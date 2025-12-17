@@ -309,6 +309,68 @@
       opacity: 0.6;
     }
 
+    /* ===== MODAL ===== */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 18px;
+      background: rgba(0,0,0,0.45);
+      z-index: 1000;
+    }
+
+    .modal-overlay.open { display: flex; }
+
+    .modal {
+      width: min(520px, 100%);
+      background: var(--panel);
+      border: 1px solid var(--panel-border);
+      border-radius: 18px;
+      padding: 16px;
+      box-shadow: 0 18px 60px rgba(0,0,0,0.22);
+    }
+
+    .modal-title { font-size: 18px; font-weight: 650; margin-bottom: 6px; }
+    .modal-subtitle { font-size: 13px; opacity: 0.75; margin-bottom: 12px; }
+
+    .modal-grid { display: grid; gap: 10px; margin-bottom: 10px; }
+    .modal-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 10px 12px;
+      border-radius: 14px;
+      border: 1px solid var(--panel-border);
+      background: color-mix(in srgb, var(--panel) 92%, var(--btn-bg));
+    }
+
+    .modal-row span { font-size: 14px; font-weight: 550; }
+
+    .modal-row input[type="number"] {
+      width: 120px;
+      padding: 10px 12px;
+      border-radius: 999px;
+      border: 1px solid var(--panel-border);
+      background: var(--panel);
+      color: var(--text);
+      text-align: center;
+    }
+
+    .modal-hint {
+      font-size: 12px;
+      opacity: 0.75;
+      margin: 8px 2px 12px;
+    }
+
+    .modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+
     /* ===== PRESENTATION MODE ===== */
     body.present {
         padding: 0;
@@ -375,6 +437,7 @@
     div.container {
         margin: 0 auto;
         width: 80%;
+        max-width: 1200px;
     }
   </style>
 </head>
@@ -398,6 +461,7 @@
     <div class="controls">
         <button id="themeBtn" title="Toggle light / dark mode">☀︎ / ☾</button>
         <button id="playBtn">Play</button>
+        <button id="grooveBtn" title="Generate a random groove">Give me a groove!</button>
         <button id="metroBtn" title="Toggle metronome click">Metronome: Off</button>
         <button id="hpBtn" title="Toggle handpan sounds">Handpan Sounds: Off</button>
         <button id="gridBtn" title="Toggle between 8th and 16th grid">8ths</button>
@@ -414,29 +478,62 @@
 
     <div class="labels" id="labels"></div>
     <div class="grid" id="grid"></div>
-
-    <div class="legend" aria-label="Legend">
-        <div class="legend-title">Legend</div>
-        <div class="legend-row">
-        <span><kbd>Space</kbd> Play / Stop</span>
-        <span><kbd>D</kbd> Ding</span>
-        <span><kbd>T</kbd> Tone</span>
-        <span><kbd>S</kbd> Slap</span>
-        <span><kbd>0–9</kbd> Digit</span>
-        <span><kbd>Left/Right</kbd> Toggle hand split</span>
-        <span><kbd>Click</kbd> Toggle on/off</span>
-        <span><kbd>Click</kbd> Select</span>
-        <span><kbd>M</kbd> Toggle metronome</span>
-        <span><kbd>Esc</kbd> Unselect / Exit Presentation</span>
-        </div>
-    </div>
   </div><!-- container -->
+
+  <div class="legend" aria-label="Legend">
+      <div class="legend-title">Legend</div>
+      <div class="legend-row">
+      <span><kbd>Space</kbd> Play / Stop</span>
+      <span><kbd>D</kbd> Ding</span>
+      <span><kbd>T</kbd> Tone</span>
+      <span><kbd>S</kbd> Slap</span>
+      <span><kbd>0–9</kbd> Digit</span>
+      <span><kbd>Left/Right</kbd> Toggle hand split</span>
+      <span><kbd>Click</kbd> Toggle on/off</span>
+      <span><kbd>Click</kbd> Select</span>
+      <span><kbd>M</kbd> Toggle metronome</span>
+      <span><kbd>Esc</kbd> Unselect / Exit Presentation</span>
+      </div>
+  </div>
+  
 
   <div class="footer">
     v1.17.4 — Cleaner hand silhouette (straight index-to-palm edge) + right-hand icon reliably on the right.  Metronome clicks every step (downbeat/beat/sub accents). Presentation mode hides UI for recording/teaching (Esc exits). Save/Load/Rename/Delete/Export/Import work via browser storage + JSON.
   </div>
 
   <button id="exitPresent" class="present-exit" title="Exit presentation mode (Esc)">Exit</button>
+
+  <!-- Groove Generator Modal -->
+  <div id="grooveModal" class="modal-overlay" aria-hidden="true">
+    <div class="modal">
+      <div class="modal-title">Give me a groove!</div>
+      <div class="modal-subtitle">Choose accents, or leave as Auto and hit Go.</div>
+
+      <div class="modal-grid">
+        <label class="modal-row">
+          <span>Ding accents</span>
+          <input id="dingCount" type="number" min="0" max="8" placeholder="Auto" />
+        </label>
+
+        <label class="modal-row">
+          <span>Tak accents</span>
+          <input id="takCount" type="number" min="0" max="8" placeholder="Auto" />
+        </label>
+
+        <label class="modal-row">
+          <span>Slap accents</span>
+          <input id="slapCount" type="number" min="0" max="8" placeholder="Auto" />
+        </label>
+      </div>
+
+      <div class="modal-hint" id="grooveHint"></div>
+
+      <div class="modal-actions">
+        <button id="grooveCancel">Cancel</button>
+        <button id="grooveGo" class="active">Go!</button>
+      </div>
+    </div>
+  </div>
 
   <script>
     // ===== CONFIG =====
@@ -478,6 +575,16 @@
     const deleteBtn = document.getElementById('deleteBtn');
     const exportBtn = document.getElementById('exportBtn');
     const importBtn = document.getElementById('importBtn');
+
+    const grooveBtn = document.getElementById('grooveBtn');
+    const grooveModal = document.getElementById('grooveModal');
+    const grooveCancel = document.getElementById('grooveCancel');
+    const grooveGo = document.getElementById('grooveGo');
+    const dingCount = document.getElementById('dingCount');
+    const takCount = document.getElementById('takCount');
+    const slapCount = document.getElementById('slapCount');
+    const grooveHint = document.getElementById('grooveHint');
+
 
     // ===== STATE =====
     let pattern = [];
@@ -824,6 +931,122 @@
       if (wasPlaying) start();
     }
 
+    // GROOVE PICKER FUNCTIONS //
+    function openGrooveModal() {
+      grooveModal.classList.add('open');
+      grooveModal.setAttribute('aria-hidden', 'false');
+      updateGroovePickerLimits();
+      updateGrooveHint();
+    }
+
+    function closeGrooveModal() {
+      grooveModal.classList.remove('open');
+      grooveModal.setAttribute('aria-hidden', 'true');
+    }
+
+    function parseCount(inputEl) {
+      const v = String(inputEl.value || '').trim();
+      if (v === '') return null; // Auto
+      const n = Number(v);
+      return Number.isFinite(n) ? Math.max(0, Math.min(8, Math.floor(n))) : null;
+    }
+
+    function setCountClamped(inputEl, n) {
+      const clamped = Math.max(0, Math.min(Number(inputEl.max || 8), Math.floor(n)));
+      inputEl.value = String(clamped);
+    }
+
+    function updateGroovePickerLimits() {
+      const d = parseCount(dingCount) ?? 0;
+      const t = parseCount(takCount) ?? 0;
+      const s = parseCount(slapCount) ?? 0;
+
+      const maxD = Math.max(0, 8 - (t + s));
+      const maxT = Math.max(0, 8 - (d + s));
+      const maxS = Math.max(0, 8 - (d + t));
+
+      dingCount.max = String(maxD);
+      takCount.max = String(maxT);
+      slapCount.max = String(maxS);
+
+      // If user typed something above the new max, clamp it
+      if (dingCount.value !== '' && Number(dingCount.value) > maxD) setCountClamped(dingCount, maxD);
+      if (takCount.value !== '' && Number(takCount.value) > maxT) setCountClamped(takCount, maxT);
+      if (slapCount.value !== '' && Number(slapCount.value) > maxS) setCountClamped(slapCount, maxS);
+    }
+
+    function updateGrooveHint() {
+      const d = parseCount(dingCount);
+      const t = parseCount(takCount);
+      const s = parseCount(slapCount);
+
+      const touched = (d !== null) || (t !== null) || (s !== null);
+      if (!touched) {
+        grooveHint.textContent = 'Auto mode: will generate a groove with at least 3 non-accented beats.';
+        return;
+      }
+      const dd = d ?? 0, tt = t ?? 0, ss = s ?? 0;
+      grooveHint.textContent = `Total accents: ${dd + tt + ss} / 8`;
+    }
+
+    function shuffle(arr) {
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      return arr;
+    }
+
+    function pickUniqueIndices(n, fromN) {
+      const idx = Array.from({ length: fromN }, (_, i) => i);
+      shuffle(idx);
+      return idx.slice(0, n);
+    }
+
+    function clearAllBeatsAndLabels() {
+      pattern.fill(false);
+      innerLabels.fill('');
+      cells().forEach((c, i) => {
+        c.classList.remove('on', 'label-d', 'label-t', 'label-s', 'label-n', 'has-label', 'selected', 'play');
+        const inner = c.querySelector('.inner');
+        if (inner) inner.textContent = '';
+      });
+      selectedIndex = null;
+    }
+
+    function generateGroove(dCount, tCount, sCount) {
+      // Applies to current STEPS, but cap the accent system at 8 as specified.
+      const slots = Math.min(8, STEPS);
+
+      clearAllBeatsAndLabels();
+
+      // Choose unique indices within first `slots`
+      const total = dCount + tCount + sCount;
+      const chosen = pickUniqueIndices(total, slots);
+
+      const dIdx = chosen.slice(0, dCount);
+      const tIdx = chosen.slice(dCount, dCount + tCount);
+      const sIdx = chosen.slice(dCount + tCount, total);
+
+      for (const i of dIdx) {
+        pattern[i] = true;
+        cells()[i]?.classList.add('on');
+        setInnerLabel(i, 'D');
+      }
+      for (const i of tIdx) {
+        pattern[i] = true;
+        cells()[i]?.classList.add('on');
+        setInnerLabel(i, 'T');
+      }
+      for (const i of sIdx) {
+        pattern[i] = true;
+        cells()[i]?.classList.add('on');
+        setInnerLabel(i, 'S');
+      }
+
+      clearSelection();
+    }
+
     // ===== PRESENTATION MODE =====
     async function enterFullscreenIfPossible() {
       try {
@@ -976,6 +1199,7 @@
 
       // Esc
       if (e.key === 'Escape') {
+        if (grooveModal.classList.contains('open')) { closeGrooveModal(); return; }
         if (document.body.classList.contains('present')) setPresentation(false);
         else clearSelection();
         return;
@@ -1210,6 +1434,70 @@
       } catch {
         alert('That did not parse as JSON.');
       }
+    });
+
+    // GROOVE PICKER EVENTS //
+    grooveBtn.addEventListener('click', () => openGrooveModal());
+
+    grooveCancel.addEventListener('click', () => closeGrooveModal());
+
+    grooveModal.addEventListener('click', (e) => {
+      // click outside closes
+      if (e.target === grooveModal) closeGrooveModal();
+    });
+
+    [dingCount, takCount, slapCount].forEach((el) => {
+      el.addEventListener('input', () => {
+        updateGroovePickerLimits();
+        updateGrooveHint();
+      });
+    });
+
+    grooveGo.addEventListener('click', () => {
+      // Determine whether user touched any picker.
+      const d = parseCount(dingCount);
+      const t = parseCount(takCount);
+      const s = parseCount(slapCount);
+      const touched = (d !== null) || (t !== null) || (s !== null);
+
+      let D = d ?? 0;
+      let T = t ?? 0;
+      let S = s ?? 0;
+
+      if (!touched) {
+        // Auto mode: ensure >= 3 non-accented beats on an 8-step grid
+        // => total accents <= 5 (and also <= 8 always)
+        const maxTotal = Math.min(5, 8);
+        const total = Math.floor(Math.random() * (maxTotal + 1)); // 0..5
+
+        // Random split of `total` into D/T/S
+        const a = Math.floor(Math.random() * (total + 1));
+        const b = Math.floor(Math.random() * (total - a + 1));
+        const c = total - a - b;
+        // shuffle assignment across D/T/S so it's not biased
+        const parts = shuffle([a, b, c]);
+        D = parts[0]; T = parts[1]; S = parts[2];
+      }
+
+      // Force "1" to be a Ding
+      if (D < 1) D = 1;
+
+      // If forcing Ding makes us exceed 8 accents, reduce others to fit
+      while (D + T + S > 8) {
+        if (S > 0) S--;
+        else if (T > 0) T--;
+        else break;
+      }
+
+
+      // Enforce constraint (just in case)
+      if (D + T + S > 8) {
+        alert('Total accents cannot exceed 8.');
+        return;
+      }
+
+      generateGroove(D, T, S);
+      closeGrooveModal();
     });
 
     // ===== INIT =====
