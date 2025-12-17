@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Rhythm Visualizer — Hands v1.10.0</title>
+  <style>
+    /* ===== RESET / BASE ===== */
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 24px;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    h2 { margin: 0 0 16px; font-weight: 500; }
+
+    /* ===== CONTROLS ===== */
+    .controls {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    button {
+      padding: 10px 16px;
+      border-radius: 999px;
+      border: none;
+      background: var(--btn-bg);
+      color: var(--text);
+      cursor: pointer;
+      font-weight: 500;
+    }
+
+    button.active { background: var(--btn-active); }
+
+    input[type=range] { width: 140px; }
+
+    /* ===== GRID ===== */
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(var(--cols, 8), 1fr);
+      gap: 12px;
+      max-width: 900px;
+    }
+
+    .cell {
+      width: 100%;
+      padding-top: 100%;
+      border-radius: 50%;
+      background: var(--cell-bg);
+      border: 2px solid var(--cell-border);
+      cursor: pointer;
+      transition: background 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+      position: relative;
+      user-select: none;
+    }
+
+    .cell .inner {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 650;
+      font-size: 18px;
+      letter-spacing: 0.5px;
+      opacity: 0.95;
+      pointer-events: none;
+      color: var(--text); /* adapts to light/dark */
+    }
+
+    /* ===== LABEL COLOR CODING ===== */
+    :root {
+      /* ===== LIGHT MODE (default) ===== */
+      --bg: #f7f6f2;
+      --panel: #ffffff;
+      --panel-border: #e2ded3;
+      --text: #2f2f2f;
+      --muted: #6f6f6f;
+      --cell-bg: #ffffff;
+      --cell-border: #ddd8cc;
+      --cell-on: #ffe8a3;
+      --play-glow: rgba(255, 209, 102, 0.45);
+      --btn-bg: #e8e5dc;
+      --btn-active: #ffd166;
+
+      /* Label colors (friendly) */
+      --label-d: #f4a261;
+      --label-t: #2a9d8f;
+      --label-s: #e76f51;
+      --label-n: #577590;
+
+      /* Hand indicators */
+      --hand-r: #3b82f6;
+      --hand-l: #a855f7;
+    }
+
+    body.dark {
+      /* ===== DARK MODE ===== */
+      --bg: #0f0f14;
+      --panel: #16161f;
+      --panel-border: #2f2f45;
+      --text: #eaeaf0;
+      --muted: #9a9aa5;
+      --cell-bg: #222233;
+      --cell-border: #2f2f45;
+      --cell-on: #5b8cff;
+      --play-glow: rgba(91,140,255,0.45);
+      --btn-bg: #2a2a38;
+      --btn-active: #5b8cff;
+
+      /* Label colors (muted, earthy-dark) */
+      --label-d: #c9a24d;
+      --label-t: #7fa67a;
+      --label-s: #b36a5e;
+      --label-n: #8fa3a6;
+
+      /* Hand indicators (dark mode) */
+      --hand-r: #60a5fa;
+      --hand-l: #c084fc;
+    }
+
+    /* ===== STRIKE COLOR (ONE-SIDE FILL) ===== */
+    /* Only beats with an inner label show strike color.
+       The strike color appears on the hand side only (R = right half, L = left half).
+       The other half stays as the blank cell color.
+    */
+    .cell.label-d { --strike: var(--label-d); }
+    .cell.label-t { --strike: var(--label-t); }
+    .cell.label-s { --strike: var(--label-s); }
+    .cell.label-n { --strike: var(--label-n); }
+
+    /* intensity of the colored half */
+    .cell.label-d, .cell.label-t, .cell.label-s, .cell.label-n { --mix: 42%; }
+    .cell.on.label-d, .cell.on.label-t, .cell.on.label-s, .cell.on.label-n { --mix: 70%; }
+
+    .cell.label-d::before,
+    .cell.label-t::before,
+    .cell.label-s::before,
+    .cell.label-n::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      pointer-events: none;
+    }
+
+    /* Left hand: left half colored */
+    .cell.hand-l.label-d::before,
+    .cell.hand-l.label-t::before,
+    .cell.hand-l.label-s::before,
+    .cell.hand-l.label-n::before {
+      background: linear-gradient(90deg,
+        color-mix(in srgb, var(--strike) var(--mix), var(--cell-bg)) 0%,
+        color-mix(in srgb, var(--strike) var(--mix), var(--cell-bg)) 50%,
+        transparent 50%,
+        transparent 100%
+      );
+    }
+
+    /* Right hand: right half colored */
+    .cell.hand-r.label-d::before,
+    .cell.hand-r.label-t::before,
+    .cell.hand-r.label-s::before,
+    .cell.hand-r.label-n::before {
+      background: linear-gradient(90deg,
+        transparent 0%,
+        transparent 50%,
+        color-mix(in srgb, var(--strike) var(--mix), var(--cell-bg)) 50%,
+        color-mix(in srgb, var(--strike) var(--mix), var(--cell-bg)) 100%
+      );
+    }
+
+    /* Keep inner label readable */
+    .cell.label-d .inner,
+    .cell.label-t .inner,
+    .cell.label-s .inner,
+    .cell.label-n .inner { color: var(--text); }
+
+    .cell.selected {
+      /* Default (dark mode): light ring */
+      border-color: rgba(234, 234, 240, 0.9);
+      box-shadow: 0 0 0 6px rgba(234, 234, 240, 0.12);
+    }
+
+    /* Light mode override: dark ring for better contrast */
+    body:not(.dark) .cell.selected {
+      border-color: rgba(47, 47, 47, 0.85);
+      box-shadow: 0 0 0 6px rgba(47, 47, 47, 0.12);
+    }
+
+    .cell.on:not(.label-d):not(.label-t):not(.label-s):not(.label-n) { background: var(--cell-on); }
+
+    .cell.play { box-shadow: 0 0 0 6px var(--play-glow); }
+
+    /* Hand cue is now shown by WHICH SIDE of the circle gets the strike color.
+       (No border styling needed.)
+    */
+
+    /* Light mode override: darker play ring for contrast */
+    body:not(.dark) .cell.play {
+      box-shadow: 0 0 0 6px rgba(47, 47, 47, 0.35);
+    }
+
+    .labels {
+      display: grid;
+      grid-template-columns: repeat(var(--cols, 8), 1fr);
+      gap: 12px;
+      margin-bottom: 12px; /* space between labels and circles */
+      max-width: 900px;
+      font-size: 24px; /* ~2x previous size */
+      font-weight: 500;
+      opacity: 0.8;
+      text-align: center;
+    }
+
+    .legend {
+      margin-top: 16px;
+      max-width: 900px;
+      padding: 14px 16px;
+      border-radius: 16px;
+      background: var(--panel);
+      border: 1px solid var(--panel-border);
+    }
+    .legend-title {
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      opacity: 0.7;
+      margin-bottom: 8px;
+    }
+    .legend-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px 16px;
+      font-size: 13px;
+      opacity: 0.85;
+      align-items: center;
+    }
+    kbd {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 12px;
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: var(--panel);
+      border: 1px solid var(--panel-border);
+      color: var(--text);
+    }
+
+    .legend-d kbd { border-color: color-mix(in srgb, var(--label-d) 55%, rgba(234,234,240,0.18)); }
+    .legend-t kbd { border-color: color-mix(in srgb, var(--label-t) 55%, rgba(234,234,240,0.18)); }
+    .legend-s kbd { border-color: color-mix(in srgb, var(--label-s) 55%, rgba(234,234,240,0.18)); }
+    .legend-n kbd { border-color: color-mix(in srgb, var(--label-n) 55%, rgba(234,234,240,0.18)); }
+
+    .footer {
+      margin-top: 18px;
+      font-size: 13px;
+      opacity: 0.6;
+    }
+  </style>
+</head>
+<body>
+
+  <h2>Simple Rhythm / Groove Visualizer <span style="opacity:.5;font-size:14px;">v1.10.0</span></h2>
+
+  <div class="controls">
+    <button id="themeBtn" title="Toggle light / dark mode">☀︎ / ☾</button>
+    <button id="playBtn">Play</button>
+
+    <button id="gridBtn" title="Toggle between 8th and 16th grid">8ths</button>
+
+    <label>
+      BPM
+      <input id="bpm" type="range" min="40" max="200" value="90">
+    </label>
+    <span id="bpmVal">90</span>
+    <button id="clearBtn">Clear</button>
+  </div>
+
+  <div class="labels" id="labels"></div>
+  <div class="grid" id="grid"></div>
+
+  <div class="legend" aria-label="Legend">
+    <div class="legend-title">Legend</div>
+    <div class="legend-row">
+      <span class="legend-d"><kbd>D</kbd> Ding</span>
+      <span class="legend-t"><kbd>T</kbd> Tone</span>
+      <span class="legend-s"><kbd>S</kbd> Slap</span>
+      <span class="legend-n"><kbd>0–9</kbd> Digit</span>
+      <span><kbd>R</kbd> Right hand (color on right half)</span>
+      <span><kbd>L</kbd> Left hand (color on left half)</span>
+      <span><kbd>Shift</kbd>+<kbd>Click</kbd> Toggle on/off</span>
+      <span><kbd>Click</kbd> Select</span>
+      <span><kbd>Esc</kbd> Unselect</span>
+    </div>
+  </div>
+
+  <div class="footer">v1.10.0 — Hand cue: labeled beats show their strike color on one side only (R = right half, L = left half). Unlabeled beats stay blank. Click to select, press D/T/S or 0–9 to label. Shift+Click toggles on/off. Toggle 8ths/16ths.</div>
+
+  <script>
+    // ===== CONFIG =====
+    const VERSION = 'v1.10.0 — Strike Color On Hand Side';
+
+    // Modes:
+    // - '8'  => 8 steps (eighth notes): 1 + 2 + 3 + 4 +
+    // - '16' => 16 steps (sixteenth notes): 1 e & a ...
+    let mode = '8';
+    let STEPS = 8;
+
+    // ===== ELEMENTS =====
+    const grid = document.getElementById('grid');
+    const labels = document.getElementById('labels');
+    const playBtn = document.getElementById('playBtn');
+    const gridBtn = document.getElementById('gridBtn');
+    const bpmInput = document.getElementById('bpm');
+    const bpmVal = document.getElementById('bpmVal');
+    const clearBtn = document.getElementById('clearBtn');
+    const themeBtn = document.getElementById('themeBtn');
+
+    // ===== STATE =====
+    let pattern = [];
+    let innerLabels = []; // per-step label shown inside circle
+    let selectedIndex = null;
+
+    let step = 0;
+    let timer = null;
+    let playing = false;
+
+    // ===== HELPERS =====
+    const cells = () => document.querySelectorAll('.cell');
+
+    function setCols(n) {
+      grid.style.setProperty('--cols', String(n));
+      labels.style.setProperty('--cols', String(n));
+    }
+
+    function labelForStep(i) {
+      if (mode === '8') {
+        const beatNumber = Math.floor(i / 2) + 1;
+        return (i % 2 === 0) ? String(beatNumber) : '+';
+      }
+      const beatNumber = Math.floor(i / 4) + 1;
+      const pos = i % 4;
+      if (pos === 0) return String(beatNumber);
+      if (pos === 1) return 'e';
+      if (pos === 2) return '&';
+      return 'a';
+    }
+
+    function clearGridDom() {
+      grid.innerHTML = '';
+      labels.innerHTML = '';
+    }
+
+    function clearSelection() {
+      selectedIndex = null;
+      const all = cells();
+      all.forEach(c => c.classList.remove('selected'));
+    }
+
+    function applySelection(i) {
+      selectedIndex = i;
+      const all = cells();
+      all.forEach((c, idx) => c.classList.toggle('selected', idx === i));
+    }
+
+    function setInnerLabel(i, value) {
+      innerLabels[i] = value;
+      const cell = cells()[i];
+      if (!cell) return;
+
+      const inner = cell.querySelector('.inner');
+      if (inner) inner.textContent = value;
+
+      // Update color-coding classes based on label
+      cell.classList.remove('label-d', 'label-t', 'label-s', 'label-n');
+      const v = String(value || '');
+      if (!v) return;
+
+      if (v === 'D') cell.classList.add('label-d');
+      else if (v === 'T') cell.classList.add('label-t');
+      else if (v === 'S') cell.classList.add('label-s');
+      else if (/^[0-9]$/.test(v)) cell.classList.add('label-n');
+    }
+
+    function buildGrid() {
+      clearGridDom();
+      setCols(STEPS);
+      pattern = Array(STEPS).fill(false);
+      innerLabels = Array(STEPS).fill('');
+      selectedIndex = null;
+      step = 0;
+
+      for (let i = 0; i < STEPS; i++) {
+        const cell = document.createElement('div');
+        cell.className = 'cell';
+
+        // Assign hand based on subdivision
+        // 8ths: numbers (1,2,3,4) = right hand; '+' = left hand
+        // 16ths: beat numbers and '&' = right hand; 'e' and 'a' = left hand
+        if (mode === '8') {
+          cell.classList.add((i % 2 === 0) ? 'hand-r' : 'hand-l');
+        } else {
+          const pos = i % 4;
+          cell.classList.add((pos === 0 || pos === 2) ? 'hand-r' : 'hand-l');
+        }
+
+        // Inner label element
+        const inner = document.createElement('div');
+        inner.className = 'inner';
+        inner.textContent = '';
+        cell.appendChild(inner);
+
+        cell.addEventListener('click', (ev) => {
+          // Prevent the background click handler from immediately clearing selection
+          ev.stopPropagation();
+
+          // If you click the already-selected cell (without Shift), unselect it
+          if (!ev.shiftKey && selectedIndex === i) {
+            clearSelection();
+            return;
+          }
+
+          // Otherwise, select it
+          applySelection(i);
+
+          // Only toggle on/off when Shift is held (cleaner for labeling workflows)
+          if (ev.shiftKey) {
+            pattern[i] = !pattern[i];
+            cell.classList.toggle('on');
+          }
+        });
+
+        grid.appendChild(cell);
+
+        const label = document.createElement('div');
+        label.textContent = labelForStep(i);
+        labels.appendChild(label);
+      }
+    }
+
+    function intervalMs() {
+      const perBeat = (mode === '8') ? 2 : 4;
+      return (60 / Number(bpmInput.value)) * 1000 / perBeat;
+    }
+
+    function tick() {
+      const all = cells();
+      if (!all.length) return;
+      all.forEach(c => c.classList.remove('play'));
+      all[step].classList.add('play');
+      step = (step + 1) % STEPS;
+    }
+
+    function start() {
+      timer = setInterval(tick, intervalMs());
+      playing = true;
+      playBtn.textContent = 'Stop';
+      playBtn.classList.add('active');
+    }
+
+    function stop() {
+      clearInterval(timer);
+      timer = null;
+      playing = false;
+      step = 0;
+      playBtn.textContent = 'Play';
+      playBtn.classList.remove('active');
+      cells().forEach(c => c.classList.remove('play'));
+    }
+
+    function restartIfPlaying() {
+      if (playing) {
+        stop();
+        start();
+      }
+    }
+
+    function setMode(nextMode) {
+      if (nextMode === mode) return;
+      const wasPlaying = playing;
+      if (wasPlaying) stop();
+
+      mode = nextMode;
+      STEPS = (mode === '8') ? 8 : 16;
+      gridBtn.textContent = (mode === '8') ? '8ths' : '16ths';
+
+      buildGrid();
+
+      if (wasPlaying) start();
+    }
+
+    // ===== KEYBOARD LABELING =====
+    // d -> D, t -> T, s -> S, digits -> digit
+    document.addEventListener('keydown', (e) => {
+      // Esc clears selection
+      if (e.key === 'Escape') {
+        clearSelection();
+        return;
+      }
+      // Don’t steal keystrokes when typing in an input
+      const tag = (e.target && e.target.tagName) ? e.target.tagName.toLowerCase() : '';
+      if (tag === 'input' || tag === 'textarea' || e.target.isContentEditable) return;
+      if (selectedIndex === null) return;
+
+      const k = e.key;
+      const lower = k.toLowerCase();
+
+      const map = { d: 'D', t: 'T', s: 'S' };
+      if (map[lower]) {
+        setInnerLabel(selectedIndex, map[lower]);
+        return;
+      }
+
+      // Number keys (top row and numpad)
+      if (/^[0-9]$/.test(k)) {
+        setInnerLabel(selectedIndex, k);
+        return;
+      }
+
+      // Optional quality-of-life: Backspace/Delete clears the label
+      if (k === 'Backspace' || k === 'Delete') {
+        setInnerLabel(selectedIndex, '');
+      }
+    });
+
+    // ===== INIT =====
+    // Restore theme
+    if (localStorage.getItem('theme') === 'dark') {
+      document.body.classList.add('dark');
+    }
+    bpmVal.textContent = bpmInput.value;
+    buildGrid();
+
+    // Clicking anywhere outside a cell clears selection
+    document.addEventListener('click', (ev) => {
+      if (!ev.target.closest('.cell')) clearSelection();
+    });
+
+    // ===== EVENTS =====
+    themeBtn.addEventListener('click', () => {
+      document.body.classList.toggle('dark');
+      localStorage.setItem('theme', document.body.classList.contains('dark') ? 'dark' : 'light');
+    });
+    playBtn.addEventListener('click', () => playing ? stop() : start());
+
+    bpmInput.addEventListener('input', () => {
+      bpmVal.textContent = bpmInput.value;
+      restartIfPlaying();
+    });
+
+    clearBtn.addEventListener('click', () => {
+      pattern.fill(false);
+      innerLabels.fill('');
+      cells().forEach((c) => {
+        c.classList.remove('on', 'label-d', 'label-t', 'label-s', 'label-n', 'selected', 'play');
+        const inner = c.querySelector('.inner');
+        if (inner) inner.textContent = '';
+      });
+      selectedIndex = null;
+    });
+
+    gridBtn.addEventListener('click', () => {
+      setMode(mode === '8' ? '16' : '8');
+    });
+  </script>
+
+</body>
+</html>

@@ -1,0 +1,1165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Rhythm Visualizer — Hand Icons v1.17.4</title>
+  <style>
+    /* ===== RESET / BASE ===== */
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 24px;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    h2 { margin: 0 0 16px; font-weight: 500; }
+
+    /* ===== THEME VARS ===== */
+    :root {
+      /* LIGHT MODE */
+      --bg: #f7f6f2;
+      --panel: #ffffff;
+      --panel-border: #e2ded3;
+      --text: #2f2f2f;
+      --cell-bg: #ffffff;
+      --cell-border: #ddd8cc;
+      --cell-on: #ffe8a3;
+      --play-glow: rgba(255, 209, 102, 0.45);
+      --btn-bg: #e8e5dc;
+      --btn-active: #ffd166;
+
+      /* Strike colors */
+      --label-d: #6DC5FE;
+      --label-t: #2a9d8f;
+      --label-s: #e76f51;
+      --label-n: #577590;
+    }
+
+    body.dark {
+      /* DARK MODE */
+      --bg: #0f0f14;
+      --panel: #16161f;
+      --panel-border: #2f2f45;
+      --text: #eaeaf0;
+      --cell-bg: #222233;
+      --cell-border: #2f2f45;
+      --cell-on: #5b8cff;
+      --play-glow: rgba(91, 140, 255, 0.45);
+      --btn-bg: #2a2a38;
+      --btn-active: #5b8cff;
+
+      /* Strike colors (muted/earthy) */
+      --label-d: #6DC5FE;
+      --label-t: #7fa67a;
+      --label-s: #b36a5e;
+      --label-n: #8fa3a6;
+    }
+
+    /* ===== LAYOUT ROWS ===== */
+    .pattern-row {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+      padding: 12px 14px;
+      border-radius: 16px;
+      background: var(--panel);
+      border: 1px solid var(--panel-border);
+    }
+
+    .controls {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+
+    button {
+      padding: 10px 16px;
+      border-radius: 999px;
+      border: none;
+      background: var(--btn-bg);
+      color: var(--text);
+      cursor: pointer;
+      font-weight: 500;
+    }
+
+    button.active { background: var(--btn-active); }
+
+    button:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+
+    select {
+      padding: 10px 14px;
+      border-radius: 999px;
+      border: 1px solid var(--panel-border);
+      background: var(--panel);
+      color: var(--text);
+    }
+
+    input[type=range] { width: 140px; }
+
+    /* ===== LABELS + GRID ===== */
+    .labels {
+      display: grid;
+      grid-template-columns: repeat(var(--cols, 8), 1fr);
+      gap: 12px;
+      margin-bottom: 12px;
+      max-width: 900px;
+      font-size: 24px;
+      font-weight: 500;
+      opacity: 0.8;
+      text-align: center;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(var(--cols, 8), 1fr);
+      gap: 12px;
+      max-width: 900px;
+    }
+
+    .cell {
+      width: 100%;
+      padding-top: 100%;
+      border-radius: 50%;
+      background: var(--cell-bg);
+      border: 2px solid var(--cell-border);
+      cursor: pointer;
+      transition: background 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+      position: relative;
+      user-select: none;
+      overflow: hidden; /* keeps half-fills clean */
+    }
+
+    .cell .inner {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 650;
+      font-size: 36px;
+      letter-spacing: 0.5px;
+      opacity: 0.95;
+      pointer-events: none;
+      color: var(--text);
+    }
+
+    /* Selection ring */
+    .cell.selected {
+      border-color: rgba(234, 234, 240, 0.9);
+      box-shadow: 0 0 0 6px rgba(234, 234, 240, 0.12);
+    }
+    body:not(.dark) .cell.selected {
+      border-color: rgba(47, 47, 47, 0.85);
+      box-shadow: 0 0 0 6px rgba(47, 47, 47, 0.12);
+    }
+
+    /* Play ring */
+    .cell.play { box-shadow: 0 0 0 6px var(--play-glow); }
+    body:not(.dark) .cell.play { box-shadow: 0 0 0 6px rgba(47, 47, 47, 0.35); }
+
+    /* ON highlight only when unlabeled */
+    .cell.on:not(.label-d):not(.label-t):not(.label-s):not(.label-n) { background: var(--cell-on); }
+
+    /* ===== STRIKE COLOR (TOGGLE) ===== */
+    .cell.label-d { --strike: var(--label-d); }
+    .cell.label-t { --strike: var(--label-t); }
+    .cell.label-s { --strike: var(--label-s); }
+    .cell.label-n { --strike: var(--label-n); }
+
+    .cell.label-d, .cell.label-t, .cell.label-s, .cell.label-n { --mix: 42%; }
+    .cell.on.label-d, .cell.on.label-t, .cell.on.label-s, .cell.on.label-n { --mix: 70%; }
+
+    /* Split mode ON: strike color is drawn on hand side only using ::before */
+    body.handSplit .cell.label-d::before,
+    body.handSplit .cell.label-t::before,
+    body.handSplit .cell.label-s::before,
+    body.handSplit .cell.label-n::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      pointer-events: none;
+    }
+
+    body.handSplit .cell.hand-l.label-d::before,
+    body.handSplit .cell.hand-l.label-t::before,
+    body.handSplit .cell.hand-l.label-s::before,
+    body.handSplit .cell.hand-l.label-n::before {
+      background: linear-gradient(90deg,
+        color-mix(in srgb, var(--strike) var(--mix), var(--cell-bg)) 0%,
+        color-mix(in srgb, var(--strike) var(--mix), var(--cell-bg)) 50%,
+        transparent 50%,
+        transparent 100%
+      );
+    }
+
+    body.handSplit .cell.hand-r.label-d::before,
+    body.handSplit .cell.hand-r.label-t::before,
+    body.handSplit .cell.hand-r.label-s::before,
+    body.handSplit .cell.hand-r.label-n::before {
+      background: linear-gradient(90deg,
+        transparent 0%,
+        transparent 50%,
+        color-mix(in srgb, var(--strike) var(--mix), var(--cell-bg)) 50%,
+        color-mix(in srgb, var(--strike) var(--mix), var(--cell-bg)) 100%
+      );
+    }
+
+    /* Split mode OFF: full-circle strike color */
+    body:not(.handSplit) .cell.label-d,
+    body:not(.handSplit) .cell.label-t,
+    body:not(.handSplit) .cell.label-s,
+    body:not(.handSplit) .cell.label-n {
+      background: color-mix(in srgb, var(--strike) var(--mix), var(--cell-bg));
+    }
+
+  /* ===== HAND ICONS (Split Mode) — IMAGE FILES ===== */
+
+  /* Only show icons when split mode is ON AND the beat is labeled */
+  body.handSplit .cell.label-d::after,
+  body.handSplit .cell.label-t::after,
+  body.handSplit .cell.label-s::after,
+  body.handSplit .cell.label-n::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    width: 34%;
+    height: 34%;
+    transform: translateY(-50%);
+    pointer-events: none;
+    opacity: 0.95;
+
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: contain;
+
+    /* optional: keeps them readable */
+    filter: drop-shadow(0 2px 2px rgba(0,0,0,0.12));
+  }
+
+  /* LEFT HAND icon: placed on left half */
+  body.handSplit .cell.hand-l.label-d::after,
+  body.handSplit .cell.hand-l.label-t::after,
+  body.handSplit .cell.hand-l.label-s::after,
+  body.handSplit .cell.hand-l.label-n::after {
+    left: 6%;
+    background-image: url("./hand-left.webp");
+  }
+
+  /* RIGHT HAND icon: placed on right half */
+  body.handSplit .cell.hand-r.label-d::after,
+  body.handSplit .cell.hand-r.label-t::after,
+  body.handSplit .cell.hand-r.label-s::after,
+  body.handSplit .cell.hand-r.label-n::after {
+    right: 6%;
+    left: auto;
+    background-image: url("./hand-right.webp");
+  }
+
+    /* ===== LEGEND ===== */
+    .legend {
+      margin-top: 16px;
+      max-width: 900px;
+      padding: 14px 16px;
+      border-radius: 16px;
+      background: var(--panel);
+      border: 1px solid var(--panel-border);
+    }
+    .legend-title {
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      opacity: 0.7;
+      margin-bottom: 8px;
+    }
+    .legend-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px 16px;
+      font-size: 13px;
+      opacity: 0.85;
+      align-items: center;
+    }
+    kbd {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 12px;
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: var(--panel);
+      border: 1px solid var(--panel-border);
+      color: var(--text);
+    }
+
+    .footer {
+      margin-top: 18px;
+      font-size: 13px;
+      opacity: 0.6;
+    }
+
+    /* ===== PRESENTATION MODE ===== */
+    body.present { padding: 18px; }
+
+    body.present h2,
+    body.present .pattern-row,
+    body.present .controls,
+    body.present .legend,
+    body.present .footer {
+      display: none;
+    }
+
+    body.present .labels {
+      max-width: 1200px;
+      font-size: 32px;
+      opacity: 0.85;
+      margin-bottom: 16px;
+    }
+
+    body.present .grid {
+      max-width: 1200px;
+      gap: 16px;
+    }
+
+    body.present .cell .inner { font-size: 44px; }
+
+    .present-exit {
+      position: fixed;
+      top: 14px;
+      right: 14px;
+      z-index: 50;
+      display: none;
+      padding: 10px 14px;
+      border-radius: 999px;
+      border: 1px solid var(--panel-border);
+      background: var(--panel);
+      color: var(--text);
+      cursor: pointer;
+      font-weight: 600;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+    }
+    body.present .present-exit {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    @media (max-width: 600px) {
+      body.present .labels { font-size: 22px; }
+      body.present .cell .inner { font-size: 36px; }
+      body.present .grid { gap: 12px; }
+    }
+  </style>
+</head>
+<body>
+
+  <h2>Simple Rhythm / Groove Visualizer <span style="opacity:.5;font-size:14px;">v1.17.4</span></h2>
+
+  <!-- Pattern management row -->
+  <div class="pattern-row">
+    <select id="patternSelect" title="Saved patterns">
+      <option value="">(no saved patterns)</option>
+    </select>
+    <button id="saveBtn" title="Save current pattern">Save</button>
+    <button id="loadBtn" title="Load selected pattern">Load</button>
+    <button id="renameBtn" title="Rename selected pattern">Rename</button>
+    <button id="deleteBtn" title="Delete selected pattern">Delete</button>
+    <button id="exportBtn" title="Copy pattern JSON to clipboard">Export</button>
+    <button id="importBtn" title="Paste JSON to load a pattern">Import</button>
+  </div>
+
+  <div class="controls">
+    <button id="themeBtn" title="Toggle light / dark mode">☀︎ / ☾</button>
+    <button id="playBtn">Play</button>
+    <button id="metroBtn" title="Toggle metronome click">Metronome: Off</button>
+    <button id="gridBtn" title="Toggle between 8th and 16th grid">8ths</button>
+    <button id="handBtn" class="active" title="Toggle left/right hand coloring">Left/Right: Off</button>
+    <button id="presentBtn" title="Toggle presentation mode (Esc exits)">Presentation</button>
+
+    <label>
+      BPM
+      <input id="bpm" type="range" min="40" max="200" value="90" />
+    </label>
+    <span id="bpmVal">90</span>
+    <button id="clearBtn">Clear</button>
+  </div>
+
+  <div class="labels" id="labels"></div>
+  <div class="grid" id="grid"></div>
+
+  <div class="legend" aria-label="Legend">
+    <div class="legend-title">Legend</div>
+    <div class="legend-row">
+      <span><kbd>D</kbd> Ding</span>
+      <span><kbd>T</kbd> Tone</span>
+      <span><kbd>S</kbd> Slap</span>
+      <span><kbd>0–9</kbd> Digit</span>
+      <span><kbd>Left/Right</kbd> Toggle hand split</span>
+      <span><kbd>Shift</kbd>+<kbd>Click</kbd> Toggle on/off</span>
+      <span><kbd>Click</kbd> Select</span>
+      <span><kbd>M</kbd> Toggle metronome (beats + subdivisions)</span>
+      <span><kbd>Esc</kbd> Unselect / Exit Presentation</span>
+    </div>
+  </div>
+
+  <div class="footer">
+    v1.17.4 — Cleaner hand silhouette (straight index-to-palm edge) + right-hand icon reliably on the right.  Metronome clicks every step (downbeat/beat/sub accents). Presentation mode hides UI for recording/teaching (Esc exits). Save/Load/Rename/Delete/Export/Import work via browser storage + JSON.
+  </div>
+
+  <button id="exitPresent" class="present-exit" title="Exit presentation mode (Esc)">Exit</button>
+
+  <script>
+    // ===== CONFIG =====
+    const VERSION = 'v1.17.4 — Cleaner Hand Silhouette + Fix Right Position';
+
+    // Modes:
+    // - '8'  => 8 steps (eighth notes): 1 + 2 + 3 + 4 +
+    // - '16' => 16 steps (sixteenth notes): 1 e & a ...
+    let mode = '8';
+    let STEPS = 8;
+
+    // ===== STORAGE KEYS =====
+    const STORAGE_KEY = 'rhythm_visualizer_patterns_v1';
+    const LAST_USED_KEY = 'rhythm_visualizer_last_used';
+    const PRESENT_KEY = 'rhythm_visualizer_present';
+    const METRO_KEY = 'rhythm_visualizer_metronome';
+
+    // ===== ELEMENTS =====
+    const grid = document.getElementById('grid');
+    const labels = document.getElementById('labels');
+    const playBtn = document.getElementById('playBtn');
+    const metroBtn = document.getElementById('metroBtn');
+    const gridBtn = document.getElementById('gridBtn');
+    const bpmInput = document.getElementById('bpm');
+    const bpmVal = document.getElementById('bpmVal');
+    const clearBtn = document.getElementById('clearBtn');
+    const themeBtn = document.getElementById('themeBtn');
+    const handBtn = document.getElementById('handBtn');
+    const presentBtn = document.getElementById('presentBtn');
+    const exitPresent = document.getElementById('exitPresent');
+
+    const patternSelect = document.getElementById('patternSelect');
+    const saveBtn = document.getElementById('saveBtn');
+    const loadBtn = document.getElementById('loadBtn');
+    const renameBtn = document.getElementById('renameBtn');
+    const deleteBtn = document.getElementById('deleteBtn');
+    const exportBtn = document.getElementById('exportBtn');
+    const importBtn = document.getElementById('importBtn');
+
+    // ===== STATE =====
+    let pattern = [];
+    let innerLabels = [];
+    let selectedIndex = null;
+
+    let step = 0;
+    // Use an array of timers to prevent accidental stacking (double-clicks, race conditions)
+    let timers = [];
+    let playing = false;
+
+    // Metronome
+    let metronomeOn = false;
+    let audioCtx = null;
+
+    // ===== HELPERS =====
+    const cells = () => document.querySelectorAll('.cell');
+
+    function setCols(n) {
+      grid.style.setProperty('--cols', String(n));
+      labels.style.setProperty('--cols', String(n));
+    }
+
+    function labelForStep(i) {
+      if (mode === '8') {
+        const beatNumber = Math.floor(i / 2) + 1;
+        return (i % 2 === 0) ? String(beatNumber) : '+';
+      }
+      const beatNumber = Math.floor(i / 4) + 1;
+      const pos = i % 4;
+      if (pos === 0) return String(beatNumber);
+      if (pos === 1) return 'e';
+      if (pos === 2) return '&';
+      return 'a';
+    }
+
+    function clearGridDom() {
+      grid.innerHTML = '';
+      labels.innerHTML = '';
+    }
+
+    function clearSelection() {
+      selectedIndex = null;
+      cells().forEach(c => c.classList.remove('selected'));
+    }
+
+    function applySelection(i) {
+      selectedIndex = i;
+      cells().forEach((c, idx) => c.classList.toggle('selected', idx === i));
+    }
+
+    function setInnerLabel(i, value) {
+      innerLabels[i] = value;
+      const cell = cells()[i];
+      if (!cell) return;
+
+      const inner = cell.querySelector('.inner');
+      if (inner) inner.textContent = value;
+
+      cell.classList.remove('label-d', 'label-t', 'label-s', 'label-n');
+      const v = String(value || '');
+      if (!v) return;
+
+      if (v === 'D') cell.classList.add('label-d');
+      else if (v === 'T') cell.classList.add('label-t');
+      else if (v === 'S') cell.classList.add('label-s');
+      else if (/^[0-9]$/.test(v)) cell.classList.add('label-n');
+    }
+
+    function buildGrid() {
+      clearGridDom();
+      setCols(STEPS);
+      pattern = Array(STEPS).fill(false);
+      innerLabels = Array(STEPS).fill('');
+      selectedIndex = null;
+      step = 0;
+
+      for (let i = 0; i < STEPS; i++) {
+        const cell = document.createElement('div');
+        cell.className = 'cell';
+
+        // Assign hand based on subdivision
+        if (mode === '8') {
+          cell.classList.add((i % 2 === 0) ? 'hand-r' : 'hand-l');
+        } else {
+          const pos = i % 4;
+          cell.classList.add((pos === 0 || pos === 2) ? 'hand-r' : 'hand-l');
+        }
+
+        const inner = document.createElement('div');
+        inner.className = 'inner';
+        inner.textContent = '';
+        cell.appendChild(inner);
+
+        cell.addEventListener('click', (ev) => {
+          ev.stopPropagation();
+
+          if (!ev.shiftKey && selectedIndex === i) {
+            clearSelection();
+            return;
+          }
+
+          applySelection(i);
+
+          if (ev.shiftKey) {
+            pattern[i] = !pattern[i];
+            cell.classList.toggle('on');
+          }
+        });
+
+        grid.appendChild(cell);
+
+        const label = document.createElement('div');
+        label.textContent = labelForStep(i);
+        labels.appendChild(label);
+      }
+    }
+
+    function intervalMs() {
+      const perBeat = (mode === '8') ? 2 : 4;
+      return (60 / Number(bpmInput.value)) * 1000 / perBeat;
+    }
+
+    function ensureAudio() {
+      if (!audioCtx) {
+        const Ctx = window.AudioContext || window.webkitAudioContext;
+        if (Ctx) audioCtx = new Ctx();
+      }
+      if (audioCtx && audioCtx.state === 'suspended') {
+        audioCtx.resume().catch(() => {});
+      }
+    }
+
+    function metroClick(kind) {
+      ensureAudio();
+      if (!audioCtx) return;
+
+      const t = audioCtx.currentTime;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+
+      osc.type = 'square';
+      const freq = (kind === 'downbeat') ? 1600 : (kind === 'beat' ? 1300 : 1000);
+      const level = (kind === 'downbeat') ? 0.28 : (kind === 'beat' ? 0.20 : 0.12);
+
+      osc.frequency.setValueAtTime(freq, t);
+
+      gain.gain.setValueAtTime(0.0001, t);
+      gain.gain.exponentialRampToValueAtTime(level, t + 0.001);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.03);
+
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+
+      osc.start(t);
+      osc.stop(t + 0.04);
+    }
+
+    function tick() {
+      const all = cells();
+      if (!all.length) return;
+
+      all.forEach(c => c.classList.remove('play'));
+      all[step].classList.add('play');
+
+      if (metronomeOn) {
+        const beatStride = (mode === '8') ? 2 : 4;
+        const isQuarter = (step % beatStride === 0);
+        const isDownbeat = (step === 0);
+        metroClick(isDownbeat ? 'downbeat' : (isQuarter ? 'beat' : 'sub'));
+      }
+
+      step = (step + 1) % STEPS;
+    }
+
+    function start() {
+      // Guard: never allow multiple intervals to stack (can freeze the tab)
+      if (playing || timers.length) return;
+
+      ensureAudio();
+      const id = setInterval(tick, intervalMs());
+      timers.push(id);
+
+      playing = true;
+      playBtn.textContent = 'Stop';
+      playBtn.classList.add('active');
+    }
+
+    function stop() {
+      // Clear ALL timers (in case stacking ever happened)
+      for (const id of timers) clearInterval(id);
+      timers = [];
+
+      playing = false;
+      step = 0;
+      playBtn.textContent = 'Play';
+      playBtn.classList.remove('active');
+      cells().forEach(c => c.classList.remove('play'));
+    }
+
+    function restartIfPlaying() {
+      if (playing) {
+        // Stop clears all timers; start guard prevents stacking
+        stop();
+        start();
+      }
+    }
+
+    function setMode(nextMode) {
+      if (nextMode === mode) return;
+      const wasPlaying = playing;
+      if (wasPlaying) stop();
+
+      mode = nextMode;
+      STEPS = (mode === '8') ? 8 : 16;
+      gridBtn.textContent = (mode === '8') ? '8ths' : '16ths';
+
+      buildGrid();
+
+      if (wasPlaying) start();
+    }
+
+    // ===== PRESENTATION MODE =====
+    async function enterFullscreenIfPossible() {
+      try {
+        if (!document.fullscreenElement && document.documentElement.requestFullscreen) {
+          await document.documentElement.requestFullscreen();
+        }
+      } catch {
+        // ignore
+      }
+    }
+
+    async function exitFullscreenIfPossible() {
+      try {
+        if (document.fullscreenElement && document.exitFullscreen) {
+          await document.exitFullscreen();
+        }
+      } catch {
+        // ignore
+      }
+    }
+
+    async function setPresentation(on) {
+      document.body.classList.toggle('present', on);
+      localStorage.setItem(PRESENT_KEY, on ? 'on' : 'off');
+      presentBtn.classList.toggle('active', on);
+      presentBtn.textContent = on ? 'Exit Presentation' : 'Presentation';
+      exitPresent.style.display = on ? 'inline-flex' : 'none';
+
+      if (on) await enterFullscreenIfPossible();
+      else await exitFullscreenIfPossible();
+    }
+
+    // ===== SAVE / LOAD =====
+    function getSavedPatterns() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        return raw ? JSON.parse(raw) : {};
+      } catch {
+        return {};
+      }
+    }
+
+    function setSavedPatterns(obj) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(obj));
+    }
+
+    function getSelectedPatternName() {
+      return patternSelect.value || '';
+    }
+
+    function updatePatternButtons() {
+      const hasSelection = !!patternSelect.value;
+      loadBtn.disabled = false;
+      renameBtn.disabled = !hasSelection;
+      deleteBtn.disabled = !hasSelection;
+    }
+
+    function refreshPatternSelect(selectedName = '') {
+      const saved = getSavedPatterns();
+      const names = Object.keys(saved).sort((a, b) => a.localeCompare(b));
+
+      patternSelect.innerHTML = '';
+      if (names.length === 0) {
+        const opt = document.createElement('option');
+        opt.value = '';
+        opt.textContent = '(no saved patterns)';
+        patternSelect.appendChild(opt);
+        updatePatternButtons();
+        return;
+      }
+
+      for (const name of names) {
+        const opt = document.createElement('option');
+        opt.value = name;
+        opt.textContent = name;
+        patternSelect.appendChild(opt);
+      }
+
+      const lastUsed = localStorage.getItem(LAST_USED_KEY) || '';
+      if (selectedName && saved[selectedName]) patternSelect.value = selectedName;
+      else if (lastUsed && saved[lastUsed]) patternSelect.value = lastUsed;
+      else patternSelect.value = names[0];
+
+      updatePatternButtons();
+    }
+
+    function serializePattern() {
+      return {
+        version: VERSION,
+        mode,
+        bpm: Number(bpmInput.value),
+        handSplit: document.body.classList.contains('handSplit'),
+        steps: STEPS,
+        on: pattern.slice(),
+        labels: innerLabels.slice(),
+      };
+    }
+
+    function applyPattern(state) {
+      if (!state || !state.mode || !Array.isArray(state.on) || !Array.isArray(state.labels)) {
+        alert('That pattern JSON does not look valid.');
+        return;
+      }
+
+      const wasPlaying = playing;
+      if (wasPlaying) stop();
+
+      setMode(state.mode === '16' ? '16' : '8');
+
+      if (typeof state.handSplit === 'boolean') {
+        document.body.classList.toggle('handSplit', state.handSplit);
+        localStorage.setItem('handSplit', state.handSplit ? 'on' : 'off');
+        handBtn.classList.add('active');
+        handBtn.textContent = state.handSplit ? 'Left/Right: On' : 'Left/Right: Off';
+      }
+
+      if (typeof state.bpm === 'number' && !Number.isNaN(state.bpm)) {
+        bpmInput.value = String(Math.max(40, Math.min(200, Math.round(state.bpm))));
+        bpmVal.textContent = bpmInput.value;
+      }
+
+      const all = cells();
+      for (let i = 0; i < STEPS; i++) {
+        const isOn = !!state.on[i];
+        pattern[i] = isOn;
+        all[i]?.classList.toggle('on', isOn);
+      }
+
+      for (let i = 0; i < STEPS; i++) {
+        setInnerLabel(i, state.labels[i] || '');
+      }
+
+      clearSelection();
+      if (wasPlaying) start();
+    }
+
+    function ensureHasSelection() {
+      const name = getSelectedPatternName();
+      if (!name) {
+        alert('Select a saved pattern first.');
+        return false;
+      }
+      return true;
+    }
+
+    // ===== KEYBOARD LABELING + SHORTCUTS =====
+    document.addEventListener('keydown', (e) => {
+      const tag = (e.target && e.target.tagName) ? e.target.tagName.toLowerCase() : '';
+      if (tag === 'input' || tag === 'textarea' || e.target.isContentEditable) return;
+
+      // Esc
+      if (e.key === 'Escape') {
+        if (document.body.classList.contains('present')) setPresentation(false);
+        else clearSelection();
+        return;
+      }
+
+      // Metronome shortcut
+      if (e.key.toLowerCase() === 'm') {
+        metronomeOn = !metronomeOn;
+        localStorage.setItem(METRO_KEY, metronomeOn ? 'on' : 'off');
+        updateMetroUI();
+        if (metronomeOn) ensureAudio();
+        return;
+      }
+
+      if (selectedIndex === null) return;
+
+      const k = e.key;
+      const lower = k.toLowerCase();
+      const map = { d: 'D', t: 'T', s: 'S' };
+
+      if (map[lower]) {
+        setInnerLabel(selectedIndex, map[lower]);
+        return;
+      }
+
+      if (/^[0-9]$/.test(k)) {
+        setInnerLabel(selectedIndex, k);
+        return;
+      }
+
+      if (k === 'Backspace' || k === 'Delete') {
+        setInnerLabel(selectedIndex, '');
+      }
+    });
+
+    document.addEventListener('click', (ev) => {
+      if (!ev.target.closest('.cell')) clearSelection();
+    });
+
+    // ===== EVENTS =====
+    patternSelect.addEventListener('change', updatePatternButtons);
+
+    playBtn.addEventListener('click', () => {
+      // Make click idempotent and resilient to rapid taps
+      if (playing) stop();
+      else start();
+    });
+
+    // If the tab is hidden, stop playback to avoid runaway timers in the background
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden && playing) stop();
+    });
+
+    bpmInput.addEventListener('input', () => {
+      bpmVal.textContent = bpmInput.value;
+      restartIfPlaying();
+    });
+
+    gridBtn.addEventListener('click', () => setMode(mode === '8' ? '16' : '8'));
+
+    handBtn.addEventListener('click', () => {
+        const on = !document.body.classList.contains('handSplit');
+        document.body.classList.toggle('handSplit', on);
+        localStorage.setItem('handSplit', on ? 'on' : 'off');
+
+        handBtn.classList.toggle('active', on);
+        handBtn.textContent = on ? 'Left/Right: On' : 'Left/Right: Off';
+    });
+
+
+
+    themeBtn.addEventListener('click', () => {
+      document.body.classList.toggle('dark');
+      localStorage.setItem('theme', document.body.classList.contains('dark') ? 'dark' : 'light');
+    });
+
+    presentBtn.addEventListener('click', () => {
+      const on = !document.body.classList.contains('present');
+      setPresentation(on);
+    });
+
+    exitPresent.addEventListener('click', () => setPresentation(false));
+
+    function updateMetroUI() {
+      metroBtn.classList.toggle('active', metronomeOn);
+      metroBtn.textContent = metronomeOn ? 'Metronome: On' : 'Metronome: Off';
+    }
+
+    metroBtn.addEventListener('click', () => {
+      metronomeOn = !metronomeOn;
+      localStorage.setItem(METRO_KEY, metronomeOn ? 'on' : 'off');
+      updateMetroUI();
+      if (metronomeOn) ensureAudio();
+    });
+
+    clearBtn.addEventListener('click', () => {
+      pattern.fill(false);
+      innerLabels.fill('');
+      cells().forEach((c) => {
+        c.classList.remove('on', 'label-d', 'label-t', 'label-s', 'label-n', 'selected', 'play');
+        const inner = c.querySelector('.inner');
+        if (inner) inner.textContent = '';
+      });
+      selectedIndex = null;
+    });
+
+    saveBtn.addEventListener('click', () => {
+      const saved = getSavedPatterns();
+      const defaultName = `Pattern ${new Date().toLocaleString()}`;
+      const name = prompt('Save pattern as:', getSelectedPatternName() || defaultName);
+      if (!name) return;
+      saved[name] = serializePattern();
+      localStorage.setItem(LAST_USED_KEY, name);
+      setSavedPatterns(saved);
+      refreshPatternSelect(name);
+    });
+
+    loadBtn.addEventListener('click', () => {
+      const saved = getSavedPatterns();
+      const names = Object.keys(saved);
+      if (names.length === 0) {
+        alert('No saved patterns yet. Click Save to store one.');
+        return;
+      }
+
+      let name = getSelectedPatternName();
+      if (!name) {
+        const lastUsed = localStorage.getItem(LAST_USED_KEY) || '';
+        name = (lastUsed && saved[lastUsed]) ? lastUsed : names.sort((a, b) => a.localeCompare(b))[0];
+        patternSelect.value = name;
+        updatePatternButtons();
+      }
+
+      if (!saved[name]) return;
+      applyPattern(saved[name]);
+      localStorage.setItem(LAST_USED_KEY, name);
+    });
+
+    renameBtn.addEventListener('click', () => {
+      if (!ensureHasSelection()) return;
+      const saved = getSavedPatterns();
+      const oldName = getSelectedPatternName();
+      if (!saved[oldName]) return;
+
+      const nextName = prompt('Rename pattern to:', oldName);
+      if (!nextName) return;
+      const trimmed = nextName.trim();
+      if (!trimmed || trimmed === oldName) return;
+
+      if (saved[trimmed]) {
+        const ok = confirm('A pattern with that name already exists. Overwrite it?');
+        if (!ok) return;
+      }
+
+      saved[trimmed] = saved[oldName];
+      delete saved[oldName];
+      localStorage.setItem(LAST_USED_KEY, trimmed);
+      setSavedPatterns(saved);
+      refreshPatternSelect(trimmed);
+    });
+
+    deleteBtn.addEventListener('click', () => {
+      if (!ensureHasSelection()) return;
+      const saved = getSavedPatterns();
+      const name = getSelectedPatternName();
+      if (!saved[name]) return;
+
+      const ok = confirm(`Delete "${name}"? This cannot be undone.`);
+      if (!ok) return;
+
+      delete saved[name];
+      setSavedPatterns(saved);
+      if (localStorage.getItem(LAST_USED_KEY) === name) {
+        localStorage.removeItem(LAST_USED_KEY);
+      }
+      refreshPatternSelect();
+    });
+
+    exportBtn.addEventListener('click', async () => {
+      const data = JSON.stringify(serializePattern(), null, 2);
+      try {
+        await navigator.clipboard.writeText(data);
+        alert('Pattern JSON copied to clipboard.');
+      } catch {
+        prompt('Copy this JSON:', data);
+      }
+    });
+
+    importBtn.addEventListener('click', () => {
+      const raw = prompt('Paste pattern JSON here:');
+      if (!raw) return;
+      try {
+        const obj = JSON.parse(raw);
+        applyPattern(obj);
+
+        const wantSave = confirm('Loaded! Save this pattern to your list?');
+        if (wantSave) {
+          const saved = getSavedPatterns();
+          const suggested = obj.name || `Imported ${new Date().toLocaleString()}`;
+          const name = prompt('Save imported pattern as:', suggested);
+          if (name) {
+            saved[name] = obj;
+            setSavedPatterns(saved);
+            refreshPatternSelect(name);
+          }
+        }
+      } catch {
+        alert('That did not parse as JSON.');
+      }
+    });
+
+    // ===== INIT =====
+    function restorePrefs() {
+      if (localStorage.getItem('theme') === 'dark') {
+        document.body.classList.add('dark');
+      }
+
+    const handOn = localStorage.getItem('handSplit') === 'on';
+    document.body.classList.toggle('handSplit', handOn);
+    handBtn.classList.toggle('active', handOn);
+    handBtn.textContent = handOn ? 'Left/Right: On' : 'Left/Right: Off';
+
+
+      metronomeOn = (localStorage.getItem(METRO_KEY) === 'on');
+      updateMetroUI();
+
+      bpmVal.textContent = bpmInput.value;
+
+      if (localStorage.getItem(PRESENT_KEY) === 'on') {
+        document.body.classList.add('present');
+        presentBtn.classList.add('active');
+        presentBtn.textContent = 'Exit Presentation';
+        exitPresent.style.display = 'inline-flex';
+      } else {
+        exitPresent.style.display = 'none';
+      }
+    }
+
+    function runSelfTests() {
+      // Existing smoke tests (kept)
+      console.assert(document.getElementById('grid') && document.getElementById('labels'), 'Grid/labels elements exist');
+      console.assert(cells().length === STEPS, `Expected ${STEPS} cells after buildGrid()`);
+      console.assert(labels.children.length === STEPS, `Expected ${STEPS} labels after buildGrid()`);
+
+      // Added: each cell should have a hand side class
+      cells().forEach((c) => {
+        console.assert(c.classList.contains('hand-l') || c.classList.contains('hand-r'), 'Cell has hand-l/hand-r');
+      });
+
+      console.assert(!!metroBtn, 'Metronome button exists');
+      console.assert(typeof metroClick === 'function', 'metroClick is a function');
+
+      console.assert(!!presentBtn && !!exitPresent, 'Presentation buttons exist');
+
+      // Added: Hand icons should be defined as mask-images in split mode CSS
+      console.assert(getComputedStyle(document.documentElement).getPropertyValue('--hand-icon') !== '', 'Hand icon color var exists');
+
+      // Added: Mode toggle should rebuild correct counts
+      const before = STEPS;
+      setMode(mode === '8' ? '16' : '8');
+      console.assert(STEPS !== before, 'Mode toggle changes step count');
+      console.assert(cells().length === STEPS, 'Grid rebuilt to new step count');
+      console.assert(labels.children.length === STEPS, 'Labels rebuilt to new step count');
+      // revert
+      setMode(mode === '8' ? '16' : '8');
+      console.assert(cells().length === STEPS, 'Grid rebuilt back');
+    }
+
+    function showFatalError(err) {
+      // Ensure we stop any running timers if an error happens during startup
+      try { stop(); } catch {}
+
+      console.error(err);
+      // Avoid duplicate panels
+      if (document.getElementById('__fatal_panel__')) return;
+      console.error(err);
+      const panel = document.createElement('div');
+      panel.id = '__fatal_panel__';
+      panel.style.position = 'fixed';
+      panel.style.inset = '16px';
+      panel.style.zIndex = '9999';
+      panel.style.background = 'rgba(0,0,0,0.85)';
+      panel.style.color = 'white';
+      panel.style.padding = '16px';
+      panel.style.borderRadius = '16px';
+      panel.style.overflow = 'auto';
+      panel.innerHTML = `
+        <div style="font-weight:700; font-size:16px; margin-bottom:8px;">App failed to start</div>
+        <div style="opacity:.85; margin-bottom:12px;">This prevents the tab from "half-freezing" when there’s a runtime error.</div>
+        <pre style="white-space:pre-wrap; line-height:1.35;">${String(err?.stack || err)}</pre>
+        <button id="panicStop" style="margin-top:12px; padding:10px 14px; border-radius:999px; border:0; cursor:pointer;">Panic Stop</button>
+      `;
+      document.body.appendChild(panel);
+      panel.querySelector('#panicStop')?.addEventListener('click', () => {
+        try { stop(); } catch {}
+      });
+    }
+
+    // Global error handlers (helps when a bad edit slips in)
+    window.addEventListener('error', (e) => {
+      // Avoid duplicate panels
+      if (document.getElementById('__fatal_panel__')) return;
+      showFatalError(e.error || e.message || e);
+    });
+
+    window.addEventListener('unhandledrejection', (e) => {
+      if (document.getElementById('__fatal_panel__')) return;
+      showFatalError(e.reason || e);
+    });
+
+    // ===== INIT (non-blocking) =====
+    // Why: if there’s a runtime error or accidental heavy work, Chrome can show “Page Unresponsive” on reload.
+    // Strategy: render once, then initialize on the next frame, and run self-tests only in debug mode.
+
+    const DEBUG = new URLSearchParams(location.search).has('debug');
+
+    function safeInit() {
+      try {
+        restorePrefs();
+        buildGrid();
+        refreshPatternSelect();
+        updatePatternButtons();
+        if (DEBUG) runSelfTests();
+      } catch (err) {
+        showFatalError(err);
+      }
+    }
+
+    // Let the browser paint UI first, then init.
+    requestAnimationFrame(() => {
+      // Yield one more tick to keep startup smooth on slower machines.
+      setTimeout(safeInit, 0);
+    });
+  </script>
+</body>
+</html>

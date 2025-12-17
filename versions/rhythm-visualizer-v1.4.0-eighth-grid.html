@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Rhythm Visualizer — Beat Labels v1.4.0</title>
+  <style>
+    /* ===== RESET / BASE ===== */
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 24px;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #0f0f14;
+      color: #eaeaf0;
+    }
+
+    h2 { margin: 0 0 16px; font-weight: 500; }
+
+    /* ===== CONTROLS ===== */
+    .controls {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    button {
+      padding: 8px 14px;
+      border-radius: 10px;
+      border: none;
+      background: #2a2a38;
+      color: #fff;
+      cursor: pointer;
+    }
+
+    button.active { background: #5b8cff; }
+
+    input[type=range] { width: 140px; }
+
+    /* ===== GRID ===== */
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(var(--cols, 8), 1fr);
+      gap: 12px;
+      max-width: 900px;
+    }
+
+    .cell {
+      width: 100%;
+      padding-top: 100%; /* perfect square */
+      border-radius: 50%;
+      background: #222233;
+      border: 2px solid #2f2f45;
+      cursor: pointer;
+      transition: background 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+      position: relative;
+      user-select: none;
+    }
+
+    .cell .inner {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      font-size: 18px;
+      letter-spacing: 0.5px;
+      opacity: 0.95;
+      pointer-events: none;
+    }
+
+    .cell.selected {
+      border-color: rgba(234, 234, 240, 0.9);
+      box-shadow: 0 0 0 6px rgba(234, 234, 240, 0.12);
+    }
+
+    .cell.on {
+      background: #5b8cff;
+    }
+
+    .cell.play {
+      box-shadow: 0 0 0 6px rgba(91, 140, 255, 0.25);
+    }
+
+    .labels {
+      display: grid;
+      grid-template-columns: repeat(var(--cols, 8), 1fr);
+      gap: 12px;
+      margin-top: 10px;
+      max-width: 900px;
+      font-size: 12px;
+      opacity: 0.6;
+      text-align: center;
+    }
+
+    .legend {
+      margin-top: 16px;
+      max-width: 900px;
+      padding: 12px 14px;
+      border-radius: 14px;
+      background: rgba(42, 42, 56, 0.35);
+      border: 1px solid rgba(47, 47, 69, 0.7);
+    }
+    .legend-title {
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      opacity: 0.7;
+      margin-bottom: 8px;
+    }
+    .legend-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px 16px;
+      font-size: 13px;
+      opacity: 0.85;
+      align-items: center;
+    }
+    kbd {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 12px;
+      padding: 2px 6px;
+      border-radius: 7px;
+      background: rgba(234, 234, 240, 0.08);
+      border: 1px solid rgba(234, 234, 240, 0.18);
+      color: #eaeaf0;
+    }
+
+    .footer {
+      margin-top: 18px;
+      font-size: 13px;
+      opacity: 0.6;
+    }
+  </style>
+</head>
+<body>
+
+  <h2>Simple Rhythm / Groove Visualizer <span style="opacity:.5;font-size:14px;">v1.4.0</span></h2>
+
+  <div class="controls">
+    <button id="playBtn">Play</button>
+
+    <button id="gridBtn" title="Toggle between 8th and 16th grid">8ths</button>
+
+    <label>
+      BPM
+      <input id="bpm" type="range" min="40" max="200" value="90">
+    </label>
+    <span id="bpmVal">90</span>
+    <button id="clearBtn">Clear</button>
+  </div>
+
+  <div class="grid" id="grid"></div>
+  <div class="labels" id="labels"></div>
+
+  <div class="legend" aria-label="Legend">
+    <div class="legend-title">Legend</div>
+    <div class="legend-row">
+      <span><kbd>D</kbd> Ding</span>
+      <span><kbd>T</kbd> Tone</span>
+      <span><kbd>S</kbd> Slap</span>
+      <span><kbd>0–9</kbd> Digit</span>
+      <span><kbd>Shift</kbd>+<kbd>Click</kbd> Toggle on/off</span>
+      <span><kbd>Click</kbd> Select</span>
+    </div>
+  </div>
+
+  <div class="footer">v1.4.0 — Click to select a beat, then press D/T/S or a number to label it. Hold Shift while clicking to toggle a beat on/off. Toggle 8ths / 16ths.</div>
+
+  <script>
+    // ===== CONFIG =====
+    const VERSION = 'v1.4.0 — Select vs Toggle + Legend';
+
+    // Modes:
+    // - '8'  => 8 steps (eighth notes): 1 + 2 + 3 + 4 +
+    // - '16' => 16 steps (sixteenth notes): 1 e & a ...
+    let mode = '8';
+    let STEPS = 8;
+
+    // ===== ELEMENTS =====
+    const grid = document.getElementById('grid');
+    const labels = document.getElementById('labels');
+    const playBtn = document.getElementById('playBtn');
+    const gridBtn = document.getElementById('gridBtn');
+    const bpmInput = document.getElementById('bpm');
+    const bpmVal = document.getElementById('bpmVal');
+    const clearBtn = document.getElementById('clearBtn');
+
+    // ===== STATE =====
+    let pattern = [];
+    let innerLabels = []; // per-step label shown inside circle
+    let selectedIndex = null;
+
+    let step = 0;
+    let timer = null;
+    let playing = false;
+
+    // ===== HELPERS =====
+    const cells = () => document.querySelectorAll('.cell');
+
+    function setCols(n) {
+      grid.style.setProperty('--cols', String(n));
+      labels.style.setProperty('--cols', String(n));
+    }
+
+    function labelForStep(i) {
+      if (mode === '8') {
+        const beatNumber = Math.floor(i / 2) + 1;
+        return (i % 2 === 0) ? String(beatNumber) : '+';
+      }
+      const beatNumber = Math.floor(i / 4) + 1;
+      const pos = i % 4;
+      if (pos === 0) return String(beatNumber);
+      if (pos === 1) return 'e';
+      if (pos === 2) return '&';
+      return 'a';
+    }
+
+    function clearGridDom() {
+      grid.innerHTML = '';
+      labels.innerHTML = '';
+    }
+
+    function clearSelection() {
+      selectedIndex = null;
+      const all = cells();
+      all.forEach(c => c.classList.remove('selected'));
+    }
+
+    function applySelection(i) {
+      selectedIndex = i;
+      const all = cells();
+      all.forEach((c, idx) => c.classList.toggle('selected', idx === i));
+    }
+
+    function setInnerLabel(i, value) {
+      innerLabels[i] = value;
+      const cell = cells()[i];
+      if (!cell) return;
+      const inner = cell.querySelector('.inner');
+      if (inner) inner.textContent = value;
+    }
+
+    function buildGrid() {
+      clearGridDom();
+      setCols(STEPS);
+      pattern = Array(STEPS).fill(false);
+      innerLabels = Array(STEPS).fill('');
+      selectedIndex = null;
+      step = 0;
+
+      for (let i = 0; i < STEPS; i++) {
+        const cell = document.createElement('div');
+        cell.className = 'cell';
+
+        // Inner label element
+        const inner = document.createElement('div');
+        inner.className = 'inner';
+        inner.textContent = '';
+        cell.appendChild(inner);
+
+        cell.addEventListener('click', (ev) => {
+          // Prevent the background click handler from immediately clearing selection
+          ev.stopPropagation();
+
+          // If you click the already-selected cell (without Shift), unselect it
+          if (!ev.shiftKey && selectedIndex === i) {
+            clearSelection();
+            return;
+          }
+
+          // Otherwise, select it
+          applySelection(i);
+
+          // Only toggle on/off when Shift is held (cleaner for labeling workflows)
+          if (ev.shiftKey) {
+            pattern[i] = !pattern[i];
+            cell.classList.toggle('on');
+          }
+        });
+
+        grid.appendChild(cell);
+
+        const label = document.createElement('div');
+        label.textContent = labelForStep(i);
+        labels.appendChild(label);
+      }
+    }
+
+    function intervalMs() {
+      const perBeat = (mode === '8') ? 2 : 4;
+      return (60 / Number(bpmInput.value)) * 1000 / perBeat;
+    }
+
+    function tick() {
+      const all = cells();
+      if (!all.length) return;
+      all.forEach(c => c.classList.remove('play'));
+      all[step].classList.add('play');
+      step = (step + 1) % STEPS;
+    }
+
+    function start() {
+      timer = setInterval(tick, intervalMs());
+      playing = true;
+      playBtn.textContent = 'Stop';
+      playBtn.classList.add('active');
+    }
+
+    function stop() {
+      clearInterval(timer);
+      timer = null;
+      playing = false;
+      step = 0;
+      playBtn.textContent = 'Play';
+      playBtn.classList.remove('active');
+      cells().forEach(c => c.classList.remove('play'));
+    }
+
+    function restartIfPlaying() {
+      if (playing) {
+        stop();
+        start();
+      }
+    }
+
+    function setMode(nextMode) {
+      if (nextMode === mode) return;
+      const wasPlaying = playing;
+      if (wasPlaying) stop();
+
+      mode = nextMode;
+      STEPS = (mode === '8') ? 8 : 16;
+      gridBtn.textContent = (mode === '8') ? '8ths' : '16ths';
+
+      buildGrid();
+
+      if (wasPlaying) start();
+    }
+
+    // ===== KEYBOARD LABELING =====
+    // d -> D, t -> T, s -> S, digits -> digit
+    document.addEventListener('keydown', (e) => {
+      // Esc clears selection
+      if (e.key === 'Escape') {
+        clearSelection();
+        return;
+      }
+      // Don’t steal keystrokes when typing in an input
+      const tag = (e.target && e.target.tagName) ? e.target.tagName.toLowerCase() : '';
+      if (tag === 'input' || tag === 'textarea' || e.target.isContentEditable) return;
+      if (selectedIndex === null) return;
+
+      const k = e.key;
+      const lower = k.toLowerCase();
+
+      const map = { d: 'D', t: 'T', s: 'S' };
+      if (map[lower]) {
+        setInnerLabel(selectedIndex, map[lower]);
+        return;
+      }
+
+      // Number keys (top row and numpad)
+      if (/^[0-9]$/.test(k)) {
+        setInnerLabel(selectedIndex, k);
+        return;
+      }
+
+      // Optional quality-of-life: Backspace/Delete clears the label
+      if (k === 'Backspace' || k === 'Delete') {
+        setInnerLabel(selectedIndex, '');
+      }
+    });
+
+    // ===== INIT =====
+    bpmVal.textContent = bpmInput.value;
+    buildGrid();
+
+    // Clicking anywhere outside a cell clears selection
+    document.addEventListener('click', (ev) => {
+      if (!ev.target.closest('.cell')) clearSelection();
+    });
+
+    // ===== EVENTS =====
+    playBtn.addEventListener('click', () => playing ? stop() : start());
+
+    bpmInput.addEventListener('input', () => {
+      bpmVal.textContent = bpmInput.value;
+      restartIfPlaying();
+    });
+
+    clearBtn.addEventListener('click', () => {
+      pattern.fill(false);
+      innerLabels.fill('');
+      cells().forEach((c, i) => {
+        c.classList.remove('on');
+        const inner = c.querySelector('.inner');
+        if (inner) inner.textContent = '';
+      });
+    });
+
+    gridBtn.addEventListener('click', () => {
+      setMode(mode === '8' ? '16' : '8');
+    });
+  </script>
+
+</body>
+</html>
