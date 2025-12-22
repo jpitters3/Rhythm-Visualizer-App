@@ -127,6 +127,24 @@
       overflow: hidden; /* keeps half-fills clean */
     }
 
+    /* ===== PLAY EXPAND (NO LAYOUT SHIFT) ===== */
+    /* Transform-based animation so other beats never move */
+    .cell {
+      transform: translateZ(0) scale(1);
+      transition: transform 250ms ease;
+      will-change: transform;
+    }
+
+    /* Expand only when playing AND not a ghost note */
+    .cell.play:not(.ghost) {
+      transform: translateZ(0) scale(1.2);
+    }
+
+    /* Never expand ghost notes */
+    .cell.ghost.play {
+      transform: translateZ(0) scale(1);
+    }
+
     .cell .inner {
       position: absolute;
       inset: 0;
@@ -724,6 +742,10 @@
 
       cell.classList.remove('label-d', 'label-t', 'label-s', 'label-n', 'has-label');
       const v = String(value || '');
+      
+      // ghost = no label set
+      cell.classList.toggle('ghost', !v);
+
       if (!v) return;
       cell.classList.add('has-label');
 
@@ -769,6 +791,9 @@
           // Grid row (row 2)
           const cell = document.createElement('div');
           cell.className = 'cell gridCell';
+
+          // Default: unlabeled = ghost
+          cell.classList.add('ghost');
 
           // Assign hand + beat position classes (same logic you already had, but using local step i)
           if (mode === '8') {
