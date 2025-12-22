@@ -509,6 +509,13 @@
       <div class="modal-title">Give me a groove!</div>
       <div class="modal-subtitle">Choose accents, or leave as Auto and hit Go.</div>
 
+      <select id="complexitySelect" title="Groove complexity">
+        <option value="1" selected>Simple</option>
+        <option value="2">Groovy</option>
+        <option value="3">Wild</option>
+        <option value="R">Completely Random</option>
+      </select>
+      
       <div class="modal-grid">
         <label class="modal-row">
           <span>Ding accents</span>
@@ -585,9 +592,10 @@
     const takCount = document.getElementById('takCount');
     const slapCount = document.getElementById('slapCount');
     const grooveHint = document.getElementById('grooveHint');
+    const complexitySelect = document.getElementById('complexitySelect');
 
 
-    // ===== STATE =====
+    // ===== STATE =====s
     let pattern = [];
     let innerLabels = [];
     let selectedIndex = null;
@@ -600,6 +608,15 @@
     // Metronome
     let metronomeOn = false;
     let audioCtx = null;
+
+    let audioUnlocked = false;
+    let samplesPreloaded = false;
+
+    function unlockAudio() {
+      audioUnlocked = true;
+      ensureAudio();
+      preloadAudioSamples();
+    }
 
     // Handpan Sounds
     let handpanSoundsOn = false;
@@ -729,6 +746,9 @@
     }
 
     function ensureAudio() {
+      // Don’t create/resume AudioContext until a real user gesture has happened
+      if (!audioUnlocked) return;
+  
       if (!audioCtx) {
         const Ctx = window.AudioContext || window.webkitAudioContext;
         if (Ctx) audioCtx = new Ctx();
@@ -738,13 +758,24 @@
       }
     }
 
+    // Preload note samples once audio is unlocked
+    function preloadAudioSamples()
+    {
+      if (!samplesPreloaded && audioCtx) {
+        samplesPreloaded = true;
+        for (let i=1; i<=8; i++) loadNumberSample(i);
+        loadSample('D', './assets/audio/dkurd_ding.wav');
+        loadSample('T', './assets/audio/dkurd_tak.wav');
+        loadSample('S', './assets/audio/dkurd_slap.wav');
+      }
+    }
     async function loadSample(key, url) {
-        ensureAudio();
-        if (!audioCtx) return;
+      ensureAudio();
+      if (!audioCtx) return;
 
-        const res = await fetch(url);
-        const arrayBuffer = await res.arrayBuffer();
-        samples[key] = await audioCtx.decodeAudioData(arrayBuffer);
+      const res = await fetch(url);
+      const arrayBuffer = await res.arrayBuffer();
+      samples[key] = await audioCtx.decodeAudioData(arrayBuffer);
     }
 
     function metroClick(kind) {
@@ -777,7 +808,14 @@
       if (!all.length) return;
 
       all.forEach(c => c.classList.remove('play'));
-      all[step].classList.add('play');
+      const cell = all[step];
+      cell.classList.add('play');
+
+      // Numbered beat playback
+      const label = innerLabels[step];
+      if (/^[1-8]$/.test(label)) {
+        playNumberSample(label);
+      }
 
       if (metronomeOn) {
         const beatStride = (mode === '8') ? 2 : 4;
@@ -795,89 +833,89 @@
       step = (step + 1) % STEPS;
     }
 
-    // Play Handpan Sounds
+    // ==== PLAY HANDPAN SOUNDS ====
     function playSample(key) {
-        if (!handpanSoundsOn) return;
-        ensureAudio();
-        if (!audioCtx) return;
+      if (!handpanSoundsOn) return;
+      ensureAudio();
+      if (!audioCtx) return;
 
-        const buffer = samples[key];
-        if (!buffer) return; // not loaded yet
+      const buffer = samples[key];
+      if (!buffer) return; // not loaded yet
 
-        const src = audioCtx.createBufferSource();
-        const gain = audioCtx.createGain();
+      const src = audioCtx.createBufferSource();
+      const gain = audioCtx.createGain();
 
-        src.buffer = buffer;
+      src.buffer = buffer;
 
-        // Tiny fade-in only (prevents click)
-        const t = audioCtx.currentTime;
-        gain.gain.setValueAtTime(0.0001, t);
-        gain.gain.exponentialRampToValueAtTime(1.0, t + 0.005);
+      // Tiny fade-in only (prevents click)
+      const t = audioCtx.currentTime;
+      gain.gain.setValueAtTime(0.0001, t);
+      gain.gain.exponentialRampToValueAtTime(1.0, t + 0.005);
 
-        // Tiny fade out (prevents click)
-        const dur = src.buffer.duration;
-        gain.gain.setValueAtTime(1.0, t + Math.max(0, dur - 0.02));
-        gain.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      // Tiny fade out (prevents click)
+      const dur = src.buffer.duration;
+      gain.gain.setValueAtTime(1.0, t + Math.max(0, dur - 0.02));
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + dur);
 
-        src.connect(gain);
-        gain.connect(audioCtx.destination);
+      src.connect(gain);
+      gain.connect(audioCtx.destination);
 
-        src.start(t);
+      src.start(t);
     }
 
     function playTone() {
-        ensureAudio();
-        if (!audioCtx) return;
+      ensureAudio();
+      if (!audioCtx) return;
 
-        const t = audioCtx.currentTime;
+      const t = audioCtx.currentTime;
 
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
 
-        osc.type = 'triangle';
-        osc.frequency.setValueAtTime(330, t);
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(330, t);
 
-        gain.gain.setValueAtTime(0.0001, t);
-        gain.gain.exponentialRampToValueAtTime(0.18, t + 0.003);
-        gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.20);
+      gain.gain.setValueAtTime(0.0001, t);
+      gain.gain.exponentialRampToValueAtTime(0.18, t + 0.003);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.20);
 
-        osc.connect(gain);
-        gain.connect(audioCtx.destination);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
 
-        osc.start(t);
-        osc.stop(t + 0.22);
+      osc.start(t);
+      osc.stop(t + 0.22);
     }
 
     function playSlap() {
-        ensureAudio();
-        if (!audioCtx) return;
+      ensureAudio();
+      if (!audioCtx) return;
 
-        const t = audioCtx.currentTime;
+      const t = audioCtx.currentTime;
 
-        // Noise burst
-        const bufferSize = Math.floor(audioCtx.sampleRate * 0.05);
-        const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
-        const data = buffer.getChannelData(0);
-        for (let i = 0; i < bufferSize; i++) data[i] = (Math.random() * 2 - 1);
+      // Noise burst
+      const bufferSize = Math.floor(audioCtx.sampleRate * 0.05);
+      const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) data[i] = (Math.random() * 2 - 1);
 
-        const noise = audioCtx.createBufferSource();
-        noise.buffer = buffer;
+      const noise = audioCtx.createBufferSource();
+      noise.buffer = buffer;
 
-        const hp = audioCtx.createBiquadFilter();
-        hp.type = 'highpass';
-        hp.frequency.setValueAtTime(800, t);
+      const hp = audioCtx.createBiquadFilter();
+      hp.type = 'highpass';
+      hp.frequency.setValueAtTime(800, t);
 
-        const gain = audioCtx.createGain();
-        gain.gain.setValueAtTime(0.0001, t);
-        gain.gain.exponentialRampToValueAtTime(0.20, t + 0.002);
-        gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.06);
+      const gain = audioCtx.createGain();
+      gain.gain.setValueAtTime(0.0001, t);
+      gain.gain.exponentialRampToValueAtTime(0.20, t + 0.002);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.06);
 
-        noise.connect(hp);
-        hp.connect(gain);
-        gain.connect(audioCtx.destination);
+      noise.connect(hp);
+      hp.connect(gain);
+      gain.connect(audioCtx.destination);
 
-        noise.start(t);
-        noise.stop(t + 0.06);
+      noise.start(t);
+      noise.stop(t + 0.06);
     }
 
     function playHandpanSoundForLabel(label) {
@@ -885,6 +923,31 @@
         if (samples[label]) playSample(label);
     }
 
+    // ===== PLAY NOTES (BY NUMBER) =====
+    const numberSamples = {};
+
+    async function loadNumberSample(n) {
+      if (!audioCtx || numberSamples[n]) return;
+
+      try {
+        const res = await fetch(`./assets/audio/${n}.wav`);
+        const buf = await res.arrayBuffer();
+        numberSamples[n] = await audioCtx.decodeAudioData(buf);
+      } catch (e) {
+        console.warn(`Could not load ${n}.wav`, e);
+      }
+    }
+
+    function playNumberSample(n) {
+      ensureAudio();
+      const buffer = numberSamples[n];
+      if (!audioCtx || !buffer) return;
+
+      const src = audioCtx.createBufferSource();
+      src.buffer = buffer;
+      src.connect(audioCtx.destination);
+      src.start();
+    }
     function start() {
       // Guard: never allow multiple intervals to stack (can freeze the tab)
       if (playing || timers.length) return;
@@ -932,12 +995,167 @@
       if (wasPlaying) start();
     }
 
-    // GROOVE PICKER FUNCTIONS //
+    // GROOVE MODAL FUNCTIONS //
     function openGrooveModal() {
       grooveModal.classList.add('open');
       grooveModal.setAttribute('aria-hidden', 'false');
       updateGroovePickerLimits();
       updateGrooveHint();
+    }
+
+    // ===== GROOVE GEN (Patch 3) =====
+    function shuffle(arr) {
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      return arr;
+    }
+
+    function randInt(min, max) {
+      return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+
+    function clearAllBeatsAndLabels() {
+      pattern.fill(false);
+      innerLabels.fill('');
+      cells().forEach((c) => {
+        c.classList.remove('on', 'label-d', 'label-t', 'label-s', 'label-n', 'selected', 'play');
+        const inner = c.querySelector('.inner');
+        if (inner) inner.textContent = '';
+      });
+      selectedIndex = null;
+    }
+
+    function neighbors(i, steps) {
+      const out = [];
+      if (i - 1 >= 0) out.push(i - 1);
+      if (i + 1 < steps) out.push(i + 1);
+      return out;
+    }
+
+    // strength: 'strict' | 'soft' | 'none'
+    function pickPositions({ pool, count, used, strength }) {
+      if (count <= 0) return [];
+      const picks = [];
+
+      const candidates = pool.filter(i => !used.has(i));
+      shuffle(candidates);
+
+      for (const i of candidates) {
+        if (picks.length >= count) break;
+
+        const hasAdj = neighbors(i, STEPS).some(j => used.has(j) || picks.includes(j));
+
+        if (strength === 'strict' && hasAdj) continue;
+        if (strength === 'soft' && hasAdj && Math.random() < 0.7) continue;
+
+        picks.push(i);
+        used.add(i);
+      }
+
+      // If we didn't fill due to neighbor rules, fill remaining without rules
+      if (picks.length < count) {
+        const remaining = pool.filter(i => !used.has(i));
+        shuffle(remaining);
+        for (const i of remaining) {
+          if (picks.length >= count) break;
+          picks.push(i);
+          used.add(i);
+        }
+      }
+
+      return picks;
+    }
+
+    // Applies D/T/S accents to the grid:
+    // - Beat 1 (index 0) is always Ding
+    // - No downbeat/upbeat bias (anything goes)
+    function applyGroove({ D, T, S, placement = 'none', completelyRandom = false, enforceThreeEmpty = false }) {
+      const maxAccents = 8; // your rule: accents never exceed 8 in 8-step grid
+      const minEmpty = 3;
+
+      // clamp
+      D = Math.max(0, Math.min(maxAccents, Math.floor(D)));
+      T = Math.max(0, Math.min(maxAccents, Math.floor(T)));
+      S = Math.max(0, Math.min(maxAccents, Math.floor(S)));
+
+      // beat 1 always Ding
+      if (D < 1) D = 1;
+
+      if (enforceThreeEmpty) {
+        const cap = Math.max(1, maxAccents - minEmpty); // keep >= 3 empty beats
+        let total = D + T + S;
+        if (total > cap) {
+          let overflow = total - cap;
+          while (overflow > 0 && S > 0) { S--; overflow--; }
+          while (overflow > 0 && T > 0) { T--; overflow--; }
+          while (overflow > 0 && D > 1) { D--; overflow--; }
+        }
+      }
+
+      clearAllBeatsAndLabels();
+
+      const all = cells();
+      if (!all.length) return;
+
+      // force beat 1
+      pattern[0] = true;
+      all[0].classList.add('on');
+      setInnerLabel(0, 'D');
+
+      let dLeft = Math.max(0, D - 1);
+      let tLeft = Math.max(0, T);
+      let sLeft = Math.max(0, S);
+
+      const pool = Array.from({ length: STEPS }, (_, i) => i).slice(1);
+      const used = new Set([0]);
+
+      if (completelyRandom) {
+        const totalLeft = dLeft + tLeft + sLeft;
+        shuffle(pool);
+        const picks = pool.slice(0, totalLeft);
+
+        const labelsArr = [];
+        for (let i = 0; i < dLeft; i++) labelsArr.push('D');
+        for (let i = 0; i < tLeft; i++) labelsArr.push('T');
+        for (let i = 0; i < sLeft; i++) labelsArr.push('S');
+        shuffle(labelsArr);
+
+        for (let i = 0; i < picks.length; i++) {
+          const idx = picks[i];
+          pattern[idx] = true;
+          all[idx].classList.add('on');
+          setInnerLabel(idx, labelsArr[i] || '');
+        }
+
+        clearSelection();
+        return;
+      }
+
+      const strength = placement; // 'strict' | 'soft' | 'none'
+
+      const dPos = pickPositions({ pool, count: dLeft, used, strength });
+      const tPos = pickPositions({ pool, count: tLeft, used, strength });
+      const sPos = pickPositions({ pool, count: sLeft, used, strength });
+
+      for (const idx of dPos) {
+        pattern[idx] = true;
+        all[idx].classList.add('on');
+        setInnerLabel(idx, 'D');
+      }
+      for (const idx of tPos) {
+        pattern[idx] = true;
+        all[idx].classList.add('on');
+        setInnerLabel(idx, 'T');
+      }
+      for (const idx of sPos) {
+        pattern[idx] = true;
+        all[idx].classList.add('on');
+        setInnerLabel(idx, 'S');
+      }
+
+      clearSelection();
     }
 
     function closeGrooveModal() {
@@ -1015,7 +1233,7 @@
       selectedIndex = null;
     }
 
-    // ===== GROOVE PICKER ===== //
+    // ===== GROOVE MODAL ===== //
     
     function neighbors(i, slots) {
       const out = [];
@@ -1360,6 +1578,9 @@
     patternSelect.addEventListener('change', updatePatternButtons);
 
     playBtn.addEventListener('click', () => {
+      // Unlock audio
+      unlockAudio();
+
       // Make click idempotent and resilient to rapid taps
       if (playing) stop();
       else start();
@@ -1538,67 +1759,83 @@
       }
     });
 
-    // GROOVE PICKER EVENTS //
-    grooveBtn.addEventListener('click', () => openGrooveModal());
+    // GROOVE MODAL EVENTS //
 
-    grooveCancel.addEventListener('click', () => closeGrooveModal());
-
-    grooveModal.addEventListener('click', (e) => {
-      // click outside closes
+    // ===== GROOVE MODAL EVENTS (Patch 3) =====
+    grooveBtn?.addEventListener('click', () => openGrooveModal());
+    grooveCancel?.addEventListener('click', () => closeGrooveModal());
+    grooveModal?.addEventListener('click', (e) => {
       if (e.target === grooveModal) closeGrooveModal();
     });
 
-    [dingCount, takCount, slapCount].forEach((el) => {
-      el.addEventListener('input', () => {
-        updateGroovePickerLimits();
-        updateGrooveHint();
-      });
+    ;[dingCount, takCount, slapCount, complexitySelect].forEach((el) => {
+      el?.addEventListener('input', updateGrooveHint);
+      el?.addEventListener('change', updateGrooveHint);
     });
 
-    grooveGo.addEventListener('click', () => {
-      // Determine whether user touched any picker.
+    grooveGo?.addEventListener('click', () => {
       const d = parseCount(dingCount);
       const t = parseCount(takCount);
       const s = parseCount(slapCount);
-      const touched = (d !== null) || (t !== null) || (s !== null);
+      const manual = (d !== null) || (t !== null) || (s !== null);
 
-      let D = d ?? 0;
-      let T = t ?? 0;
-      let S = s ?? 0;
+      // ===== Manual mode: ignore complexity =====
+      if (manual) {
+        let D = d ?? 0;
+        let T = t ?? 0;
+        let S = s ?? 0;
 
-      if (!touched) {
-        // Auto mode: ensure >= 3 non-accented beats on an 8-step grid
-        // => total accents <= 5 (and also <= 8 always)
-        const maxTotal = Math.min(5, 8);
-        const total = Math.floor(Math.random() * (maxTotal + 1)); // 0..5
+        if (D < 1) D = 1; // beat 1 ding
 
-        // Random split of `total` into D/T/S
-        const a = Math.floor(Math.random() * (total + 1));
-        const b = Math.floor(Math.random() * (total - a + 1));
-        const c = total - a - b;
-        // shuffle assignment across D/T/S so it's not biased
-        const parts = shuffle([a, b, c]);
-        D = parts[0]; T = parts[1]; S = parts[2];
-      }
+        if (D + T + S > 8) {
+          alert('D + T + S cannot exceed 8.');
+          return;
+        }
 
-      // Force "1" to be a Ding
-      if (D < 1) D = 1;
-
-      // If forcing Ding makes us exceed 8 accents, reduce others to fit
-      while (D + T + S > 8) {
-        if (S > 0) S--;
-        else if (T > 0) T--;
-        else break;
-      }
-
-
-      // Enforce constraint (just in case)
-      if (D + T + S > 8) {
-        alert('Total accents cannot exceed 8.');
+        applyGroove({ D, T, S, placement: 'none', completelyRandom: false, enforceThreeEmpty: false });
+        closeGrooveModal();
         return;
       }
 
-      generateGroove(D, T, S);
+      // ===== Complexity mode: ignore manual counts =====
+      const c = complexitySelect?.value || '1';
+
+      if (c === 'R') {
+        // Completely random: no rules except beat 1 Ding
+        const totalAccents = randInt(1, 8);
+        const remaining = totalAccents - 1;
+
+        const a = randInt(0, remaining);
+        const b = randInt(0, remaining - a);
+        const c2 = remaining - a - b;
+        const parts = shuffle([a, b, c2]);
+
+        const D = 1 + parts[0];
+        const T = parts[1];
+        const S = parts[2];
+
+        applyGroove({ D, T, S, completelyRandom: true, enforceThreeEmpty: true });
+        closeGrooveModal();
+        return;
+      }
+
+      const level = (c === '2') ? 2 : (c === '3') ? 3 : 1;
+      const maxTotal = (level === 1) ? 2 : (level === 2) ? 4 : 8;
+      const placement = (level === 1) ? 'strict' : (level === 2) ? 'soft' : 'none';
+
+      const totalAccents = randInt(1, maxTotal);
+      const remaining = totalAccents - 1;
+
+      const a = randInt(0, remaining);
+      const b = randInt(0, remaining - a);
+      const c3 = remaining - a - b;
+      const parts = shuffle([a, b, c3]);
+
+      const D = 1 + parts[0];
+      const T = parts[1];
+      const S = parts[2];
+
+      applyGroove({ D, T, S, placement, completelyRandom: false, enforceThreeEmpty: true });
       closeGrooveModal();
     });
 
@@ -1716,10 +1953,6 @@
         buildGrid();
         refreshPatternSelect();
         updatePatternButtons();
-        // Preload handpan samples
-        loadSample('D', './assets/audio/dkurd_ding.wav');
-        loadSample('T', './assets/audio/dkurd_tak.wav');
-        loadSample('S', './assets/audio/dkurd_slap.wav');
 
         if (DEBUG) runSelfTests();
       } catch (err) {
