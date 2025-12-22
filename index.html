@@ -141,6 +141,59 @@
       color: var(--text);
     }
 
+    /* ===== MULTI-MEASURE WRAP ===== */
+    .measures {
+      max-width: 900px;
+    }
+
+    /* One measure = (labels row + grid row) + a + button column */
+    .measure {
+      display: grid;
+      grid-template-columns: repeat(var(--cols, 8), 1fr) auto;
+      grid-template-rows: auto auto;
+      gap: 12px;
+      margin-bottom: 16px;
+      align-items: center;
+    }
+
+    /* We’ll render label cells + grid cells directly inside the measure grid */
+    .labelCell {
+      text-align: center;
+      font-size: 24px;
+      font-weight: 500;
+      opacity: 0.8;
+    }
+
+    .gridCell {
+      grid-row: 2;
+    }
+
+    /* + button sits to the right of the last beat and spans both rows */
+    .add-measure {
+      grid-column: calc(var(--cols, 8) + 1);
+      grid-row: 1 / span 2;
+      width: 46px;
+      height: 46px;
+      padding: 0;
+      border-radius: 999px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 26px;
+      line-height: 1;
+      font-weight: 700;
+      background: var(--btn-bg);
+      border: 1px solid var(--panel-border);
+    }
+
+    .add-measure:hover { filter: brightness(1.03); }
+
+    @media (max-width: 600px) {
+      .labelCell { font-size: 18px; }
+      .add-measure { width: 40px; height: 40px; font-size: 24px; }
+    }
+
+
     /* Selection ring */
     .cell.selected {
       border-color: rgba(234, 234, 240, 0.9);
@@ -475,9 +528,7 @@
         <span id="bpmVal">90</span>
         <button id="clearBtn">Clear</button>
     </div>
-
-    <div class="labels" id="labels"></div>
-    <div class="grid" id="grid"></div>
+    <div id="measures" class="measures" aria-label="Rhythm grid"></div>
   </div><!-- container -->
 
   <div class="legend" aria-label="Legend">
@@ -561,8 +612,7 @@
 
 
     // ===== ELEMENTS =====
-    const grid = document.getElementById('grid');
-    const labels = document.getElementById('labels');
+    const measuresEl = document.getElementById('measures');
     const playBtn = document.getElementById('playBtn');
     const metroBtn = document.getElementById('metroBtn');
     const hpBtn = document.getElementById('hpBtn');
@@ -595,10 +645,11 @@
     const complexitySelect = document.getElementById('complexitySelect');
 
 
-    // ===== STATE =====s
+    // ===== STATE =====
     let pattern = [];
     let innerLabels = [];
     let selectedIndex = null;
+    let measures = 1;
 
     let step = 0;
     // Use an array of timers to prevent accidental stacking (double-clicks, race conditions)
@@ -632,8 +683,8 @@
     const cells = () => document.querySelectorAll('.cell');
 
     function setCols(n) {
-      grid.style.setProperty('--cols', String(n));
-      labels.style.setProperty('--cols', String(n));
+      // Apply to the measures wrapper (it cascades to measure children)
+      if (measuresEl) measuresEl.style.setProperty('--cols', String(n));
     }
 
     function labelForStep(i) {
@@ -650,8 +701,7 @@
     }
 
     function clearGridDom() {
-      grid.innerHTML = '';
-      labels.innerHTML = '';
+      if (measuresEl) measuresEl.innerHTML = '';
     }
 
     function clearSelection() {
@@ -688,56 +738,111 @@
     function buildGrid() {
       clearGridDom();
       setCols(STEPS);
-      pattern = Array(STEPS).fill(false);
-      innerLabels = Array(STEPS).fill('');
+
+      const totalSteps = measures * STEPS;
+
+      // Preserve existing data when changing measures
+      const prevPattern = pattern.slice();
+      const prevLabels = innerLabels.slice();
+
+      pattern = Array(totalSteps).fill(false);
+      innerLabels = Array(totalSteps).fill('');
+      for (let i = 0; i < Math.min(prevPattern.length, totalSteps); i++) pattern[i] = !!prevPattern[i];
+      for (let i = 0; i < Math.min(prevLabels.length, totalSteps); i++) innerLabels[i] = String(prevLabels[i] || '');
+
       selectedIndex = null;
       step = 0;
 
-      for (let i = 0; i < STEPS; i++) {
-        const cell = document.createElement('div');
-        cell.className = 'cell';
+      for (let m = 0; m < measures; m++) {
+        const measureWrap = document.createElement('div');
+        measureWrap.className = 'measure';
 
-        // Assign hand + beat position (downbeat/upbeat)
-        if (mode === '8') {
-            const isDown = (i % 2 === 0); // numbered beats are even indices
+        for (let i = 0; i < STEPS; i++) {
+          const globalIndex = (m * STEPS) + i;
+
+          // Labels row (row 1)
+          const label = document.createElement('div');
+          label.className = 'labelCell';
+          label.textContent = labelForStep(i);
+          measureWrap.appendChild(label);
+
+          // Grid row (row 2)
+          const cell = document.createElement('div');
+          cell.className = 'cell gridCell';
+
+          // Assign hand + beat position classes (same logic you already had, but using local step i)
+          if (mode === '8') {
+            const isDown = (i % 2 === 0);
             cell.classList.add(isDown ? 'hand-r' : 'hand-l');
             cell.classList.add(isDown ? 'downbeat' : 'upbeat');
-        } else {
-            const pos = i % 4;            // 1 e & a
-            const isDown = (pos === 0);   // only "1,2,3,4" are downbeats
+          } else {
+            const pos = i % 4;
+            const isDown = (pos === 0);
             cell.classList.add((pos === 0 || pos === 2) ? 'hand-r' : 'hand-l');
             cell.classList.add(isDown ? 'downbeat' : 'upbeat');
+          }
+
+          const inner = document.createElement('div');
+          inner.className = 'inner';
+          inner.textContent = '';
+          cell.appendChild(inner);
+
+          // Ghost note dot
+          const ghost = document.createElement('div');
+          ghost.className = 'ghost-dot';
+          cell.appendChild(ghost);
+
+          // Restore ON state
+          cell.classList.toggle('on', !!pattern[globalIndex]);
+
+          cell.addEventListener('click', (ev) => {
+            ev.stopPropagation();
+
+            // Click selects (Esc clears selection)
+            if (selectedIndex === globalIndex) clearSelection();
+            else applySelection(globalIndex);
+
+            // Click toggles on/off (your current behavior)
+            pattern[globalIndex] = !pattern[globalIndex];
+            cell.classList.toggle('on', pattern[globalIndex]);
+          });
+
+          measureWrap.appendChild(cell);
         }
 
-        const inner = document.createElement('div');
-        inner.className = 'inner';
-        inner.textContent = '';
-        cell.appendChild(inner);
+        // Add + button ONLY on last measure
+        const addBtn = document.createElement('button');
+        const existingAddBtn = document.getElementById('add-measure');
 
-        // Ghost note dot (shown only when no label is set)
-        const ghost = document.createElement('div');
-        ghost.className = 'ghost-dot';
-        cell.appendChild(ghost);
+        if (m === measures - 1) {
+          addBtn.id = 'add-measure';
+          addBtn.className = 'add-measure';
+          addBtn.type = 'button';
+          addBtn.title = 'Add another measure';
+          addBtn.style = 'width: 200px'
+          addBtn.textContent = '+ Add Measure';
+          addBtn.addEventListener('click', (ev) => {
+            ev.stopPropagation();
+            addMeasure();
+          });
 
+          if (existingAddBtn) existingAddBtn.remove();
+          measuresEl.after(addBtn);
+        }
 
-        cell.addEventListener('click', (ev) => {
-          ev.stopPropagation();
-
-          // Click selects the cell (Esc clears selection)
-          if (selectedIndex === i) clearSelection();
-          else applySelection(i);
-
-          // Click also toggles the beat on/off
-          pattern[i] = !pattern[i];
-          cell.classList.toggle('on', pattern[i]);
-        });
-
-        grid.appendChild(cell);
-
-        const label = document.createElement('div');
-        label.textContent = labelForStep(i);
-        labels.appendChild(label);
+        measuresEl.appendChild(measureWrap);
       }
+
+      // Apply labels after DOM exists
+      for (let i = 0; i < totalSteps; i++) {
+        if (innerLabels[i]) setInnerLabel(i, innerLabels[i]);
+      }
+    }
+
+    function addMeasure() {
+      measures += 1;
+      buildGrid();
+      restartIfPlaying();
     }
 
     function intervalMs() {
@@ -830,7 +935,8 @@
         playHandpanSoundForLabel(label);
       }
 
-      step = (step + 1) % STEPS;
+      const totalSteps = measures * STEPS;
+      step = (step + 1) % totalSteps;
     }
 
     // ==== PLAY HANDPAN SOUNDS ====
@@ -949,6 +1055,9 @@
       src.start();
     }
     function start() {
+      // Unlock audio
+      unlockAudio();
+      
       // Guard: never allow multiple intervals to stack (can freeze the tab)
       if (playing || timers.length) return;
 
@@ -982,6 +1091,8 @@
     }
 
     function setMode(nextMode) {
+      measures = 1;
+      
       if (nextMode === mode) return;
       const wasPlaying = playing;
       if (wasPlaying) stop();
@@ -1452,6 +1563,7 @@
         bpm: Number(bpmInput.value),
         handSplit: document.body.classList.contains('handSplit'),
         steps: STEPS,
+        measures: measures,
         on: pattern.slice(),
         labels: innerLabels.slice(),
       };
@@ -1468,6 +1580,9 @@
 
       setMode(state.mode === '16' ? '16' : '8');
 
+      measures = Number.isFinite(state.measures) ? Math.max(1, Math.floor(state.measures)) : 1;
+      buildGrid();
+
       if (typeof state.handSplit === 'boolean') {
         document.body.classList.toggle('handSplit', state.handSplit);
         localStorage.setItem('handSplit', state.handSplit ? 'on' : 'off');
@@ -1480,14 +1595,18 @@
         bpmVal.textContent = bpmInput.value;
       }
 
+      const totalSteps = measures * STEPS;
       const all = cells();
-      for (let i = 0; i < STEPS; i++) {
+
+      // Apply on/off across all steps we have
+      for (let i = 0; i < totalSteps; i++) {
         const isOn = !!state.on[i];
         pattern[i] = isOn;
         all[i]?.classList.toggle('on', isOn);
       }
 
-      for (let i = 0; i < STEPS; i++) {
+      // Apply labels across all steps
+      for (let i = 0; i < totalSteps; i++) {
         setInnerLabel(i, state.labels[i] || '');
       }
 
@@ -1578,9 +1697,6 @@
     patternSelect.addEventListener('change', updatePatternButtons);
 
     playBtn.addEventListener('click', () => {
-      // Unlock audio
-      unlockAudio();
-
       // Make click idempotent and resilient to rapid taps
       if (playing) stop();
       else start();
@@ -1644,14 +1760,16 @@
     });
 
     clearBtn.addEventListener('click', () => {
-      pattern.fill(false);
-      innerLabels.fill('');
+      pattern = Array(measures * STEPS).fill(false);
+      innerLabels = Array(measures * STEPS).fill('');
+
       cells().forEach((c) => {
         c.classList.remove('on', 'label-d', 'label-t', 'label-s', 'label-n', 'has-label', 'selected', 'play');
         const inner = c.querySelector('.inner');
         if (inner) inner.textContent = '';
       });
       selectedIndex = null;
+      step = 0;
     });
 
     saveBtn.addEventListener('click', () => {
