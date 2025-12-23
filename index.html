@@ -518,7 +518,9 @@
   <div class="container">
     <!-- Pattern management row -->
     <div class="pattern-row">
-        <select id="patternSelect" title="Saved patterns">
+      <button id="accountBtn" title="Sign in / out">Account</button>
+      <span id="accountStatus" style="opacity:.75;font-size:13px;"></span>
+      <select id="patternSelect" title="Saved patterns">
         <option value="">(no saved patterns)</option>
         </select>
         <button id="saveBtn" title="Save current pattern">Save</button>
@@ -611,7 +613,47 @@
     </div>
   </div>
 
-  <script>
+  <!-- Auth Modal -->
+  <div id="authModal" class="modal-overlay" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-label="Account">
+      <div class="modal-title">Account</div>
+      <div class="modal-subtitle">Sign in to save grooves to the cloud.</div>
+  
+      <div class="modal-grid">
+        <label class="modal-row">
+          <span>Email</span>
+          <input id="authEmail" type="email" autocomplete="email" placeholder="you@example.com" style="width:200px;padding:10px 12px;border-radius:999px;border:1px solid var(--panel-border);background:var(--panel);color:var(--text);" />
+        </label>
+  
+        <label class="modal-row">
+          <span>Password</span>
+          <input id="authPass" type="password" autocomplete="current-password" placeholder="••••••••" style="width:200px;padding:10px 12px;border-radius:999px;border:1px solid var(--panel-border);background:var(--panel);color:var(--text);" />
+        </label>
+      </div>
+  
+      <div class="modal-hint" id="authHint">Tip: Use Register once, then Sign in.</div>
+  
+      <div class="modal-actions">
+        <button id="authCancel">Cancel</button>
+        <button id="authRegister">Register</button>
+        <button id="authLogin" class="active">Sign in</button>
+        <button id="authLogout" style="display:none;">Sign out</button>
+      </div>
+    </div>
+  </div>
+  
+
+  <script type="module">
+    // SUPABASE
+    import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
+
+    // TODO: paste yours from Supabase Dashboard → Settings → API
+    const SUPABASE_URL = "https://ycdlqkaymkgpbpgtqubs.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InljZGxxa2F5bWtncGJwZ3RxdWJzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY1MTAxMDEsImV4cCI6MjA4MjA4NjEwMX0.L6O0g5ia2pUPyYahy0wTNElo5MeF4JCLo7W8-8f3yRE";
+
+    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    let currentUser = null;
+
     // ===== CONFIG =====
     const VERSION = 'v1.17.4 — Cleaner Hand Silhouette + Fix Right Position';
 
@@ -661,6 +703,78 @@
     const slapCount = document.getElementById('slapCount');
     const grooveHint = document.getElementById('grooveHint');
     const complexitySelect = document.getElementById('complexitySelect');
+
+    // ===== AUTH ELEMENTS =====
+    const accountBtn = document.getElementById('accountBtn');
+    const accountStatus = document.getElementById('accountStatus');
+
+    const authModal = document.getElementById('authModal');
+    const authCancel = document.getElementById('authCancel');
+    const authRegister = document.getElementById('authRegister');
+    const authLogin = document.getElementById('authLogin');
+    const authLogout = document.getElementById('authLogout');
+    const authEmail = document.getElementById('authEmail');
+    const authPass = document.getElementById('authPass');
+    const authHint = document.getElementById('authHint');
+
+    function openAuthModal() {
+      authModal.classList.add('open');
+      authModal.setAttribute('aria-hidden', 'false');
+      setTimeout(() => authEmail?.focus(), 0);
+    }
+    function closeAuthModal() {
+      authModal.classList.remove('open');
+      authModal.setAttribute('aria-hidden', 'true');
+    }
+
+    function updateAccountUI() {
+      if (!accountStatus) return;
+      if (currentUser) {
+        accountStatus.textContent = `Signed in: ${currentUser.email}`;
+        authLogout.style.display = '';
+        authLogin.style.display = 'none';
+        authRegister.style.display = 'none';
+      } else {
+        accountStatus.textContent = 'Not signed in';
+        authLogout.style.display = 'none';
+        authLogin.style.display = '';
+        authRegister.style.display = '';
+      }
+    }
+
+    accountBtn?.addEventListener('click', openAuthModal);
+    authCancel?.addEventListener('click', closeAuthModal);
+
+    authRegister?.addEventListener('click', async () => {
+      const email = authEmail.value.trim();
+      const password = authPass.value;
+      authHint.textContent = 'Registering...';
+      const { data, error } = await supabase.auth.signUp({ email, password });
+      if (error) { authHint.textContent = error.message; return; }
+      authHint.textContent = data?.user
+        ? 'Registered! Now click Sign in.'
+        : 'Registered! Check your email for confirmation (if enabled), then Sign in.';
+    });
+
+    authLogin?.addEventListener('click', async () => {
+      const email = authEmail.value.trim();
+      const password = authPass.value;
+      authHint.textContent = 'Signing in...';
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) { authHint.textContent = error.message; return; }
+      currentUser = data.user;
+      authHint.textContent = 'Signed in!';
+      updateAccountUI();
+      closeAuthModal();
+      await refreshPatternSelect();
+    });
+
+    authLogout?.addEventListener('click', async () => {
+      await supabase.auth.signOut();
+      currentUser = null;
+      updateAccountUI();
+      authHint.textContent = 'Signed out.';
+    });
 
 
     // ===== STATE =====
@@ -1527,6 +1641,69 @@
       else await exitFullscreenIfPossible();
     }
 
+    // SAVE / LOAD PATTERNS WITH SUPABASE
+    function isAuthed() {
+      return !!currentUser;
+    }
+
+    async function dbListPatternNames() {
+      const { data, error } = await supabase
+        .from('patterns')
+        .select('name')
+        .order('updated_at', { ascending: false });
+
+      if (error) throw error;
+      return (data || []).map(r => r.name);
+    }
+
+    async function dbLoadPatternByName(name) {
+      const { data, error } = await supabase
+        .from('patterns')
+        .select('data')
+        .eq('name', name)
+        .limit(1)
+        .maybeSingle();
+
+      if (error) throw error;
+      return data?.data || null;
+    }
+
+    async function dbSavePattern(name, stateObj) {
+      const row = {
+        user_id: currentUser.id,
+        name,
+        data: stateObj,
+        updated_at: new Date().toISOString(),
+      };
+
+      // unique(user_id, name) => upsert to overwrite
+      const { error } = await supabase
+        .from('patterns')
+        .upsert(row, { onConflict: 'user_id,name' });
+
+      if (error) throw error;
+    }
+
+    async function dbDeletePattern(name) {
+      const { error } = await supabase
+        .from('patterns')
+        .delete()
+        .eq('name', name);
+
+      if (error) throw error;
+    }
+
+    async function dbRenamePattern(oldName, newName) {
+      // rename = update name (unique per user enforced)
+      const { error } = await supabase
+        .from('patterns')
+        .update({ name: newName, updated_at: new Date().toISOString() })
+        .eq('name', oldName);
+
+      if (error) throw error;
+    }
+
+
     // ===== SAVE / LOAD =====
     function getSavedPatterns() {
       try {
@@ -1552,34 +1729,70 @@
       deleteBtn.disabled = !hasSelection;
     }
 
-    function refreshPatternSelect(selectedName = '') {
-      const saved = getSavedPatterns();
-      const names = Object.keys(saved).sort((a, b) => a.localeCompare(b));
+    async function refreshPatternSelect(selectedName = '') {
+      try {
+        patternSelect.innerHTML = '';
 
-      patternSelect.innerHTML = '';
-      if (names.length === 0) {
-        const opt = document.createElement('option');
-        opt.value = '';
-        opt.textContent = '(no saved patterns)';
-        patternSelect.appendChild(opt);
+        // CLOUD MODE
+        if (isAuthed()) {
+          const names = (await dbListPatternNames()).sort((a,b) => a.localeCompare(b));
+          if (names.length === 0) {
+            const opt = document.createElement('option');
+            opt.value = '';
+            opt.textContent = '(no saved patterns)';
+            patternSelect.appendChild(opt);
+            updatePatternButtons();
+            return;
+          }
+
+          for (const name of names) {
+            const opt = document.createElement('option');
+            opt.value = name;
+            opt.textContent = name;
+            patternSelect.appendChild(opt);
+          }
+
+          const lastUsed = localStorage.getItem(LAST_USED_KEY) || '';
+          if (selectedName && names.includes(selectedName)) patternSelect.value = selectedName;
+          else if (lastUsed && names.includes(lastUsed)) patternSelect.value = lastUsed;
+          else patternSelect.value = names[0];
+
+          updatePatternButtons();
+          return;
+        }
+
+        // LOCAL MODE (logged out)
+        const saved = getSavedPatterns();
+        const names = Object.keys(saved).sort((a, b) => a.localeCompare(b));
+
+        if (names.length === 0) {
+          const opt = document.createElement('option');
+          opt.value = '';
+          opt.textContent = '(no saved patterns)';
+          patternSelect.appendChild(opt);
+          updatePatternButtons();
+          return;
+        }
+
+        for (const name of names) {
+          const opt = document.createElement('option');
+          opt.value = name;
+          opt.textContent = name;
+          patternSelect.appendChild(opt);
+        }
+
+        const lastUsed = localStorage.getItem(LAST_USED_KEY) || '';
+        if (selectedName && saved[selectedName]) patternSelect.value = selectedName;
+        else if (lastUsed && saved[lastUsed]) patternSelect.value = lastUsed;
+        else patternSelect.value = names[0];
+
         updatePatternButtons();
-        return;
+      } catch (err) {
+        console.error(err);
+        alert(`Could not load patterns: ${err?.message || err}`);
       }
-
-      for (const name of names) {
-        const opt = document.createElement('option');
-        opt.value = name;
-        opt.textContent = name;
-        patternSelect.appendChild(opt);
-      }
-
-      const lastUsed = localStorage.getItem(LAST_USED_KEY) || '';
-      if (selectedName && saved[selectedName]) patternSelect.value = selectedName;
-      else if (lastUsed && saved[lastUsed]) patternSelect.value = lastUsed;
-      else patternSelect.value = names[0];
-
-      updatePatternButtons();
     }
+
 
     function serializePattern() {
       return {
@@ -1797,77 +2010,148 @@
       step = 0;
     });
 
-    saveBtn.addEventListener('click', () => {
-      const saved = getSavedPatterns();
+    saveBtn.addEventListener('click', async () => {
       const defaultName = `Pattern ${new Date().toLocaleString()}`;
       const name = prompt('Save pattern as:', getSelectedPatternName() || defaultName);
       if (!name) return;
-      saved[name] = serializePattern();
-      localStorage.setItem(LAST_USED_KEY, name);
-      setSavedPatterns(saved);
-      refreshPatternSelect(name);
+
+      const trimmed = name.trim();
+      if (!trimmed) return;
+
+      try {
+        if (isAuthed()) {
+          await dbSavePattern(trimmed, serializePattern());
+          localStorage.setItem(LAST_USED_KEY, trimmed);
+          await refreshPatternSelect(trimmed);
+          return;
+        }
+
+        // local fallback
+        const saved = getSavedPatterns();
+        saved[trimmed] = serializePattern();
+        localStorage.setItem(LAST_USED_KEY, trimmed);
+        setSavedPatterns(saved);
+        await refreshPatternSelect(trimmed);
+      } catch (err) {
+        console.error(err);
+        alert(`Save failed: ${err?.message || err}`);
+      }
     });
 
-    loadBtn.addEventListener('click', () => {
-      const saved = getSavedPatterns();
-      const names = Object.keys(saved);
-      if (names.length === 0) {
-        alert('No saved patterns yet. Click Save to store one.');
-        return;
-      }
 
-      let name = getSelectedPatternName();
-      if (!name) {
-        const lastUsed = localStorage.getItem(LAST_USED_KEY) || '';
-        name = (lastUsed && saved[lastUsed]) ? lastUsed : names.sort((a, b) => a.localeCompare(b))[0];
-        patternSelect.value = name;
-        updatePatternButtons();
-      }
+    loadBtn.addEventListener('click', async () => {
+      try {
+        // CLOUD MODE
+        if (isAuthed()) {
+          const selected = getSelectedPatternName();
+          if (!selected) {
+            alert('Select a saved pattern first.');
+            return;
+          }
+          const state = await dbLoadPatternByName(selected);
+          if (!state) {
+            alert('Could not load that pattern.');
+            return;
+          }
+          applyPattern(state);
+          localStorage.setItem(LAST_USED_KEY, selected);
+          return;
+        }
 
-      if (!saved[name]) return;
-      applyPattern(saved[name]);
-      localStorage.setItem(LAST_USED_KEY, name);
+        // LOCAL MODE
+        const saved = getSavedPatterns();
+        const names = Object.keys(saved);
+        if (names.length === 0) {
+          alert('No saved patterns yet. Click Save to store one.');
+          return;
+        }
+
+        let name = getSelectedPatternName();
+        if (!name) {
+          const lastUsed = localStorage.getItem(LAST_USED_KEY) || '';
+          name = (lastUsed && saved[lastUsed]) ? lastUsed : names.sort((a, b) => a.localeCompare(b))[0];
+          patternSelect.value = name;
+          updatePatternButtons();
+        }
+
+        if (!saved[name]) return;
+        applyPattern(saved[name]);
+        localStorage.setItem(LAST_USED_KEY, name);
+      } catch (err) {
+        console.error(err);
+        alert(`Load failed: ${err?.message || err}`);
+      }
     });
 
-    renameBtn.addEventListener('click', () => {
+
+    renameBtn.addEventListener('click', async () => {
       if (!ensureHasSelection()) return;
-      const saved = getSavedPatterns();
-      const oldName = getSelectedPatternName();
-      if (!saved[oldName]) return;
 
+      const oldName = getSelectedPatternName();
       const nextName = prompt('Rename pattern to:', oldName);
       if (!nextName) return;
+
       const trimmed = nextName.trim();
       if (!trimmed || trimmed === oldName) return;
 
-      if (saved[trimmed]) {
-        const ok = confirm('A pattern with that name already exists. Overwrite it?');
-        if (!ok) return;
-      }
+      try {
+        if (isAuthed()) {
+          await dbRenamePattern(oldName, trimmed);
+          localStorage.setItem(LAST_USED_KEY, trimmed);
+          await refreshPatternSelect(trimmed);
+          return;
+        }
 
-      saved[trimmed] = saved[oldName];
-      delete saved[oldName];
-      localStorage.setItem(LAST_USED_KEY, trimmed);
-      setSavedPatterns(saved);
-      refreshPatternSelect(trimmed);
+        // local
+        const saved = getSavedPatterns();
+        if (!saved[oldName]) return;
+
+        if (saved[trimmed]) {
+          const ok = confirm('A pattern with that name already exists. Overwrite it?');
+          if (!ok) return;
+        }
+
+        saved[trimmed] = saved[oldName];
+        delete saved[oldName];
+        localStorage.setItem(LAST_USED_KEY, trimmed);
+        setSavedPatterns(saved);
+        await refreshPatternSelect(trimmed);
+      } catch (err) {
+        console.error(err);
+        alert(`Rename failed: ${err?.message || err}`);
+      }
     });
 
-    deleteBtn.addEventListener('click', () => {
-      if (!ensureHasSelection()) return;
-      const saved = getSavedPatterns();
-      const name = getSelectedPatternName();
-      if (!saved[name]) return;
 
+    deleteBtn.addEventListener('click', async () => {
+      if (!ensureHasSelection()) return;
+
+      const name = getSelectedPatternName();
       const ok = confirm(`Delete "${name}"? This cannot be undone.`);
       if (!ok) return;
 
-      delete saved[name];
-      setSavedPatterns(saved);
-      if (localStorage.getItem(LAST_USED_KEY) === name) {
-        localStorage.removeItem(LAST_USED_KEY);
+      try {
+        if (isAuthed()) {
+          await dbDeletePattern(name);
+          if (localStorage.getItem(LAST_USED_KEY) === name) localStorage.removeItem(LAST_USED_KEY);
+          await refreshPatternSelect();
+          return;
+        }
+
+        // local
+        const saved = getSavedPatterns();
+        if (!saved[name]) return;
+
+        delete saved[name];
+        setSavedPatterns(saved);
+        if (localStorage.getItem(LAST_USED_KEY) === name) localStorage.removeItem(LAST_USED_KEY);
+        await refreshPatternSelect();
+      } catch (err) {
+        console.error(err);
+        alert(`Delete failed: ${err?.message || err}`);
       }
-      refreshPatternSelect();
     });
+
 
     exportBtn.addEventListener('click', async () => {
       const data = JSON.stringify(serializePattern(), null, 2);
@@ -1879,7 +2163,7 @@
       }
     });
 
-    importBtn.addEventListener('click', () => {
+    importBtn.addEventListener('click', async () => {
       const raw = prompt('Paste pattern JSON here:');
       if (!raw) return;
       try {
@@ -1892,9 +2176,15 @@
           const suggested = obj.name || `Imported ${new Date().toLocaleString()}`;
           const name = prompt('Save imported pattern as:', suggested);
           if (name) {
-            saved[name] = obj;
-            setSavedPatterns(saved);
-            refreshPatternSelect(name);
+            if (isAuthed()) {
+              await dbSavePattern(name, obj);
+              await refreshPatternSelect(name);
+            } else {
+              const saved = getSavedPatterns();
+              saved[name] = obj;
+              setSavedPatterns(saved);
+              await refreshPatternSelect(name);
+            }
           }
         }
       } catch {
@@ -2011,6 +2301,18 @@
         exitPresent.style.display = 'none';
       }
     }
+
+    // START SUPABASE SESSION
+    const { data: { session } } = await supabase.auth.getSession();
+    currentUser = session?.user ?? null;
+    updateAccountUI();
+
+    supabase.auth.onAuthStateChange(async (_event, session2) => {
+      currentUser = session2?.user ?? null;
+      updateAccountUI();
+      await refreshPatternSelect();
+    });
+
 
     function runSelfTests() {
       // Existing smoke tests (kept)
