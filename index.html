@@ -642,16 +642,28 @@
     </div>
   </div>
   
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-  <script type="module">
-    // SUPABASE
-    import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
-
-    // TODO: paste yours from Supabase Dashboard → Settings → API
+  <script>
     const SUPABASE_URL = "https://ycdlqkaymkgpbpgtqubs.supabase.co";
-    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InljZGxxa2F5bWtncGJwZ3RxdWJzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY1MTAxMDEsImV4cCI6MjA4MjA4NjEwMX0.L6O0g5ia2pUPyYahy0wTNElo5MeF4JCLo7W8-8f3yRE";
+    const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_ibxUdXTNfhXKhE5sh0wezA_1kigLLAZ";
 
-    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    window.supabase1 = window.supabase1 || window.supabase.createClient(
+      SUPABASE_URL,
+      SUPABASE_PUBLISHABLE_KEY,
+      {
+        auth: {
+          persistSession: true,
+          autoRefreshToken: true,
+          detectSessionInUrl: true,
+          storage: window.localStorage,
+        },
+      }
+    );
+
+    const supabase1 = window.supabase1;
+
+
     let currentUser = null;
 
     // ===== CONFIG =====
@@ -742,6 +754,31 @@
       }
     }
 
+    async function initAuthSession() {
+      const { data, error } = await supabase1.auth.getSession();
+      if (error) console.warn('getSession error:', error);
+
+      currentUser = data?.session?.user ?? null;
+      updateAccountUI();
+
+      // If you load patterns from cloud when logged in:
+      if (typeof refreshPatternSelect === 'function') {
+        await refreshPatternSelect();
+      }
+    }
+
+    initAuthSession();
+
+    supabase1.auth.onAuthStateChange(async (_event, session) => {
+      currentUser = session?.user ?? null;
+      updateAccountUI();
+
+      if (typeof refreshPatternSelect === 'function') {
+        await refreshPatternSelect();
+      }
+    });
+
+
     accountBtn?.addEventListener('click', openAuthModal);
     authCancel?.addEventListener('click', closeAuthModal);
 
@@ -749,7 +786,7 @@
       const email = authEmail.value.trim();
       const password = authPass.value;
       authHint.textContent = 'Registering...';
-      const { data, error } = await supabase.auth.signUp({ email, password });
+      const { data, error } = await supabase1.auth.signUp({ email, password });
       if (error) { authHint.textContent = error.message; return; }
       authHint.textContent = data?.user
         ? 'Registered! Now click Sign in.'
@@ -760,7 +797,7 @@
       const email = authEmail.value.trim();
       const password = authPass.value;
       authHint.textContent = 'Signing in...';
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      const { data, error } = await supabase1.auth.signInWithPassword({ email, password });
       if (error) { authHint.textContent = error.message; return; }
       currentUser = data.user;
       authHint.textContent = 'Signed in!';
@@ -770,7 +807,7 @@
     });
 
     authLogout?.addEventListener('click', async () => {
-      await supabase.auth.signOut();
+      await supabase1.auth.signOut();
       currentUser = null;
       updateAccountUI();
       authHint.textContent = 'Signed out.';
@@ -1647,7 +1684,7 @@
     }
 
     async function dbListPatternNames() {
-      const { data, error } = await supabase
+      const { data, error } = await supabase1
         .from('patterns')
         .select('name')
         .order('updated_at', { ascending: false });
@@ -1657,7 +1694,7 @@
     }
 
     async function dbLoadPatternByName(name) {
-      const { data, error } = await supabase
+      const { data, error } = await supabase1
         .from('patterns')
         .select('data')
         .eq('name', name)
@@ -1670,22 +1707,29 @@
 
     async function dbSavePattern(name, stateObj) {
       const row = {
-        user_id: currentUser.id,
         name,
         data: stateObj,
         updated_at: new Date().toISOString(),
       };
 
       // unique(user_id, name) => upsert to overwrite
-      const { error } = await supabase
+      const { error } = await supabase1
         .from('patterns')
         .upsert(row, { onConflict: 'user_id,name' });
 
       if (error) throw error;
     }
 
+    function withTimeout(promise, ms = 3000, label = 'timeout') {
+      return Promise.race([
+        promise,
+        new Promise((_, reject) => setTimeout(() => reject(new Error(label)), ms)),
+      ]);
+    }
+
+
     async function dbDeletePattern(name) {
-      const { error } = await supabase
+      const { error } = await supabase1
         .from('patterns')
         .delete()
         .eq('name', name);
@@ -1695,7 +1739,7 @@
 
     async function dbRenamePattern(oldName, newName) {
       // rename = update name (unique per user enforced)
-      const { error } = await supabase
+      const { error } = await supabase1
         .from('patterns')
         .update({ name: newName, updated_at: new Date().toISOString() })
         .eq('name', oldName);
@@ -2011,6 +2055,7 @@
     });
 
     saveBtn.addEventListener('click', async () => {
+      console.log('SAVE CLICKED');
       const defaultName = `Pattern ${new Date().toLocaleString()}`;
       const name = prompt('Save pattern as:', getSelectedPatternName() || defaultName);
       if (!name) return;
@@ -2303,16 +2348,18 @@
     }
 
     // START SUPABASE SESSION
-    const { data: { session } } = await supabase.auth.getSession();
-    currentUser = session?.user ?? null;
-    updateAccountUI();
-
-    supabase.auth.onAuthStateChange(async (_event, session2) => {
-      currentUser = session2?.user ?? null;
+    (async function initSupabaseAuth() {
+      const { data: { session } } = await supabase1.auth.getSession();
+      currentUser = session?.user ?? null;
       updateAccountUI();
       await refreshPatternSelect();
-    });
 
+      supabase1.auth.onAuthStateChange(async (_event, session2) => {
+        currentUser = session2?.user ?? null;
+        updateAccountUI();
+        await refreshPatternSelect();
+      });
+    })();
 
     function runSelfTests() {
       // Existing smoke tests (kept)
