@@ -265,6 +265,28 @@
     const authPass = document.getElementById('authPass');
     const authHint = document.getElementById('authHint');
 
+    const ADMIN_EMAILS = new Set([
+      "jpitters3@gmail.com",
+    ]);
+
+    // Admin functionality
+    function isAdminUser(user) {
+      const email = user?.email?.toLowerCase?.() || "";
+      return ADMIN_EMAILS.has(email);
+    }
+
+    function updateAdminUI() {
+      const show = isAdminUser(currentUser);
+      const btn = document.getElementById("calBtn");
+      if (btn) btn.style.display = show ? "" : "none";
+
+      // if they were calibrating and lost admin (logout), force it off
+      if (!show && document.body.classList.contains("calibrating")) {
+        document.body.classList.remove("calibrating");
+      }
+    }
+
+    // Auth modal
     function openAuthModal() {
       authModal.classList.add('open');
       authModal.setAttribute('aria-hidden', 'false');
@@ -307,6 +329,7 @@
 
       currentUser = data?.session?.user ?? null;
       updateAccountUI();
+      updateAdminUI();
 
       if (typeof refreshPatternSelect === 'function') {
         await refreshPatternSelect();
@@ -316,6 +339,7 @@
       supabase1.auth.onAuthStateChange(async (_event, session) => {
         currentUser = session?.user ?? null;
         updateAccountUI();
+        updateAdminUI();
 
         if (typeof refreshPatternSelect === 'function') {
           await refreshPatternSelect();
@@ -348,6 +372,7 @@
       currentUser = data.user;
       authHint.textContent = 'Signed in!';
       updateAccountUI();
+      updateAdminUI();
       closeAuthModal();
       await refreshPatternSelect();
     });
@@ -356,6 +381,7 @@
       await supabase1.auth.signOut();
       currentUser = null;
       updateAccountUI();
+      updateAdminUI();
       authHint.textContent = 'Signed out.';
     });
 
