@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Rhythm Visualizer — Hand Icons v1.17.4</title>
+
   <style>
     /* ===== RESET / BASE ===== */
     * { box-sizing: border-box; }
@@ -511,6 +512,7 @@
         max-width: 1200px;
     }
   </style>
+  <link rel="stylesheet" href="./css/handpanmap.css">
 </head>
 <body>
 
@@ -548,7 +550,22 @@
         <span id="bpmVal">90</span>
         <button id="clearBtn">Clear</button>
     </div>
-    <div id="measures" class="measures" aria-label="Rhythm grid"></div>
+    <div class="main">
+      <div class="left">
+        <div id="measures" class="measures" aria-label="Rhythm grid"></div>
+      </div>
+    
+      <aside class="handpan-panel" aria-label="Handpan map">
+        <div class="handpan-wrap" id="handpanWrap">
+          <img
+            src="./assets/images/nine-note-handpan-numbered.png"
+            alt="Handpan note layout"
+            class="handpan-img"
+          />
+          <div class="handpan-overlay" id="handpanOverlay"></div>
+        </div>
+      </aside>
+    </div>
   </div><!-- container -->
 
   <div class="legend" aria-label="Legend">
@@ -643,6 +660,7 @@
   </div>
   
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="./js/handpanmap.js"></script>
 
   <script>
     const SUPABASE_URL = "https://ycdlqkaymkgpbpgtqubs.supabase.co";
@@ -1124,6 +1142,7 @@
       const label = innerLabels[step];
       if (/^[1-8]$/.test(label)) {
         playNumberSample(label);
+        highlightHandpan(label);
       }
 
       if (metronomeOn) {
@@ -1137,6 +1156,7 @@
       if (handpanSoundsOn && pattern[step]) {
         const label = innerLabels[step] || '';
         playHandpanSoundForLabel(label);
+        highlightHandpan(label);
       }
 
       const totalSteps = measures * STEPS;

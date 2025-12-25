@@ -1,0 +1,75 @@
+/* Handpan Image Section */
+.main{
+    display:flex;
+    gap:24px;
+    align-items:flex-start;
+  }
+
+  .left{
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .handpan-panel{
+    flex: 0 0 340px;
+    position: sticky;
+    top: 16px;
+    align-self: flex-start;
+  }
+
+  .handpan-wrap{
+    position: relative;
+    width: 100%;
+    border-radius: 18px;
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    padding: 14px;
+  }
+
+  .handpan-img{
+    width: 100%;
+    height: auto;
+    display:block;
+    border-radius: 14px;
+  }
+
+  .handpan-overlay{
+    position:absolute;
+    inset: 14px; /* match padding so overlay sits on top of image area */
+    pointer-events:none;
+  }
+
+  /* Mobile: stack */
+  @media (max-width: 900px){
+    .main{ flex-direction: column; }
+    .handpan-panel{ position: static; width: 100%; flex: none; }
+  }
+  
+  /* Overlays */
+  .hp-dot{
+    position:absolute;
+    border-radius: 50%;
+    /* border: 2px solid rgba(255,255,255,0.65); */
+    background: rgba(79, 17, 48, 0.12);
+    /* box-shadow: 0 0 0 0 rgba(79, 17, 48, 0.0); */
+    opacity: 0.0;              /* hidden until active */
+    transition: opacity 120ms ease;
+  }
+  
+  body:not(.dark) .hp-dot{
+    border-color: rgba(47,47,47,0.55);
+    background: rgba(79, 17, 48, 0.50);
+  }
+  
+  .hp-dot.active{
+    opacity: 1;
+    animation: hpPulse 180ms ease-out;
+    box-shadow: 0 0 0 5px rgba(79, 17, 48, 0.18);
+  }
+  
+  @keyframes hpPulse{
+    0%   { transform: translate(-50%, -50%) scale(1); }
+    60%  { transform: translate(-50%, -50%) scale(1.18); }
+    100% { transform: translate(-50%, -50%) scale(1); }
+  }
+  
