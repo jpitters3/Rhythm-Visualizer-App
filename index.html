@@ -663,6 +663,24 @@
 
     const supabase1 = window.supabase1;
 
+    const TAB_ID = crypto.randomUUID();
+    const TAB_KEY = 'groovepan_active_tab';
+
+    function claimTab() {
+      const active = localStorage.getItem(TAB_KEY);
+      if (!active) localStorage.setItem(TAB_KEY, TAB_ID);
+      return localStorage.getItem(TAB_KEY) === TAB_ID;
+    }
+
+    function releaseTab() {
+      if (localStorage.getItem(TAB_KEY) === TAB_ID) localStorage.removeItem(TAB_KEY);
+    }
+
+    window.addEventListener('beforeunload', releaseTab);
+
+    if (!claimTab()) {
+      alert("GroovePan is open in another tab. Close the other tab to avoid account issues.");
+    }
 
     let currentUser = null;
 
@@ -754,30 +772,40 @@
       }
     }
 
+    let authInitDone = false;
+
     async function initAuthSession() {
+      if (authInitDone) return;
+      authInitDone = true;
+
+      // Hydrate current session
       const { data, error } = await supabase1.auth.getSession();
+      if (!data?.session && !error) {
+        // No session is OK. But if you previously got stuck sessions,
+        // this gives you a single place to diagnose.
+        // console.log('No existing session found.');
+      }
       if (error) console.warn('getSession error:', error);
 
       currentUser = data?.session?.user ?? null;
       updateAccountUI();
 
-      // If you load patterns from cloud when logged in:
       if (typeof refreshPatternSelect === 'function') {
         await refreshPatternSelect();
       }
+
+      // Subscribe ONCE
+      supabase1.auth.onAuthStateChange(async (_event, session) => {
+        currentUser = session?.user ?? null;
+        updateAccountUI();
+
+        if (typeof refreshPatternSelect === 'function') {
+          await refreshPatternSelect();
+        }
+      });
     }
 
     initAuthSession();
-
-    supabase1.auth.onAuthStateChange(async (_event, session) => {
-      currentUser = session?.user ?? null;
-      updateAccountUI();
-
-      if (typeof refreshPatternSelect === 'function') {
-        await refreshPatternSelect();
-      }
-    });
-
 
     accountBtn?.addEventListener('click', openAuthModal);
     authCancel?.addEventListener('click', closeAuthModal);
@@ -2346,20 +2374,6 @@
         exitPresent.style.display = 'none';
       }
     }
-
-    // START SUPABASE SESSION
-    (async function initSupabaseAuth() {
-      const { data: { session } } = await supabase1.auth.getSession();
-      currentUser = session?.user ?? null;
-      updateAccountUI();
-      await refreshPatternSelect();
-
-      supabase1.auth.onAuthStateChange(async (_event, session2) => {
-        currentUser = session2?.user ?? null;
-        updateAccountUI();
-        await refreshPatternSelect();
-      });
-    })();
 
     function runSelfTests() {
       // Existing smoke tests (kept)
