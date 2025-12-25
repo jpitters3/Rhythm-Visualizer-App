@@ -137,8 +137,8 @@ body:not(.dark) .cell.play { box-shadow: 0 0 0 6px rgba(47, 47, 47, 0.35); }
 
 /* Two colors only */
 :root {
-    --down-fill: #610a42; /* blue */
-    --up-fill: rgb(2, 68, 150);   /* yellow */
+    --down-fill: #610a42; /* wine red */
+    --up-fill: rgb(2, 68, 150);   /* blue */
 }
 body.dark {
     --down-fill: #fd0380; /* keep gold in dark mode too */

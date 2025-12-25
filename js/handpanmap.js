@@ -37,23 +37,27 @@ function buildHandpanOverlay(){
 
 buildHandpanOverlay();
 
-let hpPulseTimer = null;
+let hpPulseTimers = new Map();
 
-function highlightHandpan(note){
+function highlightHandpan(note, stepIndex){
   const key = String(note || '').toUpperCase();
   const el = handpanDots.get(key);
   if (!el) return;
 
-  // reset animation cleanly
-  el.classList.remove('active');
-  void el.offsetWidth; // reflow to restart animation
+  const down = isDownbeatStep(stepIndex);
+
+  el.classList.remove('hp-down','hp-up','active');
+  el.classList.add(down ? 'hp-down' : 'hp-up');
+
+  // restart animation
+  void el.offsetWidth;
   el.classList.add('active');
 
-  // fade it back out after a beat tick
-  clearTimeout(hpPulseTimer);
-  hpPulseTimer = setTimeout(() => {
+  // per-note timer so multiple notes in a row don't fight
+  clearTimeout(hpPulseTimers.get(key));
+  hpPulseTimers.set(key, setTimeout(() => {
     el.classList.remove('active');
-  }, Math.min(220, intervalMs() * 0.9));
+  }, Math.min(220, intervalMs() * 0.9)));
 }
 
 /* Calibration */

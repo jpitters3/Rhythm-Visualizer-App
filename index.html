@@ -553,6 +553,11 @@
       osc.stop(t + 0.04);
     }
 
+    function isDownbeatStep(stepIndex){
+      if (mode === '8') return stepIndex % 2 === 0;     // 1,2,3,4
+      return stepIndex % 4 === 0;                       // 1,2,3,4 on 16ths
+    }
+
     function tick() {
       const all = cells();
       if (!all.length) return;
@@ -565,7 +570,7 @@
       const label = innerLabels[step];
       if (/^[1-8]$/.test(label)) {
         playNumberSample(label);
-        highlightHandpan(label);
+        highlightHandpan(label, step);
       }
 
       if (metronomeOn) {
@@ -579,7 +584,7 @@
       if (handpanSoundsOn && pattern[step]) {
         const label = innerLabels[step] || '';
         playHandpanSoundForLabel(label);
-        highlightHandpan(label);
+        highlightHandpan(label, step);
       }
 
       const totalSteps = measures * STEPS;

@@ -38,15 +38,3 @@ body.dark {
   --btn-bg: #2a2a38;
   --btn-active: #5b8cff;
 }
-
-.footer {
-  margin-top: 18px;
-  font-size: 13px;
-  opacity: 0.6;
-}
-
-div.container {
-    margin: 0 auto;
-    width: 80%;
-    max-width: 1200px;
-}

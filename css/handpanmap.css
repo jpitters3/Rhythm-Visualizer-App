@@ -46,20 +46,27 @@
   }
   
   /* Overlays */
+
+  /* :root{
+    --downbeat-color: rgba(79, 17, 48, 0.12);
+    --upbeat-color: rgb(2, 68, 150);
+  }
+  body.dark{
+    --downbeat-color: #ffd166;
+    --upbeat-color: #7fa67a;
+  } */
+
   .hp-dot{
     position:absolute;
     border-radius: 50%;
-    /* border: 2px solid rgba(255,255,255,0.65); */
-    background: rgba(79, 17, 48, 0.12);
-    /* box-shadow: 0 0 0 0 rgba(79, 17, 48, 0.0); */
     opacity: 0.0;              /* hidden until active */
     transition: opacity 120ms ease;
   }
   
-  body:not(.dark) .hp-dot{
-    border-color: rgba(47,47,47,0.55);
-    background: rgba(79, 17, 48, 0.50);
-  }
+  /* body:not(.dark) .hp-dot{ */
+    /* border-color: rgba(47,47,47,0.55); */
+    /* background: rgba(79, 17, 48, 0.50); */
+  /* } */
   
   .hp-dot.active{
     opacity: 1;
@@ -73,8 +80,36 @@
     100% { transform: translate(-50%, -50%) scale(1); }
   }
   
-  /* Calibration */
+  .hp-dot{
+    border: 2px solid rgba(255,255,255,0.65);
+    background: rgba(255,255,255,0.06);
+  }
   
+  body:not(.dark) .hp-dot{
+    border-color: rgba(47,47,47,0.55);
+  }
+  
+
+  /* Color comes from class */
+  .hp-dot.hp-down{
+    border-color: color-mix(in srgb, var(--down-fill) 70%, transparent);
+    background: color-mix(in srgb, var(--down-fill) 50%, transparent);
+  }
+  .hp-dot.hp-up{
+    border-color: color-mix(in srgb, var(--up-fill) 70%, transparent);
+    background: color-mix(in srgb, var(--up-fill) 50%, transparent);
+  }
+  
+  .hp-dot.active.hp-down{
+    box-shadow: 0 0 0 10px color-mix(in srgb, var(--down-fill) 22%, transparent);
+  }
+  .hp-dot.active.hp-up{
+    box-shadow: 0 0 0 10px color-mix(in srgb, var(--up-fill) 22%, transparent);
+  }
+
+  
+  /* Calibration */
+
   /* Enable clicking dots only when calibrating */
 body.calibrating .handpan-overlay { pointer-events: auto; }
 
