@@ -1,0 +1,52 @@
+/* ===== RESET / BASE ===== */
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  padding: 24px;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+h2 { margin: 0 0 16px; font-weight: 500; }
+
+/* ===== THEME VARS ===== */
+:root {
+  /* LIGHT MODE */
+  --bg: #f7f6f2;
+  --panel: #ffffff;
+  --panel-border: #e2ded3;
+  --text: #2f2f2f;
+  --cell-bg: #ffffff;
+  --cell-border: #ddd8cc;
+  --cell-on: #ffe8a3;
+  --play-glow: rgba(255, 209, 102, 0.45);
+  --btn-bg: #e8e5dc;
+  --btn-active: #ffd166;
+}
+
+body.dark {
+  /* DARK MODE */
+  --bg: #0f0f14;
+  --panel: #16161f;
+  --panel-border: #2f2f45;
+  --text: #eaeaf0;
+  --cell-bg: #222233;
+  --cell-border: #2f2f45;
+  --cell-on: #5b8cff;
+  --play-glow: rgba(91, 140, 255, 0.45);
+  --btn-bg: #2a2a38;
+  --btn-active: #5b8cff;
+}
+
+.footer {
+  margin-top: 18px;
+  font-size: 13px;
+  opacity: 0.6;
+}
+
+div.container {
+    margin: 0 auto;
+    width: 80%;
+    max-width: 1200px;
+}

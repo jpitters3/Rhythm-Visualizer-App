@@ -73,3 +73,24 @@
     100% { transform: translate(-50%, -50%) scale(1); }
   }
   
+  /* Calibration */
+  
+  /* Enable clicking dots only when calibrating */
+body.calibrating .handpan-overlay { pointer-events: auto; }
+
+/* Make dots visible while calibrating (even when not playing) */
+body.calibrating .hp-dot { opacity: 0.55; }
+
+/* Selected dot styling */
+body.calibrating .hp-dot.selected {
+  opacity: 1;
+  outline: 3px solid rgba(255, 209, 102, 0.9);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 10px rgba(255, 209, 102, 0.18);
+}
+
+/* Dark mode outline tweak */
+body.dark.calibrating .hp-dot.selected {
+  outline-color: rgba(91, 140, 255, 0.95);
+  box-shadow: 0 0 0 10px rgba(91, 140, 255, 0.20);
+}

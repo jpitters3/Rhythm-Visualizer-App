@@ -55,3 +55,107 @@ function highlightHandpan(note){
     el.classList.remove('active');
   }, Math.min(220, intervalMs() * 0.9));
 }
+
+/* Calibration */
+const calBtn = document.getElementById('calBtn');
+let calibrating = false;
+let selectedHpNote = null;
+
+function setCalibrating(on) {
+  calibrating = on;
+  document.body.classList.toggle('calibrating', on);
+  if (calBtn) calBtn.classList.toggle('active', on);
+  if (calBtn) calBtn.textContent = on ? 'Calibrating…' : 'Calibrate Map';
+
+  // Clear selection when exiting
+  if (!on) {
+    selectedHpNote = null;
+    for (const el of handpanDots.values()) el.classList.remove('selected');
+  }
+}
+
+calBtn?.addEventListener('click', () => setCalibrating(!calibrating));
+
+function selectHpDot(note) {
+  selectedHpNote = note;
+  for (const [k, el] of handpanDots.entries()) {
+    el.classList.toggle('selected', k === note);
+  }
+}
+
+// Click-to-select dots (only matters during calibrating because pointer-events are off otherwise)
+handpanOverlay?.addEventListener('click', (e) => {
+  if (!calibrating) return;
+  const dot = e.target.closest('.hp-dot');
+  if (!dot) return;
+  const note = dot.dataset.note;
+  if (!note || !HANDPAN_MAP[note]) return;
+  selectHpDot(note);
+});
+
+// Nudge with arrow keys
+document.addEventListener('keydown', (e) => {
+  if (!calibrating) return;
+
+  // Esc exits calibration
+  if (e.key === 'Escape') {
+    setCalibrating(false);
+    return;
+  }
+
+  // C prints current map
+  if (e.key.toLowerCase() === 'c') {
+    e.preventDefault();
+    console.log('HANDPAN_MAP =', JSON.parse(JSON.stringify(HANDPAN_MAP)));
+    console.log('Copy/paste version:\n' + stringifyHandpanMap(HANDPAN_MAP));
+    return;
+  }
+
+  if (!selectedHpNote) return;
+
+  const step = e.shiftKey ? 0.5 : 0.2; // percent increments
+  let dx = 0, dy = 0;
+
+  if (e.key === 'ArrowLeft')  dx = -step;
+  if (e.key === 'ArrowRight') dx =  step;
+  if (e.key === 'ArrowUp')    dy = -step;
+  if (e.key === 'ArrowDown')  dy =  step;
+
+  if (!dx && !dy) return;
+
+  e.preventDefault();
+
+  const p = HANDPAN_MAP[selectedHpNote];
+  p.x = clamp(p.x + dx, 0, 100);
+  p.y = clamp(p.y + dy, 0, 100);
+
+  // Update DOM position live
+  const el = handpanDots.get(selectedHpNote);
+  if (el) {
+    el.style.left = `${p.x}%`;
+    el.style.top  = `${p.y}%`;
+  }
+});
+
+function clamp(v, min, max) {
+  return Math.max(min, Math.min(max, v));
+}
+
+function stringifyHandpanMap(map) {
+  const keys = Object.keys(map).sort((a,b) => {
+    if (a === 'D') return -1;
+    if (b === 'D') return 1;
+    return Number(a) - Number(b);
+  });
+
+  const lines = keys.map(k => {
+    const p = map[k];
+    // keep tidy rounding so your file stays clean
+    const x = Number(p.x.toFixed(1));
+    const y = Number(p.y.toFixed(1));
+    const r = Number(p.r.toFixed(1));
+    return `  ${JSON.stringify(k)}: { x: ${x}, y: ${y}, r: ${r} },`;
+  });
+
+  return `const HANDPAN_MAP = {\n${lines.join('\n')}\n};`;
+}

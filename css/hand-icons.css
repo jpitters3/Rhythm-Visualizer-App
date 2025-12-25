@@ -1,0 +1,42 @@
+/* ===== HAND ICONS (Split Mode) — IMAGE FILES ===== */
+
+  /* Only show icons when split mode is ON AND the beat is labeled */
+  body.handSplit .cell.label-d::after,
+  body.handSplit .cell.label-t::after,
+  body.handSplit .cell.label-s::after,
+  body.handSplit .cell.label-n::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    width: 34%;
+    height: 34%;
+    transform: translateY(-50%);
+    pointer-events: none;
+    opacity: 0.95;
+
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: contain;
+
+    /* optional: keeps them readable */
+    filter: drop-shadow(0 2px 2px rgba(0,0,0,0.12));
+  }
+
+  /* LEFT HAND icon: placed on left half */
+  body.handSplit .cell.hand-l.label-d::after,
+  body.handSplit .cell.hand-l.label-t::after,
+  body.handSplit .cell.hand-l.label-s::after,
+  body.handSplit .cell.hand-l.label-n::after {
+    left: 6%;
+    background-image: url("../assets/images/hand-left.webp");
+  }
+
+  /* RIGHT HAND icon: placed on right half */
+  body.handSplit .cell.hand-r.label-d::after,
+  body.handSplit .cell.hand-r.label-t::after,
+  body.handSplit .cell.hand-r.label-s::after,
+  body.handSplit .cell.hand-r.label-n::after {
+    right: 6%;
+    left: auto;
+    background-image: url("../assets/images/hand-right.webp");
+  }

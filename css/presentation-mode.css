@@ -1,0 +1,63 @@
+/* ===== PRESENTATION MODE ===== */
+body.present {
+    padding: 0;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;   /* vertical centering */
+    /* horizontal centering */
+    /* align-items: center;        */
+    margin: auto;
+    /* width: 50%; */
+
+}
+
+body.present h2,
+body.present .pattern-row,
+body.present .controls,
+body.present .legend,
+body.present .footer {
+  display: none;
+}
+
+body.present .labels {
+  max-width: 1200px;
+  font-size: 32px;
+  opacity: 0.85;
+  margin-bottom: 16px;
+}
+
+body.present .grid {
+  max-width: 1200px;
+  gap: 16px;
+}
+
+body.present .cell .inner { font-size: 44px; }
+
+.present-exit {
+  position: fixed;
+  top: 14px;
+  right: 14px;
+  z-index: 50;
+  display: none;
+  padding: 10px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--panel-border);
+  background: var(--panel);
+  color: var(--text);
+  cursor: pointer;
+  font-weight: 600;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+}
+
+body.present .present-exit {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+@media (max-width: 600px) {
+  body.present .labels { font-size: 22px; }
+  body.present .cell .inner { font-size: 36px; }
+  body.present .grid { gap: 12px; }
+}
