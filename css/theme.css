@@ -19,7 +19,7 @@ h2 { margin: 0 0 16px; font-weight: 500; }
   --text: #2f2f2f;
   --cell-bg: #ffffff;
   --cell-border: #ddd8cc;
-  --cell-on: #ffe8a3;
+  --cell-on: #eaeaea;
   --play-glow: rgba(255, 209, 102, 0.45);
   --btn-bg: #e8e5dc;
   --btn-active: #ffd166;

@@ -131,7 +131,7 @@ body:not(.dark) .cell.selected {
 body:not(.dark) .cell.play { box-shadow: 0 0 0 6px rgba(47, 47, 47, 0.35); }
 
 /* ON highlight only when unlabeled */
-.cell.on:not(.label-d):not(.label-t):not(.label-s):not(.label-n) { background: var(--cell-on); }
+.cell.selected:not(.label-d):not(.label-t):not(.label-s):not(.label-n) { background: var(--cell-on); }
 
 /* ===== BEAT POSITION COLOR (Downbeat/Upbeat) ===== */
 
@@ -163,7 +163,7 @@ body.dark {
 }
 
 /* ON highlight only when unlabeled */
-.cell.on:not(.has-label) { background: var(--cell-on); }
+.cell.selected:not(.has-label) { background: var(--cell-on); }
 
 body.handSplit .cell.has-label {
    background: color-mix(in srgb, var(--beat-fill) var(--mix), var(--cell-bg));
