@@ -123,7 +123,7 @@
 }
 body:not(.dark) .cell.selected {
   border-color: rgba(47, 47, 47, 0.85);
-  box-shadow: 0 0 0 6px rgba(47, 47, 47, 0.12);
+  box-shadow: 0 0 0 10px rgba(74, 74, 74, 0.22);
 }
 
 /* Play ring */
@@ -146,8 +146,8 @@ body.dark {
 }
 
 /* Mixing strength (keeps your nice subtle fill) */
-.cell.has-label { --mix: 42%; }
-.cell.on.has-label { --mix: 70%; }
+.cell.off.has-label { --mix: 42%; }
+.cell.has-label { --mix: 70%; }
 
 /* Choose fill based on beat position */
 .cell.downbeat { --beat-fill: var(--down-fill); }

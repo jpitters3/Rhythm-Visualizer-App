@@ -29,7 +29,7 @@ function clearAllBeatsAndLabels() {
   pattern.fill(false);
   innerLabels.fill('');
   cells().forEach((c) => {
-    c.classList.remove('on', 'label-d', 'label-t', 'label-s', 'label-n', 'selected', 'play');
+    c.classList.remove('label-d', 'label-t', 'label-s', 'label-n', 'selected', 'play');
     const inner = c.querySelector('.inner');
     if (inner) inner.textContent = '';
   });
@@ -110,7 +110,6 @@ function applyGroove({ D, T, S, placement = 'none', completelyRandom = false, en
 
   // force beat 1
   pattern[0] = true;
-  all[0].classList.add('on');
   setInnerLabel(0, 'D');
 
   let dLeft = Math.max(0, D - 1);
@@ -134,7 +133,6 @@ function applyGroove({ D, T, S, placement = 'none', completelyRandom = false, en
     for (let i = 0; i < picks.length; i++) {
       const idx = picks[i];
       pattern[idx] = true;
-      all[idx].classList.add('on');
       setInnerLabel(idx, labelsArr[i] || '');
     }
 
@@ -150,17 +148,14 @@ function applyGroove({ D, T, S, placement = 'none', completelyRandom = false, en
 
   for (const idx of dPos) {
     pattern[idx] = true;
-    all[idx].classList.add('on');
     setInnerLabel(idx, 'D');
   }
   for (const idx of tPos) {
     pattern[idx] = true;
-    all[idx].classList.add('on');
     setInnerLabel(idx, 'T');
   }
   for (const idx of sPos) {
     pattern[idx] = true;
-    all[idx].classList.add('on');
     setInnerLabel(idx, 'S');
   }
 
@@ -347,21 +342,18 @@ function generateGroove(dCount, tCount, sCount) {
   // Apply Dings
   for (const i of dIdx) {
     pattern[i] = true;
-    allCells[i]?.classList.add('on');
     setInnerLabel(i, 'D');
   }
 
   // Apply Taks
   for (const i of tIdx) {
     pattern[i] = true;
-    allCells[i]?.classList.add('on');
     setInnerLabel(i, 'T');
   }
 
   // Apply Slaps
   for (const i of sIdx) {
     pattern[i] = true;
-    allCells[i]?.classList.add('on');
     setInnerLabel(i, 'S');
   }
 

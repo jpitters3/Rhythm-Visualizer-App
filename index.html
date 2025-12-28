@@ -51,7 +51,6 @@
         <button id="playBtn">Play</button>
         <button id="grooveBtn" title="Generate a random groove">Give me a groove!</button>
         <button id="metroBtn" title="Toggle metronome click">Metronome: Off</button>
-        <button id="hpBtn" title="Toggle handpan sounds">Handpan Sounds: Off</button>
         <button id="gridBtn" title="Toggle between 8th and 16th grid">8ths</button>
         <button id="handBtn" class="active" title="Toggle left/right hand coloring">Left/Right: Off</button>
         <button id="presentBtn" title="Toggle presentation mode (Esc exits)">Presentation</button>
@@ -71,6 +70,8 @@
       </div>
     
       <aside class="handpan-panel" aria-label="Handpan map">
+        <select id="scaleSelect" title="Choose your handpan scale"></select>
+        <span id="scaleStatus" style="opacity:.7;font-size:13px;"></span>
         <div class="handpan-wrap" id="handpanWrap">
           <img
             src="./assets/images/nine-note-handpan-numbered.png"
@@ -192,25 +193,6 @@
 
     const supabase1 = window.supabase1;
 
-    const TAB_ID = crypto.randomUUID();
-    const TAB_KEY = 'groovepan_active_tab';
-
-    function claimTab() {
-      const active = localStorage.getItem(TAB_KEY);
-      if (!active) localStorage.setItem(TAB_KEY, TAB_ID);
-      return localStorage.getItem(TAB_KEY) === TAB_ID;
-    }
-
-    function releaseTab() {
-      if (localStorage.getItem(TAB_KEY) === TAB_ID) localStorage.removeItem(TAB_KEY);
-    }
-
-    window.addEventListener('beforeunload', releaseTab);
-
-    if (!claimTab()) {
-      alert("GroovePan is open in another tab. Close the other tab to avoid account issues.");
-    }
-
     let currentUser = null;
 
     // ===== CONFIG =====
@@ -227,7 +209,6 @@
     const LAST_USED_KEY = 'rhythm_visualizer_last_used';
     const PRESENT_KEY = 'rhythm_visualizer_present';
     const METRO_KEY = 'rhythm_visualizer_metronome';
-    const HP_KEY = 'rhythm_visualizer_handpan_sounds';
 
 
     // ===== ELEMENTS =====
@@ -284,337 +265,21 @@
 
 
     // ===== STATE =====
-    let pattern = [];
     let innerLabels = [];
     let selectedIndex = null;
     let measures = 1;
 
-    let step = 0;
-    // Use an array of timers to prevent accidental stacking (double-clicks, race conditions)
-    let timers = [];
-    let playing = false;
-
-    // Metronome
-    let metronomeOn = false;
-    let audioCtx = null;
-
-    let audioUnlocked = false;
-    let samplesPreloaded = false;
-
-    function unlockAudio() {
-      audioUnlocked = true;
-      ensureAudio();
-      preloadAudioSamples();
-    }
-
-    // Handpan Sounds
-    let handpanSoundsOn = false;
-
-    // ===== HANDPAN SAMPLE BUFFERS =====
-    const samples = {
-        D: null,
-        T: null,
-        S: null,
-    };
-
-    // ===== HELPERS =====
-    const cells = () => document.querySelectorAll('.cell');
-
-    function setCols(n) {
-      // Apply to the measures wrapper (it cascades to measure children)
-      if (measuresEl) measuresEl.style.setProperty('--cols', String(n));
-    }
-
-    function labelForStep(i) {
-      if (mode === '8') {
-        const beatNumber = Math.floor(i / 2) + 1;
-        return (i % 2 === 0) ? String(beatNumber) : '+';
-      }
-      const beatNumber = Math.floor(i / 4) + 1;
-      const pos = i % 4;
-      if (pos === 0) return String(beatNumber);
-      if (pos === 1) return 'e';
-      if (pos === 2) return '&';
-      return 'a';
-    }
-
-    function clearGridDom() {
-      if (measuresEl) measuresEl.innerHTML = '';
-    }
-
-    function clearSelection() {
-      selectedIndex = null;
-      cells().forEach(c => c.classList.remove('selected'));
-    }
-
-    function applySelection(i) {
-      selectedIndex = i;
-      cells().forEach((c, idx) => c.classList.toggle('selected', idx === i));
-    }
-
-    function setInnerLabel(i, value) {
-      innerLabels[i] = value;
-      const cell = cells()[i];
-      if (!cell) return;
-
-      const inner = cell.querySelector('.inner');
-      if (inner) inner.textContent = value;
-
-      cell.classList.remove('label-d', 'label-t', 'label-s', 'label-n', 'has-label');
-      const v = String(value || '');
-      
-      // ghost = no label set
-      cell.classList.toggle('ghost', !v);
-
-      if (!v) return;
-      cell.classList.add('has-label');
-
-
-        if (v === 'D') cell.classList.add('label-d');
-        else if (v === 'T') cell.classList.add('label-t');
-        else if (v === 'S') cell.classList.add('label-s');
-        else if (/^[0-9]$/.test(v)) cell.classList.add('label-n');
-
-    }
-
-    function buildGrid() {
-      clearGridDom();
-      setCols(STEPS);
-
-      const totalSteps = measures * STEPS;
-
-      // Preserve existing data when changing measures
-      const prevPattern = pattern.slice();
-      const prevLabels = innerLabels.slice();
-
-      pattern = Array(totalSteps).fill(false);
-      innerLabels = Array(totalSteps).fill('');
-      for (let i = 0; i < Math.min(prevPattern.length, totalSteps); i++) pattern[i] = !!prevPattern[i];
-      for (let i = 0; i < Math.min(prevLabels.length, totalSteps); i++) innerLabels[i] = String(prevLabels[i] || '');
-
-      selectedIndex = null;
-      step = 0;
-
-      for (let m = 0; m < measures; m++) {
-        const measureWrap = document.createElement('div');
-        measureWrap.className = 'measure';
-
-        for (let i = 0; i < STEPS; i++) {
-          const globalIndex = (m * STEPS) + i;
-
-          // Labels row (row 1)
-          const label = document.createElement('div');
-          label.className = 'labelCell';
-          label.textContent = labelForStep(i);
-          measureWrap.appendChild(label);
-
-          // Grid row (row 2)
-          const cell = document.createElement('div');
-          cell.className = 'cell gridCell';
-
-          // Default: unlabeled = ghost
-          cell.classList.add('ghost');
-
-          // Assign hand + beat position classes (same logic you already had, but using local step i)
-          if (mode === '8') {
-            const isDown = (i % 2 === 0);
-            cell.classList.add(isDown ? 'hand-r' : 'hand-l');
-            cell.classList.add(isDown ? 'downbeat' : 'upbeat');
-          } else {
-            const pos = i % 4;
-            const isDown = (pos === 0);
-            cell.classList.add((pos === 0 || pos === 2) ? 'hand-r' : 'hand-l');
-            cell.classList.add(isDown ? 'downbeat' : 'upbeat');
-          }
-
-          const inner = document.createElement('div');
-          inner.className = 'inner';
-          inner.textContent = '';
-          cell.appendChild(inner);
-
-          // Ghost note dot
-          const ghost = document.createElement('div');
-          ghost.className = 'ghost-dot';
-          cell.appendChild(ghost);
-
-          // Restore ON state
-          cell.classList.toggle('on', !!pattern[globalIndex]);
-
-          cell.addEventListener('click', (ev) => {
-            ev.stopPropagation();
-
-            // Click selects (Esc clears selection)
-            if (selectedIndex === globalIndex) clearSelection();
-            else applySelection(globalIndex);
-
-            // Click toggles on/off (your current behavior)
-            pattern[globalIndex] = !pattern[globalIndex];
-            cell.classList.toggle('on', pattern[globalIndex]);
-          });
-
-          measureWrap.appendChild(cell);
-        }
-
-        // Show +Add Measure button ONLY on last measure
-        const addBtn = document.createElement('button');
-        const existingAddBtn = document.getElementById('add-measure');
-
-        if (m === measures - 1) {
-          addBtn.id = 'add-measure';
-          addBtn.className = 'add-measure';
-          addBtn.type = 'button';
-          addBtn.title = 'Add another measure';
-          addBtn.style = 'width: 200px'
-          addBtn.textContent = '+ Add Measure';
-          addBtn.addEventListener('click', (ev) => {
-            ev.stopPropagation();
-            addMeasure();
-          });
-
-          if (existingAddBtn) existingAddBtn.remove();
-          measuresEl.after(addBtn);
-        }
-
-        measuresEl.appendChild(measureWrap);
-      }
-
-      // Apply labels after DOM exists
-      for (let i = 0; i < totalSteps; i++) {
-        if (innerLabels[i]) setInnerLabel(i, innerLabels[i]);
-      }
-    }
-
-    function addMeasure() {
-      measures += 1;
-      buildGrid();
-      restartIfPlaying();
-    }
-
-    function intervalMs() {
-      const perBeat = (mode === '8') ? 2 : 4;
-      return (60 / Number(bpmInput.value)) * 1000 / perBeat;
-    }
-
-    function ensureAudio() {
-      // Don’t create/resume AudioContext until a real user gesture has happened
-      if (!audioUnlocked) return;
-  
-      if (!audioCtx) {
-        const Ctx = window.AudioContext || window.webkitAudioContext;
-        if (Ctx) audioCtx = new Ctx();
-      }
-      if (audioCtx && audioCtx.state === 'suspended') {
-        audioCtx.resume().catch(() => {});
-      }
-    }
-
-    // Preload note samples once audio is unlocked
-    function preloadAudioSamples()
-    {
-      if (!samplesPreloaded && audioCtx) {
-        samplesPreloaded = true;
-        for (let i=1; i<=8; i++) loadNumberSample(i);
-        loadSample('D', './assets/audio/dkurd_ding.wav');
-        loadSample('T', './assets/audio/dkurd_tak.wav');
-        loadSample('S', './assets/audio/dkurd_slap.wav');
-      }
-    }
-    async function loadSample(key, url) {
-      ensureAudio();
-      if (!audioCtx) return;
-
-      const res = await fetch(url);
-      const arrayBuffer = await res.arrayBuffer();
-      samples[key] = await audioCtx.decodeAudioData(arrayBuffer);
-    }
-
-    function metroClick(kind) {
-      ensureAudio();
-      if (!audioCtx) return;
-
-      const t = audioCtx.currentTime;
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
-
-      osc.type = 'square';
-      const freq = (kind === 'downbeat') ? 1600 : (kind === 'beat' ? 1300 : 1000);
-      const level = (kind === 'downbeat') ? 0.28 : (kind === 'beat' ? 0.20 : 0.12);
-
-      osc.frequency.setValueAtTime(freq, t);
-
-      gain.gain.setValueAtTime(0.0001, t);
-      gain.gain.exponentialRampToValueAtTime(level, t + 0.001);
-      gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.03);
-
-      osc.connect(gain);
-      gain.connect(audioCtx.destination);
-
-      osc.start(t);
-      osc.stop(t + 0.04);
-    }
-
-    function isDownbeatStep(stepIndex){
-      if (mode === '8') return stepIndex % 2 === 0;     // 1,2,3,4
-      return stepIndex % 4 === 0;                       // 1,2,3,4 on 16ths
-    }
-
-    function tick() {
-      const all = cells();
-      if (!all.length) return;
-
-      all.forEach(c => c.classList.remove('play'));
-      const cell = all[step];
-      cell.classList.add('play');
-
-      // Numbered beat playback
-      const label = innerLabels[step];
-      if (/^[1-8]$/.test(label)) {
-        playNumberSample(label);
-        highlightHandpan(label, step);
-      }
-
-      if (metronomeOn) {
-        const beatStride = (mode === '8') ? 2 : 4;
-        const isQuarter = (step % beatStride === 0);
-        const isDownbeat = (step === 0);
-        metroClick(isDownbeat ? 'downbeat' : (isQuarter ? 'beat' : 'sub'));
-      }
-
-      // Handpan sounds: only when this step is ON and has a D/T/S label
-      if (handpanSoundsOn && pattern[step]) {
-        const label = innerLabels[step] || '';
-        playHandpanSoundForLabel(label);
-        highlightHandpan(label, step);
-      }
-
-      const totalSteps = measures * STEPS;
-      step = (step + 1) % totalSteps;
-    }
-
-    function setMode(nextMode) {
-      measures = 1;
-      
-      if (nextMode === mode) return;
-      const wasPlaying = playing;
-      if (wasPlaying) stop();
-
-      mode = nextMode;
-      STEPS = (mode === '8') ? 8 : 16;
-      gridBtn.textContent = (mode === '8') ? '8ths' : '16ths';
-
-      buildGrid();
-
-      if (wasPlaying) start();
-    }
+    
   </script>
-  <script src="./js/auth.js"></script>
+  <script src="./js/notegrid.js"></script>
+  <script src="./js/noteplayer.js"></script>
   <script src="./js/groove-generator.js"></script>
   <script src="./js/presentation-mode.js"></script>
   <script src="./js/pattern-crud.js"></script>
-  <script src="./js/play-sounds.js"></script>
   <script src="./js/controls.js"></script>
   <script src="./js/keyboard-shortcuts.js"></script>
   <script src="./js/handpanmap.js"></script>
+  <script src="./js/auth.js"></script>
   <script src="./js/init.js"></script><!-- keep near bottom -->
 </body>
 </html>

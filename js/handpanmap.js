@@ -1,3 +1,5 @@
+/* Includes scale selector */
+
 /* Perfectly mapped to nine-note-handpan-numbered.png */
 const HANDPAN_MAP = {
   D: { x: 50.3, y: 47, r: 12 },
@@ -163,3 +165,13 @@ function stringifyHandpanMap(map) {
 
   return `const HANDPAN_MAP = {\n${lines.join('\n')}\n};`;
 }
+
+// Event handlers
+
+scaleSelect.addEventListener('change', async () => {
+  selectedScaleName = scaleSelect.value;
+  scaleStatus.textContent = `Scale: ${selectedScaleName}`;
+  saveScaleLocal(selectedScaleName);
+  await preloadScaleSamples();
+  if (currentUser) await saveScaleRemote(selectedScaleName);
+});

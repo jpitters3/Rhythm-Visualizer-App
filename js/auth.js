@@ -78,6 +78,23 @@ async function initAuthSession() {
 
 initAuthSession();
 
+async function initScale(){
+  let name = null;
+
+  if (currentUser) name = await loadScaleRemote();
+  if (!name) name = loadScaleLocal();
+  if (!name || !SCALES[name]) name = Object.keys(SCALES)[0];
+
+  selectedScaleName = name;
+  scaleSelect.value = name;
+  scaleStatus.textContent = `Scale: ${name}`;
+
+  await preloadScaleSamples();
+}
+
+initScale();
+
+// Auth modal
 accountBtn?.addEventListener('click', openAuthModal);
 authCancel?.addEventListener('click', closeAuthModal);
 
@@ -104,6 +121,7 @@ authLogin?.addEventListener('click', async () => {
   updateAdminUI();
   closeAuthModal();
   await refreshPatternSelect();
+  initScale();
 });
 
 authLogout?.addEventListener('click', async () => {
@@ -111,5 +129,6 @@ authLogout?.addEventListener('click', async () => {
   currentUser = null;
   updateAccountUI();
   updateAdminUI();
+  initScale();
   authHint.textContent = 'Signed out.';
 });

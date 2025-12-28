@@ -14,10 +14,6 @@ updateMetroUI();
 
 bpmVal.textContent = bpmInput.value;
 
-handpanSoundsOn = (localStorage.getItem(HP_KEY) === 'on');
-updateHandpanUI();
-
-
   if (localStorage.getItem(PRESENT_KEY) === 'on') {
     document.body.classList.add('present');
     presentBtn.classList.add('active');

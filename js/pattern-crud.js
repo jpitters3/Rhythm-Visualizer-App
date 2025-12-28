@@ -200,13 +200,6 @@ function applyPattern(state) {
   const totalSteps = measures * STEPS;
   const all = cells();
 
-  // Apply on/off across all steps we have
-  for (let i = 0; i < totalSteps; i++) {
-    const isOn = !!state.on[i];
-    pattern[i] = isOn;
-    all[i]?.classList.toggle('on', isOn);
-  }
-
   // Apply labels across all steps
   for (let i = 0; i < totalSteps; i++) {
     setInnerLabel(i, state.labels[i] || '');

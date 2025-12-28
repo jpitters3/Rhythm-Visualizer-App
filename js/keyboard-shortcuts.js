@@ -35,7 +35,9 @@
     return;
   }
 
-
+  // From this point onwards in this function,
+  // assign the beat to a ding, tak, slap, or note
+  // based on the key that was pressed
   if (selectedIndex === null) return;
 
   const k = e.key;

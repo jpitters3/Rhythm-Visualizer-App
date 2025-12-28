@@ -53,24 +53,11 @@ metroBtn.addEventListener('click', () => {
   if (metronomeOn) ensureAudio();
 });
 
-function updateHandpanUI() {
-    hpBtn.classList.toggle('active', handpanSoundsOn);
-    hpBtn.textContent = handpanSoundsOn ? 'Handpan Sounds: On' : 'Handpan Sounds: Off';
-}
-
-hpBtn.addEventListener('click', () => {
-    handpanSoundsOn = !handpanSoundsOn;
-    localStorage.setItem(HP_KEY, handpanSoundsOn ? 'on' : 'off');
-    updateHandpanUI();
-    if (handpanSoundsOn) ensureAudio();
-});
-
 clearBtn.addEventListener('click', () => {
-  pattern = Array(measures * STEPS).fill(false);
   innerLabels = Array(measures * STEPS).fill('');
 
   cells().forEach((c) => {
-    c.classList.remove('on', 'label-d', 'label-t', 'label-s', 'label-n', 'has-label', 'selected', 'play');
+    c.classList.remove('label-d', 'label-t', 'label-s', 'label-n', 'has-label', 'selected', 'play');
     const inner = c.querySelector('.inner');
     if (inner) inner.textContent = '';
   });
