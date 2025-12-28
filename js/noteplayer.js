@@ -22,6 +22,9 @@ const SCALES = {
   }
 };
 
+const SOUND_TAK = 'Tak';
+const SOUND_SLAP = 'Slap';
+
 const SCALE_KEY_LOCAL = 'groovepan_scale';            // for non-logged-in users
 const SCALE_KEY_REMOTE = 'handpan_scale';             // for logged-in users in Supabase profile
 let selectedScaleName = null;
@@ -48,9 +51,11 @@ function getScale(){
 
 function noteForLabel(label){
   const s = getScale();
-  if (label === 'D') return s.ding;            // ding note name like "D"
-  if (/^[1-8]$/.test(label)) return s.map[label];  // e.g. "Cs3"
-  return null; // T/S or ghosts etc
+  if (label === 'D') return `${s.ding}_ding`;     // ding note name like "D3"
+  else if (label === 'T') return SOUND_TAK;
+  else if (label === 'S') return SOUND_SLAP;
+  if (/^[1-8]$/.test(label)) return s.map[label]; // e.g. "Cs3"
+  return null; // ghosts notes
 }
 
 function noteToFile(note){
@@ -110,11 +115,7 @@ function unlockAudio() {
 }
 
 // ===== HANDPAN SAMPLE BUFFERS =====
-const samples = {
-    D: null,
-    T: null,
-    S: null,
-};
+const samples = {};
 
 function intervalMs() {
   const perBeat = (mode === '8') ? 2 : 4;
@@ -149,9 +150,8 @@ function preloadAudioSamples()
 {
   if (!samplesPreloaded && audioCtx) {
     samplesPreloaded = true;
-    loadSample('D', './assets/audio/dkurd_ding.wav');
-    loadSample('T', './assets/audio/dkurd_tak.wav');
-    loadSample('S', './assets/audio/dkurd_slap.wav');
+    loadSample(SOUND_TAK, './assets/audio/dkurd_tak.wav');
+    loadSample(SOUND_SLAP, './assets/audio/dkurd_slap.wav');
     preloadScaleSamples();
   }
 }
@@ -209,18 +209,13 @@ function tick() {
     metroClick(isDownbeat ? 'downbeat' : (isQuarter ? 'beat' : 'sub'));
   }
 
-  // Numbered beat playback
+  // Play the sound that corresponds to the beat label
   const label = innerLabels[step];
-  const note = noteForLabel(label); // e.g. "C#"
+  const note = noteForLabel(label); // e.g. "C#", "D3_ding"
   if (note) { playNoteSample(note); }
   
-  // Handpan sounds: only when this step is ON and has a D/T/S label
-  // if (pattern[step]) {
-    const labelx = innerLabels[step] || '';
-    playHandpanSoundForLabel(label);
-    highlightHandpan(labelx, step);
-  // }
-
+  highlightHandpan(label, step);
+  
   const totalSteps = measures * STEPS;
   step = (step + 1) % totalSteps;
 }
