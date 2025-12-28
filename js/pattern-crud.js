@@ -166,13 +166,12 @@ function serializePattern() {
     handSplit: document.body.classList.contains('handSplit'),
     steps: STEPS,
     measures: measures,
-    on: pattern.slice(),
     labels: innerLabels.slice(),
   };
 }
 
 function applyPattern(state) {
-  if (!state || !state.mode || !Array.isArray(state.on) || !Array.isArray(state.labels)) {
+  if (!state || !state.mode || !Array.isArray(state.labels)) {
     alert('That pattern JSON does not look valid.');
     return;
   }
