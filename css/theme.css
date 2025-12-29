@@ -5,7 +5,22 @@ body {
   padding: 5px;
   font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
   background: var(--bg);
+  background-blend-mode:overlay;
   color: var(--text);
+}
+
+/* Comment this section to remove the background */
+body::after {
+  content: "";
+  background-image: url('../assets/images/backgrounds/lake-waterfall.jpg');
+  background-size: cover;
+  opacity: 0.7;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  right: 0;
+  position: absolute;
+  z-index: -1;   
 }
 
 h2 { margin: 0 0 16px; font-weight: 500; }

@@ -21,8 +21,8 @@
     position: relative;
     width: 100%;
     border-radius: 18px;
-    background: var(--panel);
-    border: 1px solid var(--panel-border);
+    /* background: var(--panel);
+    border: 1px solid var(--panel-border); */
     padding: 14px;
   }
 

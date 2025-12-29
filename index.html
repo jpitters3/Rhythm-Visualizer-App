@@ -12,10 +12,44 @@
       opacity: 0.6;
     }
 
+    div.grid-container.top-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      grid-gap: 20px;
+    }
+
+    div.logo img.logo-img {
+      max-height: 120px;
+      padding-bottom: 20px;
+    }
+
+    div.grid-child.account {
+      min-width: 200px;
+      justify-content: right;
+      justify-self: right;
+    }
+
     div.container {
         margin: 0 auto;
-        width: 98%;
+        width: 98%; 
+        padding: 50px;
         max-width: 1200px;
+        background-color: #ffffff;
+        background-color: var(--bg);
+        border-radius: 25px;
+    }
+
+    @media (max-width: 768px) {
+      div.container {
+        margin: 0 auto;
+        width: 98%;
+        padding: 0px;
+    }
+}
+
+    div.container::after {
+      background-color: aliceblue;
+      opacity: 0.5;
     }
   </style>
   <link rel="stylesheet" href="./css/controls.css">
@@ -29,24 +63,31 @@
 </head>
 <body>
 
-  <h2>Simple Rhythm / Groove Visualizer <span style="opacity:.5;font-size:14px;">v1.17.4</span></h2>
   <div class="container">
-    <!-- Pattern management row -->
+    <div class="grid-container top-row">
+      <div class="grid-child logo">
+        <img class="logo-img" src="./assets/images/groovepan-logo.png" />
+      </div>
+      <!-- Pattern management row -->
+      <div class="pattern-row grid-child account">
+        <button id="accountBtn" title="Sign in / out">Account</button>
+        <span id="accountStatus" style="opacity:.75;font-size:13px;"></span>
+      </div>
+    </div>
     <div class="pattern-row">
-      <button id="accountBtn" title="Sign in / out">Account</button>
-      <span id="accountStatus" style="opacity:.75;font-size:13px;"></span>
+      <h3>Select pattern:</h3>
       <select id="patternSelect" title="Saved patterns">
         <option value="">(no saved patterns)</option>
-        </select>
-        <button id="saveBtn" title="Save current pattern">Save</button>
-        <button id="loadBtn" title="Load selected pattern">Load</button>
-        <button id="renameBtn" title="Rename selected pattern">Rename</button>
-        <button id="deleteBtn" title="Delete selected pattern">Delete</button>
-        <button id="exportBtn" title="Copy pattern JSON to clipboard">Export</button>
-        <button id="importBtn" title="Paste JSON to load a pattern">Import</button>
+      </select>
+      <button id="saveBtn" title="Save current pattern">Save</button>
+      <button id="loadBtn" title="Load selected pattern">Load</button>
+      <button id="renameBtn" title="Rename selected pattern">Rename</button>
+      <button id="deleteBtn" title="Delete selected pattern">Delete</button>
+      <button id="exportBtn" title="Copy pattern JSON to clipboard">Export</button>
+      <button id="importBtn" title="Paste JSON to load a pattern">Import</button>
     </div>
 
-    <div class="controls">
+    <div class="controls pattern-row">
         <button id="themeBtn" title="Toggle light / dark mode">☀︎ / ☾</button>
         <button id="grooveBtn" title="Generate a random groove">Give me a groove!</button>
         <button id="metroBtn" title="Toggle metronome click">Metronome: Off</button>
@@ -83,24 +124,32 @@
         </div>
       </aside>
     </div>
-  </div><!-- container -->
+  
 
   <div class="legend" aria-label="Legend">
       <div class="legend-title">Legend</div>
       <div class="legend-row">
-      <span><kbd>Space</kbd> Play / Stop</span>
-      <span><kbd>D</kbd> Ding</span>
-      <span><kbd>T</kbd> Tone</span>
-      <span><kbd>S</kbd> Slap</span>
-      <span><kbd>0–9</kbd> Digit</span>
-      <span><kbd>Left/Right</kbd> Toggle hand split</span>
-      <span><kbd>Click</kbd> Toggle on/off</span>
-      <span><kbd>Click</kbd> Select</span>
-      <span><kbd>M</kbd> Toggle metronome</span>
-      <span><kbd>Esc</kbd> Unselect / Exit Presentation</span>
+        <h3>Actions for Setting the Notes</h3><br/>
+      </div>
+      <div class="legend-row">
+        <span><kbd>Click</kbd> Select A Note</span>
+        <span><kbd>D</kbd> Ding</span>
+        <span><kbd>T</kbd> Tak</span>
+        <span><kbd>S</kbd> Slap</span>
+        <span><kbd>0–9</kbd> Numbered Note</span>
+        <span><kbd>Space</kbd> Ghost Note</span>
+        <span><kbd>M</kbd> Toggle metronome</span>
+        <span><kbd>Esc</kbd> Exit</span>
+      </div>
+      <div class="legend-row">
+        <h3>Labels</h3><br/>
+      </div>
+      <div class="legend-row">
+        <span><kbd>Left/Right</kbd> Toggle hand icons</span>
+        
       </div>
   </div>
-  
+</div><!-- container -->
 
   <div class="footer"></div>
 
