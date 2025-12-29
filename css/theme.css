@@ -2,7 +2,7 @@
 * { box-sizing: border-box; }
 body {
   margin: 0;
-  padding: 24px;
+  padding: 5px;
   font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
   background: var(--bg);
   color: var(--text);
