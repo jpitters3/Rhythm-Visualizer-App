@@ -155,7 +155,7 @@ body.dark {
 
 /* Mixing strength (keeps your nice subtle fill) */
 .cell.off.has-label { --mix: 42%; }
-.cell.has-label { --mix: 65%; }
+.cell.has-label { --mix: 68%; }
 @media (max-width: 768px) {
   .cell.has-label { --mix: 0%; }
 }
