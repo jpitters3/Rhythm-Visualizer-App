@@ -40,22 +40,27 @@
   // based on the key that was pressed
   if (selectedIndex === null) return;
 
+  const noAdvance = e.altKey; // Alt = write without advancing
+
   const k = e.key;
   const lower = k.toLowerCase();
   const map = { d: 'D', t: 'T', s: 'S' };
 
   if (map[lower]) {
-    setInnerLabel(selectedIndex, map[lower]);
+    // setInnerLabel(selectedIndex, map[lower]);
+    writeToSelected(map[lower], { advance: !noAdvance });
     return;
   }
 
   if (/^[0-9]$/.test(k)) {
-    setInnerLabel(selectedIndex, k);
+    // setInnerLabel(selectedIndex, k);
+    writeToSelected(k, { advance: !noAdvance });
     return;
   }
 
   if (k === 'Backspace' || k === 'Delete' || k === 'g') {
-    setInnerLabel(selectedIndex, '');
+    // setInnerLabel(selectedIndex, '');
+    writeToSelected('', { advance: !noAdvance });
   }
 });
 
