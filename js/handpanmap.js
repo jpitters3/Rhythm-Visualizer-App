@@ -224,11 +224,11 @@ scaleSelect.addEventListener('change', async () => {
 handpanSelect.addEventListener('change', async () => {
   selectedHandpanName = handpanSelect.value;
   if (selectedHandpanName === 'Bronze') {
-    handpanImg.src = `../assets/images/${HANDPAN_IMG_BRONZE}`;
+    handpanImg.src = `./assets/images/${HANDPAN_IMG_BRONZE}`;
     HANDPAN_MAP = HANDPAN_MAP_BRONZE;
   }
   else if (selectedHandpanName === 'Sketch') {
-    handpanImg.src = `../assets/images/${HANDPAN_IMG_SKETCH}`;
+    handpanImg.src = `./assets/images/${HANDPAN_IMG_SKETCH}`;
     HANDPAN_MAP = HANDPAN_MAP_SKETCH;
   }
   buildHandpanOverlay();
