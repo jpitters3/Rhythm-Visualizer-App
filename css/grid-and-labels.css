@@ -88,7 +88,8 @@
 
 .gridCell {
   grid-row: 2;
-  min-height: 80px;
+  min-height: 35px;
+  min-width: 35px;
   aspect-ratio: 1 / 1;
 }
 
