@@ -7,6 +7,7 @@ function updateComposeUI(){
   if (!composeBtn) return;
   composeBtn.classList.toggle('active', composeOn);
   composeBtn.textContent = composeOn ? 'Compose: On' : 'Compose: Off';
+  document.body.classList.toggle('composeOn', composeOn);
 }
 
 composeBtn?.addEventListener('click', () => {
@@ -42,10 +43,12 @@ function writeToSelected(label, { advance = true } = {}){
 
   setInnerLabel(selectedIndex, label);
 
-  // Your existing behavior: labeled beats should also be "on"
-  // pattern[selectedIndex] = true;
-  // cells()[selectedIndex]?.classList.add('on');
-
   // Compose advance unless Alt is held
   if (composeOn && advance) advanceSelection(1);
+}
+
+function labelFromHandpanDot(dotNote){
+  // dotNote will be 'D', '1'...'8', (and later 'T','S')
+
+  return dotNote;
 }

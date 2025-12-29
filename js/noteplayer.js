@@ -211,8 +211,7 @@ function tick() {
 
   // Play the sound that corresponds to the beat label
   const label = innerLabels[step];
-  const note = noteForLabel(label); // e.g. "C#", "D3_ding"
-  if (note) { playNoteSample(note); }
+  playNoteByLabel(label, step);
   
   highlightHandpan(label, step);
   
@@ -220,6 +219,11 @@ function tick() {
   step = (step + 1) % totalSteps;
 }
 
+function playNoteByLabel(label, step)
+{
+  const note = noteForLabel(label); // e.g. "C#", "D3_ding"
+  if (note) { playNoteSample(note); }
+}
 function setMode(nextMode) {
   measures = 1;
   

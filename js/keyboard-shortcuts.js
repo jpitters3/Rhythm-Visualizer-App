@@ -65,7 +65,13 @@
 });
 
 document.addEventListener('click', (ev) => {
-  if (!ev.target.closest('.cell')) clearSelection();
+  // Clear selection when clicking / tapping anywhere except 
+  // on the beat cells, or on the handpan notes while Compose mode is ON
+  let clear = true;
+  if (!ev.target.closest('.cell')) clear = false;
+  if (composeOn && !ev.target.closest('.hp-dot')) clear = false;
+
+  if (clear) clearSelection();
 });
 
 document.addEventListener('click', () => {

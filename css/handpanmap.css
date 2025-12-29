@@ -111,7 +111,7 @@
   /* Calibration */
 
   /* Enable clicking dots only when calibrating */
-body.calibrating .handpan-overlay { pointer-events: auto; }
+body .handpan-overlay { pointer-events: auto; }
 
 /* Make dots visible while calibrating (even when not playing) */
 body.calibrating .hp-dot { opacity: 0.55; }

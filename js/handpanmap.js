@@ -89,14 +89,38 @@ function selectHpDot(note) {
   }
 }
 
-// Click-to-select dots (only matters during calibrating because pointer-events are off otherwise)
+// Click-to-select dots
 handpanOverlay?.addEventListener('click', (e) => {
-  if (!calibrating) return;
-  const dot = e.target.closest('.hp-dot');
-  if (!dot) return;
-  const note = dot.dataset.note;
-  if (!note || !HANDPAN_MAP[note]) return;
-  selectHpDot(note);
+  if (calibrating) {
+    const dot = e.target.closest('.hp-dot');
+    if (!dot) return;
+    const note = dot.dataset.note;
+    if (!note || !HANDPAN_MAP[note]) return;
+    selectHpDot(note);
+
+  } else {
+    // Play notes like a virtual handpan
+    const dot = e.target.closest('.hp-dot');
+    if (!dot) return;
+
+    const note = dot.dataset.note;
+    if (!note) return;
+
+    // If not composing and nothing selected, we can still play sounds.
+    // If a beat is selected, write to it.
+
+    // Play note sound on click / tap
+    playNoteByLabel(note, step); 
+    highlightHandpan(note, step);
+
+    // If a beat is selected, write to it (Compose auto-advance applies)
+    if (selectedIndex !== null) {
+      // Alt click means "don’t advance"
+      const noAdvance = e.altKey; // Alt = write without advancing
+      writeToSelected(note, { advance: !noAdvance });
+      // if (composeOn && !noAdvance) advanceSelection(1);
+    }
+  }
 });
 
 // Nudge with arrow keys
