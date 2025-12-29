@@ -66,8 +66,8 @@ clearBtn.addEventListener('click', () => {
 });
 
 saveBtn.addEventListener('click', async () => {
-  console.log('SAVE CLICKED');
   const defaultName = `Pattern ${new Date().toLocaleString()}`;
+  window.focus();
   const name = prompt('Save pattern as:', getSelectedPatternName() || defaultName);
   if (!name) return;
 
@@ -144,6 +144,7 @@ renameBtn.addEventListener('click', async () => {
   if (!ensureHasSelection()) return;
 
   const oldName = getSelectedPatternName();
+  window.focus();
   const nextName = prompt('Rename pattern to:', oldName);
   if (!nextName) return;
 

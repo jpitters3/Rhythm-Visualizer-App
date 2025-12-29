@@ -29,6 +29,20 @@
       justify-self: right;
     }
 
+    div.grid-container.handpan-options {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr 1fr;
+    }
+
+    div.grid-child.handpan-options.label {
+      text-align: right;
+      padding-right: 10px;
+    }
+
+    div.grid-child.handpan-options.select {
+      align-content: center;
+    }
+
     div.container {
         margin: 0 auto;
         width: 98%; 
@@ -112,13 +126,35 @@
       </div>
     
       <aside class="handpan-panel" aria-label="Handpan map">
-        <select id="scaleSelect" title="Choose your handpan scale"></select>
-        <span id="scaleStatus" style="opacity:.7;font-size:13px;"></span>
+        <div class="grid-container handpan-options">
+          <div class="grid-child handpan-options label">
+            <h3>Scale:</h3>
+          </div>
+          <div class="grid-child handpan-options select">
+            <select id="scaleSelect" title="Choose your handpan scale"></select>
+            <span id="scaleStatus" style="display:none; opacity:.7;font-size:13px;"></span>
+          </div>
+          <div class="grid-child handpan-options label">
+            <h3>Color:</h3>
+          </div>
+          <div class="grid-child handpan-options select">
+            <select id="handpanSelect" title="Choose your handpan color">
+              <option value="Bronze">Bronze</option>
+              <option value="Sketch">Sketch</option>
+            </select>
+          </div>
+        </div>
         <div class="handpan-wrap" id="handpanWrap">
-          <img
+          <!-- <img
             src="./assets/images/nine-note-handpan-numbered.png"
             alt="Handpan note layout"
             class="handpan-img"
+          /> -->
+          <img
+            id="handpanImg"
+            class="handpan-img"
+            src="./assets/images/handpan-for-groovepan.png"
+            alt="Handpan note layout"
           />
           <div class="handpan-overlay" id="handpanOverlay"></div>
         </div>
@@ -306,6 +342,9 @@
     const authEmail = document.getElementById('authEmail');
     const authPass = document.getElementById('authPass');
     const authHint = document.getElementById('authHint');
+
+    const handpanImg = document.getElementById('handpanImg');
+    const hideHandpanOptionsBtn = document.getElementById('hideHandpanOptionsBtn');
 
     const ADMIN_EMAILS = new Set([
       "jpitters3@gmail.com",

@@ -88,7 +88,16 @@
   body:not(.dark) .hp-dot{
     border-color: rgba(47,47,47,0.55);
   }
+
+  .hp-dot[data-note="T"], .hp-dot[data-note="S"]{
+    border-color: rgba(0, 0, 0, 0.77);
+  }
   
+  body:not(.dark) .hp-dot[data-note="T"], body:not(.dark) .hp-dot[data-note="S"]{
+    border-style: dashed;
+    border-color: rgba(0, 0, 0);
+    opacity: 0.65;
+  }
 
   /* Color comes from class */
   .hp-dot.hp-down{

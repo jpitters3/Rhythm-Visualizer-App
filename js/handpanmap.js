@@ -1,17 +1,39 @@
 /* Includes scale selector */
 
-/* Perfectly mapped to nine-note-handpan-numbered.png */
-const HANDPAN_MAP = {
-  D: { x: 50.3, y: 47, r: 12 },
-  1: { x: 63, y: 78.3, r: 12 },
-  2: { x: 33.5, y: 76.3, r: 12 },
-  3: { x: 81.2, y: 58, r: 11 },
-  4: { x: 17.8, y: 54.7, r: 11 },
-  5: { x: 79, y: 33, r: 10 },
-  6: { x: 21.3, y: 30.3, r: 10 },
-  7: { x: 61.2, y: 16, r: 9 },
-  8: { x: 38.2, y: 15.3, r: 9 },
+/* Mapped to nine-note-handpan-numbered.png */
+const HANDPAN_MAP_SKETCH = {
+  "D": { x: 50.3, y: 47, r: 12 },
+  "1": { x: 63, y: 78.3, r: 12 },
+  "2": { x: 33.5, y: 76.3, r: 12 },
+  "3": { x: 81.2, y: 58, r: 11 },
+  "4": { x: 17.8, y: 54.7, r: 11 },
+  "5": { x: 79, y: 33, r: 10 },
+  "6": { x: 21.3, y: 30.3, r: 10 },
+  "7": { x: 61.2, y: 16, r: 9 },
+  "8": { x: 38.2, y: 15.3, r: 9 },
+  "T": { x: 60.1, y: 56.1, r: 5 },
+  "S": { x: 94.1, y: 44.5, r: 7 },
 };
+
+/* Mapped to handpan-for-groovepan.png */
+const HANDPAN_MAP_BRONZE = {
+  "D": { x: 48.1, y: 45.2, r: 12 },
+  "1": { x: 60.8, y: 78.1, r: 12 },
+  "2": { x: 33.1, y: 76.7, r: 12 },
+  "3": { x: 80.6, y: 60.2, r: 11 },
+  "4": { x: 16, y: 56.3, r: 11 },
+  "5": { x: 78.8, y: 33.4, r: 10 },
+  "6": { x: 19.7, y: 30.5, r: 10 },
+  "7": { x: 60.4, y: 16.8, r: 9 },
+  "8": { x: 38.2, y: 16.1, r: 9 },
+  "T": { x: 61.1, y: 56.3, r: 5 },
+  "S": { x: 93.9, y: 44.5, r: 7 },
+};
+
+let HANDPAN_MAP = HANDPAN_MAP_BRONZE;
+
+const HANDPAN_IMG_SKETCH = 'nine-note-handpan-numbered.png';
+const HANDPAN_IMG_BRONZE = 'handpan-for-groovepan.png';
 
 const handpanOverlay = document.getElementById('handpanOverlay');
 const handpanDots = new Map();
@@ -118,7 +140,6 @@ handpanOverlay?.addEventListener('click', (e) => {
       // Alt click means "don’t advance"
       const noAdvance = e.altKey; // Alt = write without advancing
       writeToSelected(note, { advance: !noAdvance });
-      // if (composeOn && !noAdvance) advanceSelection(1);
     }
   }
 });
@@ -199,3 +220,20 @@ scaleSelect.addEventListener('change', async () => {
   await preloadScaleSamples();
   if (currentUser) await saveScaleRemote(selectedScaleName);
 });
+
+handpanSelect.addEventListener('change', async () => {
+  selectedHandpanName = handpanSelect.value;
+  if (selectedHandpanName === 'Bronze') {
+    handpanImg.src = `../assets/images/${HANDPAN_IMG_BRONZE}`;
+    HANDPAN_MAP = HANDPAN_MAP_BRONZE;
+  }
+  else if (selectedHandpanName === 'Sketch') {
+    handpanImg.src = `../assets/images/${HANDPAN_IMG_SKETCH}`;
+    HANDPAN_MAP = HANDPAN_MAP_SKETCH;
+  }
+  buildHandpanOverlay();
+});
+
+// hideHandpanOptionsBtn.addEventListener('change', async () => {
+  
+// });

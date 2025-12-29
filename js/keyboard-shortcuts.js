@@ -63,6 +63,9 @@
 });
 
 document.addEventListener('click', (ev) => {
+  // Unlock audio if anything is clicked
+  unlockAudio();
+
   // Clear selection when clicking / tapping anywhere except 
   // on the beat cells, or on the handpan notes while Compose mode is ON
   let clear = true;
