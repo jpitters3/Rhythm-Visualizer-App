@@ -88,6 +88,8 @@
 
 .gridCell {
   grid-row: 2;
+  min-height: 80px;
+  aspect-ratio: 1 / 1;
 }
 
 /* + button sits to the right of the last beat and spans both rows */
