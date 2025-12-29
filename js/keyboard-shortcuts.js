@@ -20,9 +20,9 @@
     return;
   }
 
-  // Spacebar: Play / Stop
-  if (e.code === 'Space') {
-    e.preventDefault(); // prevent page scroll
+  // Enter: Play / Stop
+  if (e.code === 'Enter') {
+    e.preventDefault();
     if (playing) stop();
     else start();
     return;
@@ -47,19 +47,17 @@
   const map = { d: 'D', t: 'T', s: 'S' };
 
   if (map[lower]) {
-    // setInnerLabel(selectedIndex, map[lower]);
     writeToSelected(map[lower], { advance: !noAdvance });
     return;
   }
 
   if (/^[0-9]$/.test(k)) {
-    // setInnerLabel(selectedIndex, k);
     writeToSelected(k, { advance: !noAdvance });
     return;
   }
 
-  if (k === 'Backspace' || k === 'Delete' || k === 'g') {
-    // setInnerLabel(selectedIndex, '');
+  if (k === 'Backspace' || k === 'Delete' || k === 'g' || e.code === 'Space') {
+    e.preventDefault(); // prevent page scroll
     writeToSelected('', { advance: !noAdvance });
   }
 });

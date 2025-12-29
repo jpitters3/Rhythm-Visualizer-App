@@ -62,6 +62,11 @@
   pointer-events: none;
   color: var(--text);
 }
+@media (max-width: 768px) {
+  .cell .inner {
+    font-size: 25px
+  }
+}
 
 /* ===== MULTI-MEASURE WRAP ===== */
 .measures {
@@ -150,7 +155,10 @@ body.dark {
 
 /* Mixing strength (keeps your nice subtle fill) */
 .cell.off.has-label { --mix: 42%; }
-.cell.has-label { --mix: 70%; }
+.cell.has-label { --mix: 65%; }
+@media (max-width: 768px) {
+  .cell.has-label { --mix: 0%; }
+}
 
 /* Choose fill based on beat position */
 .cell.downbeat { --beat-fill: var(--down-fill); }

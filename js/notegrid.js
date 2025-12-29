@@ -81,11 +81,13 @@ function buildGrid() {
     for (let i = 0; i < STEPS; i++) {
       const globalIndex = (m * STEPS) + i;
 
-      // Labels row (row 1)
-      const label = document.createElement('div');
-      label.className = 'labelCell';
-      label.textContent = labelForStep(i);
-      measureWrap.appendChild(label);
+      // Labels row (row 1) - Only display once every 4 measures
+      if (m % 4 == 0) {
+        const label = document.createElement('div');
+        label.className = 'labelCell';
+        label.textContent = labelForStep(i);
+        measureWrap.appendChild(label);
+      }
 
       // Grid row (row 2)
       const cell = document.createElement('div');
@@ -125,6 +127,13 @@ function buildGrid() {
       });
 
       measureWrap.appendChild(cell);
+    }
+
+    if (m > 0) {
+      // Horizontal line running through each measure
+      const hr = document.createElement('hr');
+      // hr.style="margin-bottom: 30px;";
+      measuresEl.appendChild(hr);
     }
 
     // Show +Add Measure button ONLY on last measure
