@@ -150,13 +150,19 @@
               <option value="Sketch">Sketch</option>
             </select>
           </div>
+          <div class="grid-child handpan-options label">
+            <h3>123 / ABC:</h3>
+          </div>
+          <div class="grid-child handpan-options select">
+            <select id="numberPitchSelect" title="Display numbers or pitches">
+              <option value="default">-----</option>
+              <option value="Numbers">Numbers</option>
+              <option value="Pitches">Pitches</option>
+            </select>
+          </div>
         </div>
+        
         <div class="handpan-wrap" id="handpanWrap">
-          <!-- <img
-            src="./assets/images/nine-note-handpan-numbered.png"
-            alt="Handpan note layout"
-            class="handpan-img"
-          /> -->
           <img
             id="handpanImg"
             class="handpan-img"
@@ -352,19 +358,16 @@
 
     const handpanImg = document.getElementById('handpanImg');
     const hideHandpanOptionsBtn = document.getElementById('hideHandpanOptionsBtn');
+    const numberPitchSelect = document.getElementById('numberPitchSelect');
 
     const ADMIN_EMAILS = new Set([
       "jpitters3@gmail.com",
     ]);
 
-    
-
-
     // ===== STATE =====
     let innerLabels = [];
     let selectedIndex = null;
     let measures = 1;
-
     
   </script>
   <script src="./js/notegrid.js"></script>

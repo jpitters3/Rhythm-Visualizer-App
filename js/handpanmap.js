@@ -33,10 +33,34 @@ const HANDPAN_MAP_BRONZE = {
 let HANDPAN_MAP = HANDPAN_MAP_BRONZE;
 
 const HANDPAN_IMG_SKETCH = 'nine-note-handpan-numbered.png';
+const HANDPAN_IMG_SKETCH_EMPTY = 'handpan-empty-notes.png';
 const HANDPAN_IMG_BRONZE = 'handpan-for-groovepan.png';
 
 const handpanOverlay = document.getElementById('handpanOverlay');
 const handpanDots = new Map();
+
+let overlayPitches = false;
+
+function overlayPitchNotes() {
+  // Write the note pitches into the note space
+  if (SCALES[scaleSelect.value]) {
+    const scalesMap = new Map(Object.entries(SCALES[scaleSelect.value].map));
+    const dots = document.getElementsByClassName('hp-dot');
+    for (const d of dots) {
+      const n = d.dataset.note;
+      let pitch = scalesMap.get(''+n);
+      if (pitch)
+      {
+        pitch = '' + pitch.replace('s','#');
+        const pitchLabel = document.createElement('span');
+        pitchLabel.className = 'pitch-label';
+        pitchLabel.innerText = pitch;
+        d.appendChild(pitchLabel);
+      }
+    }
+  }
+  overlayPitches = false;
+}
 
 function buildHandpanOverlay(){
   if (!handpanOverlay) return;
@@ -57,6 +81,7 @@ function buildHandpanOverlay(){
     handpanOverlay.appendChild(dot);
     handpanDots.set(note, dot);
   }
+  if (overlayPitches) overlayPitchNotes();
 }
 
 buildHandpanOverlay();
@@ -226,6 +251,7 @@ handpanSelect.addEventListener('change', async () => {
   if (selectedHandpanName === 'Bronze') {
     handpanImg.src = `./assets/images/${HANDPAN_IMG_BRONZE}`;
     HANDPAN_MAP = HANDPAN_MAP_BRONZE;
+    numberPitchSelect.value = 'default';
   }
   else if (selectedHandpanName === 'Sketch') {
     handpanImg.src = `./assets/images/${HANDPAN_IMG_SKETCH}`;
@@ -234,6 +260,16 @@ handpanSelect.addEventListener('change', async () => {
   buildHandpanOverlay();
 });
 
-// hideHandpanOptionsBtn.addEventListener('change', async () => {
-  
-// });
+numberPitchSelect.addEventListener('change', async () => {
+  selectedNotation = numberPitchSelect.value;
+  if (selectedNotation === 'Numbers') {
+    handpanImg.src = `./assets/images/${HANDPAN_IMG_SKETCH}`;
+    HANDPAN_MAP = HANDPAN_MAP_BRONZE;
+  }
+  else if (selectedNotation === 'Pitches') {
+    handpanImg.src = `./assets/images/${HANDPAN_IMG_SKETCH_EMPTY}`;
+    HANDPAN_MAP = HANDPAN_MAP_SKETCH;
+    overlayPitches = true;
+  }
+  buildHandpanOverlay();
+});

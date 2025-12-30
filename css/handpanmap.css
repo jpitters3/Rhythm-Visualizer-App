@@ -59,7 +59,7 @@
   .hp-dot{
     position:absolute;
     border-radius: 50%;
-    opacity: 0.0;              /* hidden until active */
+    /* opacity: 0.0;              hidden until active */
     transition: opacity 120ms ease;
   }
   
@@ -81,7 +81,7 @@
   }
   
   .hp-dot{
-    border: 2px solid rgba(255,255,255,0.65);
+    /* border: 2px solid rgba(255,255,255,0.65); */
     background: rgba(255,255,255,0.06);
   }
   
@@ -116,6 +116,14 @@
     box-shadow: 0 0 0 10px color-mix(in srgb, var(--up-fill) 22%, transparent);
   }
 
+  span.pitch-label {
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    position: absolute;
+    font-weight: bold;
+    font-size: 1.5em;
+  }
   
   /* Calibration */
 
