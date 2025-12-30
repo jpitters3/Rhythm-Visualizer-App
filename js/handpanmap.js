@@ -4,13 +4,13 @@
 const HANDPAN_MAP_SKETCH = {
   "D": { x: 50.3, y: 47, r: 12 },
   "1": { x: 63, y: 78.3, r: 12 },
-  "2": { x: 33.5, y: 76.3, r: 12 },
-  "3": { x: 81.2, y: 58, r: 11 },
-  "4": { x: 17.8, y: 54.7, r: 11 },
-  "5": { x: 79, y: 33, r: 10 },
-  "6": { x: 21.3, y: 30.3, r: 10 },
-  "7": { x: 61.2, y: 16, r: 9 },
-  "8": { x: 38.2, y: 15.3, r: 9 },
+  "2": { x: 33.9, y: 76.3, r: 12 },
+  "3": { x: 81, y: 58, r: 11 },
+  "4": { x: 18.6, y: 54.9, r: 11 },
+  "5": { x: 78.6, y: 33.4, r: 10 },
+  "6": { x: 21.9, y: 30.9, r: 10 },
+  "7": { x: 61.2, y: 16.6, r: 9 },
+  "8": { x: 38.6, y: 15.9, r: 9 },
   "T": { x: 60.1, y: 56.1, r: 5 },
   "S": { x: 94.1, y: 44.5, r: 7 },
 };
@@ -32,7 +32,7 @@ const HANDPAN_MAP_BRONZE = {
 
 let HANDPAN_MAP = HANDPAN_MAP_BRONZE;
 
-const HANDPAN_IMG_SKETCH = 'nine-note-handpan-numbered.png';
+// const HANDPAN_IMG_SKETCH = 'nine-note-handpan-numbered.png';
 const HANDPAN_IMG_SKETCH_EMPTY = 'handpan-empty-notes.png';
 const HANDPAN_IMG_BRONZE = 'handpan-for-groovepan.png';
 
@@ -40,26 +40,56 @@ const handpanOverlay = document.getElementById('handpanOverlay');
 const handpanDots = new Map();
 
 let overlayPitches = false;
+let overlayNumbers = false;
 
-function overlayPitchNotes() {
+function overlayNumberPitchNotes() {
   // Write the note pitches into the note space
   if (SCALES[scaleSelect.value]) {
     const scalesMap = new Map(Object.entries(SCALES[scaleSelect.value].map));
     const dots = document.getElementsByClassName('hp-dot');
     for (const d of dots) {
       const n = d.dataset.note;
-      let pitch = scalesMap.get(''+n);
-      if (pitch)
+      if (!n || n === 'D') continue;
+
+      let pitch = (n === 'T' || n === 'S' ? n : scalesMap.get(''+n));
+      if (pitch && overlayPitches)
       {
         pitch = '' + pitch.replace('s','#');
-        const pitchLabel = document.createElement('span');
-        pitchLabel.className = 'pitch-label';
-        pitchLabel.innerText = pitch;
-        d.appendChild(pitchLabel);
+        const noteLabel = document.createElement('span');
+        noteLabel.className = 'note-label';
+        if (handpanSelect.value === 'Bronze') noteLabel.className = 'note-label light-text';
+        noteLabel.innerText = pitch;
+        d.appendChild(noteLabel);
+      }
+      else if (overlayNumbers)
+      {
+        const noteLabel = document.createElement('span');
+        noteLabel.className = 'note-label';
+        if (handpanSelect.value === 'Bronze') noteLabel.className = 'note-label light-text';
+        noteLabel.innerText = ''+n;
+        d.appendChild(noteLabel);
       }
     }
   }
-  overlayPitches = false;
+  overlayPitches = false; // this is a command, not a state. remove when finished with it.
+  overlayNumbers = false; // same here.
+}
+
+function removeNoteLabels()
+{
+  const noteLabels = document.getElementsByClassName('note-label');
+  for (const label of noteLabels) {
+    label.remove();
+  }
+}
+
+function checkNumberPitchSelection() {
+  selectedNotation = numberPitchSelect.value;
+  if (selectedNotation === 'Numbers') {
+    overlayNumbers = true;
+  } else if (selectedNotation === 'Pitches') {
+    overlayPitches = true;
+  }
 }
 
 function buildHandpanOverlay(){
@@ -81,7 +111,8 @@ function buildHandpanOverlay(){
     handpanOverlay.appendChild(dot);
     handpanDots.set(note, dot);
   }
-  if (overlayPitches) overlayPitchNotes();
+  if (overlayPitches || overlayNumbers) 
+    overlayNumberPitchNotes(); else removeNoteLabels();
 }
 
 buildHandpanOverlay();
@@ -105,7 +136,7 @@ function highlightHandpan(note, stepIndex){
   // per-note timer so multiple notes in a row don't fight
   clearTimeout(hpPulseTimers.get(key));
   hpPulseTimers.set(key, setTimeout(() => {
-    el.classList.remove('active');
+    el.classList.remove('active', 'hp-down', 'hp-up');
   }, Math.min(220, intervalMs() * 0.9)));
 }
 
@@ -244,6 +275,8 @@ scaleSelect.addEventListener('change', async () => {
   saveScaleLocal(selectedScaleName);
   await preloadScaleSamples();
   if (currentUser) await saveScaleRemote(selectedScaleName);
+  checkNumberPitchSelection();
+  buildHandpanOverlay();
 });
 
 handpanSelect.addEventListener('change', async () => {
@@ -251,25 +284,17 @@ handpanSelect.addEventListener('change', async () => {
   if (selectedHandpanName === 'Bronze') {
     handpanImg.src = `./assets/images/${HANDPAN_IMG_BRONZE}`;
     HANDPAN_MAP = HANDPAN_MAP_BRONZE;
-    numberPitchSelect.value = 'default';
+
   }
   else if (selectedHandpanName === 'Sketch') {
-    handpanImg.src = `./assets/images/${HANDPAN_IMG_SKETCH}`;
+    handpanImg.src = `./assets/images/${HANDPAN_IMG_SKETCH_EMPTY}`;
     HANDPAN_MAP = HANDPAN_MAP_SKETCH;
   }
+  checkNumberPitchSelection();
   buildHandpanOverlay();
 });
 
 numberPitchSelect.addEventListener('change', async () => {
-  selectedNotation = numberPitchSelect.value;
-  if (selectedNotation === 'Numbers') {
-    handpanImg.src = `./assets/images/${HANDPAN_IMG_SKETCH}`;
-    HANDPAN_MAP = HANDPAN_MAP_BRONZE;
-  }
-  else if (selectedNotation === 'Pitches') {
-    handpanImg.src = `./assets/images/${HANDPAN_IMG_SKETCH_EMPTY}`;
-    HANDPAN_MAP = HANDPAN_MAP_SKETCH;
-    overlayPitches = true;
-  }
+  checkNumberPitchSelection();
   buildHandpanOverlay();
 });

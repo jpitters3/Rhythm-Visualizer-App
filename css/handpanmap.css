@@ -59,8 +59,11 @@
   .hp-dot{
     position:absolute;
     border-radius: 50%;
-    /* opacity: 0.0;              hidden until active */
+    /* hidden until active */
+    /* opacity: 0.0; */
     transition: opacity 120ms ease;
+    background: rgba(255,255,255,0);
+    transition: background-color 120ms ease;
   }
   
   /* body:not(.dark) .hp-dot{ */
@@ -80,10 +83,10 @@
     100% { transform: translate(-50%, -50%) scale(1); }
   }
   
-  .hp-dot{
+  /* .hp-dot{ */
     /* border: 2px solid rgba(255,255,255,0.65); */
-    background: rgba(255,255,255,0.06);
-  }
+    /* background: rgba(255,255,255,0.06); */
+  /* } */
   
   body:not(.dark) .hp-dot{
     border-color: rgba(47,47,47,0.55);
@@ -116,13 +119,17 @@
     box-shadow: 0 0 0 10px color-mix(in srgb, var(--up-fill) 22%, transparent);
   }
 
-  span.pitch-label {
+  span.note-label {
     left: 50%;
     top: 50%;
     transform: translate(-50%, -50%);
     position: absolute;
     font-weight: bold;
     font-size: 1.5em;
+  }
+
+  span.note-label.light-text {
+      color: white;
   }
   
   /* Calibration */
