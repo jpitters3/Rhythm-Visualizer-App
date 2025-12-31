@@ -47,32 +47,21 @@ async function initAuthSession() {
   if (authInitDone) return;
   authInitDone = true;
 
-  // Hydrate current session
-  const { data, error } = await supabase1.auth.getSession();
-  if (!data?.session && !error) {
-    // No session is OK. But if you previously got stuck sessions,
-    // this gives you a single place to diagnose.
-    // console.log('No existing session found.');
-  }
-  if (error) console.warn('getSession error:', error);
-
-  currentUser = data?.session?.user ?? null;
-  updateAccountUI();
-  updateAdminUI();
-
-  if (typeof refreshPatternSelect === 'function') {
-    await refreshPatternSelect();
-  }
-
   // Subscribe ONCE
   supabase1.auth.onAuthStateChange(async (_event, session) => {
     currentUser = session?.user ?? null;
     updateAccountUI();
     updateAdminUI();
 
-    if (typeof refreshPatternSelect === 'function') {
-      await refreshPatternSelect();
-    }
+    // IMPORTANT: never await Supabase calls inside this callback
+    queueMicrotask(async () => {
+      try {
+        // safe to do async work here
+        await refreshPatternSelect?.();
+      } catch (e) {
+        console.warn('Post-auth refresh failed:', e);
+      }
+    });
   });
 }
 
