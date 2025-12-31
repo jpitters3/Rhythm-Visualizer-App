@@ -71,8 +71,14 @@ saveBtn.addEventListener('click', async () => {
   const name = prompt('Save pattern as:', getSelectedPatternName() || defaultName);
   if (!name) return;
 
-  const trimmed = name.trim();
-  if (!trimmed) return;
+  saveCurrentPatternAs(name);
+});
+
+async function saveCurrentPatternAs(name){
+  if (!name) return false;
+
+  const trimmed = String(name || '').trim();
+  if (!trimmed) return false;
 
   try {
     if (isAuthed()) {
@@ -87,13 +93,13 @@ saveBtn.addEventListener('click', async () => {
     saved[trimmed] = serializePattern();
     localStorage.setItem(LAST_USED_KEY, trimmed);
     setSavedPatterns(saved);
-    await refreshPatternSelect(trimmed);
+    refreshPatternSelect(trimmed);
+    return true;
   } catch (err) {
     console.error(err);
     alert(`Save failed: ${err?.message || err}`);
   }
-});
-
+}
 
 loadBtn.addEventListener('click', async () => {
   try {

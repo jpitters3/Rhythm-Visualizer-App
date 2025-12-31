@@ -81,6 +81,7 @@
   <link rel="stylesheet" href="./css/groove-modal.css">
   <link rel="stylesheet" href="./css/presentation-mode.css">
   <link rel="stylesheet" href="./css/handpanmap.css">
+  <link rel="stylesheet" href="./css/shared-pattern-banner.css">
 </head>
 <body>
 
@@ -89,12 +90,28 @@
       <div class="grid-child logo">
         <img class="logo-img" src="./assets/images/groovepan-logo.png" />
       </div>
+
       <!-- Pattern management row -->
       <div class="pattern-row grid-child account">
         <button id="accountBtn" title="Sign in / out">Account</button>
         <span id="accountStatus" style="opacity:.75;font-size:13px;"></span>
       </div>
     </div>
+
+    <!-- Shared Pattern Banner -->
+    <div id="sharedBanner" class="shared-banner" style="display:none;">
+      <div class="shared-left">
+        <div class="shared-title">Viewing shared pattern</div>
+        <div class="shared-sub" id="sharedBannerSub"></div>
+      </div>
+
+      <div class="shared-actions">
+        <button id="sharedSaveCopyBtn" class="active" title="Save a copy to your patterns">Save a copy</button>
+        <button id="sharedExitBtn" title="Exit shared view">Exit</button>
+      </div>
+    </div>
+
+    <!-- Pattern select, save, load, etc. -->
     <div class="pattern-row">
       <h3>Select pattern:</h3>
       <select id="patternSelect" title="Saved patterns">
@@ -106,8 +123,10 @@
       <button id="deleteBtn" title="Delete selected pattern">Delete</button>
       <button id="exportBtn" title="Copy pattern JSON to clipboard">Export</button>
       <button id="importBtn" title="Paste JSON to load a pattern">Import</button>
+      <button id="shareBtn" title="Create a share link (public)">Share</button>
     </div>
 
+    <!-- Control buttons -->
     <div class="controls pattern-row">
         <button id="themeBtn" title="Toggle light / dark mode">☀︎ / ☾</button>
         <button id="grooveBtn" title="Generate a random groove">Give me a groove!</button>
@@ -378,6 +397,7 @@
   <script src="./js/presentation-mode.js"></script>
   <script src="./js/pattern-crud.js"></script>
   <script src="./js/controls.js"></script>
+  <script src="./js/share-patterns.js"></script>
   <script src="./js/keyboard-shortcuts.js"></script>
   <script src="./js/auth.js"></script>
   <script src="./js/init.js"></script><!-- keep near bottom -->

@@ -106,7 +106,12 @@ function safeInit() {
   try {
     restorePrefs();
     buildGrid();
-    refreshPatternSelect();
+
+    (async () => {
+      await loadSharedFromURL();
+      await refreshPatternSelect();
+    })();
+
     updatePatternButtons();
 
     if (DEBUG) runSelfTests();
@@ -117,6 +122,8 @@ function safeInit() {
 
 // Let the browser paint UI first, then init.
 requestAnimationFrame(() => {
-  // Yield one more tick to keep startup smooth on slower machines.
-  setTimeout(safeInit, 0);
+  setTimeout(() => {
+    // fire-and-forget but safeInit itself is async
+    safeInit();
+  }, 0);
 });

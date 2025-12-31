@@ -1,0 +1,30 @@
+.shared-banner{
+  max-width: 900px;
+  margin: 0 0 14px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.shared-title{
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.shared-sub{
+  font-size: 12px;
+  opacity: 0.75;
+  margin-top: 2px;
+}
+
+.shared-actions{
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
