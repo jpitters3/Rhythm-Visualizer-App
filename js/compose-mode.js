@@ -13,6 +13,7 @@ function updateComposeUI(){
   for (const lockable of [handpanSection, ghostNoteSection]) {
       lockable.classList.toggle('locked', composeOn);
   }
+  scrollToPatternGrid(composeOn);
 }
 
 composeBtn?.addEventListener('click', () => {
@@ -58,11 +59,11 @@ function labelFromHandpanDot(dotNote){
   return dotNote;
 }
 
-function scrollToPatternGrid()
+function scrollToPatternGrid(composeOn)
 {
-  const composeOn = (localStorage.getItem(COMPOSE_KEY) === 'on');
-    if (composeOn) {
-      let cell = cells()[0];
-      cell?.scrollIntoView({ block: 'start', behavior: 'smooth' });
-    }
+  if (composeOn) {
+    const i = selectedIndex ? selectedIndex : 0;
+    let cell = cells()[i];
+    cell?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+  }
 }

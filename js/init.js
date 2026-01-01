@@ -114,7 +114,6 @@ function safeInit() {
 
     updatePatternButtons();
     updateComposeUI();
-    scrollToPatternGrid();
 
     if (DEBUG) runSelfTests();
   } catch (err) {
