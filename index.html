@@ -190,10 +190,13 @@
           />
           <div class="handpan-overlay" id="handpanOverlay"></div>
         </div>
+        <div class="under-handpan">
+          <button id="ghostBtn"><img src="./assets/images/ghost.png" /></button>
+        </div>
       </aside>
     </div>
   
-
+  <!-- Legend -->
   <div class="legend" aria-label="Legend">
       <div class="legend-title">Legend</div>
       <div class="legend-row">
@@ -378,6 +381,7 @@
     const handpanImg = document.getElementById('handpanImg');
     const hideHandpanOptionsBtn = document.getElementById('hideHandpanOptionsBtn');
     const numberPitchSelect = document.getElementById('numberPitchSelect');
+    const ghostBtn = document.getElementById('ghostBtn');
 
     const ADMIN_EMAILS = new Set([
       "jpitters3@gmail.com",

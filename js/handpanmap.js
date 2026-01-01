@@ -298,3 +298,8 @@ numberPitchSelect.addEventListener('change', async () => {
   checkNumberPitchSelection();
   buildHandpanOverlay();
 });
+
+ghostBtn.addEventListener('click', (e) => {
+  const noAdvance = e.altKey; // Alt = write without advancing
+  writeToSelected('', { advance: !noAdvance });
+});

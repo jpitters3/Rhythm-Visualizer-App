@@ -21,9 +21,8 @@
     position: relative;
     width: 100%;
     border-radius: 18px;
-    /* background: var(--panel);
-    border: 1px solid var(--panel-border); */
     padding: 14px;
+    padding-bottom: 0;
   }
 
   .handpan-img{
@@ -152,4 +151,24 @@ body.calibrating .hp-dot.selected {
 body.dark.calibrating .hp-dot.selected {
   outline-color: rgba(91, 140, 255, 0.95);
   box-shadow: 0 0 0 10px rgba(91, 140, 255, 0.20);
+}
+
+div.under-handpan {
+  position:relative;
+  height: 50px;
+}
+
+div.under-handpan button {
+  width: 60%;
+  height: 100%;
+  margin: 0;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  -ms-transform: translate(-50%, -50%);
+  transform: translate(-50%, -50%);
+}
+
+div.under-handpan button#ghostBtn img {
+  height: 100%;
 }
