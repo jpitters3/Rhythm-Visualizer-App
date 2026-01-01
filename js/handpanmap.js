@@ -303,3 +303,12 @@ ghostBtn.addEventListener('click', (e) => {
   const noAdvance = e.altKey; // Alt = write without advancing
   writeToSelected('', { advance: !noAdvance });
 });
+
+lockBtn.addEventListener('click', (e) => {
+  const handpanWrap = document.getElementById('handpanWrap');
+  const ghostNoteSection = document.getElementById('ghostNoteSection');
+  for (const lockable of [handpanWrap, ghostNoteSection]) {
+    if (!lockable.classList.contains('locked')) lockable.classList.add('locked');
+    else lockable.classList.remove('locked');
+  }
+});

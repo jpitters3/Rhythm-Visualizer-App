@@ -151,6 +151,7 @@
         <div id="measures" class="measures" aria-label="Rhythm grid"></div>
       </div>
     
+      <!-- HANDPAN OPTIONS -->
       <aside class="handpan-panel" aria-label="Handpan map">
         <div class="grid-container handpan-options">
           <div class="grid-child handpan-options label">
@@ -181,7 +182,15 @@
           </div>
         </div>
         
+        <!-- HANDPAN WRAP -->
         <div class="handpan-wrap" id="handpanWrap">
+          <div id="lockBtn" class="lock-btn">
+            <img
+            id="lockBtnImg"
+            src="./assets/images/lock.png"
+            alt="Lock handpan"
+          />
+          </div>
           <img
             id="handpanImg"
             class="handpan-img"
@@ -190,7 +199,7 @@
           />
           <div class="handpan-overlay" id="handpanOverlay"></div>
         </div>
-        <div class="under-handpan">
+        <div id="ghostNoteSection" class="under-handpan">
           <button id="ghostBtn"><img src="./assets/images/ghost.png" /></button>
         </div>
       </aside>
@@ -381,7 +390,8 @@
     const handpanImg = document.getElementById('handpanImg');
     const hideHandpanOptionsBtn = document.getElementById('hideHandpanOptionsBtn');
     const numberPitchSelect = document.getElementById('numberPitchSelect');
-    const ghostBtn = document.getElementById('ghostBtn');
+    const ghostNoteSection = document.getElementById('ghostNoteSection');
+    const lockBtn = document.getElementById('lockBtn');
 
     const ADMIN_EMAILS = new Set([
       "jpitters3@gmail.com",

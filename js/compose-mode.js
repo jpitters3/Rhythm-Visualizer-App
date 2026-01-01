@@ -34,8 +34,9 @@ function advanceSelection(delta = 1){
   applySelection(next);
 
   // Nice UX: keep selection visible when you have many measures
-  const cell = cells()[next];
-  cell?.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' });
+  let cell = cells()[next-STEPS]; // Scroll to one measure before the next cell
+  cell = cell ? cell : cells()[next]; // If we're on the first measure, scroll to the next cell
+  cell?.scrollIntoView({ block: 'start', behavior: 'smooth' });
 }
 
 function writeToSelected(label, { advance = true } = {}){

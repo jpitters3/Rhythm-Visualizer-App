@@ -169,6 +169,47 @@ div.under-handpan button {
   transform: translate(-50%, -50%);
 }
 
-div.under-handpan button#ghostBtn img {
+div.under-handpan button img {
   height: 100%;
+}
+
+/* Locked handpan and ghost note sections for mobile */
+div.lock-btn {
+  display:none;
+}
+
+@media (max-width: 768px){
+  div.lock-btn {
+    display: block;
+    width: 30px;
+    height: 0;
+    top: 0px;
+    position: relative;
+    justify-self: right;
+    z-index: 1;
+  }
+  
+  div.lock-btn img {
+    width: 100%;
+  }
+
+  .locked {
+    background: var(--bg);
+  }
+
+  .handpan-wrap.locked {
+    z-index: 1;
+    bottom: 50px;
+    position: fixed;
+  }
+
+  div.under-handpan.locked { /* ghost note button */
+    position: fixed;
+    justify-self: center;
+    padding: 5px;
+    bottom: 0px;
+    width: 100%;
+    margin: 5px;
+    z-index: 1;
+  }
 }
