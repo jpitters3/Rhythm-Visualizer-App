@@ -2,32 +2,32 @@
 
 /* Mapped to nine-note-handpan-numbered.png */
 const HANDPAN_MAP_SKETCH = {
-  "D": { x: 50.3, y: 47, r: 12 },
-  "1": { x: 63, y: 78.3, r: 12 },
-  "2": { x: 33.9, y: 76.3, r: 12 },
-  "3": { x: 81, y: 58, r: 11 },
-  "4": { x: 18.6, y: 54.9, r: 11 },
-  "5": { x: 78.6, y: 33.4, r: 10 },
-  "6": { x: 21.9, y: 30.9, r: 10 },
-  "7": { x: 61.2, y: 16.6, r: 9 },
+  "D": { x: 50.3, y: 49.4, r: 12 },
+  "1": { x: 63, y: 81.7, r: 12 },
+  "2": { x: 33.9, y: 79.7, r: 12 },
+  "3": { x: 81, y: 60.7, r: 11 },
+  "4": { x: 18.6, y: 57.3, r: 11 },
+  "5": { x: 78.6, y: 35, r: 10 },
+  "6": { x: 21.9, y: 32.3, r: 10 },
+  "7": { x: 61.2, y: 17.4, r: 9 },
   "8": { x: 38.6, y: 15.9, r: 9 },
-  "T": { x: 60.1, y: 56.1, r: 5 },
-  "S": { x: 94.1, y: 44.5, r: 7 },
+  "T": { x: 60.3, y: 56.9, r: 5 },
+  "S": { x: 94.1, y: 45.7, r: 7 },
 };
 
 /* Mapped to handpan-for-groovepan.png */
 const HANDPAN_MAP_BRONZE = {
-  "D": { x: 48.1, y: 45.2, r: 12 },
-  "1": { x: 60.8, y: 78.1, r: 12 },
-  "2": { x: 33.1, y: 76.7, r: 12 },
-  "3": { x: 80.6, y: 60.2, r: 11 },
-  "4": { x: 16, y: 56.3, r: 11 },
-  "5": { x: 78.8, y: 33.4, r: 10 },
-  "6": { x: 19.7, y: 30.5, r: 10 },
-  "7": { x: 60.4, y: 16.8, r: 9 },
-  "8": { x: 38.2, y: 16.1, r: 9 },
+  "D": { x: 48.1, y: 47.4, r: 12 },
+  "1": { x: 59.6, y: 80.9, r: 12 },
+  "2": { x: 33.3, y: 80.5, r: 12 },
+  "3": { x: 80, y: 62.4, r: 11 },
+  "4": { x: 15.8, y: 59.1, r: 11 },
+  "5": { x: 79.6, y: 34.8, r: 10 },
+  "6": { x: 19.1, y: 31.9, r: 10 },
+  "7": { x: 61.6, y: 17.2, r: 9 },
+  "8": { x: 37.6, y: 16.5, r: 9 },
   "T": { x: 61.1, y: 56.3, r: 5 },
-  "S": { x: 93.9, y: 44.5, r: 7 },
+  "S": { x: 93.3, y: 47.9, r: 7 },
 };
 
 let HANDPAN_MAP = HANDPAN_MAP_BRONZE;
@@ -305,10 +305,5 @@ ghostBtn.addEventListener('click', (e) => {
 });
 
 lockBtn.addEventListener('click', (e) => {
-  const handpanWrap = document.getElementById('handpanWrap');
-  const ghostNoteSection = document.getElementById('ghostNoteSection');
-  for (const lockable of [handpanWrap, ghostNoteSection]) {
-    if (!lockable.classList.contains('locked')) lockable.classList.add('locked');
-    else lockable.classList.remove('locked');
-  }
+  composeBtn.click();
 });

@@ -8,6 +8,11 @@ function updateComposeUI(){
   composeBtn.classList.toggle('active', composeOn);
   composeBtn.textContent = composeOn ? 'Compose: On' : 'Compose: Off';
   document.body.classList.toggle('composeOn', composeOn);
+
+  // Lock the handpan section on mobile
+  for (const lockable of [handpanSection, ghostNoteSection]) {
+      lockable.classList.toggle('locked', composeOn);
+  }
 }
 
 composeBtn?.addEventListener('click', () => {
@@ -15,7 +20,6 @@ composeBtn?.addEventListener('click', () => {
   localStorage.setItem(COMPOSE_KEY, composeOn ? 'on' : 'off');
   updateComposeUI();
 });
-updateComposeUI();
 
 function totalSteps(){
   return measures * STEPS;
@@ -52,4 +56,13 @@ function labelFromHandpanDot(dotNote){
   // dotNote will be 'D', '1'...'8', (and later 'T','S')
 
   return dotNote;
+}
+
+function scrollToPatternGrid()
+{
+  const composeOn = (localStorage.getItem(COMPOSE_KEY) === 'on');
+    if (composeOn) {
+      let cell = cells()[0];
+      cell?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    }
 }
