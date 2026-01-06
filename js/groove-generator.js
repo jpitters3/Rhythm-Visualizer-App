@@ -26,7 +26,6 @@ function randInt(min, max) {
 }
 
 function clearAllBeatsAndLabels() {
-  pattern.fill(false);
   innerLabels.fill('');
   cells().forEach((c) => {
     c.classList.remove('label-d', 'label-t', 'label-s', 'label-n', 'selected', 'play');
@@ -109,7 +108,6 @@ function applyGroove({ D, T, S, placement = 'none', completelyRandom = false, en
   if (!all.length) return;
 
   // force beat 1
-  pattern[0] = true;
   setInnerLabel(0, 'D');
 
   let dLeft = Math.max(0, D - 1);
@@ -132,7 +130,6 @@ function applyGroove({ D, T, S, placement = 'none', completelyRandom = false, en
 
     for (let i = 0; i < picks.length; i++) {
       const idx = picks[i];
-      pattern[idx] = true;
       setInnerLabel(idx, labelsArr[i] || '');
     }
 
@@ -147,15 +144,12 @@ function applyGroove({ D, T, S, placement = 'none', completelyRandom = false, en
   const sPos = pickPositions({ pool, count: sLeft, used, strength });
 
   for (const idx of dPos) {
-    pattern[idx] = true;
     setInnerLabel(idx, 'D');
   }
   for (const idx of tPos) {
-    pattern[idx] = true;
     setInnerLabel(idx, 'T');
   }
   for (const idx of sPos) {
-    pattern[idx] = true;
     setInnerLabel(idx, 'S');
   }
 
@@ -227,7 +221,6 @@ function pickUniqueIndices(n, fromN) {
 }
 
 function clearAllBeatsAndLabels() {
-  pattern.fill(false);
   innerLabels.fill('');
   cells().forEach((c, i) => {
     c.classList.remove('on', 'label-d', 'label-t', 'label-s', 'label-n', 'has-label', 'selected', 'play');
@@ -303,7 +296,6 @@ function generateGroove(dCount, tCount, sCount) {
 
   // 1) Force "1" to be a Ding (step 0)
   const root = 0;
-  pattern[root] = true;
   allCells[root]?.classList.add('on');
   setInnerLabel(root, 'D');
   used.add(root);
@@ -341,19 +333,16 @@ function generateGroove(dCount, tCount, sCount) {
 
   // Apply Dings
   for (const i of dIdx) {
-    pattern[i] = true;
     setInnerLabel(i, 'D');
   }
 
   // Apply Taks
   for (const i of tIdx) {
-    pattern[i] = true;
     setInnerLabel(i, 'T');
   }
 
   // Apply Slaps
   for (const i of sIdx) {
-    pattern[i] = true;
     setInnerLabel(i, 'S');
   }
 
