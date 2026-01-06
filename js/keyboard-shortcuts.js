@@ -35,6 +35,43 @@
     return;
   }
 
+  // Cmd/Ctrl+C / V for selection
+  const isMac = navigator.platform.toLowerCase().includes('mac');
+  const mod = isMac ? e.metaKey : e.ctrlKey;
+
+  if (mod && e.key.toLowerCase() === 'c') {
+    const r = getRange();
+    if (r && r.length >= 1) {
+      e.preventDefault();
+      copySelection();
+    }
+  }
+
+  if (mod && e.key.toLowerCase() === 'v') {
+    if (beatClipboard) {
+      e.preventDefault();
+      pasteSelection();
+    }
+  }
+
+  // Delete selection (Backspace/Delete)
+  if (e.key === 'Backspace' || e.key === 'Delete') {
+    const r = getRange();
+    if (r && r.length > 1) {
+      e.preventDefault();
+      deleteSelection();
+    }
+  }
+
+  // Esc cancels range selection
+  if (e.key === 'Escape') {
+    const r = getRange();
+    if (r && r.length > 1) {
+      clearRange();
+      return;
+    }
+  }
+
   // From this point onwards in this function,
   // assign the beat to a ding, tak, slap, or note
   // based on the key that was pressed

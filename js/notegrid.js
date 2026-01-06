@@ -121,10 +121,60 @@ function buildGrid() {
       cell.addEventListener('click', (ev) => {
         ev.stopPropagation();
 
+        const i = indexFromCellEl(cell);
+        if (i < 0) return;
+
+        // If long-press just fired, swallow the click that follows it.
+        if (longPressFired) {
+          longPressFired = false;
+          return;
+        }
+
+        // Desktop range select (Shift+click)
+        if (ev.shiftKey) {
+          if (anchorIndex === null) anchorIndex = (caretIndex ?? i);
+          setCaret(i);
+          setRange(anchorIndex, i);
+          return;
+        }
+
+        // Normal click: caret only, range collapses to single
+        selecting = false;
+        anchorIndex = i;
+        setCaret(i);
+        setRange(i, i);
+
         // Click selects (Esc clears selection)
         if (selectedIndex === globalIndex) clearSelection();
         else applySelection(globalIndex);
       });
+
+      cell.addEventListener('pointerdown', (ev) => {
+        // Only left-click / primary touch
+        if (ev.button !== undefined && ev.button !== 0) return;
+      
+        // Start long-press for touch devices
+        startLongPress(cell);
+      
+        // Capture pointer so we keep getting move events
+        cell.setPointerCapture?.(ev.pointerId);
+      });
+      
+      cell.addEventListener('pointermove', (ev) => {
+        // If user is dragging during selection mode, expand range
+        if (selecting) {
+          ev.preventDefault();
+          updateDragSelectionOver(cell);
+        }
+      });
+      
+      cell.addEventListener('pointerup', () => {
+        cancelLongPress();
+        // If long-press fired, we stay in selection mode until cancel
+      });
+      
+      cell.addEventListener('pointercancel', () => cancelLongPress());
+      
 
       measureWrap.appendChild(cell);
     }
@@ -170,3 +220,74 @@ function addMeasure() {
   buildGrid();
   restartIfPlaying();
 }
+
+// ===== SELECTION ACTIONS ===== //
+
+function snapshotBeat(i) {
+  // Adjust if your state storage differs:
+  const label = Array.isArray(innerLabels) ? (innerLabels[i] || '') : '';
+  return { label };
+}
+
+function applyBeat(i, beat) {
+  // Adjust if your state storage differs:
+  const cell = allCells()[i];
+
+  if (typeof setInnerLabel === 'function') setInnerLabel(i, beat.label || '');
+}
+
+function setBeatToGhost(i) {
+  // Your ghost behavior may be "no label + default dot".
+  // We'll implement as clearing label + turning OFF accent.
+  const cell = allCells()[i];
+  if (typeof setInnerLabel === 'function') setInnerLabel(i, '');
+}
+
+function copySelection() {
+  const r = getRange();
+  if (!r) return;
+
+  const steps = [];
+  for (let i = r.start; i <= r.end; i++) steps.push(snapshotBeat(i));
+
+  beatClipboard = { type: 'beats', steps, length: steps.length };
+  if (selPasteBtn) selPasteBtn.disabled = false;
+}
+
+function pasteSelection() {
+  if (!beatClipboard || beatClipboard.type !== 'beats') return;
+
+  const startAt = (caretIndex !== null) ? caretIndex : (getRange()?.start ?? 0);
+  const cells = allCells();
+  const max = cells.length - 1;
+
+  for (let k = 0; k < beatClipboard.steps.length; k++) {
+    const idx = startAt + k;
+    if (idx > max) break;
+    applyBeat(idx, beatClipboard.steps[k]);
+  }
+
+  // Keep caret at end of paste
+  setCaret(clampIndex(startAt + beatClipboard.steps.length - 1));
+  setRange(startAt, clampIndex(startAt + beatClipboard.steps.length - 1));
+}
+
+function deleteSelection() {
+  const r = getRange();
+  if (!r) return;
+
+  for (let i = r.start; i <= r.end; i++) setBeatToGhost(i);
+
+  // Keep caret at start
+  setCaret(r.start);
+  setRange(r.start, r.start);
+}
+
+selCopyBtn?.addEventListener('click', () => copySelection());
+selPasteBtn?.addEventListener('click', () => pasteSelection());
+selDeleteBtn?.addEventListener('click', () => deleteSelection());
+selCancelBtn?.addEventListener('click', () => {
+  clearRange();
+  // Also clear caret ring if you want:
+  // clearSelection?.();
+});

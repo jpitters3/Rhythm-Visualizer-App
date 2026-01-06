@@ -300,8 +300,20 @@ numberPitchSelect.addEventListener('change', async () => {
 });
 
 ghostBtn.addEventListener('click', (e) => {
-  const noAdvance = e.altKey; // Alt = write without advancing
-  writeToSelected('', { advance: !noAdvance });
+  const idx = (caretIndex !== null) ? caretIndex : (typeof selectedIndex !== 'undefined' ? selectedIndex : null);
+  if (idx === null) return;
+
+  setBeatToGhost(idx);
+
+  // If your "compose/tracking" is enabled, advance:
+  if (window.composeOn) { // rename to your actual flag
+    const next = clampIndex(idx + 1);
+    setCaret(next);
+    setRange(next, next);
+  }
+
+  // const noAdvance = e.altKey; // Alt = write without advancing
+  // writeToSelected('', { advance: !noAdvance });
 });
 
 lockBtn.addEventListener('click', (e) => {

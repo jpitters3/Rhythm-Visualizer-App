@@ -1,0 +1,45 @@
+/* ===== RANGE SELECTION ===== */
+.cell.range {
+  box-shadow: 0 0 0 6px rgba(47, 47, 47, 0.16);
+}
+body.dark .cell.range {
+  box-shadow: 0 0 0 6px rgba(234, 234, 240, 0.16);
+}
+
+/* Keep your existing .cell.selected as the caret (single beat).
+   range is the block selection. */
+
+/* ===== MOBILE SELECTION ACTION BAR ===== */
+.sel-bar {
+  position: fixed;
+  left: 12px;
+  right: 12px;
+  bottom: 12px;
+  z-index: 2000;
+  padding: 10px 12px;
+  border-radius: 16px;
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  box-shadow: 0 18px 60px rgba(0,0,0,0.22);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.sel-bar-text {
+  font-weight: 650;
+  font-size: 13px;
+  opacity: 0.85;
+}
+
+.sel-bar-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* Optional: make buttons slightly smaller on mobile */
+@media (max-width: 600px) {
+  .sel-bar-actions button { padding: 8px 12px; }
+}

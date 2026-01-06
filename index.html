@@ -146,6 +146,21 @@
         <button id="clearBtn">Clear</button>
         <button id="playBtn">Play</button>
     </div>
+
+    <!-- Selection Action Bar (shows when a range is selected) -->
+    <div id="selBar" class="sel-bar" style="display:none;" aria-label="Selection actions">
+      <div class="sel-bar-left">
+        <span id="selBarText" class="sel-bar-text">0 selected</span>
+      </div>
+      <div class="sel-bar-actions">
+        <button id="selCopyBtn">Copy</button>
+        <button id="selPasteBtn" disabled>Paste</button>
+        <button id="selDeleteBtn">Delete</button>
+        <button id="selCancelBtn">Cancel</button>
+      </div>
+    </div>
+
+    <!-- Grid -->
     <div class="main">
       <div class="left">
         <div id="measures" class="measures" aria-label="Rhythm grid"></div>
@@ -394,6 +409,22 @@
     const ghostNoteSection = document.getElementById('ghostNoteSection');
     const lockBtn = document.getElementById('lockBtn');
 
+    // ===== RANGE SELECTION STATE =====
+    let anchorIndex = null;     // anchor for shift-click / long-press selection
+    let caretIndex = null;      // where paste starts (usually last clicked/selected)
+    let rangeStart = null;      // inclusive
+    let rangeEnd = null;        // inclusive
+    let selecting = false;      // selection mode (especially for mobile drag)
+    let beatClipboard = null;   // { type:'beats', steps:[{on,label}], length:n }
+
+    // Action bar elements
+    const selBar = document.getElementById('selBar');
+    const selBarText = document.getElementById('selBarText');
+    const selCopyBtn = document.getElementById('selCopyBtn');
+    const selPasteBtn = document.getElementById('selPasteBtn');
+    const selDeleteBtn = document.getElementById('selDeleteBtn');
+    const selCancelBtn = document.getElementById('selCancelBtn');
+
     const ADMIN_EMAILS = new Set([
       "jpitters3@gmail.com",
     ]);
@@ -404,6 +435,7 @@
     let measures = 1;
     
   </script>
+  <script src="./js/range-selection.js"></script>
   <script src="./js/notegrid.js"></script>
   <script src="./js/noteplayer.js"></script>
   <script src="./js/handpanmap.js"></script>
