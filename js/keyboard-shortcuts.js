@@ -6,8 +6,10 @@
   // Esc
   if (e.key === 'Escape') {
     if (grooveModal.classList.contains('open')) { closeGrooveModal(); return; }
-    if (document.body.classList.contains('present')) setPresentation(false);
-    else clearSelection();
+    if (document.body.classList.contains('present')) { setPresentation(false); return; }
+    
+    clearSelection();
+    clearRange();
     return;
   }
 
@@ -54,15 +56,6 @@
     }
   }
 
-  // Delete selection (Backspace/Delete)
-  if (e.key === 'Backspace' || e.key === 'Delete') {
-    const r = getRange();
-    if (r && r.length > 1) {
-      e.preventDefault();
-      deleteSelection();
-    }
-  }
-
   // Esc cancels range selection
   if (e.key === 'Escape') {
     const r = getRange();
@@ -93,9 +86,15 @@
     return;
   }
 
+  // Delete single cell or selection
   if (k === 'Backspace' || k === 'Delete' || k === 'g' || e.code === 'Space') {
-    e.preventDefault(); // prevent page scroll
-    writeToSelected('', { advance: !noAdvance });
+    e.preventDefault();
+    const r = getRange();
+    if (r && r.length > 1) {
+      deleteSelection();
+    } else {
+      writeToSelected('', { advance: !noAdvance });
+    }
   }
 });
 

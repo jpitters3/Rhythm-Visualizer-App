@@ -37,6 +37,8 @@ function advanceSelection(delta = 1){
 
   const next = clampIndex(selectedIndex + delta);
   applySelection(next);
+  setCaret(next);
+  clearRange();
 
   // Nice UX: keep selection visible when you have many measures
   let cell = cells()[next-STEPS]; // Scroll to one measure before the next cell

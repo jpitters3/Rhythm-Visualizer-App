@@ -306,10 +306,9 @@ ghostBtn.addEventListener('click', (e) => {
   setBeatToGhost(idx);
 
   // If your "compose/tracking" is enabled, advance:
-  if (window.composeOn) { // rename to your actual flag
+  if (composeOn) { // rename to your actual flag
     const next = clampIndex(idx + 1);
     setCaret(next);
-    setRange(next, next);
   }
 
   // const noAdvance = e.altKey; // Alt = write without advancing

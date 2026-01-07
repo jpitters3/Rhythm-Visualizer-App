@@ -223,8 +223,7 @@ function deleteSelection() {
   for (let i = r.start; i <= r.end; i++) setBeatToGhost(i);
 
   // Keep caret at start
-  setCaret(r.start);
-  setRange(r.start, r.start);
+  // setCaret(r.start-1);
 }
 
 selCopyBtn?.addEventListener('click', () => copySelection());
@@ -244,21 +243,23 @@ function attachCellListeners(cell, globalIndex) {
     const i = indexFromCellEl(cell);
     if (i < 0) return;
 
-    // If we are already in selection mode (from a previous long-press), 
-    // allow a simple tap to define the new end of the range
-    if (selecting && anchorIndex !== null) {
-      setCaret(i);
-      setRange(anchorIndex, i);
-      return;
-    }
-
-    // If long-press just fired, swallow the click that follows it.
+    // 1. Swallow the ghost click that follows a long-press release
     if (longPressFired) {
       longPressFired = false;
       return;
     }
 
-    // Desktop range select (Shift+click)
+    // 2. "Tap to Expand" / Finalize selection
+    // If we are currently in selection mode (from a long press), 
+    // this second tap defines the end and closes the selection session.
+    if (selecting && anchorIndex !== null) {
+      setCaret(i);
+      setRange(anchorIndex, i);
+      selecting = false;
+      return;
+    }
+
+    // 3. Desktop range select (Shift+click)    
     if (ev.shiftKey) {
       if (anchorIndex === null) anchorIndex = (caretIndex ?? i);
       setCaret(i);
@@ -266,11 +267,10 @@ function attachCellListeners(cell, globalIndex) {
       return;
     }
 
-    // Normal click: caret only, range collapses to single
+    // 4. Normal click: resets state and places a single caret
     selecting = false;
     anchorIndex = i;
     setCaret(i);
-    setRange(i, i);
 
     // // Click selects (Esc clears selection)
     // if (selectedIndex === globalIndex) clearSelection();

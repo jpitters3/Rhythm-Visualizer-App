@@ -35,10 +35,6 @@ function appendEmptyMeasure() {
   // Expand data
   if (Array.isArray(innerLabels)) innerLabels.push(...Array(s).fill(''));
 
-  // Render DOM for the new measure
-  // If you already have a renderMeasure() function, call it here.
-  // Otherwise we’ll do a minimal DOM append by cloning your existing measure builder behavior.
-
   renderAllMeasures();
 }
 
@@ -48,7 +44,6 @@ addMeasureBtn?.addEventListener('click', () => {
   const m = getMeasureCountFromDOM() - 1;
   const { start } = measureRange(m);
   setCaret?.(start);
-  setRange?.(start, start);
 });
 
 // ===== Copy/Paste/Delete measure =====
@@ -75,7 +70,6 @@ function pasteMeasureInto(mIndex) {
 
   // Keep caret at start of pasted measure
   setCaret?.(start);
-  setRange?.(start, start);
 }
 
 function deleteMeasure(mIndex) {
