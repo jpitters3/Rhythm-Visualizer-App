@@ -1,4 +1,4 @@
-/* Sidebar */
+/* Sidebar
 .sidebar {
   position: fixed;
   left: -320px;
@@ -15,7 +15,7 @@
 .sidebar.open { left: 0; }
 
 /* Lesson List Accordion */
-.course-item { margin-bottom: 20px; }
+/* .course-item { margin-bottom: 20px; }
 .course-item h4 { margin-bottom: 10px; border-bottom: 1px solid var(--panel-border); }
 .section-title { font-size: 0.9em; font-weight: bold; opacity: 0.7; margin: 10px 0 5px; }
 .lesson-link { 
@@ -25,7 +25,143 @@
   cursor: pointer; 
   font-size: 0.95em; 
 }
-.lesson-link:hover { background: var(--btn-bg); }
+.lesson-link:hover { background: var(--btn-bg); } */
+
+/* Sidebar Container */
+.sidebar {
+  position: fixed;
+  left: -350px; /* Slightly wider for better card layout */
+  top: 0;
+  width: 350px;
+  height: 100%;
+  background: var(--bg); /* Uses theme background */
+  backdrop-filter: blur(10px); /* Glass effect */
+  border-right: 1px solid var(--panel-border);
+  z-index: 2500;
+  transition: left 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  padding: 0; /* Handled by internal containers */
+  display: flex;
+  flex-direction: column;
+  box-shadow: 10px 0 30px rgba(0,0,0,0.15);
+}
+
+.sidebar.open {
+  left: 0;
+}
+
+.sidebar-header {
+  padding: 24px 20px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--panel-border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.sidebar-header h3 {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+/* Scrollable Content Area */
+#courseList {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* Course & Section Grouping */
+.course-item {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.course-item h4 {
+  margin: 0;
+  padding-left: 4px;
+  font-size: 1rem;
+  color: var(--text);
+  border-left: 3px solid var(--btn-active);
+  padding-left: 10px;
+}
+
+.section-title {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  opacity: 0.5;
+  margin: 8px 0 4px 4px;
+}
+
+/* Lesson Panels (The "Cards") */
+.lesson-link {
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  border-radius: 12px;
+  padding: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Small indicator for the "Active" lesson */
+.lesson-link::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  width: 0;
+  background: var(--btn-active);
+  transition: width 0.2s ease;
+}
+
+.lesson-link:hover {
+  transform: translateY(-2px);
+  border-color: var(--btn-active);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.lesson-link:hover::before {
+  width: 4px;
+}
+
+.lesson-link:active {
+  transform: translateY(0);
+}
+
+/* Iconography for lessons */
+.lesson-link::after {
+  content: '▶';
+  font-size: 10px;
+  margin-left: auto;
+  opacity: 0.3;
+  transition: opacity 0.2s ease;
+}
+
+.lesson-link:hover::after {
+  opacity: 1;
+  color: var(--btn-active);
+}
+
+/* Clean up the loading text */
+.loading {
+  text-align: center;
+  margin-top: 40px;
+  opacity: 0.6;
+  font-style: italic;
+}
 
 /* Lesson Player */
 .lesson-panel {
@@ -52,4 +188,25 @@ button#closeLessonBtn
 {
   position: absolute;
   right: 0px;
+}
+
+.sidebar-search {
+  padding: 0 16px 16px;
+  border-bottom: 1px solid var(--panel-border);
+}
+
+#courseSearchInput {
+  width: 100%;
+  padding: 10px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--panel-border);
+  background: var(--panel);
+  color: var(--text);
+  font-size: 0.9rem;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+#courseSearchInput:focus {
+  border-color: var(--btn-active);
 }

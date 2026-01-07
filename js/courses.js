@@ -82,3 +82,28 @@ document.getElementById('closeLessonBtn').onclick = () => document.getElementByI
 
 // Initial Load
 fetchCourses();
+
+
+// ==== SEARCH ===== //
+
+const searchInput = document.getElementById('courseSearchInput');
+
+searchInput?.addEventListener('input', (e) => {
+  const term = e.target.value.toLowerCase();
+  const lessonCards = document.querySelectorAll('.lesson-link');
+  const sectionTitles = document.querySelectorAll('.section-title');
+  const courseItems = document.querySelectorAll('.course-item');
+
+  lessonCards.forEach(card => {
+    const text = card.textContent.toLowerCase();
+    // Show card if it matches search
+    const isMatch = text.includes(term);
+    card.style.display = isMatch ? 'flex' : 'none';
+  });
+
+  // UX Polish: Hide Section/Course titles if all their lessons are hidden
+  courseItems.forEach(item => {
+    const visibleLessons = item.querySelectorAll('.lesson-link[style="display: flex;"]');
+    item.style.display = visibleLessons.length > 0 ? 'flex' : 'none';
+  });
+});
