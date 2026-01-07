@@ -1,7 +1,15 @@
 /* ===== RANGE SELECTION ===== */
+
+/* Enhanced Range Selection */
 .cell.range {
-  box-shadow: 0 0 0 6px rgba(47, 47, 47, 0.16);
+  box-shadow: 0 0 0 4px var(--btn-active);
+  background: color-mix(in srgb, var(--btn-active) 20%, var(--cell-bg)) !important;
 }
+
+/* Add distinct handles to the first and last items in the range */
+.cell.range-start { border-radius: 50% 0 0 50%; }
+.cell.range-end { border-radius: 0 50% 50% 0; }
+
 body.dark .cell.range {
   box-shadow: 0 0 0 6px rgba(234, 234, 240, 0.16);
 }

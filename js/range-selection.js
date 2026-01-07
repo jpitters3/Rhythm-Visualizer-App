@@ -42,13 +42,17 @@ function setRange(a, b) {
 
 function updateRangeUI() {
   const cells = allCells();
-
-  // Clear old range class
-  cells.forEach(c => c.classList.remove('range'));
+  cells.forEach(c => c.classList.remove('range', 'range-start', 'range-end')); //
 
   const r = getRange();
   if (r) {
-    for (let i = r.start; i <= r.end; i++) cells[i]?.classList.add('range');
+    for (let i = r.start; i <= r.end; i++) {
+      const cell = cells[i];
+      if (!cell) continue;
+      cell.classList.add('range');
+      if (i === r.start) cell.classList.add('range-start');
+      if (i === r.end) cell.classList.add('range-end');
+    }
   }
 
   // Update action bar
@@ -79,10 +83,16 @@ function startLongPress(cellEl) {
   longPressTimer = setTimeout(() => {
     longPressFired = true;
     selecting = true;
+    
+    // Add Haptic Feedback
+    if ('vibrate' in navigator) {
+      navigator.vibrate(50); // Short 50ms pulse
+    }
+
     anchorIndex = idx;
     setCaret(idx);
-    setRange(idx, idx); // start single; drag expands
-  }, 450); // long-press threshold (ms)
+    setRange(idx, idx); 
+  }, 450); 
 }
 
 function cancelLongPress() {

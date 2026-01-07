@@ -244,6 +244,14 @@ function attachCellListeners(cell, globalIndex) {
     const i = indexFromCellEl(cell);
     if (i < 0) return;
 
+    // If we are already in selection mode (from a previous long-press), 
+    // allow a simple tap to define the new end of the range
+    if (selecting && anchorIndex !== null) {
+      setCaret(i);
+      setRange(anchorIndex, i);
+      return;
+    }
+
     // If long-press just fired, swallow the click that follows it.
     if (longPressFired) {
       longPressFired = false;
@@ -283,7 +291,7 @@ function attachCellListeners(cell, globalIndex) {
   cell.addEventListener('pointermove', (ev) => {
     // If user is dragging during selection mode, expand range
     if (selecting) {
-      ev.preventDefault();
+      ev.preventDefault(); // Force the browser to ignore scrolling while selecting
       updateDragSelectionOver(cell);
     }
   });
