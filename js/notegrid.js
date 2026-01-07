@@ -162,6 +162,7 @@ function renderAllMeasures() {
 
   // After re-render, update selection visuals
   updateRangeUI?.();
+  measures = measureCount;
 }
 
 // ===== SELECTION ACTIONS ===== //

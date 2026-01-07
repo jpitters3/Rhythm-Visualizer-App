@@ -200,7 +200,7 @@ function tick() {
 
   all.forEach(c => c.classList.remove('play'));
   const cell = all[step];
-  cell.classList.add('play');
+  if (cell !== undefined) cell.classList.add('play');
 
   if (metronomeOn) {
     const beatStride = (mode === '8') ? 2 : 4;

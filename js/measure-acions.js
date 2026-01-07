@@ -39,7 +39,7 @@ function appendEmptyMeasure() {
   // If you already have a renderMeasure() function, call it here.
   // Otherwise we’ll do a minimal DOM append by cloning your existing measure builder behavior.
 
-  renderAllMeasures(); // We'll add this in Patch M6
+  renderAllMeasures();
 }
 
 addMeasureBtn?.addEventListener('click', () => {
