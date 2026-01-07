@@ -5,8 +5,30 @@
 
   // Esc
   if (e.key === 'Escape') {
-    if (grooveModal.classList.contains('open')) { closeGrooveModal(); return; }
-    if (document.body.classList.contains('present')) { setPresentation(false); return; }
+    
+    // 1. Check Groove Modal
+    if (grooveModal.classList.contains('open')) { 
+      closeGrooveModal(); 
+      return; 
+    }
+
+    // 2. Check Course Modal
+    if (courseModal?.classList.contains('open')) {
+      closeCourseCreator(); // Defined in course-creator.js
+      return;
+    }
+
+    // 3. Check Course Sidebar
+    if (sidebar?.classList.contains('open')) {
+      closeSidebar();
+    return;
+  }
+    
+    // Other Esc actions
+    if (document.body.classList.contains('present')) {
+      setPresentation(false);
+      return;
+    }
     
     clearSelection();
     clearRange();

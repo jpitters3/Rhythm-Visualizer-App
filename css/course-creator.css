@@ -1,0 +1,27 @@
+.course-modal { width: min(800px, 95vw); max-height: 90vh; overflow-y: auto; }
+
+.section-builder {
+  background: var(--panel-border);
+  padding: 15px;
+  border-radius: 12px;
+  margin-top: 15px;
+}
+
+.lesson-builder {
+  background: var(--panel);
+  margin: 10px 0 0 20px;
+  padding: 12px;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.lesson-meta {
+  font-size: 11px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.full-width { width: 100%; padding: 12px; margin-bottom: 10px; border-radius: 8px; border: 1px solid var(--panel-border); }

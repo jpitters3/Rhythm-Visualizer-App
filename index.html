@@ -84,6 +84,8 @@
   <link rel="stylesheet" href="./css/shared-pattern-banner.css">
   <link rel="stylesheet" href="./css/action-bar.css">
   <link rel="stylesheet" href="./css/measure-actions.css">
+  <link rel="stylesheet" href="./css/course-creator.css">
+  <link rel="stylesheet" href="./css/courses.css">
 </head>
 <body>
 
@@ -140,6 +142,8 @@
         <button id="handBtn" class="active" title="Toggle left/right hand coloring">Left/Right: Off</button>
         <button id="presentBtn" title="Toggle presentation mode (Esc exits)">Presentation</button>
         <button id="calBtn" title="Toggle handpan calibration">Calibrate Map</button>
+        <button id="openCourseModalBtn" class="admin-only" style="display: none;">Create Course</button>
+        <button id="toggleSidebarBtn">📚 Courses</button>
         <label>
         BPM
         <input id="bpm" type="range" min="40" max="200" value="90" />
@@ -227,6 +231,19 @@
         </div>
         <div id="ghostNoteSection" class="under-handpan">
           <button id="ghostBtn"><img src="./assets/images/ghost.png" /></button>
+        </div>
+
+        <!-- Lesson Player -->
+        <br/>
+        <div id="lessonPlayer" style="display: none;" class="lesson-panel">
+          <div class="lesson-header">
+            <h2 id="activeLessonTitle">Lesson Name</h2>
+            <button id="closeLessonBtn" class="small-btn">Exit Lesson</button>
+          </div>
+          <div class="lesson-content">
+            <div id="videoContainer" class="video-wrapper"></div>
+            <div id="lessonDescription" class="text-area"></div>
+          </div>
         </div>
       </aside>
     </div>
@@ -329,6 +346,41 @@
     </div>
   </div>
   
+  <!-- Course Creator Modal -->
+  <div id="courseModal" class="modal-overlay" aria-hidden="true">
+    <div class="modal course-modal">
+      <div class="modal-header">
+        <h2 class="modal-title">Course Creator</h2>
+        <button id="closeCourseModal" class="close-btn">&times;</button>
+      </div>
+      
+      <div class="course-form">
+        <input type="text" id="courseTitle" placeholder="Course Title (e.g., Intro to D-Kurd)" class="full-width">
+        <textarea id="courseDesc" placeholder="Course Description"></textarea>
+        
+        <div id="courseStructure">
+          </div>
+        
+        <button id="addSectionBtn" class="secondary-btn">+ Add Section</button>
+      </div>
+  
+      <div class="modal-footer">
+        <button id="saveCourseBtn" class="primary-btn">Save Course</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Courses View -->
+  <div id="courseSidebar" class="sidebar">
+    <div class="sidebar-header">
+      <h3>Course Library</h3>
+      <button id="closeSidebar" class="close-btn">&times;</button>
+    </div>
+    <div id="courseList">
+      <p class="loading">Loading courses...</p>
+    </div>
+  </div>
+
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
     const SUPABASE_URL = "https://ycdlqkaymkgpbpgtqubs.supabase.co";
@@ -388,6 +440,8 @@
     const deleteBtn = document.getElementById('deleteBtn');
     const exportBtn = document.getElementById('exportBtn');
     const importBtn = document.getElementById('importBtn');
+
+    const openCourseModalBtn = document.getElementById('openCourseModalBtn');
 
     // ===== GROOVE MODAL ELEMENTS =====
     const grooveBtn = document.getElementById('grooveBtn');
@@ -454,6 +508,9 @@
     let measures = 1;
     
   </script>
+
+  <script src="./js/course-creator.js"></script>
+  <script src="./js/courses.js"></script>
   <script src="./js/range-selection.js"></script>
   <script src="./js/measure-acions.js"></script>
   <script src="./js/notegrid.js"></script>
