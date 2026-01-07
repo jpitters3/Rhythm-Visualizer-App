@@ -235,7 +235,7 @@ function setMode(nextMode) {
   STEPS = (mode === '8') ? 8 : 16;
   gridBtn.textContent = (mode === '8') ? '8ths' : '16ths';
 
-  buildGrid();
+  renderAllMeasures();
 
   if (wasPlaying) start();
 }

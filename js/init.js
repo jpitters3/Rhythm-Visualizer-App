@@ -27,8 +27,8 @@ bpmVal.textContent = bpmInput.value;
 function runSelfTests() {
   // Existing smoke tests (kept)
   console.assert(document.getElementById('grid') && document.getElementById('labels'), 'Grid/labels elements exist');
-  console.assert(cells().length === STEPS, `Expected ${STEPS} cells after buildGrid()`);
-  console.assert(labels.children.length === STEPS, `Expected ${STEPS} labels after buildGrid()`);
+  console.assert(cells().length === STEPS, `Expected ${STEPS} cells after renderAllMeasures()`);
+  console.assert(labels.children.length === STEPS, `Expected ${STEPS} labels after renderAllMeasures()`);
 
   // Added: each cell should have a hand side class
   cells().forEach((c) => {
@@ -105,7 +105,7 @@ const DEBUG = new URLSearchParams(location.search).has('debug');
 function safeInit() {
   try {
     restorePrefs();
-    buildGrid();
+    renderAllMeasures();
 
     (async () => {
       await loadSharedFromURL();

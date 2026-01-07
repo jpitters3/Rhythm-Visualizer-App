@@ -166,6 +166,15 @@
     <div class="main">
       <div class="left">
         <div id="measures" class="measures" aria-label="Rhythm grid"></div>
+        
+        <!-- Measure Actions -->
+        <div class="measure-tools" id="measureTools">
+          <span class="measure-tools-label">Measure</span>
+          <button id="addMeasureBtn" title="Add a new measure">＋</button>
+          <button id="delMeasureBtn" title="Delete active measure">−</button>
+          <button id="copyMeasureBtn" title="Copy active measure">Copy</button>
+          <button id="pasteMeasureBtn" title="Paste into active measure" disabled>Paste</button>
+        </div>
       </div>
     
       <!-- HANDPAN OPTIONS -->
@@ -417,7 +426,7 @@
     let rangeStart = null;      // inclusive
     let rangeEnd = null;        // inclusive
     let selecting = false;      // selection mode (especially for mobile drag)
-    let beatClipboard = null;   // { type:'beats', steps:[{on,label}], length:n }
+    let beatClipboard = null;   // { type:'beats', steps:[{label}], length:n }
 
     // Action bar elements
     const selBar = document.getElementById('selBar');
@@ -426,6 +435,14 @@
     const selPasteBtn = document.getElementById('selPasteBtn');
     const selDeleteBtn = document.getElementById('selDeleteBtn');
     const selCancelBtn = document.getElementById('selCancelBtn');
+
+    // ===== MEASURE ACTIONS STATE =====
+    let measureClipboard = null; // { type:'measure', steps:[{label}], stepsCount: STEPS }
+
+    const addMeasureBtn = document.getElementById('addMeasureBtn');
+    const delMeasureBtn = document.getElementById('delMeasureBtn');
+    const copyMeasureBtn = document.getElementById('copyMeasureBtn');
+    const pasteMeasureBtn = document.getElementById('pasteMeasureBtn');
 
     const ADMIN_EMAILS = new Set([
       "jpitters3@gmail.com",
@@ -438,6 +455,7 @@
     
   </script>
   <script src="./js/range-selection.js"></script>
+  <script src="./js/measure-acions.js"></script>
   <script src="./js/notegrid.js"></script>
   <script src="./js/noteplayer.js"></script>
   <script src="./js/handpanmap.js"></script>

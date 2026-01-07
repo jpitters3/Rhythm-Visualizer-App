@@ -182,7 +182,6 @@ function applyPattern(state) {
   setMode(state.mode === '16' ? '16' : '8');
 
   measures = Number.isFinite(state.measures) ? Math.max(1, Math.floor(state.measures)) : 1;
-  buildGrid();
 
   if (typeof state.handSplit === 'boolean') {
     document.body.classList.toggle('handSplit', state.handSplit);
@@ -200,9 +199,8 @@ function applyPattern(state) {
   const all = cells();
 
   // Apply labels across all steps
-  for (let i = 0; i < totalSteps; i++) {
-    setInnerLabel(i, state.labels[i] || '');
-  }
+  innerLabels = state.labels;
+  renderAllMeasures();
 
   clearSelection();
   if (wasPlaying) start();

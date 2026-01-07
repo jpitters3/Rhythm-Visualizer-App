@@ -51,66 +51,60 @@ function setInnerLabel(i, value) {
   if (!v) return;
   cell.classList.add('has-label');
 
-
-    if (v === 'D') cell.classList.add('label-d');
-    else if (v === 'T') cell.classList.add('label-t');
-    else if (v === 'S') cell.classList.add('label-s');
-    else if (/^[0-9]$/.test(v)) cell.classList.add('label-n');
+  if (v === 'D') cell.classList.add('label-d');
+  else if (v === 'T') cell.classList.add('label-t');
+  else if (v === 'S') cell.classList.add('label-s');
+  else if (/^[0-9]$/.test(v)) cell.classList.add('label-n');
 
 }
 
-function buildGrid() {
-  clearGridDom();
-  setCols(STEPS);
+function renderAllMeasures() {
+  if (!measuresEl) {
+    // fallback: if you still render into #grid, you can adapt this
+    console.warn('measuresEl not found. renderAllMeasures() skipped.');
+    return;
+  }
 
-  const totalSteps = measures * STEPS;
+  const s = getStepCountPerMeasure();
+  const totalSteps = Array.isArray(innerLabels) ? innerLabels.length : 0;
+  const measureCount = Math.max(1, Math.ceil(totalSteps / s));
 
-  // Preserve existing data when changing measures
-  const prevLabels = innerLabels.slice();
+  measuresEl.innerHTML = '';
 
-  innerLabels = Array(totalSteps).fill('');
-  for (let i = 0; i < Math.min(prevLabels.length, totalSteps); i++) innerLabels[i] = String(prevLabels[i] || '');
+  for (let m = 0; m < measureCount; m++) {
+    const row = document.createElement('div');
+    row.className = 'measure-row';
 
-  selectedIndex = null;
-  step = 0;
+    // Optional: measure header + ⋮ menu later
+    const header = document.createElement('div');
+    header.className = 'measure-header';
+    header.textContent = `Measure ${m + 1}`;
+    row.appendChild(header);
 
-  for (let m = 0; m < measures; m++) {
-    const measureWrap = document.createElement('div');
-    measureWrap.className = 'measure';
+    const labels = document.createElement('div');
+    labels.className = 'labels';
+    labels.style.setProperty('--cols', String(s));
 
-    for (let i = 0; i < STEPS; i++) {
-      const globalIndex = (m * STEPS) + i;
+    const grid = document.createElement('div');
+    grid.className = 'grid';
+    grid.style.setProperty('--cols', String(s));
 
-      // Labels row (row 1) - Only display once every 4 measures
+    // Build labels + cells
+    for (let i = 0; i < s; i++) {
+      
+      // label
       if (m % 4 == 0) {
-        const label = document.createElement('div');
-        label.className = 'labelCell';
-        label.textContent = labelForStep(i);
-        measureWrap.appendChild(label);
+        const lab = document.createElement('div');
+        lab.textContent = labelForStep(i); // use your existing label function (per-measure)
+        labels.appendChild(lab);
       }
 
-      // Grid row (row 2)
+      // cell
       const cell = document.createElement('div');
-      cell.className = 'cell gridCell';
-
-      // Default: unlabeled = ghost
-      cell.classList.add('ghost');
-
-      // Assign hand + beat position classes (same logic you already had, but using local step i)
-      if (mode === '8') {
-        const isDown = (i % 2 === 0);
-        cell.classList.add(isDown ? 'hand-r' : 'hand-l');
-        cell.classList.add(isDown ? 'downbeat' : 'upbeat');
-      } else {
-        const pos = i % 4;
-        const isDown = (pos === 0);
-        cell.classList.add((pos === 0 || pos === 2) ? 'hand-r' : 'hand-l');
-        cell.classList.add(isDown ? 'downbeat' : 'upbeat');
-      }
+      cell.className = 'cell';
 
       const inner = document.createElement('div');
       inner.className = 'inner';
-      inner.textContent = '';
       cell.appendChild(inner);
 
       // Ghost note dot
@@ -118,107 +112,56 @@ function buildGrid() {
       ghost.className = 'ghost-dot';
       cell.appendChild(ghost);
 
-      cell.addEventListener('click', (ev) => {
-        ev.stopPropagation();
+      // Global index
+      const g = (m * s) + i;
 
-        const i = indexFromCellEl(cell);
-        if (i < 0) return;
+      const lbl = innerLabels[g] || '';
+      inner.textContent = lbl;
+      // Apply label classes using your existing function
+      // This will add label-d/label-t/label-s/label-n classes
+      if (typeof setInnerLabel === 'function') {
+        // setInnerLabel expects the cell to already exist in DOM order;
+        // Here we are building. So we apply classes manually:
+        cell.classList.remove('label-d', 'label-t', 'label-s', 'label-n');
 
-        // If long-press just fired, swallow the click that follows it.
-        if (longPressFired) {
-          longPressFired = false;
-          return;
-        }
+        if (lbl !== '') cell.classList.add('has-label');
 
-        // Desktop range select (Shift+click)
-        if (ev.shiftKey) {
-          if (anchorIndex === null) anchorIndex = (caretIndex ?? i);
-          setCaret(i);
-          setRange(anchorIndex, i);
-          return;
-        }
+        if (lbl === 'D') cell.classList.add('label-d');
+        else if (lbl === 'T') cell.classList.add('label-t');
+        else if (lbl === 'S') cell.classList.add('label-s');
+        else if (/^[0-9]$/.test(lbl)) cell.classList.add('label-n');
+      }
 
-        // Normal click: caret only, range collapses to single
-        selecting = false;
-        anchorIndex = i;
-        setCaret(i);
-        setRange(i, i);
+      // Assign hand side for visuals (per your existing logic)
+      // IMPORTANT: this uses your current mode mapping (8ths/16ths)
+      if (mode === '8') {
+        cell.classList.add((i % 2 === 0) ? 'hand-r' : 'hand-l');
+        cell.classList.add((i % 2 === 0) ? 'downbeat' : 'upbeat');
+      } else {
+        const pos = i % 4;
+        cell.classList.add((pos === 0 || pos === 2) ? 'hand-r' : 'hand-l');
+        cell.classList.add((pos === 0 || pos === 2) ? 'downbeat' : 'upbeat');
+      }
 
-        // Click selects (Esc clears selection)
-        if (selectedIndex === globalIndex) clearSelection();
-        else applySelection(globalIndex);
-      });
+      // Attach your existing cell listeners:
+      // - pointerdown/move for long-press selection
+      // - click for caret / shift-range
+      attachCellListeners(cell, g);
 
-      cell.addEventListener('pointerdown', (ev) => {
-        // Only left-click / primary touch
-        if (ev.button !== undefined && ev.button !== 0) return;
-      
-        // Start long-press for touch devices
-        startLongPress(cell);
-      
-        // Capture pointer so we keep getting move events
-        cell.setPointerCapture?.(ev.pointerId);
-      });
-      
-      cell.addEventListener('pointermove', (ev) => {
-        // If user is dragging during selection mode, expand range
-        if (selecting) {
-          ev.preventDefault();
-          updateDragSelectionOver(cell);
-        }
-      });
-      
-      cell.addEventListener('pointerup', () => {
-        cancelLongPress();
-        // If long-press fired, we stay in selection mode until cancel
-      });
-      
-      cell.addEventListener('pointercancel', () => cancelLongPress());
-      
-
-      measureWrap.appendChild(cell);
+      grid.appendChild(cell);
     }
 
-    if (m > 0) {
-      // Horizontal line running through each measure
-      const hr = document.createElement('hr');
-      // hr.style="margin-bottom: 30px;";
-      measuresEl.appendChild(hr);
-    }
+    row.appendChild(labels);
+    row.appendChild(grid);
+    measuresEl.appendChild(row);
 
-    // Show +Add Measure button ONLY on last measure
-    const addBtn = document.createElement('button');
-    const existingAddBtn = document.getElementById('add-measure');
-
-    if (m === measures - 1) {
-      addBtn.id = 'add-measure';
-      addBtn.className = 'add-measure';
-      addBtn.type = 'button';
-      addBtn.title = 'Add another measure';
-      addBtn.style = 'width: 200px'
-      addBtn.textContent = '+ Add Measure';
-      addBtn.addEventListener('click', (ev) => {
-        ev.stopPropagation();
-        addMeasure();
-      });
-
-      if (existingAddBtn) existingAddBtn.remove();
-      measuresEl.after(addBtn);
-    }
-
-    measuresEl.appendChild(measureWrap);
+    // Horizontal line running through each measure
+    const hr = document.createElement('hr');
+    measuresEl.appendChild(hr);
   }
 
-  // Apply labels after DOM exists
-  for (let i = 0; i < totalSteps; i++) {
-    if (innerLabels[i]) setInnerLabel(i, innerLabels[i]);
-  }
-}
-
-function addMeasure() {
-  measures += 1;
-  buildGrid();
-  restartIfPlaying();
+  // After re-render, update selection visuals
+  updateRangeUI?.();
 }
 
 // ===== SELECTION ACTIONS ===== //
@@ -291,3 +234,63 @@ selCancelBtn?.addEventListener('click', () => {
   // Also clear caret ring if you want:
   // clearSelection?.();
 });
+
+function attachCellListeners(cell, globalIndex) {
+  // Pointer selection
+  cell.addEventListener('click', (ev) => {
+    ev.stopPropagation();
+
+    const i = indexFromCellEl(cell);
+    if (i < 0) return;
+
+    // If long-press just fired, swallow the click that follows it.
+    if (longPressFired) {
+      longPressFired = false;
+      return;
+    }
+
+    // Desktop range select (Shift+click)
+    if (ev.shiftKey) {
+      if (anchorIndex === null) anchorIndex = (caretIndex ?? i);
+      setCaret(i);
+      setRange(anchorIndex, i);
+      return;
+    }
+
+    // Normal click: caret only, range collapses to single
+    selecting = false;
+    anchorIndex = i;
+    setCaret(i);
+    setRange(i, i);
+
+    // // Click selects (Esc clears selection)
+    // if (selectedIndex === globalIndex) clearSelection();
+    // else applySelection(globalIndex);
+  });
+
+  cell.addEventListener('pointerdown', (ev) => {
+    // Only left-click / primary touch
+    if (ev.button !== undefined && ev.button !== 0) return;
+  
+    // Start long-press for touch devices
+    startLongPress(cell);
+  
+    // Capture pointer so we keep getting move events
+    cell.setPointerCapture?.(ev.pointerId);
+  });
+  
+  cell.addEventListener('pointermove', (ev) => {
+    // If user is dragging during selection mode, expand range
+    if (selecting) {
+      ev.preventDefault();
+      updateDragSelectionOver(cell);
+    }
+  });
+  
+  cell.addEventListener('pointerup', () => {
+    cancelLongPress();
+    // If long-press fired, we stay in selection mode until cancel
+  });
+  
+  cell.addEventListener('pointercancel', () => cancelLongPress());
+}
