@@ -86,6 +86,7 @@
   <link rel="stylesheet" href="./css/measure-actions.css">
   <link rel="stylesheet" href="./css/course-creator.css">
   <link rel="stylesheet" href="./css/courses.css">
+  <link rel="stylesheet" href="./css/mic-mode.css">
 </head>
 <body>
 
@@ -143,6 +144,15 @@
         <button id="presentBtn" title="Toggle presentation mode (Esc exits)">Presentation</button>
         <button id="calBtn" title="Toggle handpan calibration">Calibrate Map</button>
         <button id="openCourseModalBtn" class="admin-only" style="display: none;">Create Course</button>
+        <button id="micBtn" class="secondary-btn">🎤 Listen Mode: Off</button>
+        <div id="micVisualizer" class="mic-meter" style="display:none;">
+            <div id="micLevel" class="mic-level-bar"></div>
+        </div>
+        <div class="mic-controls">
+          <label for="micSensitivity">Mic Sensitivity</label>
+          <input type="range" id="micSensitivity" min="0.01" max="0.3" step="0.01" value="0.05">
+          <span id="sensVal">0.05</span>
+        </div>
         <button id="toggleSidebarBtn">📚 Courses</button>
         <label>
         BPM
@@ -447,6 +457,7 @@
     const importBtn = document.getElementById('importBtn');
 
     const openCourseModalBtn = document.getElementById('openCourseModalBtn');
+    const micBtn = document.getElementById('micBtn');
 
     // ===== GROOVE MODAL ELEMENTS =====
     const grooveBtn = document.getElementById('grooveBtn');
@@ -522,6 +533,7 @@
   <script src="./js/noteplayer.js"></script>
   <script src="./js/handpanmap.js"></script>
   <script src="./js/compose-mode.js"></script>
+  <script src="./js/transcription.js"></script>
   <script src="./js/groove-generator.js"></script>
   <script src="./js/presentation-mode.js"></script>
   <script src="./js/pattern-crud.js"></script>
