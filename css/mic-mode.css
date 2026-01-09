@@ -29,13 +29,29 @@
 .mic-controls {
   display: flex;
   align-items: center;
-  gap: 12px;
   background: var(--panel);
-  padding: 8px 16px;
   border-radius: 999px;
   border: 1px solid var(--panel-border);
   font-size: 13px;
   margin-top: 10px;
+}
+
+.mic-controls {
+  flex-wrap: wrap; /* Allow sliders to stack on small mobile screens */
+  gap: 10px 20px;
+  padding: 12px 20px;
+}
+
+.mic-controls label {
+  font-weight: 600;
+  color: var(--text);
+  opacity: 0.8;
+}
+
+.mic-controls span {
+  min-width: 35px; /* Keeps numbers from jumping when they change */
+  display: inline-block;
+  font-family: monospace;
 }
 
 .mic-controls input[type="range"] {

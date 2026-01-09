@@ -149,10 +149,14 @@
             <div id="micLevel" class="mic-level-bar"></div>
         </div>
         <div class="mic-controls">
-          <label for="micSensitivity">Mic Sensitivity</label>
+          <label for="micSensitivity">Sensitivity</label>
           <input type="range" id="micSensitivity" min="0.01" max="0.3" step="0.01" value="0.05">
           <span id="sensVal">0.05</span>
-        </div>
+      
+          <label for="micGate" style="margin-left: 15px;">Gate (ms)</label>
+          <input type="range" id="micGate" min="50" max="500" step="10" value="150">
+          <span id="gateVal">150</span>
+      </div>
         <button id="toggleSidebarBtn">📚 Courses</button>
         <label>
         BPM

@@ -57,6 +57,18 @@ micSensInput?.addEventListener('input', () => {
     if (sensValDisplay) sensValDisplay.textContent = sensitivityThreshold.toFixed(2);
 });
 
+let lastNoteTime = 0;       // Timestamp of the last written note
+let gateDuration = 150;     // Default 150ms "dead zone"
+
+// UI Listeners for the Gate slider
+const micGateInput = document.getElementById('micGate');
+const gateValDisplay = document.getElementById('gateVal');
+
+micGateInput?.addEventListener('input', () => {
+    gateDuration = parseInt(micGateInput.value);
+    if (gateValDisplay) gateValDisplay.textContent = gateDuration;
+});
+
 function transcriptionLoop() {
     if (!isListening) return;
 
@@ -66,27 +78,37 @@ function transcriptionLoop() {
     let sum = 0;
     for (let i = 0; i < buf.length; i++) sum += buf[i] * buf[i];
     const rms = Math.sqrt(sum / buf.length);
-    
+    const now = Date.now();
+
     // Update visual meter
     document.getElementById('micLevel').style.width = Math.min(100, rms * 500) + "%";
 
-    // 1. Check if the sound is LOUD enough based on our slider
-    if (rms > sensitivityThreshold && pitch !== -1) {
+    // 1. GATE CHECK: Is enough time passed since the last hit?
+    const isGateOpen = (now - lastNoteTime > gateDuration);
+
+    // 2. VOLUME CHECK: Is the sound LOUD enough based on our slider?
+    const isLoudEnough = rms > sensitivityThreshold && pitch !== -1;
+
+    if (isLoudEnough && isGateOpen) {
         const detectedLabel = findClosestScaleNote(pitch);
         
-        // 2. DEBOUNCE: Only write if this is a NEW note event
+        // 2. DEBOUNCE: Only write if this is a NEW note event OR if enough time has passed.
         // If the detected note is the same as the last one, we skip writing 
         // until the note actually stops (rms falls below threshold) or changes.
-        if (detectedLabel && detectedLabel !== lastDetectedNote) {
+        if (detectedLabel && (detectedLabel !== lastDetectedNote || isGateOpen)) {
             recordNoteToGrid(detectedLabel);
-            lastDetectedNote = detectedLabel; // Lock this note
             console.log(`VOLUME GOOD: ${rms} | ${sensitivityThreshold}`);
+            
+            // LOCK: Set the timestamp and the label
+            lastNoteTime = now;
+            lastDetectedNote = detectedLabel; // Lock this note
+            console.log(`LOCKED at: ${now}`);
         }
     } else {
         // 3. Reset the lock when it gets quiet
         // This allows the same note to be played twice in a row (e.g., Ding-Ding)
         lastDetectedNote = null;
-        console.log(`VOLUME BAD: ${rms} | ${sensitivityThreshold}`);
+        console.log(`VOLUME BAD OR GATE CLOSED: ${rms} | ${sensitivityThreshold}`);
     }
 
     requestAnimationFrame(transcriptionLoop);
@@ -129,7 +151,7 @@ function recordNoteToGrid(label) {
     if (!playing) return;
 
     // Use the current loop position (defined in noteplayer.tick()) to determine the cell
-    const currentIndex = step-1 > 0 ? step-1 : 0;
+    const currentIndex = transcriptionIndex;
     
     // Debounce: Don't overwrite the same cell multiple times in one tick
     if (innerLabels[currentIndex] !== label) {
@@ -139,7 +161,7 @@ function recordNoteToGrid(label) {
         highlightHandpan(label, currentIndex);
     }
     // For debug only
-    console.log(`<<<DEBOUNCE>>>: [[[${label}]]] at ${currentIndex}`);
+    // console.log(`<<<DEBOUNCE>>>: [[[${label}]]] at ${currentIndex}`);
 }
 
 // Standard Autocorrelation Algorithm

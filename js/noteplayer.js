@@ -96,6 +96,7 @@ async function loadScaleRemote(){
 /* Player Functionality */
 
 let step = 0;
+let transcriptionIndex = 0;
 
 // Use an array of timers to prevent accidental stacking (double-clicks, race conditions)
 let timers = [];
@@ -215,6 +216,10 @@ function tick() {
   
   highlightHandpan(label, step);
   
+  // Since transcription happens after tick(), 
+  // we need to use the index before we increment 'step'
+  transcriptionIndex = step;
+
   const totalSteps = measures * STEPS;
   step = (step + 1) % totalSteps;
 }
