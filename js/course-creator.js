@@ -75,7 +75,7 @@ function openCourseCreator() {
 
 function closeCourseCreator() {
   courseModal.classList.remove('open');
-  courseModal.setAttribute('aria-hidden', 'true');
+  // courseModal.setAttribute('aria-hidden', 'true');
 }
 
 // Listeners
@@ -84,7 +84,10 @@ closeCourseBtn?.addEventListener('click', closeCourseCreator);
 
 // Close on clicking the dark overlay
 courseModal?.addEventListener('click', (e) => {
-  if (e.target === courseModal) closeCourseCreator();
+  if (e.target === courseModal) {
+    e.target.inert = true;
+    closeCourseCreator();
+  }
 });
 
 

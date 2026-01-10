@@ -101,22 +101,21 @@ async function saveCurrentPatternAs(name){
   }
 }
 
-loadBtn.addEventListener('click', async () => {
+async function loadPatternByName(pattern) {
   try {
     // CLOUD MODE
     if (isAuthed()) {
-      const selected = getSelectedPatternName();
-      if (!selected) {
+      if (!pattern) {
         alert('Select a saved pattern first.');
         return;
       }
-      const state = await dbLoadPatternByName(selected);
+      const state = await dbLoadPatternByName(pattern);
       if (!state) {
         alert('Could not load that pattern.');
         return;
       }
       applyPattern(state);
-      localStorage.setItem(LAST_USED_KEY, selected);
+      localStorage.setItem(LAST_USED_KEY, pattern);
       return;
     }
 
@@ -143,6 +142,11 @@ loadBtn.addEventListener('click', async () => {
     console.error(err);
     alert(`Load failed: ${err?.message || err}`);
   }
+}
+
+loadBtn.addEventListener('click', async () => {
+  const selected = getSelectedPatternName();
+  loadPatternByName(selected);
 });
 
 

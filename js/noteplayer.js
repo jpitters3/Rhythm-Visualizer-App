@@ -32,6 +32,9 @@ let selectedScaleName = null;
 const scaleSelect = document.getElementById('scaleSelect');
 const scaleStatus = document.getElementById('scaleStatus');
 
+let countdownRemaining = 0;
+const COUNTDOWN_LENGTH = 4; // 4 steps
+
 function buildScaleSelect(){
   if (!scaleSelect) return;
   scaleSelect.innerHTML = '';
@@ -195,19 +198,70 @@ function isDownbeatStep(stepIndex){
   return stepIndex % 4 === 0;                       // 1,2,3,4 on 16ths
 }
 
+// Helpers for the Countdown UI
+function showCountdown(num) {
+  const overlay = document.getElementById('countdownOverlay');
+  const text = document.getElementById('countdownNumber');
+  
+  if (overlay && text) {
+    overlay.style.display = 'flex';
+    text.textContent = num;
+
+    // THE REFLOW TRICK:
+    // 1. Remove the animation
+    text.style.animation = 'none';
+    
+    // 2. Trigger a reflow (this is the magic bit)
+    void text.offsetWidth; 
+    
+    // 3. Re-apply the animation
+    text.style.animation = null; 
+  }
+}
+
+function hideCountdown() {
+  const overlay = document.getElementById('countdownOverlay');
+  if (overlay) overlay.style.display = 'none';
+}
+
 function tick() {
   const all = cells();
   if (!all.length) return;
 
   all.forEach(c => c.classList.remove('play'));
+
+  // COUNTDOWN LOGIC
+  if (countdownRemaining > 0) {
+    // Show the CURRENT number (4, 3, 2, 1)
+    showCountdown(countdownRemaining);
+
+    // Play metronome click (Low pitch for count-in)
+    if (metronomeOn) metroClick(getMetroClickKind('beat'));
+
+    // Decrement for the NEXT tick
+    countdownRemaining--;
+    
+    // If we just finished 1, the next tick will be the actual start
+    return; 
+  }
+
+  if (document.getElementById('countdownOverlay').style.display !== 'none') {
+    hideCountdown();
+  }
+
   const cell = all[step];
   if (cell !== undefined) cell.classList.add('play');
 
   if (metronomeOn) {
+    metroClick(getMetroClickKind());
+  }
+
+  function getMetroClickKind() {
     const beatStride = (mode === '8') ? 2 : 4;
     const isQuarter = (step % beatStride === 0);
     const isDownbeat = (step === 0);
-    metroClick(isDownbeat ? 'downbeat' : (isQuarter ? 'beat' : 'sub'));
+    kind = isDownbeat ? 'downbeat' : (isQuarter ? 'beat' : 'sub');
+    return kind;
   }
 
   // Play the sound that corresponds to the beat label
@@ -365,6 +419,13 @@ function start() {
   
   // Guard: never allow multiple intervals to stack (can freeze the tab)
   if (playing || timers.length) return;
+
+  // If Listen Mode is ON, initiate countdown
+  if (typeof isListening !== 'undefined' && isListening) {
+    countdownRemaining = COUNTDOWN_LENGTH;
+  } else {
+    countdownRemaining = 0;
+  }
 
   ensureAudio();
   const id = setInterval(tick, intervalMs());

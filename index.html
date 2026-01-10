@@ -144,19 +144,27 @@
         <button id="presentBtn" title="Toggle presentation mode (Esc exits)">Presentation</button>
         <button id="calBtn" title="Toggle handpan calibration">Calibrate Map</button>
         <button id="openCourseModalBtn" class="admin-only" style="display: none;">Create Course</button>
-        <button id="micBtn" class="secondary-btn">🎤 Listen Mode: Off</button>
-        <div id="micVisualizer" class="mic-meter" style="display:none;">
-            <div id="micLevel" class="mic-level-bar"></div>
+        <!-- Microphone -->
+        <div class="mic-section">
+          <div class="mic-main-controls">
+            <button id="micBtn" class="secondary-btn">🎤 Listen Mode: Off</button>
+            <button id="micCalBtn" class="secondary-btn">🎯 Calibrate</button>
+            <button id="guidedCalBtn">Guided Calibration</button>
+          </div>
+        
+          <div id="calibrationStatus" class="calibration-overlay" style="display:none;">
+              <span>Tap Note: </span><span id="targetNoteName">D</span>
+          </div>
+        
+          <div class="mic-settings">
+            <div class="setting-group">
+              <h3>Base Sensitivity</h3>
+              <input type="range" id="micSensInput" min="0.01" max="0.3" step="0.01" value="0.05">
+              <span id="sensVal">0.05</span>
+            </div>
+          </div>
         </div>
-        <div class="mic-controls">
-          <label for="micSensitivity">Sensitivity</label>
-          <input type="range" id="micSensitivity" min="0.01" max="0.3" step="0.01" value="0.05">
-          <span id="sensVal">0.05</span>
-      
-          <label for="micGate" style="margin-left: 15px;">Gate (ms)</label>
-          <input type="range" id="micGate" min="50" max="500" step="10" value="150">
-          <span id="gateVal">150</span>
-      </div>
+        <!-- Courses -->
         <button id="toggleSidebarBtn">📚 Courses</button>
         <label>
         BPM
@@ -290,6 +298,10 @@
   </div>
 </div><!-- container -->
 
+<div id="countdownOverlay" class="countdown-overlay" style="display: none;">
+  <span id="countdownNumber">4</span>
+</div>
+
   <div class="footer"></div>
 
   <button id="exitPresent" class="present-exit" title="Exit presentation mode (Esc)">Exit</button>
@@ -386,6 +398,30 @@
     </div>
   </div>
 
+  <!-- Guided Calibration Modal -->
+  <div id="guidedCalModal" class="modal-overlay" style="display: none;">
+    <div class="modal-content">
+        <h2>Guided Calibration</h2>
+        <p>We will tune your handpan's sensitivity. Play the scale up, striking the indicated note every 2 clicks.</p>
+        
+        <div class="calibration-guide">
+            <div id="guideNoteBox" class="guide-note-box">READY</div>
+            <div class="progress-bar-container">
+                <div id="guideProgress" class="progress-bar"></div>
+            </div>
+        </div>
+
+        <div class="modal-actions">
+            <button id="startGuidedBtn" class="primary-btn">Begin Calibration</button>
+            <button id="closeGuidedBtn" class="text-btn">Cancel</button>
+        </div>
+    </div>
+  </div>
+  <div id="micVisualizer" class="mic-meter" style="display:none;">
+    <div id="micLevel" class="mic-level-bar"></div>
+  </div>
+</div>
+
   <!-- Courses View -->
   <div id="courseSidebar" class="sidebar">
     <div class="sidebar-header">
@@ -461,7 +497,6 @@
     const importBtn = document.getElementById('importBtn');
 
     const openCourseModalBtn = document.getElementById('openCourseModalBtn');
-    const micBtn = document.getElementById('micBtn');
 
     // ===== GROOVE MODAL ELEMENTS =====
     const grooveBtn = document.getElementById('grooveBtn');
@@ -532,7 +567,7 @@
   <script src="./js/course-creator.js"></script>
   <script src="./js/courses.js"></script>
   <script src="./js/range-selection.js"></script>
-  <script src="./js/measure-acions.js"></script>
+  <script src="./js/measure-actions.js"></script>
   <script src="./js/notegrid.js"></script>
   <script src="./js/noteplayer.js"></script>
   <script src="./js/handpanmap.js"></script>
