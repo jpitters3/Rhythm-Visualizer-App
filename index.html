@@ -87,6 +87,7 @@
   <link rel="stylesheet" href="./css/course-creator.css">
   <link rel="stylesheet" href="./css/courses.css">
   <link rel="stylesheet" href="./css/mic-mode.css">
+  <link rel="stylesheet" href="./css/bloom-animation.css">
 </head>
 <body>
 
@@ -272,35 +273,35 @@
       </aside>
     </div>
   
-  <!-- Legend -->
-  <div class="legend" aria-label="Legend">
-      <div class="legend-title">Legend</div>
-      <div class="legend-row">
-        <h3>Actions for Setting the Notes</h3><br/>
-      </div>
-      <div class="legend-row">
-        <span><kbd>Click</kbd> Select A Note</span>
-        <span><kbd>D</kbd> Ding</span>
-        <span><kbd>T</kbd> Tak</span>
-        <span><kbd>S</kbd> Slap</span>
-        <span><kbd>0–9</kbd> Numbered Note</span>
-        <span><kbd>Space</kbd> Ghost Note</span>
-        <span><kbd>M</kbd> Toggle metronome</span>
-        <span><kbd>Esc</kbd> Exit</span>
-      </div>
-      <div class="legend-row">
-        <h3>Labels</h3><br/>
-      </div>
-      <div class="legend-row">
-        <span><kbd>Left/Right</kbd> Toggle hand icons</span>
-        
-      </div>
-  </div>
-</div><!-- container -->
+    <!-- Legend -->
+    <div class="legend" aria-label="Legend">
+        <div class="legend-title">Legend</div>
+        <div class="legend-row">
+          <h3>Actions for Setting the Notes</h3><br/>
+        </div>
+        <div class="legend-row">
+          <span><kbd>Click</kbd> Select A Note</span>
+          <span><kbd>D</kbd> Ding</span>
+          <span><kbd>T</kbd> Tak</span>
+          <span><kbd>S</kbd> Slap</span>
+          <span><kbd>0–9</kbd> Numbered Note</span>
+          <span><kbd>Space</kbd> Ghost Note</span>
+          <span><kbd>M</kbd> Toggle metronome</span>
+          <span><kbd>Esc</kbd> Exit</span>
+        </div>
+        <div class="legend-row">
+          <h3>Labels</h3><br/>
+        </div>
+        <div class="legend-row">
+          <span><kbd>Left/Right</kbd> Toggle hand icons</span>
+          
+        </div>
+    </div>
+  </div><!-- container -->
 
-<div id="countdownOverlay" class="countdown-overlay" style="display: none;">
-  <span id="countdownNumber">4</span>
-</div>
+  <div id="countdownOverlay" class="countdown-overlay" style="display: none;">
+    <span id="countdownNumber">4</span>
+  </div>
 
   <div class="footer"></div>
 
@@ -435,6 +436,9 @@
       <p class="loading">Loading courses...</p>
     </div>
   </div>
+
+  <!-- Radial Bloom -->
+  <div id="bloom-ui-layer"></div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>

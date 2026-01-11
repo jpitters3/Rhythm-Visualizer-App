@@ -1,6 +1,12 @@
 /* ==== Layout and structure of the notes ==== */
 
 const cells = () => document.querySelectorAll('.cell');
+let activeSubIndex = null; // Tracks which of the 4 circles is selected (0-3)
+let fingerMap = new Map();
+fingerMap.set("lh-index", 0);
+fingerMap.set("lh-thumb", 1);
+fingerMap.set("rh-index", 2);
+fingerMap.set("rh-thumb", 3);
 
 function setCols(n) {
   // Apply to the measures wrapper (it cascades to measure children)
@@ -26,36 +32,16 @@ function clearGridDom() {
 
 function clearSelection() {
   selectedIndex = null;
-  cells().forEach(c => c.classList.remove('selected'));
+  activeSubIndex = null; 
+  cells().forEach(c => {
+    c.classList.remove('selected');
+    c.querySelectorAll('.sub-dot').forEach(s => s.classList.remove('selected'));
+});
 }
 
 function applySelection(i) {
   selectedIndex = i;
   cells().forEach((c, idx) => c.classList.toggle('selected', idx === i));
-}
-
-function setInnerLabel(i, value) {
-  innerLabels[i] = value;
-  const cell = cells()[i];
-  if (!cell) return;
-
-  const inner = cell.querySelector('.inner');
-  if (inner) inner.textContent = value;
-
-  cell.classList.remove('label-d', 'label-t', 'label-s', 'label-n', 'has-label');
-  const v = String(value || '');
-  
-  // ghost = no label set
-  cell.classList.toggle('ghost', !v);
-
-  if (!v) return;
-  cell.classList.add('has-label');
-
-  if (v === 'D') cell.classList.add('label-d');
-  else if (v === 'T') cell.classList.add('label-t');
-  else if (v === 'S') cell.classList.add('label-s');
-  else if (/^[0-9]$/.test(v)) cell.classList.add('label-n');
-
 }
 
 function renderAllMeasures() {
@@ -107,6 +93,34 @@ function renderAllMeasures() {
       inner.className = 'inner';
       cell.appendChild(inner);
 
+      // quad circles
+      const quad = document.createElement('div');
+      quad.className = 'quad-container';
+
+      // Left Hand Column (Bottom: Thumb, Top: Index)
+      const leftCol = document.createElement('div');
+      leftCol.className = 'hand-column left';
+      ['lh-index', 'lh-thumb'].forEach(pos => {
+          const dot = document.createElement('div');
+          dot.className = `sub-dot ${pos}`;
+          dot.dataset = `${fingerMap.get(pos)}`;
+          leftCol.appendChild(dot);
+      });
+
+      // Right Hand Column (Bottom: Thumb, Top: Index)
+      const rightCol = document.createElement('div');
+      rightCol.className = 'hand-column right';
+      ['rh-index', 'rh-thumb'].forEach(pos => {
+          const dot = document.createElement('div');
+          dot.className = `sub-dot ${pos}`;
+          dot.dataset = `${fingerMap.get(pos)}`;
+          rightCol.appendChild(dot);
+      });
+
+      quad.appendChild(leftCol);
+      quad.appendChild(rightCol);
+      cell.appendChild(quad);
+
       // Ghost note dot
       const ghost = document.createElement('div');
       ghost.className = 'ghost-dot';
@@ -114,11 +128,26 @@ function renderAllMeasures() {
 
       // Global index
       const g = (m * s) + i;
-
       const lbl = innerLabels[g] || '';
-      inner.textContent = lbl;
-      // Apply label classes using your existing function
-      // This will add label-d/label-t/label-s/label-n classes
+      
+      // Set inner label of multi-mode cells OR single-note cells
+      const isMultiCell = Array.isArray(lbl);
+      // inner.textContent = lbl;
+
+      if (!isMultiCell) {
+        // Set single-note cell labels
+        inner.textContent = lbl;
+      } 
+      else {
+        // Set multi-note cell labels
+        cell.classList.add('multi-mode');
+        const allSubs = cell.querySelectorAll('.sub-dot');
+        for (let idx = 0; idx < allSubs.length - 1; idx++) {
+          allSubs[idx].textContent = lbl[idx];
+        };
+      }
+
+      // Apply label classes 
       if (typeof setInnerLabel === 'function') {
         // setInnerLabel expects the cell to already exist in DOM order;
         // Here we are building. So we apply classes manually:
@@ -126,27 +155,30 @@ function renderAllMeasures() {
 
         if (lbl !== '') cell.classList.add('has-label');
 
-        if (lbl === 'D') cell.classList.add('label-d');
-        else if (lbl === 'T') cell.classList.add('label-t');
-        else if (lbl === 'S') cell.classList.add('label-s');
-        else if (/^[0-9]$/.test(lbl)) cell.classList.add('label-n');
-      }
+        if (!isMultiCell) {
+          // Set single-note cell classes
+          if (lbl === 'D') cell.classList.add('label-d');
+          else if (lbl === 'T') cell.classList.add('label-t');
+          else if (lbl === 'S') cell.classList.add('label-s');
+          else if (/^[0-9]$/.test(lbl)) cell.classList.add('label-n');
 
-      // Assign hand side for visuals (per your existing logic)
-      // IMPORTANT: this uses your current mode mapping (8ths/16ths)
-      if (mode === '8') {
-        cell.classList.add((i % 2 === 0) ? 'hand-r' : 'hand-l');
-        cell.classList.add((i % 2 === 0) ? 'downbeat' : 'upbeat');
-      } else {
-        const pos = i % 4;
-        cell.classList.add((pos === 0 || pos === 2) ? 'hand-r' : 'hand-l');
-        cell.classList.add((pos === 0 || pos === 2) ? 'downbeat' : 'upbeat');
+          // Assign hand side for visuals (per your existing logic)
+          // IMPORTANT: this uses your current mode mapping (8ths/16ths)
+          if (mode === '8') {
+            cell.classList.add((i % 2 === 0) ? 'hand-r' : 'hand-l');
+            cell.classList.add((i % 2 === 0) ? 'downbeat' : 'upbeat');
+          } else {
+            const pos = i % 4;
+            cell.classList.add((pos === 0 || pos === 2) ? 'hand-r' : 'hand-l');
+            cell.classList.add((pos === 0 || pos === 2) ? 'downbeat' : 'upbeat');
+          }
+        }
       }
 
       // Attach your existing cell listeners:
       // - pointerdown/move for long-press selection
       // - click for caret / shift-range
-      attachCellListeners(cell, g);
+      attachCellListeners(cell);
 
       grid.appendChild(cell);
     }
@@ -221,10 +253,121 @@ function deleteSelection() {
   if (!r) return;
 
   for (let i = r.start; i <= r.end; i++) setBeatToGhost(i);
-
-  // Keep caret at start
-  // setCaret(r.start-1);
 }
+
+// Bloom for mobile note selection //
+
+function showChoiceMenu(cell, globalIndex) {
+    const uiLayer = document.getElementById('bloom-ui-layer'); // Get it here!
+    if (!uiLayer) return;
+    uiLayer.innerHTML = ''; // Clear previous UI
+    const rect = cell.getBoundingClientRect();
+    
+    const menu = document.createElement('div');
+    menu.className = 'choice-menu';
+    
+    // Position menu near the touch point, but keep it on screen
+    menu.style.left = `${Math.min(window.innerWidth - 180, Math.max(10, rect.left))}px`;
+    menu.style.top = `${rect.top - 120}px`;
+
+    const btnChord = document.createElement('button');
+    btnChord.textContent = "Set Chord (Bloom)";
+    btnChord.onclick = () => {
+        console.log(`I'm the best mayne... I deeed it.`);
+        uiLayer.innerHTML = '';
+        openRadialBloom(cell, globalIndex);
+    };
+
+    const btnRange = document.createElement('button');
+    btnRange.textContent = "Select Range";
+    btnRange.onclick = () => {
+        uiLayer.innerHTML = '';
+        selecting = true;
+        anchorIndex = globalIndex;
+        updateDragSelectionOver(cell);
+    };
+
+    menu.appendChild(btnChord);
+    menu.appendChild(btnRange);
+    uiLayer.appendChild(menu);
+
+    // Close menu if clicking outside
+    // setTimeout(() => {
+    //     const closer = () => { uiLayer.innerHTML = ''; window.removeEventListener('click', closer); };
+    //     window.addEventListener('click', closer);
+    // }, 10);
+}
+
+function openRadialBloom(cell, globalIndex) {
+    const uiLayer = document.getElementById('bloom-ui-layer'); // Get it here too!
+    if (!uiLayer) return;
+
+    const rect = cell.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+    
+    // Clear the layer first to ensure no stale menus are blocking view
+    uiLayer.innerHTML = '';
+
+    const container = document.createElement('div');
+    container.className = 'bloom-container';
+    
+    // EDGE DETECTION
+    const dist = 75; // Distance from center
+    let xMult = 1;   // Default right
+    let yMult = 1;   // Default down
+
+    if (centerX > window.innerWidth - 100) xMult = -1; // Shift left if at right edge
+    if (centerY > window.innerHeight - 150) yMult = -1; // Shift up if at bottom edge
+
+    const fingerPositions = [
+        { label: 'LH-I', tx: -dist * xMult, ty: -dist * yMult }, // Left Index
+        { label: 'RH-I', tx: dist * xMult,  ty: -dist * yMult }, // Right Index
+        { label: 'LH-T', tx: -dist * xMult, ty: dist * yMult },  // Left Thumb
+        { label: 'RH-T', tx: dist * xMult,  ty: dist * yMult }   // Right Thumb
+    ];
+
+    fingerPositions.forEach((pos, idx) => {
+        const sat = document.createElement('div');
+        sat.className = 'bloom-satellite';
+        sat.style.left = `${centerX}px`;
+        sat.style.top = `${centerY}px`;
+        sat.style.setProperty('--tx', `${pos.tx}px`);
+        sat.style.setProperty('--ty', `${pos.ty}px`);
+        sat.textContent = pos.label;
+
+        sat.onclick = (e) => {
+            e.stopPropagation();
+            activeSubIndex = idx;
+            cell.classList.add('multi-mode');
+            sat.classList.add('selected');
+            
+            // Set caret so the handpan knows which cell to fill
+            setCaret(globalIndex);
+            
+            setTimeout(() => uiLayer.innerHTML = '', 300);
+        };
+        container.appendChild(sat);
+    });
+
+    uiLayer.appendChild(container);
+
+    // This double-frame delay ensures the browser registers the initial 
+    // position before triggering the 'bloom' transform animation.
+    // requestAnimationFrame(() => {
+        container.classList.add('active');
+    // });
+
+    container.style.pointerEvents = 'auto';
+
+    // Close the bloom when we click the container
+    container.onclick = () => {
+        container.classList.remove('active');
+        setTimeout(() => uiLayer.innerHTML = '', 300);
+    };
+}
+
+// EVENT LISTENERS //
 
 selCopyBtn?.addEventListener('click', () => copySelection());
 selPasteBtn?.addEventListener('click', () => pasteSelection());
@@ -235,23 +378,123 @@ selCancelBtn?.addEventListener('click', () => {
   // clearSelection?.();
 });
 
-function attachCellListeners(cell, globalIndex) {
+function setInnerLabel(i, value) {
+  const cell = cells()[i];
+  if (!cell) return;
+
+  if (!Array.isArray(innerLabels[i]) && activeSubIndex == null) {
+
+    // Set single note
+
+    innerLabels[i] = value;
+    const inner = cell.querySelector('.inner');
+    if (inner) inner.textContent = value;
+
+    cell.classList.remove('label-d', 'label-t', 'label-s', 'label-n', 'has-label');
+    const v = String(value || '');
+    
+    // ghost = no label set
+    cell.classList.toggle('ghost', !v);
+
+    if (!v) return;
+    cell.classList.add('has-label');
+
+    if (v === 'D') cell.classList.add('label-d');
+    else if (v === 'T') cell.classList.add('label-t');
+    else if (v === 'S') cell.classList.add('label-s');
+    else if (/^[0-9]$/.test(v)) cell.classList.add('label-n');
+
+    cell.classList.remove('multi-mode');
+
+  } else {
+    
+    // Set sub notes
+
+    // If we haven't initialized an array for this index, do it now
+    if (!Array.isArray(innerLabels[i])) {
+      innerLabels[i] = [innerLabels[i] || '', '', '', ''];
+    }
+
+    // If a specific quadrant is selected, update only that one
+    if (activeSubIndex !== null) {
+      innerLabels[i][activeSubIndex] = value;
+    }
+
+    // else ?
+
+    const labels = innerLabels[i].filter(l => l !== '');
+    const isMulti = cell.classList.contains('multi-mode');
+    
+    cell.classList.toggle('multi-mode', isMulti);
+    cell.classList.toggle('has-label', labels.length > 0);
+    
+    const subs = Array.from(cell.querySelectorAll('.sub-dot'));
+    
+    innerLabels[i].forEach((label, idx) => {
+      subs[idx].textContent = label;
+      subs[idx
+      ].classList.toggle('active', !!label);
+    });
+  }
+}
+
+function attachCellListeners(cell) {
   // Pointer selection
   cell.addEventListener('click', (ev) => {
     ev.stopPropagation();
 
+    // 1. Get the physical coordinates of the click
+    const x = ev.clientX;
+    const y = ev.clientY;
+
+    // 2. Use elementFromPoint to find what was ACTUALLY touched
+    // This ignores the Pointer Capture redirection.
+    const actualTarget = document.elementFromPoint(x, y);
+    const subDot = actualTarget?.closest('.sub-dot');
+
+    // 1. Calculate the index immediately so it is available for all logic
     const i = indexFromCellEl(cell);
     if (i < 0) return;
 
-    // 1. Swallow the ghost click that follows a long-press release
+    if (subDot) {
+      // Transition to multi-mode visually
+      cell.classList.add('multi-mode');
+      
+      const allSubs = Array.from(cell.querySelectorAll('.sub-dot'));
+      activeSubIndex = allSubs.indexOf(subDot);
+      
+      // Clear other selections and highlight this specific finger-dot
+      cells().forEach(c => {
+          c.querySelectorAll('.sub-dot').forEach(s => s.classList.remove('selected'));
+      });
+      subDot.classList.add('selected');
+      
+      // Use the 'i' we calculated at the top
+      setCaret(i); 
+      return; 
+    }
+
+    // 3. STANDARD CELL CLICK (RESET QUADRANTS)
+    activeSubIndex = null; 
+    cells().forEach(c => {
+        c.querySelectorAll('.sub-dot').forEach(s => s.classList.remove('selected'));
+    });
+    
+    // Optional: Only remove multi-mode if the cell is empty
+    const labels = innerLabels[i] || [];
+    if (Array.isArray(labels)) {
+      if (labels.filter(l => l !== '').length <= 1) {
+          cell.classList.remove('multi-mode');
+      }
+    } else {
+      cell.classList.remove('multi-mode');
+    }
+
     if (longPressFired) {
       longPressFired = false;
       return;
     }
 
-    // 2. "Tap to Expand" / Finalize selection
-    // If we are currently in selection mode (from a long press), 
-    // this second tap defines the end and closes the selection session.
     if (selecting && anchorIndex !== null) {
       setCaret(i);
       setRange(anchorIndex, i);
@@ -259,7 +502,6 @@ function attachCellListeners(cell, globalIndex) {
       return;
     }
 
-    // 3. Desktop range select (Shift+click)    
     if (ev.shiftKey) {
       if (anchorIndex === null) anchorIndex = (caretIndex ?? i);
       setCaret(i);
@@ -267,14 +509,9 @@ function attachCellListeners(cell, globalIndex) {
       return;
     }
 
-    // 4. Normal click: resets state and places a single caret
     selecting = false;
     anchorIndex = i;
     setCaret(i);
-
-    // // Click selects (Esc clears selection)
-    // if (selectedIndex === globalIndex) clearSelection();
-    // else applySelection(globalIndex);
   });
 
   cell.addEventListener('pointerdown', (ev) => {
@@ -298,7 +535,12 @@ function attachCellListeners(cell, globalIndex) {
   
   cell.addEventListener('pointerup', () => {
     cancelLongPress();
-    // If long-press fired, we stay in selection mode until cancel
+    if (longPressFired) {
+      longPressFired = false;
+      const i = indexFromCellEl(cell);
+      showChoiceMenu(cell, i); // This opens the choice menu
+      return;
+    }
   });
   
   cell.addEventListener('pointercancel', () => cancelLongPress());

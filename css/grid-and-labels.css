@@ -18,6 +18,32 @@
   max-width: 900px;
 }
 
+/* Define the mobile-only playback layout */
+@media (max-width: 768px) {
+  /* When NOT playing, show 8 beats for context */
+  .grid {
+    grid-template-columns: repeat(8, 1fr);
+  }
+
+  /* When PLAYING, shift to 4 beats for focus and legibility */
+  .grid.playback-mode {
+    grid-template-columns: repeat(4, 1fr) !important;
+  }
+
+  /* Increase sub-dot size during playback so they "pop" */
+  .grid.playback-mode .sub-dot {
+    width: 28px;
+    height: 28px;
+    font-size: 14px;
+  }
+
+  /* Staggered hand layout needs more space in 4-col mode */
+  .grid.playback-mode .hand-column.right {
+    margin-bottom: 16px;
+    margin-left: -2px;
+  }
+}
+
 .cell {
   touch-action: none;
   width: 100%;
@@ -26,10 +52,120 @@
   background: var(--cell-bg);
   border: 2px solid var(--cell-border);
   cursor: pointer;
-  transition: background 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+  /* transition: background 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease; */
   position: relative;
   user-select: none;
   overflow: hidden; /* keeps half-fills clean */
+}
+
+/* The container for the 4 smaller circles */
+/* Container replaces the large single dot */
+/* Update your notegrid.css */
+
+.cell {
+    position: relative; /* Ensure stacking context */
+}
+
+.inner {
+    position: relative;
+    z-index: 1; /* Lower than quadrants */
+    pointer-events: none; /* Let clicks pass through to what's behind/under if needed */
+}
+
+.quad-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;   /* Use right/bottom instead of width/height */
+  bottom: 0;
+  width: auto; 
+  height: auto;
+  z-index: 10 !important;
+  pointer-events: auto !important;
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: flex-end;
+  padding: 2px;
+  box-sizing: border-box;
+  opacity: 0;
+  transition: all 0.3s ease;
+}
+
+/* REVEAL ON HOVER: Shows the user where the 4 dots are */
+.cell:hover .quad-container {
+    opacity: 0.3; /* Faint "ghost" dots */
+}
+
+/* REVEAL ON CARET: When you click a cell, show the dots clearly */
+.cell.active .quad-container,
+.cell.multi-mode .quad-container {
+    opacity: 1;
+}
+
+/* If multi-mode is active, hide the big center dot entirely */
+.cell.multi-mode .inner {
+    display: none;
+}
+
+.sub-dot {
+    pointer-events: auto; /* Crucial for catching clicks */
+    cursor: pointer;
+}
+
+/* Vertical columns for fingers */
+.hand-column {
+  display: flex;
+  /* Stack from bottom up */
+  flex-direction: column; 
+}
+
+/* Individual finger circles */
+.sub-dot {
+  width: 38px;
+  height: 38px;
+  pointer-events: auto !important; /* Ensure this is explicit */
+  z-index: 11 !important;
+  position: relative; /* Give it its own stacking context */
+  border-radius: 50%;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  font-weight: bold;
+  color: #fff;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+/* Active state for recorded notes */
+.sub-dot.active {
+  opacity: 0.8;
+}
+
+.cell.multi-mode.has-label {
+  background-color: rgba(1,1,1,1,0.0);
+  overflow: visible;
+}
+
+.hand-column.left .sub-dot {
+  background: color-mix(in srgb, var(--up-fill) var(--mix), var(--cell-bg));
+}
+
+.hand-column.right .sub-dot {
+  background: color-mix(in srgb, var(--down-fill) var(--mix), var(--cell-bg));
+}
+
+/* Toggle visibility */
+.cell.multi-mode .inner { display: none; }
+.cell.multi-mode .quad-container { opacity: 1; }
+
+/* Indicate which quadrant is being targeted for the next note input */
+.sub-dot.selected {
+  border: 2px solid #fff;
+  box-shadow: 0 0 10px var(--btn-active);
+  z-index: 2;
 }
 
 /* ===== PLAY EXPAND (NO LAYOUT SHIFT) ===== */
@@ -167,11 +303,13 @@ body.dark {
 
 /* Inner label color by beat type */
 .cell.has-label.downbeat .inner {
-    color: var(--down-fill); /* black text on gold */
+  color: white;
+    /* color: var(--down-fill); */
 }
 
 .cell.has-label.upbeat .inner {
-    color: var(--up-fill); /* text */
+  color: white;
+    /* color: var(--up-fill);  */
 }
 
 /* ON highlight only when unlabeled */
@@ -182,7 +320,7 @@ body.handSplit .cell.has-label {
 }
 
 /* Split mode OFF: fill whole circle */
-body:not(.handSplit) .cell.has-label {
+body:not(.handSplit) .cell.has-label:not(.multi-mode) {
     background: color-mix(in srgb, var(--beat-fill) var(--mix), var(--cell-bg));
     background: color-mix(in srgb, var(--beat-fill) var(--mix), var(--cell-bg));
 

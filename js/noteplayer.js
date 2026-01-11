@@ -228,9 +228,8 @@ function tick() {
   const all = cells();
   if (!all.length) return;
 
-  all.forEach(c => c.classList.remove('play'));
+  // CALIBRATION COUNTDOWN LOGIC //
 
-  // COUNTDOWN LOGIC
   if (countdownRemaining > 0) {
     // Show the CURRENT number (4, 3, 2, 1)
     showCountdown(countdownRemaining);
@@ -249,33 +248,50 @@ function tick() {
     hideCountdown();
   }
 
+  // PLAY & HIGHLIGHT SUB-DOTS or SINGLE-NOTE //
+
+  const currentData = innerLabels[step];
+  
+  // Play and Highlight Multiple Notes
+  if (Array.isArray(currentData)) {
+    currentData.forEach(label => {
+      if (label) {
+        playNoteByLabel(label, step);
+        highlightHandpan(label, step);
+      }
+    });
+  //Play and Highlight Single Note
+  } else if (currentData) {
+    playNoteByLabel(currentData, step);
+    highlightHandpan(currentData, step);
+  }
+
+  // Remove styles of previously played steps
+  all.forEach(c => c.classList.remove('play'));
+  
+  // Add style to current steps
   const cell = all[step];
   if (cell !== undefined) cell.classList.add('play');
 
+  // Metronome click
   if (metronomeOn) {
     metroClick(getMetroClickKind());
   }
 
-  function getMetroClickKind() {
-    const beatStride = (mode === '8') ? 2 : 4;
-    const isQuarter = (step % beatStride === 0);
-    const isDownbeat = (step === 0);
-    kind = isDownbeat ? 'downbeat' : (isQuarter ? 'beat' : 'sub');
-    return kind;
-  }
-
-  // Play the sound that corresponds to the beat label
-  const label = innerLabels[step];
-  playNoteByLabel(label, step);
-  
-  highlightHandpan(label, step);
-  
   // Since transcription happens after tick(), 
   // we need to use the index before we increment 'step'
   transcriptionIndex = step;
 
   const totalSteps = measures * STEPS;
   step = (step + 1) % totalSteps;
+}
+
+function getMetroClickKind() {
+  const beatStride = (mode === '8') ? 2 : 4;
+  const isQuarter = (step % beatStride === 0);
+  const isDownbeat = (step === 0);
+  kind = isDownbeat ? 'downbeat' : (isQuarter ? 'beat' : 'sub');
+  return kind;
 }
 
 function playNoteByLabel(label, step)
@@ -413,10 +429,24 @@ function playNoteSample(n) {
   src.start();
 }
 
+function togglePlaybackLayout(isActive) {
+  const gridEls = document.getElementsByClassName('grid');
+  if (!gridEls) return;
+
+  for (const g of gridEls) {
+    if (isActive) {
+      g.classList.add('playback-mode');
+    } else {
+      g.classList.remove('playback-mode');
+    }
+  }
+  
+}
+
 function start() {
   // Unlock audio
   unlockAudio();
-  
+
   // Guard: never allow multiple intervals to stack (can freeze the tab)
   if (playing || timers.length) return;
 
@@ -434,6 +464,7 @@ function start() {
   playing = true;
   playBtn.textContent = 'Stop';
   playBtn.classList.add('active');
+  togglePlaybackLayout(playing); // Trigger the layout shift for mobile
 }
 
 function stop() {
@@ -446,6 +477,7 @@ function stop() {
   playBtn.textContent = 'Play';
   playBtn.classList.remove('active');
   cells().forEach(c => c.classList.remove('play'));
+  togglePlaybackLayout(playing); // Trigger the layout shift for mobile
 }
 
 function restartIfPlaying() {

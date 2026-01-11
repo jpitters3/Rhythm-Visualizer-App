@@ -85,9 +85,9 @@ function startLongPress(cellEl) {
     selecting = true;
     
     // Add Haptic Feedback
-    if ('vibrate' in navigator) {
-      navigator.vibrate(50); // Short 50ms pulse
-    }
+    // if ('vibrate' in navigator) {
+    //   navigator.vibrate(50); // Short 50ms pulse
+    // }
 
     anchorIndex = idx;
     setCaret(idx);

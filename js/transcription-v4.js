@@ -183,23 +183,12 @@ function handleCalibration(pitch, rms) {
 
 // Record the detected note to the grid
 function recordNoteToGrid(label, index) {
-    if (index === -1) return;
+    // Only write if the cell is currently empty or different
+    // This allows you to "overdub" a different note if you play it louder later
+    if (innerLabels[index] !== label) {
+        setInnerLabel(index, label);
 
-    let currentArray = innerLabels[index];
-    
-    // Convert to array if it isn't one
-    if (!Array.isArray(currentArray)) {
-        currentArray = currentArray ? [currentArray] : [];
-    }
-
-    // Only add if not present and we have space (max 4)
-    if (!currentArray.includes(label) && currentArray.length < 4) {
-        currentArray.push(label);
-        
-        // Pass the array to your updated setInnerLabel
-        setInnerLabel(index, currentArray);
-        
-        // Visual feedback flash
+        // Visual feedback: Make the cell flash when recorded
         const cell = cells()[index];
         if (cell) {
             cell.style.transition = 'none';
