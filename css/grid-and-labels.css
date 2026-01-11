@@ -92,12 +92,15 @@
   transition: all 0.3s ease;
 }
 
-/* REVEAL ON HOVER: Shows the user where the 4 dots are */
-.cell:hover .quad-container {
-    opacity: 0.3; /* Faint "ghost" dots */
+.cell.multi-selected {
+  background: var(--cell-bg);
+}
+/* REVEAL ON DOUBLE-CLICK: Shows the user where the 4 dots are */
+.cell.multi-selected .quad-container {
+    opacity: 1; /* Faint subdots */
 }
 
-/* REVEAL ON CARET: When you click a cell, show the dots clearly */
+/* REVEAL ON CARET: Show the dots clearly */
 .cell.active .quad-container,
 .cell.multi-mode .quad-container {
     opacity: 1;
@@ -157,9 +160,13 @@
   background: color-mix(in srgb, var(--down-fill) var(--mix), var(--cell-bg));
 }
 
-/* Toggle visibility */
-.cell.multi-mode .inner { display: none; }
-.cell.multi-mode .quad-container { opacity: 1; }
+.cell.multi-selected .hand-column.left .sub-dot {
+  background-color: color-mix(in srgb, var(--up-fill), transparent 50%);
+}
+
+.cell.multi-selected .hand-column.right .sub-dot {
+  background-color: color-mix(in srgb, var(--down-fill), transparent 50%);
+}
 
 /* Indicate which quadrant is being targeted for the next note input */
 .sub-dot.selected {
@@ -167,6 +174,11 @@
   box-shadow: 0 0 10px var(--btn-active);
   z-index: 2;
 }
+
+/* Toggle visibility */
+.cell.multi-mode .inner { display: none; }
+.cell.multi-mode .quad-container { opacity: 1; }
+
 
 /* ===== PLAY EXPAND (NO LAYOUT SHIFT) ===== */
 /* Transform-based animation so other beats never move */

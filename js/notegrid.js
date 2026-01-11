@@ -2,6 +2,8 @@
 
 const cells = () => document.querySelectorAll('.cell');
 let activeSubIndex = null; // Tracks which of the 4 circles is selected (0-3)
+let isEditMulti = false;
+
 let fingerMap = new Map();
 fingerMap.set("lh-index", 0);
 fingerMap.set("lh-thumb", 1);
@@ -35,8 +37,13 @@ function clearSelection() {
   activeSubIndex = null; 
   cells().forEach(c => {
     c.classList.remove('selected');
-    c.querySelectorAll('.sub-dot').forEach(s => s.classList.remove('selected'));
-});
+    c.classList.remove('multi-selected');
+    c.querySelectorAll('.sub-dot').forEach(s => {
+      s.classList.remove('selected');
+      s.classList.remove('active');
+    });
+  });
+  isEditMulti = false;
 }
 
 function applySelection(i) {
@@ -382,7 +389,8 @@ function setInnerLabel(i, value) {
   const cell = cells()[i];
   if (!cell) return;
 
-  if (!Array.isArray(innerLabels[i]) && activeSubIndex == null) {
+  // if (!Array.isArray(innerLabels[i]) && activeSubIndex == null) {
+  if (activeSubIndex == null) {
 
     // Set single note
 
@@ -443,6 +451,11 @@ function attachCellListeners(cell) {
   cell.addEventListener('click', (ev) => {
     ev.stopPropagation();
 
+    // If we double-clicked, then [isEditMulti] is true
+    // if (isEditMulti) {
+
+    // }
+
     // 1. Get the physical coordinates of the click
     const x = ev.clientX;
     const y = ev.clientY;
@@ -456,7 +469,7 @@ function attachCellListeners(cell) {
     const i = indexFromCellEl(cell);
     if (i < 0) return;
 
-    if (subDot) {
+    if (subDot && isEditMulti) {
       // Transition to multi-mode visually
       cell.classList.add('multi-mode');
       
@@ -512,6 +525,17 @@ function attachCellListeners(cell) {
     selecting = false;
     anchorIndex = i;
     setCaret(i);
+  });
+
+  cell.addEventListener('dblclick', (ev) => {
+    ev.stopPropagation();
+
+    isEditMulti = true;
+
+    // Set .cell.multi-selected .hand-column.left .sub-dot
+    cell.classList.add('multi-selected');
+    const allSubs = Array.from(cell.querySelectorAll('.sub-dot'));
+    allSubs.forEach(s => s.classList.add('active'));
   });
 
   cell.addEventListener('pointerdown', (ev) => {
