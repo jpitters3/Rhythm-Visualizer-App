@@ -16,6 +16,15 @@ function addLessonToSection(sectionIndex) {
   renderCourseStructure();
 }
 
+// Function to add a new section
+function addSection() {
+  currentCourseData.sections.push({
+    title: `Section ${currentCourseData.sections.length + 1}`,
+    lessons: []
+  });
+  renderCourseStructure();
+}
+
 // Function to render the UI for the course builder
 function renderCourseStructure() {
   const container = document.getElementById('courseStructure');
@@ -91,6 +100,9 @@ courseModal?.addEventListener('click', (e) => {
 });
 
 
+const addSectionBtn = document.getElementById('addSectionBtn');
+addSectionBtn?.addEventListener('click', addSection);
+
 // ===== SAVE ===== //
 
 
@@ -117,10 +129,10 @@ saveCourseBtn?.addEventListener('click', async () => {
     // 1. Save the Course
     const { data: course, error: cErr } = await supabase1
       .from('courses')
-      .insert([{ 
-        title, 
-        description, 
-        owner_id: currentUser.id 
+      .insert([{
+        title,
+        description,
+        owner_id: currentUser.id
       }])
       .select()
       .single();
@@ -130,7 +142,7 @@ saveCourseBtn?.addEventListener('click', async () => {
     // 2. Save Sections and Lessons
     for (let sIdx = 0; sIdx < currentCourseData.sections.length; sIdx++) {
       const sectionData = currentCourseData.sections[sIdx];
-      
+
       const { data: section, error: sErr } = await supabase1
         .from('sections')
         .insert([{
@@ -157,14 +169,14 @@ saveCourseBtn?.addEventListener('click', async () => {
         const { error: lErr } = await supabase1
           .from('lessons')
           .insert(lessonsToInsert);
-        
+
         if (lErr) throw lErr;
       }
     }
 
     alert("Course saved successfully!");
     closeCourseCreator();
-    
+
     // Optional: Reset form
     currentCourseData = { title: "", description: "", sections: [] };
     document.getElementById('courseTitle').value = "";

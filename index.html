@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -22,7 +23,7 @@
       div.grid-container.top-row {
         display: grid;
         grid-template-columns: 1fr;
-     }
+      }
     }
 
     div.logo img.logo-img {
@@ -51,13 +52,13 @@
     }
 
     div.container {
-        margin: 0 auto;
-        width: 98%; 
-        padding: 50px;
-        max-width: 1200px;
-        background-color: #ffffff;
-        background-color: var(--bg);
-        border-radius: 25px;
+      margin: 0 auto;
+      width: 98%;
+      padding: 50px;
+      max-width: 1200px;
+      background-color: #ffffff;
+      background-color: var(--bg);
+      border-radius: 25px;
     }
 
     @media (max-width: 768px) {
@@ -65,8 +66,8 @@
         margin: 0 auto;
         width: 98%;
         padding: 0px;
+      }
     }
-}
 
     div.container::after {
       background-color: aliceblue;
@@ -89,6 +90,7 @@
   <link rel="stylesheet" href="./css/mic-mode.css">
   <link rel="stylesheet" href="./css/bloom-animation.css">
 </head>
+
 <body>
 
   <div class="container">
@@ -134,46 +136,46 @@
 
     <!-- Control buttons -->
     <div class="controls pattern-row">
-        <button id="themeBtn" title="Toggle light / dark mode">☀︎ / ☾</button>
-        <button id="grooveBtn" title="Generate a random groove">Give me a groove!</button>
-        <button id="metroBtn" title="Toggle metronome click">Metronome: Off</button>
-        <button id="composeBtn" title="Compose mode: writing advances to the next beat (Alt = write without advance)">
-          Compose: Off
-        </button>        
-        <button id="gridBtn" title="Toggle between 8th and 16th grid">8ths</button>
-        <button id="handBtn" class="active" title="Toggle left/right hand coloring">Left/Right: Off</button>
-        <button id="presentBtn" title="Toggle presentation mode (Esc exits)">Presentation</button>
-        <button id="calBtn" title="Toggle handpan calibration">Calibrate Map</button>
-        <button id="openCourseModalBtn" class="admin-only" style="display: none;">Create Course</button>
-        <!-- Microphone -->
-        <div class="mic-section">
-          <div class="mic-main-controls">
-            <button id="micBtn" class="secondary-btn">🎤 Listen Mode: Off</button>
-            <button id="micCalBtn" class="secondary-btn">🎯 Calibrate</button>
-            <button id="guidedCalBtn">Guided Calibration</button>
-          </div>
-        
-          <div id="calibrationStatus" class="calibration-overlay" style="display:none;">
-              <span>Tap Note: </span><span id="targetNoteName">D</span>
-          </div>
-        
-          <div class="mic-settings">
-            <div class="setting-group">
-              <h3>Base Sensitivity</h3>
-              <input type="range" id="micSensInput" min="0.01" max="0.3" step="0.01" value="0.05">
-              <span id="sensVal">0.05</span>
-            </div>
+      <button id="themeBtn" title="Toggle light / dark mode">☀︎ / ☾</button>
+      <button id="grooveBtn" title="Generate a random groove">Give me a groove!</button>
+      <button id="metroBtn" title="Toggle metronome click">Metronome: Off</button>
+      <button id="composeBtn" title="Compose mode: writing advances to the next beat (Alt = write without advance)">
+        Compose: Off
+      </button>
+      <button id="gridBtn" title="Toggle between 8th and 16th grid">8ths</button>
+      <button id="handBtn" class="active" title="Toggle left/right hand coloring">Left/Right: Off</button>
+      <button id="presentBtn" title="Toggle presentation mode (Esc exits)">Presentation</button>
+      <button id="calBtn" title="Toggle handpan calibration">Calibrate Map</button>
+      <button id="openCourseModalBtn" class="admin-only" style="display: none;">Create Course</button>
+      <!-- Microphone -->
+      <div class="mic-section">
+        <div class="mic-main-controls">
+          <button id="micBtn" class="secondary-btn">🎤 Listen Mode: Off</button>
+          <button id="micCalBtn" class="secondary-btn">🎯 Calibrate</button>
+          <button id="guidedCalBtn">Guided Calibration</button>
+        </div>
+
+        <div id="calibrationStatus" class="calibration-overlay" style="display:none;">
+          <span>Tap Note: </span><span id="targetNoteName">D</span>
+        </div>
+
+        <div class="mic-settings">
+          <div class="setting-group">
+            <h3>Base Sensitivity</h3>
+            <input type="range" id="micSensInput" min="0.01" max="0.3" step="0.01" value="0.05">
+            <span id="sensVal">0.05</span>
           </div>
         </div>
-        <!-- Courses -->
-        <button id="toggleSidebarBtn">📚 Courses</button>
-        <label>
+      </div>
+      <!-- Courses -->
+      <button id="toggleSidebarBtn">📚 Courses</button>
+      <label>
         BPM
         <input id="bpm" type="range" min="40" max="200" value="90" />
-        </label>
-        <span id="bpmVal">90</span>
-        <button id="clearBtn">Clear</button>
-        <button id="playBtn">Play</button>
+      </label>
+      <span id="bpmVal">90</span>
+      <button id="clearBtn">Clear</button>
+      <button id="playBtn">Play</button>
     </div>
 
     <!-- Selection Action Bar (shows when a range is selected) -->
@@ -193,7 +195,7 @@
     <div class="main">
       <div class="left">
         <div id="measures" class="measures" aria-label="Rhythm grid"></div>
-        
+
         <!-- Measure Actions -->
         <div class="measure-tools" id="measureTools">
           <span class="measure-tools-label">Measure</span>
@@ -203,7 +205,7 @@
           <button id="pasteMeasureBtn" title="Paste into active measure" disabled>Paste</button>
         </div>
       </div>
-    
+
       <!-- HANDPAN OPTIONS -->
       <aside class="handpan-panel" aria-label="Handpan map">
         <div class="grid-container handpan-options">
@@ -234,22 +236,14 @@
             </select>
           </div>
         </div>
-        
+
         <!-- HANDPAN WRAP -->
         <div class="handpan-wrap" id="handpanWrap">
           <div id="lockBtn" class="lock-btn">
-            <img
-            id="lockBtnImg"
-            src="./assets/images/lock.png"
-            alt="Lock handpan"
-          />
+            <img id="lockBtnImg" src="./assets/images/lock.png" alt="Lock handpan" />
           </div>
-          <img
-            id="handpanImg"
-            class="handpan-img"
-            src="./assets/images/handpan-for-groovepan.png"
-            alt="Handpan note layout"
-          />
+          <img id="handpanImg" class="handpan-img" src="./assets/images/handpan-for-groovepan.png"
+            alt="Handpan note layout" />
           <div class="handpan-overlay" id="handpanOverlay"></div>
         </div>
         <div id="ghostNoteSection" class="under-handpan">
@@ -257,7 +251,7 @@
         </div>
 
         <!-- Lesson Player -->
-        <br/>
+        <br />
         <div id="lessonPlayer" style="display: none;" class="lesson-panel">
           <div class="lesson-header">
             <h2 id="activeLessonTitle">Lesson Name</h2>
@@ -272,30 +266,30 @@
         </div>
       </aside>
     </div>
-  
+
     <!-- Legend -->
     <div class="legend" aria-label="Legend">
-        <div class="legend-title">Legend</div>
-        <div class="legend-row">
-          <h3>Actions for Setting the Notes</h3><br/>
-        </div>
-        <div class="legend-row">
-          <span><kbd>Click</kbd> Select A Note</span>
-          <span><kbd>D</kbd> Ding</span>
-          <span><kbd>T</kbd> Tak</span>
-          <span><kbd>S</kbd> Slap</span>
-          <span><kbd>0–9</kbd> Numbered Note</span>
-          <span><kbd>Space</kbd> Ghost Note</span>
-          <span><kbd>M</kbd> Toggle metronome</span>
-          <span><kbd>Esc</kbd> Exit</span>
-        </div>
-        <div class="legend-row">
-          <h3>Labels</h3><br/>
-        </div>
-        <div class="legend-row">
-          <span><kbd>Left/Right</kbd> Toggle hand icons</span>
-          
-        </div>
+      <div class="legend-title">Legend</div>
+      <div class="legend-row">
+        <h3>Actions for Setting the Notes</h3><br />
+      </div>
+      <div class="legend-row">
+        <span><kbd>Click</kbd> Select A Note</span>
+        <span><kbd>D</kbd> Ding</span>
+        <span><kbd>T</kbd> Tak</span>
+        <span><kbd>S</kbd> Slap</span>
+        <span><kbd>0–9</kbd> Numbered Note</span>
+        <span><kbd>Space</kbd> Ghost Note</span>
+        <span><kbd>M</kbd> Toggle metronome</span>
+        <span><kbd>Esc</kbd> Exit</span>
+      </div>
+      <div class="legend-row">
+        <h3>Labels</h3><br />
+      </div>
+      <div class="legend-row">
+        <span><kbd>Left/Right</kbd> Toggle hand icons</span>
+
+      </div>
     </div>
   </div><!-- container -->
 
@@ -319,7 +313,7 @@
         <option value="3">Wild</option>
         <option value="R">Completely Random</option>
       </select>
-      
+
       <div class="modal-grid">
         <label class="modal-row">
           <span>Ding accents</span>
@@ -351,21 +345,23 @@
     <div class="modal" role="dialog" aria-modal="true" aria-label="Account">
       <div class="modal-title">Account</div>
       <div class="modal-subtitle">Sign in to save grooves to the cloud.</div>
-  
+
       <div class="modal-grid">
         <label class="modal-row">
           <span>Email</span>
-          <input id="authEmail" type="email" autocomplete="email" placeholder="you@example.com" style="width:200px;padding:10px 12px;border-radius:999px;border:1px solid var(--panel-border);background:var(--panel);color:var(--text);" />
+          <input id="authEmail" type="email" autocomplete="email" placeholder="you@example.com"
+            style="width:200px;padding:10px 12px;border-radius:999px;border:1px solid var(--panel-border);background:var(--panel);color:var(--text);" />
         </label>
-  
+
         <label class="modal-row">
           <span>Password</span>
-          <input id="authPass" type="password" autocomplete="current-password" placeholder="••••••••" style="width:200px;padding:10px 12px;border-radius:999px;border:1px solid var(--panel-border);background:var(--panel);color:var(--text);" />
+          <input id="authPass" type="password" autocomplete="current-password" placeholder="••••••••"
+            style="width:200px;padding:10px 12px;border-radius:999px;border:1px solid var(--panel-border);background:var(--panel);color:var(--text);" />
         </label>
       </div>
-  
+
       <div class="modal-hint" id="authHint">Tip: Use Register once, then Sign in.</div>
-  
+
       <div class="modal-actions">
         <button id="authCancel">Cancel</button>
         <button id="authRegister">Register</button>
@@ -374,7 +370,7 @@
       </div>
     </div>
   </div>
-  
+
   <!-- Course Creator Modal -->
   <div id="courseModal" class="modal-overlay" aria-hidden="true">
     <div class="modal course-modal">
@@ -382,18 +378,17 @@
         <h2 class="modal-title">Course Creator</h2>
         <button id="closeCourseModal" class="close-btn">&times;</button>
       </div>
-      
+
       <div class="course-form">
         <input type="text" id="courseTitle" placeholder="Course Title (e.g., Intro to D-Kurd)" class="full-width">
         <textarea id="courseDesc" placeholder="Course Description"></textarea>
-        
+
         <div id="courseStructure">
-          </div>
-        
-        <button id="addSectionBtn" class="secondary-btn">+ Add Section</button>
+        </div>
       </div>
-  
+
       <div class="modal-footer">
+        <button id="addSectionBtn" class="secondary-btn">+ Add Section</button>
         <button id="saveCourseBtn" class="primary-btn">Save Course</button>
       </div>
     </div>
@@ -402,33 +397,33 @@
   <!-- Guided Calibration Modal -->
   <div id="guidedCalModal" class="modal-overlay" style="display: none;">
     <div class="modal-content">
-        <h2>Guided Calibration</h2>
-        <p>We will tune your handpan's sensitivity. Play the scale up, striking the indicated note every 2 clicks.</p>
-        
-        <div class="calibration-guide">
-            <div id="guideNoteBox" class="guide-note-box">READY</div>
-            <div class="progress-bar-container">
-                <div id="guideProgress" class="progress-bar"></div>
-            </div>
-        </div>
+      <h2>Guided Calibration</h2>
+      <p>We will tune your handpan's sensitivity. Play the scale up, striking the indicated note every 2 clicks.</p>
 
-        <div class="modal-actions">
-            <button id="startGuidedBtn" class="primary-btn">Begin Calibration</button>
-            <button id="closeGuidedBtn" class="text-btn">Cancel</button>
+      <div class="calibration-guide">
+        <div id="guideNoteBox" class="guide-note-box">READY</div>
+        <div class="progress-bar-container">
+          <div id="guideProgress" class="progress-bar"></div>
         </div>
+      </div>
+
+      <div class="modal-actions">
+        <button id="startGuidedBtn" class="primary-btn">Begin Calibration</button>
+        <button id="closeGuidedBtn" class="text-btn">Cancel</button>
+      </div>
     </div>
   </div>
   <div id="micVisualizer" class="mic-meter" style="display:none;">
     <div id="micLevel" class="mic-level-bar"></div>
   </div>
-</div>
+  </div>
 
   <!-- Courses View -->
   <div id="courseSidebar" class="sidebar">
     <div class="sidebar-header">
       <h3>Course Library</h3>
       <button id="closeSidebar" class="close-btn">&times;</button>
-    </div><br/>
+    </div><br />
     <div class="sidebar-search">
       <input type="text" id="courseSearchInput" placeholder="Search lessons or scales...">
     </div>
@@ -565,7 +560,7 @@
     let innerLabels = [];
     let selectedIndex = null;
     let measures = 1;
-    
+
   </script>
 
   <script src="./js/course-creator.js"></script>
@@ -586,4 +581,5 @@
   <script src="./js/auth.js"></script>
   <script src="./js/init.js"></script><!-- keep near bottom -->
 </body>
+
 </html>
