@@ -6,19 +6,19 @@
 const SCALES = {
   "D Kurd": {
     ding: "D3",
-    map: { "1":"A3", "2":"Bb3", "3":"C4", "4":"D4", "5":"E4", "6":"F4", "7":"G4", "8":"A4" }
+    map: { "1": "A3", "2": "Bb3", "3": "C4", "4": "D4", "5": "E4", "6": "F4", "7": "G4", "8": "A4" }
   },
   "D Major": {
     ding: "D3",
-    map: { "1":"G3", "2":"A3", "3":"B3", "4":"Cs4", "5":"D4", "6":"E4", "7":"Fs4", "8":"A4" }
+    map: { "1": "G3", "2": "A3", "3": "B3", "4": "Cs4", "5": "D4", "6": "E4", "7": "Fs4", "8": "A4" }
   },
   "D Amara": {
     ding: "D3",
-    map: { "1":"A3", "2":"C4", "3":"D4", "4":"E4", "5":"F4", "6":"G4", "7":"A4", "8":"C5" }
+    map: { "1": "A3", "2": "C4", "3": "D4", "4": "E4", "5": "F4", "6": "G4", "7": "A4", "8": "C5" }
   },
   "B Celtic": {
     ding: "B3",
-    map: { "1":"Fs3", "2":"A3", "3":"B3", "4":"Cs4", "5":"D4", "6":"E4", "7":"Fs4", "8":"B4" }
+    map: { "1": "Fs3", "2": "A3", "3": "B3", "4": "Cs4", "5": "D4", "6": "E4", "7": "Fs4", "8": "B4" }
   }
 };
 
@@ -35,7 +35,7 @@ const scaleStatus = document.getElementById('scaleStatus');
 let countdownRemaining = 0;
 const COUNTDOWN_LENGTH = 4; // 4 steps
 
-function buildScaleSelect(){
+function buildScaleSelect() {
   if (!scaleSelect) return;
   scaleSelect.innerHTML = '';
   for (const name of Object.keys(SCALES)) {
@@ -48,11 +48,11 @@ function buildScaleSelect(){
 
 buildScaleSelect();
 
-function getScale(){
+function getScale() {
   return SCALES[selectedScaleName] || SCALES[Object.keys(SCALES)[0]];
 }
 
-function noteForLabel(label){
+function noteForLabel(label) {
   const s = getScale();
   if (label === 'D') return `${s.ding}_ding`;     // ding note name like "D3"
   else if (label === 'T') return SOUND_TAK;
@@ -61,22 +61,22 @@ function noteForLabel(label){
   return null; // ghosts notes
 }
 
-function noteToFile(note){
+function noteToFile(note) {
   // "C#3" -> "Cs3.wav", "F#3" -> "Fs3.wav", "Bb3" -> "Bb3.wav"
   // TODO Map flats to sharps here
-  return note.replace('#','s') + '.wav';
+  return note.replace('#', 's') + '.wav';
 }
 
 /* ==== Save and load scales locally and in db ==== */
 
-function saveScaleLocal(name){
+function saveScaleLocal(name) {
   localStorage.setItem(SCALE_KEY_LOCAL, name);
 }
-function loadScaleLocal(){
+function loadScaleLocal() {
   return localStorage.getItem(SCALE_KEY_LOCAL);
 }
 
-async function saveScaleRemote(name){
+async function saveScaleRemote(name) {
   if (!currentUser) return;
   await supabase1.from('profiles').upsert(
     { user_id: currentUser.id, handpan_scale: name },
@@ -84,7 +84,7 @@ async function saveScaleRemote(name){
   );
 }
 
-async function loadScaleRemote(){
+async function loadScaleRemote() {
   if (!currentUser) return null;
   const { data, error } = await supabase1
     .from('profiles')
@@ -135,14 +135,14 @@ function ensureAudio() {
     if (Ctx) audioCtx = new Ctx();
   }
   if (audioCtx && audioCtx.state === 'suspended') {
-    audioCtx.resume().catch(() => {});
+    audioCtx.resume().catch(() => { });
   }
 }
 
 // Preload note samples once audio is unlocked
-async function preloadScaleSamples(){
+async function preloadScaleSamples() {
   const s = getScale();
-  const notes = new Set([s.ding+'_ding', ...Object.values(s.map)]);
+  const notes = new Set([s.ding + '_ding', ...Object.values(s.map)]);
   for (const n of notes) {
     let note = noteToFile(n); // includes .wav extension
     await loadSample(n, `./assets/audio/${note}`);
@@ -150,8 +150,7 @@ async function preloadScaleSamples(){
 }
 
 // Preload all audio samples
-function preloadAudioSamples()
-{
+function preloadAudioSamples() {
   if (!samplesPreloaded && audioCtx) {
     samplesPreloaded = true;
     loadSample(SOUND_TAK, './assets/audio/dkurd_tak.wav');
@@ -193,7 +192,7 @@ function metroClick(kind) {
   osc.stop(t + 0.04);
 }
 
-function isDownbeatStep(stepIndex){
+function isDownbeatStep(stepIndex) {
   if (mode === '8') return stepIndex % 2 === 0;     // 1,2,3,4
   return stepIndex % 4 === 0;                       // 1,2,3,4 on 16ths
 }
@@ -202,7 +201,7 @@ function isDownbeatStep(stepIndex){
 function showCountdown(num) {
   const overlay = document.getElementById('countdownOverlay');
   const text = document.getElementById('countdownNumber');
-  
+
   if (overlay && text) {
     overlay.style.display = 'flex';
     text.textContent = num;
@@ -210,12 +209,12 @@ function showCountdown(num) {
     // THE REFLOW TRICK:
     // 1. Remove the animation
     text.style.animation = 'none';
-    
+
     // 2. Trigger a reflow (this is the magic bit)
-    void text.offsetWidth; 
-    
+    void text.offsetWidth;
+
     // 3. Re-apply the animation
-    text.style.animation = null; 
+    text.style.animation = null;
   }
 }
 
@@ -239,9 +238,9 @@ function tick() {
 
     // Decrement for the NEXT tick
     countdownRemaining--;
-    
+
     // If we just finished 1, the next tick will be the actual start
-    return; 
+    return;
   }
 
   if (document.getElementById('countdownOverlay').style.display !== 'none') {
@@ -251,7 +250,7 @@ function tick() {
   // PLAY & HIGHLIGHT SUB-DOTS or SINGLE-NOTE //
 
   const currentData = innerLabels[step];
-  
+
   // Play and Highlight Multiple Notes
   if (Array.isArray(currentData)) {
     currentData.forEach(label => {
@@ -260,7 +259,7 @@ function tick() {
         highlightHandpan(label, step);
       }
     });
-  //Play and Highlight Single Note
+    //Play and Highlight Single Note
   } else if (currentData) {
     playNoteByLabel(currentData, step);
     highlightHandpan(currentData, step);
@@ -268,7 +267,7 @@ function tick() {
 
   // Remove styles of previously played steps
   all.forEach(c => c.classList.remove('play'));
-  
+
   // Add style to current steps
   const cell = all[step];
   if (cell !== undefined) cell.classList.add('play');
@@ -294,14 +293,13 @@ function getMetroClickKind() {
   return kind;
 }
 
-function playNoteByLabel(label, step)
-{
+function playNoteByLabel(label, step) {
   const note = noteForLabel(label); // e.g. "C#", "D3_ding"
   if (note) { playNoteSample(note); }
 }
 function setMode(nextMode) {
   measures = 1;
-  
+
   if (nextMode === mode) return;
   const wasPlaying = playing;
   if (wasPlaying) stop();
@@ -400,7 +398,7 @@ function playSlap() {
 }
 
 function playHandpanSoundForLabel(label) {
-    if (samples[label]) playSample(label);
+  if (samples[label]) playSample(label);
 }
 
 // ===== PLAY NOTES BY PITCH =====
@@ -440,7 +438,7 @@ function togglePlaybackLayout(isActive) {
       g.classList.remove('playback-mode');
     }
   }
-  
+
 }
 
 function start() {
@@ -462,8 +460,10 @@ function start() {
   timers.push(id);
 
   playing = true;
-  playBtn.textContent = 'Stop';
+  playBtn.textContent = '⏹';
   playBtn.classList.add('active');
+  playBtn2.textContent = '⏹';
+  playBtn2.classList.add('active');
   togglePlaybackLayout(playing); // Trigger the layout shift for mobile
 }
 
@@ -474,8 +474,10 @@ function stop() {
 
   playing = false;
   step = 0;
-  playBtn.textContent = 'Play';
+  playBtn.textContent = '►';
   playBtn.classList.remove('active');
+  playBtn2.textContent = '►';
+  playBtn2.classList.remove('active');
   cells().forEach(c => c.classList.remove('play'));
   togglePlaybackLayout(playing); // Trigger the layout shift for mobile
 }

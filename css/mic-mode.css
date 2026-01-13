@@ -1,5 +1,10 @@
+#micBtn {
+  font-size: 20px;
+}
+
 #micBtn.active {
-  background: #ff4b4b; /* Recording red */
+  background: #ff4b4b;
+  /* Recording red */
   color: white;
   animation: pulse 2s infinite;
 }
@@ -31,7 +36,8 @@
 }
 
 .mic-controls {
-  flex-wrap: wrap; /* Allow sliders to stack on small mobile screens */
+  flex-wrap: wrap;
+  /* Allow sliders to stack on small mobile screens */
   gap: 10px 20px;
   padding: 12px 20px;
 }
@@ -43,7 +49,8 @@
 }
 
 .mic-controls span {
-  min-width: 35px; /* Keeps numbers from jumping when they change */
+  min-width: 35px;
+  /* Keeps numbers from jumping when they change */
   display: inline-block;
   font-family: monospace;
 }
@@ -53,19 +60,24 @@
   cursor: pointer;
 }
 
-.mic-section {
-  background: var(--panel);
-  border: 1px solid var(--panel-border);
-  border-radius: 12px;
-  padding: 15px;
-  margin: 10px 0;
+.mic-main-controls {
   display: flex;
-  flex-direction: column;
-  gap: 15px;
+  align-items: center;
+  gap: 10px;
 }
-.mic-main-controls { display: flex; align-items: center; gap: 10px; }
-.mic-settings { display: flex; gap: 20px; flex-wrap: wrap; font-size: 0.8rem; }
-.setting-group { display: flex; align-items: center; gap: 8px; }
+
+.mic-settings {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  font-size: 0.8rem;
+}
+
+.setting-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
 
 .calibration-overlay {
   background: var(--btn-active);
@@ -77,64 +89,80 @@
   animation: pulse 1.5s infinite;
 }
 
-#micBtn.active { background: #ff4b4b; color: white; }
-#calibrateBtn.active { border-color: #ff4b4b; }
+#micBtn.active {
+  background: #ff4b4b;
+  color: white;
+}
 
-@keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }
+#calibrateBtn.active {
+  border-color: #ff4b4b;
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.6;
+  }
+
+  100% {
+    opacity: 1;
+  }
+}
 
 .countdown-overlay {
   position: fixed;
-  top: 0; left: 0; width: 100vw; height: 100vh;
-  background: rgba(0,0,0,0.6);
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.6);
   display: flex;
   justify-content: center;
   align-items: center;
   z-index: 9999;
-  pointer-events: none; /* Don't block clicks */
+  pointer-events: none;
+  /* Don't block clicks */
 }
 
 #countdownNumber {
-  font-size: 18rem; /* Slightly larger for impact */
+  font-size: 18rem;
+  /* Slightly larger for impact */
   font-weight: 900;
   color: var(--btn-active);
-  text-shadow: 0 0 40px rgba(0,0,0,0.6);
-  
+  text-shadow: 0 0 40px rgba(0, 0, 0, 0.6);
+
   /* The "Strike" animation */
   animation: countdownStrike 0.4s cubic-bezier(0.12, 0, 0.39, 0) forwards;
 }
 
 @keyframes countdownStrike {
-  0% { 
-    transform: scale(1.6); 
-    opacity: 0; 
+  0% {
+    transform: scale(1.6);
+    opacity: 0;
     filter: blur(10px);
   }
-  5% { 
-    transform: scale(1); 
-    opacity: 1; 
+
+  5% {
+    transform: scale(1);
+    opacity: 1;
     filter: blur(0);
   }
-  100% { 
-    transform: scale(0.9); 
-    opacity: 0; 
+
+  100% {
+    transform: scale(0.9);
+    opacity: 0;
   }
 }
 
 
 /* Ensure unique and high Z-index */
 #guidedCalModal {
-  z-index: 99999 !important; /* Higher than your course modal */
+  z-index: 99999 !important;
+  /* Higher than your course modal */
 }
-/* 
-.modal-overlay {
-  position: fixed;
-  top: 0; left: 0;
-  width: 100%; height: 100%;
-  background: rgba(0, 0, 0, 0.85);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-} */
 
 .modal-content {
   background: var(--panel);

@@ -49,7 +49,7 @@ async function toggleListening() {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         micStream = stream;
         ensureAudio(); // From noteplayer.js
-        
+
         const source = audioCtx.createMediaStreamSource(stream);
         audioAnalyser = audioCtx.createAnalyser();
         audioAnalyser.fftSize = BUFSIZE;
@@ -59,7 +59,7 @@ async function toggleListening() {
         btn.textContent = "🎤 Listening...";
         btn.classList.add('active');
         meter.style.display = 'block';
-        
+
         requestAnimationFrame(transcriptionLoop);
     } catch (err) {
         alert("Microphone access denied or not supported.");
@@ -84,7 +84,7 @@ function transcriptionLoop() {
 
     audioAnalyser.getFloatTimeDomainData(buf);
     const pitch = autoCorrelate(buf, audioCtx.sampleRate);
-    
+
     let sum = 0;
     for (let i = 0; i < buf.length; i++) sum += buf[i] * buf[i];
     const rms = Math.sqrt(sum / buf.length);
@@ -97,7 +97,7 @@ function transcriptionLoop() {
     if (currentIndex !== lastFrameStep) {
         tally = {};               // Reset the confidence race
         stepWasRecorded = false;  // Allow a new note to be recorded in this new cell
-        lastFrameStep = currentIndex; 
+        lastFrameStep = currentIndex;
     }
 
     // Visual Meter
@@ -119,11 +119,11 @@ function transcriptionLoop() {
             // We only record if we've seen this note 3 times WITHIN this specific step
             if (tally[detectedLabel] >= CONFIDENCE_THRESHOLD) {
                 recordNoteToGrid(detectedLabel, currentIndex);
-                
+
                 // LOCKS
                 lastNoteTime = now;
                 stepWasRecorded = true; // Prevents any more recording until the NEXT step
-                tally = {}; 
+                tally = {};
             }
         }
     }
@@ -136,7 +136,7 @@ function recordNoteToGrid(label, index) {
     // This allows you to "overdub" a different note if you play it louder later
     if (innerLabels[index] !== label) {
         setInnerLabel(index, label);
-        
+
         // Visual feedback: Make the cell flash when recorded
         const cell = cells()[index];
         if (cell) {

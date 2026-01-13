@@ -2,7 +2,6 @@
 function updateMetroUI() {
   if (!metroBtn) return;
   metroBtn.classList.toggle('active', metronomeOn);
-  metroBtn.textContent = metronomeOn ? 'Metronome: On' : 'Metronome: Off';
 }
 
 function restorePrefs() {

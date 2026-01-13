@@ -3,18 +3,31 @@
 patternSelect.addEventListener('change', updatePatternButtons);
 
 // Dropdown Logic
+// Dropdown Logic
 const dropdownBtn = document.getElementById('fileDropdownBtn');
 const dropdownMenu = document.getElementById('fileDropdownMenu');
 
-dropdownBtn?.addEventListener('click', (e) => {
-  e.stopPropagation();
-  dropdownMenu.classList.toggle('show');
-});
+// Mic Dropdown
+const micDropdownMenu = document.getElementById('micDropdownMenu');
+
+function setupDropdown(btn, menu) {
+  if (!btn || !menu) return;
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    menu.classList.toggle('show');
+  });
+}
+
+setupDropdown(dropdownBtn, dropdownMenu);
+setupDropdown(micBtn, micDropdownMenu);
 
 // Close dropdown when clicking outside
 window.addEventListener('click', (e) => {
   if (dropdownBtn && dropdownMenu && !dropdownBtn.contains(e.target) && !dropdownMenu.contains(e.target)) {
     dropdownMenu.classList.remove('show');
+  }
+  if (micBtn && micDropdownMenu && !micBtn.contains(e.target) && !micDropdownMenu.contains(e.target)) {
+    micDropdownMenu.classList.remove('show');
   }
 });
 
@@ -22,6 +35,10 @@ playBtn.addEventListener('click', () => {
   // Make click idempotent and resilient to rapid taps
   if (playing) stop();
   else start();
+});
+
+playBtn2.addEventListener('click', () => {
+  playBtn.click();
 });
 
 // If the tab is hidden, stop playback to avoid runaway timers in the background

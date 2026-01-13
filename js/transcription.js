@@ -46,7 +46,7 @@ const meter = document.getElementById('micVisualizer');
 async function toggleListening() {
     if (isListening) {
         isListening = false;
-        micBtn.textContent = "🎤 Listen Mode: Off";
+        micBtn.textContent = "🎤";
         micBtn.classList.remove('active');
         meter.style.display = 'none';
         if (micStream) micStream.getTracks().forEach(t => t.stop());
@@ -57,17 +57,17 @@ async function toggleListening() {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         micStream = stream;
         ensureAudio(); // From noteplayer.js
-        
+
         const source = audioCtx.createMediaStreamSource(stream);
         audioAnalyser = audioCtx.createAnalyser();
         audioAnalyser.fftSize = BUFSIZE;
         source.connect(audioAnalyser);
 
         isListening = true;
-        micBtn.textContent = "🎤 Listening...";
+        micBtn.textContent = "🎤";
         micBtn.classList.add('active');
         meter.style.display = 'block';
-        
+
         requestAnimationFrame(transcriptionLoop);
     } catch (err) {
         alert("Microphone access denied or not supported.");
@@ -186,7 +186,7 @@ function recordNoteToGrid(label, index) {
     if (index === -1) return;
 
     let currentArray = innerLabels[index];
-    
+
     // Convert to array if it isn't one
     if (!Array.isArray(currentArray)) {
         currentArray = currentArray ? [currentArray] : [];
@@ -195,10 +195,10 @@ function recordNoteToGrid(label, index) {
     // Only add if not present and we have space (max 4)
     if (!currentArray.includes(label) && currentArray.length < 4) {
         currentArray.push(label);
-        
+
         // Pass the array to your updated setInnerLabel
         setInnerLabel(index, currentArray);
-        
+
         // Visual feedback flash
         const cell = cells()[index];
         if (cell) {
@@ -239,7 +239,7 @@ function analyzeGuidedResults() {
     guidedCalModal.style.display = 'none';
     isGuidedCalibrating = false;
     resetGuideUI();
-    
+
     localStorage.setItem('gp_multipliers', JSON.stringify(noteMultipliers));
     isGuidedCalibrating = false;
     stop(); // From noteplayer.js
@@ -317,14 +317,14 @@ function updateGuidedUI(currentIndex) {
     const expected = ['D', '1', '2', '3', '4', '5', '6', '7', '8'];
     // We expect a note every 2 steps: 0, 2, 4, 6...
     const noteIndex = Math.floor(currentIndex / 2);
-    
+
     if (noteIndex < expected.length) {
         const targetNote = expected[noteIndex];
         const isStrikeStep = (currentIndex % 2 === 0);
-        
+
         guideNoteBox.textContent = targetNote;
         guideNoteBox.style.opacity = isStrikeStep ? "1" : "0.3";
-        
+
         // Update progress bar
         const progress = ((noteIndex + 1) / expected.length) * 100;
         guideProgress.style.width = progress + "%";
@@ -372,16 +372,16 @@ guidedCalBtn?.addEventListener('click', () => {
 
     const modal = document.getElementById('guidedCalModal');
     modal.style.display = 'flex';
-    
+
     // REMOVE aria-hidden from the modal itself if it was there
     modal.setAttribute('aria-hidden', false);
-    
+
     // MOVE FOCUS to the "Begin" button inside the modal
     // This stops the "Blocked aria-hidden" error
     setTimeout(() => {
         document.getElementById('startGuidedBtn')?.focus();
     }, 10);
-    
+
     resetGuideUI();
 });
 
@@ -392,8 +392,8 @@ closeGuidedBtn?.addEventListener('click', () => {
     isGuidedCalibrating = false;
 
     modal.setAttribute('aria-hidden', true);
-    
-    if (playing) stop(); 
+
+    if (playing) stop();
 
     // RETURN FOCUS to the original button
     if (lastActiveElement) lastActiveElement.focus();
@@ -404,10 +404,10 @@ startGuidedBtn?.addEventListener('click', () => {
     isGuidedCalibrating = true;
     startGuidedBtn.disabled = true;
     startGuidedBtn.textContent = "Calibrating...";
-    
+
     // Clear the grid so we have a fresh slate for analysis
     if (typeof clearGrid === 'function') clearGrid();
-    
+
     // Trigger the count-in and start the sequencer (from noteplayer.js)
-    start(); 
+    start();
 });

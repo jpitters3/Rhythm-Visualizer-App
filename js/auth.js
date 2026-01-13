@@ -30,6 +30,10 @@ function closeAuthModal() {
   authModal.setAttribute('aria-hidden', 'true');
 }
 
+// Dropdown
+const accountDropdownMenu = document.getElementById('accountDropdownMenu');
+const authLogoutDropdown = document.getElementById('authLogoutDropdown');
+
 function updateAccountUI() {
   if (!accountStatus) return;
   if (currentUser) {
@@ -37,6 +41,7 @@ function updateAccountUI() {
     // Set button text to first letter of email
     if (accountBtn) accountBtn.textContent = currentUser.email.charAt(0).toUpperCase();
 
+    // Hide old auth buttons in modal if you want, but mainly we rely on dropdown now for logout
     authLogout.style.display = '';
     authLogin.style.display = 'none';
     authRegister.style.display = 'none';
@@ -44,6 +49,9 @@ function updateAccountUI() {
     accountStatus.textContent = 'Not signed in';
     // Reset button text
     if (accountBtn) accountBtn.textContent = 'Account';
+
+    // Close dropdown if open
+    if (accountDropdownMenu) accountDropdownMenu.classList.remove('show');
 
     authLogout.style.display = 'none';
     authLogin.style.display = '';
@@ -94,7 +102,40 @@ async function initScale() {
 initScale();
 
 // Auth modal
-accountBtn?.addEventListener('click', openAuthModal);
+// accountBtn?.addEventListener('click', openAuthModal); // REMOVED standard listener
+
+const authCancel = document.getElementById('authCancel');
+
+// New Logic: Click Account -> If Signed In (Toggle Dropdown) ELSE (Open Modal)
+accountBtn?.addEventListener('click', (e) => {
+  e.stopPropagation();
+  if (currentUser) {
+    // Toggle Dropdown
+    accountDropdownMenu?.classList.toggle('show');
+  } else {
+    // Open Modal
+    openAuthModal();
+  }
+});
+
+authCancel?.addEventListener('click', closeAuthModal);
+
+// Close dropdown when clicking outside
+window.addEventListener('click', (e) => {
+  if (accountBtn && accountDropdownMenu && !accountBtn.contains(e.target) && !accountDropdownMenu.contains(e.target)) {
+    accountDropdownMenu.classList.remove('show');
+  }
+});
+
+authLogoutDropdown?.addEventListener('click', async () => {
+  await supabase1.auth.signOut();
+  currentUser = null;
+  updateAccountUI();
+  updateAdminUI();
+  initScale();
+  authHint.textContent = 'Signed out.';
+  accountDropdownMenu?.classList.remove('show');
+});
 
 
 // Modal Action Buttons (Actual Submit)

@@ -15,7 +15,7 @@
 
     div.grid-container.top-row {
       display: grid;
-      grid-template-columns: 1fr 1fr;
+      grid-template-columns: 2fr 6fr 1fr;
       grid-gap: 20px;
     }
 
@@ -31,8 +31,16 @@
       padding-bottom: 20px;
     }
 
+    div.grid-child.pattern-select {
+      display: flex;
+      align-items: center;
+    }
+
+    button {
+      min-width: 50px;
+    }
+
     div.grid-child.account {
-      min-width: 200px;
       justify-content: right;
       justify-self: right;
     }
@@ -99,10 +107,38 @@
       <div class="grid-child logo">
         <img class="logo-img" src="./assets/images/groovepan-logo.png" />
       </div>
+      <!-- Pattern select, save, load, etc. -->
+      <div class="pattern-row grid-child pattern-select">
+        <h3>Select pattern:</h3>
+        <select id="patternSelect" title="Saved patterns">
+          <option value="">(no saved patterns)</option>
+        </select>
+        <!-- File Dropdown -->
+        <div class="dropdown">
+          <button id="fileDropdownBtn" class="dropdown-toggle">File ▾</button>
+          <div id="fileDropdownMenu" class="dropdown-content">
+            <button id="saveBtn" title="Save current pattern">Save</button>
+            <button id="loadBtn" title="Load selected pattern">Load</button>
+            <button id="renameBtn" title="Rename selected pattern">Rename</button>
+            <button id="deleteBtn" title="Delete selected pattern">Delete</button>
+            <div class="dropdown-divider"></div>
+            <button id="exportBtn" title="Copy pattern JSON to clipboard">Export</button>
+            <button id="importBtn" title="Paste JSON to load a pattern">Import</button>
+          </div>
+        </div>
 
-      <!-- Pattern management row -->
+        <button id="shareBtn" title="Create a share link (public)">Share</button>
+      </div>
       <div class="pattern-row grid-child account">
-        <button id="accountBtn" title="Sign in / out">Account</button>
+        <div class="dropdown account-dropdown">
+          <button id="accountBtn" title="Account">Account</button>
+          <div id="accountDropdownMenu" class="dropdown-content right-aligned">
+            <button id="toggleSidebarBtn">📚 Courses</button>
+            <button id="openCourseModalBtn" class="admin-only" style="display: none;">Create Course</button>
+            <div class="dropdown-divider"></div>
+            <button id="authLogoutDropdown">Sign out</button>
+          </div>
+        </div>
         <span id="accountStatus" style="opacity:.75;font-size:13px;"></span>
       </div>
     </div>
@@ -120,73 +156,53 @@
       </div>
     </div>
 
-    <!-- Pattern select, save, load, etc. -->
-    <div class="pattern-row">
-      <h3>Select pattern:</h3>
-      <select id="patternSelect" title="Saved patterns">
-        <option value="">(no saved patterns)</option>
-      </select>
-
-      <!-- File Dropdown -->
-      <div class="dropdown">
-        <button id="fileDropdownBtn" class="dropdown-toggle">File ▾</button>
-        <div id="fileDropdownMenu" class="dropdown-content">
-          <button id="saveBtn" title="Save current pattern">Save</button>
-          <button id="loadBtn" title="Load selected pattern">Load</button>
-          <button id="renameBtn" title="Rename selected pattern">Rename</button>
-          <button id="deleteBtn" title="Delete selected pattern">Delete</button>
-          <div class="dropdown-divider"></div>
-          <button id="exportBtn" title="Copy pattern JSON to clipboard">Export</button>
-          <button id="importBtn" title="Paste JSON to load a pattern">Import</button>
-        </div>
-      </div>
-
-      <button id="shareBtn" title="Create a share link (public)">Share</button>
-    </div>
-
     <!-- Control buttons -->
     <div class="controls pattern-row">
       <button id="themeBtn" title="Toggle light / dark mode">☀︎ / ☾</button>
       <button id="grooveBtn" title="Generate a random groove">Give me a groove!</button>
-      <button id="metroBtn" title="Toggle metronome click">Metronome: Off</button>
-      <button id="composeBtn" title="Compose mode: writing advances to the next beat (Alt = write without advance)">
-        Compose: Off
+      <button id="metroBtn" title="Toggle metronome click"
+        style="display:flex; align-items:center; justify-content:center;">
+        <svg xmlns="http://www.w3.org/2000/svg" width="25" height="25" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 18v-8" />
+          <path d="M7 21h10" />
+          <path d="M6 21l5-16 5 16" />
+          <path d="M12 18a2 2 0 1 0 0 4 2 2 0 0 0 0-4Z" />
+        </svg>
       </button>
+      <button id="composeBtn"
+        title="Compose mode: writing advances to the next beat (Alt = write without advance)">🎼</button>
       <button id="gridBtn" title="Toggle between 8th and 16th grid">8ths</button>
       <button id="handBtn" style="display: none;" class="active" title="Toggle left/right hand coloring">Left/Right:
         Off</button>
-      <button id="presentBtn" title="Toggle presentation mode (Esc exits)">Presentation</button>
-
-      <button id="openCourseModalBtn" class="admin-only" style="display: none;">Create Course</button>
-      <!-- Microphone -->
-      <div class="mic-section">
-        <div class="mic-main-controls">
-          <button id="micBtn" class="secondary-btn">🎤 Listen Mode: Off</button>
-          <button id="micCalBtn" class="secondary-btn">🎯 Calibrate</button>
-          <button id="guidedCalBtn">Guided Calibration</button>
-        </div>
-
-        <div id="calibrationStatus" class="calibration-overlay" style="display:none;">
-          <span>Tap Note: </span><span id="targetNoteName">D</span>
-        </div>
-
-        <div class="mic-settings">
-          <div class="setting-group">
-            <h3>Base Sensitivity</h3>
-            <input type="range" id="micSensInput" min="0.01" max="0.3" step="0.01" value="0.05">
-            <span id="sensVal">0.05</span>
-          </div>
-        </div>
-      </div>
-      <!-- Courses -->
-      <button id="toggleSidebarBtn">📚 Courses</button>
-      <label>
-        BPM
+      <button id="playBtn">►</button>
+      <label>BPM
         <input id="bpm" type="range" min="40" max="200" value="90" />
       </label>
       <span id="bpmVal">90</span>
       <button id="clearBtn">Clear</button>
-      <button id="playBtn">Play</button>
+      <!-- Microphone -->
+      <div class="dropdown mic-dropdown">
+        <button id="micBtn" class="secondary-btn" title="Toggle mic (Click) / Settings (Auto-open)">🎤</button>
+        <div id="micDropdownMenu" class="dropdown-content">
+          <div style="padding: 8px 12px;">
+            <div class="setting-group" style="margin-bottom: 12px;">
+              <label style="font-size: 13px; font-weight: 500; display:block; margin-bottom:4px;">Sensitivity</label>
+              <div style="display:flex; align-items:center; gap:8px;">
+                <input type="range" id="micSensInput" min="0.01" max="0.3" step="0.01" value="0.05"
+                  style="width:100px;">
+                <span id="sensVal" style="font-size:12px; font-family:monospace;">0.05</span>
+              </div>
+            </div>
+            <button id="guidedCalBtn" style="width:100%; font-size:13px; padding:8px;">🎯 Guided Calibration</button>
+            <button id="micCalBtn" style="display: none;">Calibrate</button>
+          </div>
+        </div>
+      </div>
+      <div id="calibrationStatus" class="calibration-overlay" style="display:none;">
+        <span>Tap Note: </span><span id="targetNoteName">D</span>
+      </div>
+      <button id="presentBtn" title="Toggle presentation mode (Esc exits)">⛶</button>
     </div>
 
     <!-- Selection Action Bar (shows when a range is selected) -->
@@ -220,6 +236,7 @@
       <!-- HANDPAN OPTIONS -->
       <aside class="handpan-panel" aria-label="Handpan map">
         <div class="handpan-header">
+          <button id="playBtn2" title="Play">►</button>
           <button id="hpSettingsToggle" class="icon-btn" title="Settings">⚙️</button>
         </div>
 
@@ -527,7 +544,6 @@
     const accountStatus = document.getElementById('accountStatus');
 
     const authModal = document.getElementById('authModal');
-    const authCancel = document.getElementById('authCancel');
     const authRegister = document.getElementById('authRegister');
     const authLogin = document.getElementById('authLogin');
     const authLogout = document.getElementById('authLogout');
@@ -577,24 +593,24 @@
 
   </script>
 
-  <script src="./js/course-creator.js?v=3"></script>
-  <script src="./js/courses.js?v=3"></script>
-  <script src="./js/range-selection.js?v=3"></script>
-  <script src="./js/measure-actions.js?v=3"></script>
-  <script src="./js/notegrid.js?v=3"></script>
-  <script src="./js/noteplayer.js?v=3"></script>
-  <script src="./js/handpanmap.js?v=3"></script>
-  <script src="./js/compose-mode.js?v=3"></script>
-  <script src="./js/transcription.js?v=3"></script>
-  <script src="./js/groove-generator.js?v=3"></script>
-  <script src="./js/presentation-mode.js?v=3"></script>
-  <script src="./js/pattern-crud.js?v=3"></script>
-  <script src="./js/controls.js?v=3"></script>
-  <script src="./js/share-patterns.js?v=3"></script>
-  <script src="./js/keyboard-shortcuts.js?v=3"></script>
-  <script src="./js/auth.js?v=3"></script>
-  <script src="./js/init.js?v=3"></script><!-- keep near bottom -->
-  <script src="./js/ai-assistant.js?v=3"></script>
+  <script src="./js/course-creator.js?v=4"></script>
+  <script src="./js/courses.js?v=4"></script>
+  <script src="./js/range-selection.js?v=4"></script>
+  <script src="./js/measure-actions.js?v=4"></script>
+  <script src="./js/notegrid.js?v=4"></script>
+  <script src="./js/noteplayer.js?v=4"></script>
+  <script src="./js/handpanmap.js?v=4"></script>
+  <script src="./js/compose-mode.js?v=4"></script>
+  <script src="./js/transcription.js?v=4"></script>
+  <script src="./js/groove-generator.js?v=4"></script>
+  <script src="./js/presentation-mode.js?v=4"></script>
+  <script src="./js/pattern-crud.js?v=4"></script>
+  <script src="./js/controls.js?v=4"></script>
+  <script src="./js/share-patterns.js?v=4"></script>
+  <script src="./js/keyboard-shortcuts.js?v=4"></script>
+  <script src="./js/auth.js?v=4"></script>
+  <script src="./js/init.js?v=4"></script><!-- keep near bottom -->
+  <script src="./js/ai-assistant.js?v=4"></script>
 
   <!-- AI Assistant UI -->
   <div id="aiFab" title="AI Assistant">

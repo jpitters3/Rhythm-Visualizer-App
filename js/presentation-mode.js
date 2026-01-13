@@ -23,7 +23,7 @@ async function setPresentation(on) {
   document.body.classList.toggle('present', on);
   localStorage.setItem(PRESENT_KEY, on ? 'on' : 'off');
   presentBtn.classList.toggle('active', on);
-  presentBtn.textContent = on ? 'Exit Presentation' : 'Presentation';
+  // presentBtn.textContent = on ? '⛶' : '⛶';
   exitPresent.style.display = on ? 'inline-flex' : 'none';
 
   if (on) await enterFullscreenIfPossible();

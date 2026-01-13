@@ -19,6 +19,7 @@
 }
 
 button {
+  height: 50px;
   padding: 10px 16px;
   border-radius: 999px;
   border: none;
@@ -35,6 +36,19 @@ button.active {
 button:disabled {
   opacity: 0.45;
   cursor: not-allowed;
+}
+
+button#composeBtn {
+  font-size: 30px;
+}
+
+button#metronomeBtn svg {
+  width: 30px;
+  height: 30px;
+}
+
+button#presentBtn {
+  font-size: 20px;
 }
 
 select {

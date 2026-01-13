@@ -1,48 +1,23 @@
-/* Sidebar
-.sidebar {
-  position: fixed;
-  left: -320px;
-  top: 0;
-  width: 320px;
-  height: 100%;
-  background: var(--panel);
-  border-right: 1px solid var(--panel-border);
-  z-index: 1500;
-  transition: left 0.3s ease;
-  padding: 20px;
-  overflow-y: auto;
-}
-.sidebar.open { left: 0; }
-
-/* Lesson List Accordion */
-/* .course-item { margin-bottom: 20px; }
-.course-item h4 { margin-bottom: 10px; border-bottom: 1px solid var(--panel-border); }
-.section-title { font-size: 0.9em; font-weight: bold; opacity: 0.7; margin: 10px 0 5px; }
-.lesson-link { 
-  display: block; 
-  padding: 8px 12px; 
-  border-radius: 8px; 
-  cursor: pointer; 
-  font-size: 0.95em; 
-}
-.lesson-link:hover { background: var(--btn-bg); } */
-
 /* Sidebar Container */
 .sidebar {
   position: fixed;
-  left: -350px; /* Slightly wider for better card layout */
+  left: -350px;
+  /* Slightly wider for better card layout */
   top: 0;
   width: 350px;
   height: 100%;
-  background: var(--bg); /* Uses theme background */
-  backdrop-filter: blur(10px); /* Glass effect */
+  background: var(--bg);
+  /* Uses theme background */
+  backdrop-filter: blur(10px);
+  /* Glass effect */
   border-right: 1px solid var(--panel-border);
   z-index: 2500;
   transition: left 0.35s cubic-bezier(0.4, 0, 0.2, 1);
-  padding: 0; /* Handled by internal containers */
+  padding: 0;
+  /* Handled by internal containers */
   display: flex;
   flex-direction: column;
-  box-shadow: 10px 0 30px rgba(0,0,0,0.15);
+  box-shadow: 10px 0 30px rgba(0, 0, 0, 0.15);
 }
 
 .sidebar.open {
@@ -99,6 +74,21 @@
   margin: 8px 0 4px 4px;
 }
 
+div.grid-container {
+  display: grid;
+  grid-template-columns: 3fr 1fr;
+  grid-gap: 10px;
+}
+
+div.grid-child {
+  display: grid;
+}
+
+.edit-course {
+  cursor: pointer;
+  justify-self: right;
+}
+
 /* Lesson Panels (The "Cards") */
 .lesson-link {
   background: var(--panel);
@@ -110,7 +100,7 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
   position: relative;
   overflow: hidden;
 }
@@ -130,7 +120,7 @@
 .lesson-link:hover {
   transform: translateY(-2px);
   border-color: var(--btn-active);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .lesson-link:hover::before {
@@ -172,20 +162,25 @@
   margin-bottom: 20px;
   animation: slideDown 0.4s ease;
 }
+
 .video-wrapper {
   position: relative;
-  padding-bottom: 56.25%; /* 16:9 aspect ratio */
+  padding-bottom: 56.25%;
+  /* 16:9 aspect ratio */
   height: 0;
   margin-bottom: 15px;
 }
+
 .video-wrapper iframe {
   position: absolute;
-  top: 0; left: 0; width: 100%; height: 100%;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
   border-radius: 12px;
 }
 
-button#closeLessonBtn
-{
+button#closeLessonBtn {
   position: absolute;
   right: 0px;
 }
