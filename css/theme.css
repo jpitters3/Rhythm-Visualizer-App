@@ -1,11 +1,14 @@
 /* ===== RESET / BASE ===== */
-* { box-sizing: border-box; }
+* {
+  box-sizing: border-box;
+}
+
 body {
   margin: 0;
   padding: 5px;
   font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
   background: var(--bg);
-  background-blend-mode:overlay;
+  background-blend-mode: overlay;
   color: var(--text);
 }
 
@@ -23,14 +26,17 @@ body::after {
   bottom: 0;
   right: 0;
   position: absolute;
-  z-index: -1;   
+  z-index: -1;
 }
 
 body.dark::after {
   background-image: url('../assets/images/backgrounds/starry-sky.jpg');
 }
 
-h2 { margin: 0 0 16px; font-weight: 500; }
+h2 {
+  margin: 0 0 16px;
+  font-weight: 500;
+}
 
 /* ===== THEME VARS ===== */
 :root {

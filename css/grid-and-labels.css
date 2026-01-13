@@ -20,6 +20,7 @@
 
 /* Define the mobile-only playback layout */
 @media (max-width: 768px) {
+
   /* When NOT playing, show 8 beats for context */
   .grid {
     grid-template-columns: repeat(8, 1fr);
@@ -55,7 +56,8 @@
   /* transition: background 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease; */
   position: relative;
   user-select: none;
-  overflow: hidden; /* keeps half-fills clean */
+  overflow: hidden;
+  /* keeps half-fills clean */
 }
 
 /* The container for the 4 smaller circles */
@@ -63,22 +65,26 @@
 /* Update your notegrid.css */
 
 .cell {
-    position: relative; /* Ensure stacking context */
+  position: relative;
+  /* Ensure stacking context */
 }
 
 .inner {
-    position: relative;
-    z-index: 1; /* Lower than quadrants */
-    pointer-events: none; /* Let clicks pass through to what's behind/under if needed */
+  position: relative;
+  z-index: 1;
+  /* Lower than quadrants */
+  pointer-events: none;
+  /* Let clicks pass through to what's behind/under if needed */
 }
 
 .quad-container {
   position: absolute;
   top: 0;
   left: 0;
-  right: 0;   /* Use right/bottom instead of width/height */
+  right: 0;
+  /* Use right/bottom instead of width/height */
   bottom: 0;
-  width: auto; 
+  width: auto;
   height: auto;
   z-index: 10 !important;
   pointer-events: auto !important;
@@ -95,41 +101,46 @@
 .cell.multi-selected {
   background: var(--cell-bg);
 }
+
 /* REVEAL ON DOUBLE-CLICK: Shows the user where the 4 dots are */
 .cell.multi-selected .quad-container {
-    opacity: 1; /* Faint subdots */
+  opacity: 1;
+  /* Faint subdots */
 }
 
 /* REVEAL ON CARET: Show the dots clearly */
 .cell.active .quad-container,
 .cell.multi-mode .quad-container {
-    opacity: 1;
+  opacity: 1;
 }
 
 /* If multi-mode is active, hide the big center dot entirely */
 .cell.multi-mode .inner {
-    display: none;
+  display: none;
 }
 
 .sub-dot {
-    pointer-events: auto; /* Crucial for catching clicks */
-    cursor: pointer;
+  pointer-events: auto;
+  /* Crucial for catching clicks */
+  cursor: pointer;
 }
 
 /* Vertical columns for fingers */
 .hand-column {
   display: flex;
   /* Stack from bottom up */
-  flex-direction: column; 
+  flex-direction: column;
 }
 
 /* Individual finger circles */
 .sub-dot {
   width: 38px;
   height: 38px;
-  pointer-events: auto !important; /* Ensure this is explicit */
+  pointer-events: auto !important;
+  /* Ensure this is explicit */
   z-index: 11 !important;
-  position: relative; /* Give it its own stacking context */
+  position: relative;
+  /* Give it its own stacking context */
   border-radius: 50%;
   background: transparent;
   display: flex;
@@ -148,7 +159,7 @@
 }
 
 .cell.multi-mode.has-label {
-  background-color: rgba(1,1,1,1,0.0);
+  background-color: rgba(1, 1, 1, 1, 0.0);
   overflow: visible;
 }
 
@@ -176,8 +187,13 @@
 }
 
 /* Toggle visibility */
-.cell.multi-mode .inner { display: none; }
-.cell.multi-mode .quad-container { opacity: 1; }
+.cell.multi-mode .inner {
+  display: none;
+}
+
+.cell.multi-mode .quad-container {
+  opacity: 1;
+}
 
 
 /* ===== PLAY EXPAND (NO LAYOUT SHIFT) ===== */
@@ -211,6 +227,7 @@
   pointer-events: none;
   color: var(--text);
 }
+
 @media (max-width: 768px) {
   .cell .inner {
     font-size: 25px
@@ -265,11 +282,20 @@
   border: 1px solid var(--panel-border);
 }
 
-.add-measure:hover { filter: brightness(1.03); }
+.add-measure:hover {
+  filter: brightness(1.03);
+}
 
 @media (max-width: 600px) {
-  .labelCell { font-size: 18px; }
-  .add-measure { width: 40px; height: 40px; font-size: 24px; }
+  .labelCell {
+    font-size: 18px;
+  }
+
+  .add-measure {
+    width: 40px;
+    height: 40px;
+    font-size: 24px;
+  }
 }
 
 
@@ -278,86 +304,114 @@
   border-color: rgba(234, 234, 240, 0.9);
   box-shadow: 0 0 0 6px rgba(234, 234, 240, 0.12);
 }
+
 body:not(.dark) .cell.selected {
   border-color: rgba(47, 47, 47, 0.85);
   box-shadow: 0 0 0 10px rgba(74, 74, 74, 0.22);
 }
 
 /* Play ring */
-.cell.play { box-shadow: 0 0 0 6px var(--play-glow); }
-body:not(.dark) .cell.play { box-shadow: 0 0 0 6px rgba(47, 47, 47, 0.35); }
+.cell.play {
+  box-shadow: 0 0 0 6px var(--play-glow);
+}
+
+body:not(.dark) .cell.play {
+  box-shadow: 0 0 0 6px rgba(47, 47, 47, 0.35);
+}
 
 /* ON highlight only when unlabeled */
-.cell.selected:not(.label-d):not(.label-t):not(.label-s):not(.label-n) { background: var(--cell-on); }
+.cell.selected:not(.label-d):not(.label-t):not(.label-s):not(.label-n) {
+  background: var(--cell-on);
+}
 
 /* ===== BEAT POSITION COLOR (Downbeat/Upbeat) ===== */
 
 /* Two colors only */
 :root {
-    --down-fill: #610a42; /* wine red */
-    --up-fill: rgb(2, 68, 150);   /* blue */
+  --down-fill: #610a42;
+  /* wine red */
+  --up-fill: rgb(2, 68, 150);
+  /* blue */
 }
+
 body.dark {
-    --down-fill: #fd0380; /* keep gold in dark mode too */
-    --up-fill: rgb(30, 121, 232);   /* slightly softer green for dark */
+  --down-fill: #fd0380;
+  /* keep gold in dark mode too */
+  --up-fill: rgb(30, 121, 232);
+  /* slightly softer green for dark */
 }
 
 /* Mixing strength (keeps your nice subtle fill) */
-.cell.off.has-label { --mix: 42%; }
-.cell.has-label { --mix: 68%; }
+.cell.off.has-label {
+  --mix: 42%;
+}
+
+.cell.has-label {
+  --mix: 68%;
+}
+
 @media (max-width: 768px) {
-  .cell.has-label { --mix: 0%; }
+  .cell.has-label {
+    --mix: 0%;
+  }
 }
 
 /* Choose fill based on beat position */
-.cell.downbeat { --beat-fill: var(--down-fill); }
-.cell.upbeat { --beat-fill: var(--up-fill); }
+.cell.downbeat {
+  --beat-fill: var(--down-fill);
+}
+
+.cell.upbeat {
+  --beat-fill: var(--up-fill);
+}
 
 /* Inner label color by beat type */
 .cell.has-label.downbeat .inner {
   color: white;
-    /* color: var(--down-fill); */
+  /* color: var(--down-fill); */
 }
 
 .cell.has-label.upbeat .inner {
   color: white;
-    /* color: var(--up-fill);  */
+  /* color: var(--up-fill);  */
 }
 
 /* ON highlight only when unlabeled */
-.cell.selected:not(.has-label) { background: var(--cell-on); }
+.cell.selected:not(.has-label) {
+  background: var(--cell-on);
+}
 
 body.handSplit .cell.has-label {
-   background: color-mix(in srgb, var(--beat-fill) var(--mix), var(--cell-bg));
+  background: color-mix(in srgb, var(--beat-fill) var(--mix), var(--cell-bg));
 }
 
 /* Split mode OFF: fill whole circle */
 body:not(.handSplit) .cell.has-label:not(.multi-mode) {
-    background: color-mix(in srgb, var(--beat-fill) var(--mix), var(--cell-bg));
-    background: color-mix(in srgb, var(--beat-fill) var(--mix), var(--cell-bg));
+  background: color-mix(in srgb, var(--beat-fill) var(--mix), var(--cell-bg));
+  background: color-mix(in srgb, var(--beat-fill) var(--mix), var(--cell-bg));
 
 }
 
 /* ===== GHOST NOTE DOT (default when no inner label) ===== */
 .cell .ghost-dot {
-    position: absolute;
-    left: 50%;
-    top: 50%;
-    width: 12px;
-    height: 12px;
-    border-radius: 999px;
-    transform: translate(-50%, -50%);
-    pointer-events: none;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
 
-    /* Match the color the fill WOULD be (downbeat/upbeat) */
-    background: var(--beat-fill);
+  /* Match the color the fill WOULD be (downbeat/upbeat) */
+  background: var(--beat-fill);
 
-    /* A little softness for video readability */
-    opacity: 0.75;
-    box-shadow: 0 0 0 4px rgba(0,0,0,0.06);
+  /* A little softness for video readability */
+  opacity: 0.75;
+  box-shadow: 0 0 0 4px rgba(0, 0, 0, 0.06);
 }
 
 /* Hide dot once a label is set */
 .cell.has-label .ghost-dot {
-    display: none;
+  display: none;
 }

@@ -139,7 +139,6 @@ closeCourseBtn?.addEventListener('click', closeCourseCreator);
 // Close on clicking the dark overlay
 courseModal?.addEventListener('click', (e) => {
   if (e.target === courseModal) {
-    e.target.inert = true;
     closeCourseCreator();
   }
 });

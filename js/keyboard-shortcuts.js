@@ -1,15 +1,15 @@
- // ===== KEYBOARD LABELING + SHORTCUTS =====
- document.addEventListener('keydown', (e) => {
+// ===== KEYBOARD LABELING + SHORTCUTS =====
+document.addEventListener('keydown', (e) => {
   const tag = (e.target && e.target.tagName) ? e.target.tagName.toLowerCase() : '';
   if (tag === 'input' || tag === 'textarea' || e.target.isContentEditable) return;
 
   // Esc
   if (e.key === 'Escape') {
-    
+
     // 1. Check Groove Modal
-    if (grooveModal.classList.contains('open')) { 
-      closeGrooveModal(); 
-      return; 
+    if (grooveModal.classList.contains('open')) {
+      closeGrooveModal();
+      return;
     }
 
     // 2. Check Course Modal
@@ -21,15 +21,15 @@
     // 3. Check Course Sidebar
     if (sidebar?.classList.contains('open')) {
       closeSidebar();
-    return;
-  }
-    
+      return;
+    }
+
     // Other Esc actions
     if (document.body.classList.contains('present')) {
       setPresentation(false);
       return;
     }
-    
+
     clearSelection();
     clearRange();
     return;
@@ -41,14 +41,6 @@
     localStorage.setItem(METRO_KEY, metronomeOn ? 'on' : 'off');
     updateMetroUI();
     if (metronomeOn) ensureAudio();
-    return;
-  }
-
-  // Enter: Play / Stop
-  if (e.code === 'Enter') {
-    e.preventDefault();
-    if (playing) stop();
-    else start();
     return;
   }
 
@@ -85,6 +77,14 @@
       clearRange();
       return;
     }
+  }
+
+  // Enter: Play / Stop
+  if (e.code === 'Space') {
+    e.preventDefault();
+    if (playing) stop();
+    else start();
+    return;
   }
 
   // From this point onwards in this function,
@@ -134,8 +134,8 @@ document.addEventListener('click', (ev) => {
 });
 
 document.addEventListener('click', () => {
-    if (audioCtx && audioCtx.state === 'suspended') {
-        audioCtx.resume();
-    }
-    }, { once: true }
+  if (audioCtx && audioCtx.state === 'suspended') {
+    audioCtx.resume();
+  }
+}, { once: true }
 );
