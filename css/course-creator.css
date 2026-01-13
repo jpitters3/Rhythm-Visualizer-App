@@ -160,6 +160,25 @@ body.dark .section-builder {
   opacity: 0.9;
 }
 
+.lesson-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.lesson-meta button.remove-btn {
+  background: transparent;
+  color: #e74c3c;
+  border: 1px solid rgba(231, 76, 60, 0.3);
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 11px;
+}
+
+.lesson-meta button.remove-btn:hover {
+  background: rgba(231, 76, 60, 0.1);
+  border-color: #e74c3c;
+}
+
 /* Buttons */
 button {
   cursor: pointer;
@@ -213,6 +232,32 @@ body.dark .primary-btn {
 }
 
 /* Inner Buttons: Add Lesson & Update Pattern */
+.add-lesson-btn {
+  /* + Add Lesson (Moved to bottom) */
+  background: #e8ecf6;
+  color: #34495e;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 999px;
+  font-size: 13px;
+  white-space: nowrap;
+  width: 100%;
+  margin-top: 15px;
+  border: 1px dashed rgba(52, 73, 94, 0.2);
+}
+
+.add-lesson-btn:hover {
+  background: #dce3f3;
+  color: #1e2b37;
+  border-style: solid;
+}
+
+body.dark .add-lesson-btn {
+  background: rgba(44, 62, 80, 0.5);
+  color: #ecf0f1;
+  border-color: rgba(236, 240, 241, 0.2);
+}
+
 .section-header button {
   /* + Add Lesson */
   background: #e8ecf6;

@@ -51,22 +51,20 @@ function overlayNumberPitchNotes() {
       const n = d.dataset.note;
       if (!n || n === 'D') continue;
 
-      let pitch = (n === 'T' || n === 'S' ? n : scalesMap.get(''+n));
-      if (pitch && overlayPitches)
-      {
-        pitch = '' + pitch.replace('s','#');
+      let pitch = (n === 'T' || n === 'S' ? n : scalesMap.get('' + n));
+      if (pitch && overlayPitches) {
+        pitch = '' + pitch.replace('s', '#');
         const noteLabel = document.createElement('span');
         noteLabel.className = 'note-label';
         if (handpanSelect.value === 'Bronze') noteLabel.className = 'note-label light-text';
         noteLabel.innerText = pitch;
         d.appendChild(noteLabel);
       }
-      else if (overlayNumbers)
-      {
+      else if (overlayNumbers) {
         const noteLabel = document.createElement('span');
         noteLabel.className = 'note-label';
         if (handpanSelect.value === 'Bronze') noteLabel.className = 'note-label light-text';
-        noteLabel.innerText = ''+n;
+        noteLabel.innerText = '' + n;
         d.appendChild(noteLabel);
       }
     }
@@ -75,8 +73,7 @@ function overlayNumberPitchNotes() {
   overlayNumbers = false; // same here.
 }
 
-function removeNoteLabels()
-{
+function removeNoteLabels() {
   const noteLabels = document.getElementsByClassName('note-label');
   for (const label of noteLabels) {
     label.remove();
@@ -92,7 +89,7 @@ function checkNumberPitchSelection() {
   }
 }
 
-function buildHandpanOverlay(){
+function buildHandpanOverlay() {
   if (!handpanOverlay) return;
   handpanOverlay.innerHTML = '';
   handpanDots.clear();
@@ -103,15 +100,15 @@ function buildHandpanOverlay(){
     dot.dataset.note = note;
 
     dot.style.left = `${p.x}%`;
-    dot.style.top  = `${p.y}%`;
-    dot.style.width  = `${p.r * 2}%`;
+    dot.style.top = `${p.y}%`;
+    dot.style.width = `${p.r * 2}%`;
     dot.style.height = `${p.r * 2}%`;
     dot.style.transform = 'translate(-50%, -50%)';
 
     handpanOverlay.appendChild(dot);
     handpanDots.set(note, dot);
   }
-  if (overlayPitches || overlayNumbers) 
+  if (overlayPitches || overlayNumbers)
     overlayNumberPitchNotes(); else removeNoteLabels();
 }
 
@@ -119,14 +116,14 @@ buildHandpanOverlay();
 
 let hpPulseTimers = new Map();
 
-function highlightHandpan(note, stepIndex){
+function highlightHandpan(note, stepIndex) {
   const key = String(note || '').toUpperCase();
   const el = handpanDots.get(key);
   if (!el) return;
 
   const down = isDownbeatStep(stepIndex);
 
-  el.classList.remove('hp-down','hp-up','active');
+  el.classList.remove('hp-down', 'hp-up', 'active');
   el.classList.add(down ? 'hp-down' : 'hp-up');
 
   // restart animation
@@ -188,7 +185,7 @@ handpanOverlay?.addEventListener('click', (e) => {
     // If a beat is selected, write to it.
 
     // Play note sound on click / tap
-    playNoteByLabel(note, step); 
+    playNoteByLabel(note, step);
     highlightHandpan(note, step);
 
     // If a beat is selected, write to it (Compose auto-advance applies)
@@ -223,10 +220,10 @@ document.addEventListener('keydown', (e) => {
   const step = e.shiftKey ? 0.5 : 0.2; // percent increments
   let dx = 0, dy = 0;
 
-  if (e.key === 'ArrowLeft')  dx = -step;
-  if (e.key === 'ArrowRight') dx =  step;
-  if (e.key === 'ArrowUp')    dy = -step;
-  if (e.key === 'ArrowDown')  dy =  step;
+  if (e.key === 'ArrowLeft') dx = -step;
+  if (e.key === 'ArrowRight') dx = step;
+  if (e.key === 'ArrowUp') dy = -step;
+  if (e.key === 'ArrowDown') dy = step;
 
   if (!dx && !dy) return;
 
@@ -240,7 +237,7 @@ document.addEventListener('keydown', (e) => {
   const el = handpanDots.get(selectedHpNote);
   if (el) {
     el.style.left = `${p.x}%`;
-    el.style.top  = `${p.y}%`;
+    el.style.top = `${p.y}%`;
   }
 });
 
@@ -249,7 +246,7 @@ function clamp(v, min, max) {
 }
 
 function stringifyHandpanMap(map) {
-  const keys = Object.keys(map).sort((a,b) => {
+  const keys = Object.keys(map).sort((a, b) => {
     if (a === 'D') return -1;
     if (b === 'D') return 1;
     return Number(a) - Number(b);
@@ -317,4 +314,15 @@ ghostBtn.addEventListener('click', (e) => {
 
 lockBtn.addEventListener('click', (e) => {
   composeBtn.click();
+});
+
+// Settings Toggle
+const hpSettingsToggle = document.getElementById('hpSettingsToggle');
+const hpSettingsPanel = document.getElementById('hpSettingsPanel');
+
+hpSettingsToggle?.addEventListener('click', (e) => {
+  e.stopPropagation();
+  const isHidden = hpSettingsPanel.style.display === 'none';
+  hpSettingsPanel.style.display = isHidden ? 'block' : 'none';
+  hpSettingsToggle.classList.toggle('active', isHidden);
 });

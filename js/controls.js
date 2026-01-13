@@ -2,6 +2,22 @@
 
 patternSelect.addEventListener('change', updatePatternButtons);
 
+// Dropdown Logic
+const dropdownBtn = document.getElementById('fileDropdownBtn');
+const dropdownMenu = document.getElementById('fileDropdownMenu');
+
+dropdownBtn?.addEventListener('click', (e) => {
+  e.stopPropagation();
+  dropdownMenu.classList.toggle('show');
+});
+
+// Close dropdown when clicking outside
+window.addEventListener('click', (e) => {
+  if (dropdownBtn && dropdownMenu && !dropdownBtn.contains(e.target) && !dropdownMenu.contains(e.target)) {
+    dropdownMenu.classList.remove('show');
+  }
+});
+
 playBtn.addEventListener('click', () => {
   // Make click idempotent and resilient to rapid taps
   if (playing) stop();
@@ -21,12 +37,12 @@ bpmInput.addEventListener('input', () => {
 gridBtn.addEventListener('click', () => setMode(mode === '8' ? '16' : '8'));
 
 handBtn.addEventListener('click', () => {
-    const on = !document.body.classList.contains('handSplit');
-    document.body.classList.toggle('handSplit', on);
-    localStorage.setItem('handSplit', on ? 'on' : 'off');
+  const on = !document.body.classList.contains('handSplit');
+  document.body.classList.toggle('handSplit', on);
+  localStorage.setItem('handSplit', on ? 'on' : 'off');
 
-    handBtn.classList.toggle('active', on);
-    handBtn.textContent = on ? 'Left/Right: On' : 'Left/Right: Off';
+  handBtn.classList.toggle('active', on);
+  handBtn.textContent = on ? 'Left/Right: On' : 'Left/Right: Off';
 });
 
 themeBtn.addEventListener('click', () => {
@@ -41,10 +57,7 @@ presentBtn.addEventListener('click', () => {
 
 exitPresent.addEventListener('click', () => setPresentation(false));
 
-function updateMetroUI() {
-  metroBtn.classList.toggle('active', metronomeOn);
-  metroBtn.textContent = metronomeOn ? 'Metronome: On' : 'Metronome: Off';
-}
+
 
 metroBtn.addEventListener('click', () => {
   metronomeOn = !metronomeOn;
@@ -74,7 +87,7 @@ saveBtn.addEventListener('click', async () => {
   saveCurrentPatternAs(name);
 });
 
-async function saveCurrentPatternAs(name){
+async function saveCurrentPatternAs(name) {
   if (!name) return false;
 
   const trimmed = String(name || '').trim();

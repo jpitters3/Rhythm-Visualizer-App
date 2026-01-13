@@ -17,6 +17,7 @@ async function fetchCourses() {
     return;
   }
   renderCourseLibrary(courses);
+  window.allCourses = courses; // Store globally for editing
 }
 
 function renderCourseLibrary(courses) {
@@ -24,9 +25,10 @@ function renderCourseLibrary(courses) {
   list.innerHTML = courses.map(course => `
     <div class="course-item">
       <h4>${course.title}</h4>
-      ${course.sections.sort((a,b) => a.order_index - b.order_index).map(section => `
+      <button onclick="editCourse('${course.id}')" class="secondary-btn" style="font-size:11px; padding:4px 10px; margin-top:10px;">Edit Course</button>
+      ${course.sections.sort((a, b) => a.order_index - b.order_index).map(section => `
         <div class="section-title">${section.title}</div>
-        ${section.lessons.sort((a,b) => a.order_index - b.order_index).map(lesson => `
+        ${section.lessons.sort((a, b) => a.order_index - b.order_index).map(lesson => `
           <div class="lesson-link" onclick="loadLesson('${lesson.id}')">
             • ${lesson.title}
           </div>
@@ -60,7 +62,14 @@ function loadLesson(lessonId) {
   } else {
     videoCont.style.display = 'none';
   }
-  
+
+  closeSidebar();
+}
+
+function editCourse(courseId) {
+  const course = window.allCourses.find(c => c.id === courseId);
+  if (!course) return;
+  loadCourseToEdit(course);
   closeSidebar();
 }
 

@@ -6,7 +6,7 @@ function isAdminUser(user) {
 
 function updateAdminUI() {
   const show = isAdminUser(currentUser);
-  
+
   const calBbtn = document.getElementById("calBtn");
   if (calBtn) calBtn.style.display = show ? "" : "none";
 
@@ -33,12 +33,18 @@ function closeAuthModal() {
 function updateAccountUI() {
   if (!accountStatus) return;
   if (currentUser) {
-    accountStatus.textContent = `Signed in: ${currentUser.email}`;
+    // accountStatus.textContent = `${currentUser.email}`;
+    // Set button text to first letter of email
+    if (accountBtn) accountBtn.textContent = currentUser.email.charAt(0).toUpperCase();
+
     authLogout.style.display = '';
     authLogin.style.display = 'none';
     authRegister.style.display = 'none';
   } else {
     accountStatus.textContent = 'Not signed in';
+    // Reset button text
+    if (accountBtn) accountBtn.textContent = 'Account';
+
     authLogout.style.display = 'none';
     authLogin.style.display = '';
     authRegister.style.display = '';
@@ -71,7 +77,7 @@ async function initAuthSession() {
 
 initAuthSession();
 
-async function initScale(){
+async function initScale() {
   let name = null;
 
   if (currentUser) name = await loadScaleRemote();
@@ -89,8 +95,9 @@ initScale();
 
 // Auth modal
 accountBtn?.addEventListener('click', openAuthModal);
-authCancel?.addEventListener('click', closeAuthModal);
 
+
+// Modal Action Buttons (Actual Submit)
 authRegister?.addEventListener('click', async () => {
   const email = authEmail.value.trim();
   const password = authPass.value;
@@ -117,6 +124,7 @@ authLogin?.addEventListener('click', async () => {
   initScale();
 });
 
+// Keep existing logout for safety if it exists elsewhere
 authLogout?.addEventListener('click', async () => {
   await supabase1.auth.signOut();
   currentUser = null;

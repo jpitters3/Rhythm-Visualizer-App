@@ -1,18 +1,24 @@
 // ===== INIT =====
+function updateMetroUI() {
+  if (!metroBtn) return;
+  metroBtn.classList.toggle('active', metronomeOn);
+  metroBtn.textContent = metronomeOn ? 'Metronome: On' : 'Metronome: Off';
+}
+
 function restorePrefs() {
   if (localStorage.getItem('theme') === 'dark') {
     document.body.classList.add('dark');
   }
 
-const handOn = localStorage.getItem('handSplit') === 'on';
-document.body.classList.toggle('handSplit', handOn);
-handBtn.classList.toggle('active', handOn);
-handBtn.textContent = handOn ? 'Left/Right: On' : 'Left/Right: Off';
+  const handOn = localStorage.getItem('handSplit') === 'on';
+  document.body.classList.toggle('handSplit', handOn);
+  handBtn.classList.toggle('active', handOn);
+  handBtn.textContent = handOn ? 'Left/Right: On' : 'Left/Right: Off';
 
-metronomeOn = (localStorage.getItem(METRO_KEY) === 'on');
-updateMetroUI();
+  metronomeOn = (localStorage.getItem(METRO_KEY) === 'on');
+  updateMetroUI();
 
-bpmVal.textContent = bpmInput.value;
+  bpmVal.textContent = bpmInput.value;
 
   if (localStorage.getItem(PRESENT_KEY) === 'on') {
     document.body.classList.add('present');
@@ -56,7 +62,7 @@ function runSelfTests() {
 
 function showFatalError(err) {
   // Ensure we stop any running timers if an error happens during startup
-  try { stop(); } catch {}
+  try { stop(); } catch { }
 
   console.error(err);
   // Avoid duplicate panels
@@ -80,7 +86,7 @@ function showFatalError(err) {
   `;
   document.body.appendChild(panel);
   panel.querySelector('#panicStop')?.addEventListener('click', () => {
-    try { stop(); } catch {}
+    try { stop(); } catch { }
   });
 }
 

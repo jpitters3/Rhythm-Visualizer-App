@@ -89,6 +89,7 @@
   <link rel="stylesheet" href="./css/courses.css">
   <link rel="stylesheet" href="./css/mic-mode.css">
   <link rel="stylesheet" href="./css/bloom-animation.css">
+  <link rel="stylesheet" href="./css/ai-assistant.css">
 </head>
 
 <body>
@@ -125,12 +126,21 @@
       <select id="patternSelect" title="Saved patterns">
         <option value="">(no saved patterns)</option>
       </select>
-      <button id="saveBtn" title="Save current pattern">Save</button>
-      <button id="loadBtn" title="Load selected pattern">Load</button>
-      <button id="renameBtn" title="Rename selected pattern">Rename</button>
-      <button id="deleteBtn" title="Delete selected pattern">Delete</button>
-      <button id="exportBtn" title="Copy pattern JSON to clipboard">Export</button>
-      <button id="importBtn" title="Paste JSON to load a pattern">Import</button>
+
+      <!-- File Dropdown -->
+      <div class="dropdown">
+        <button id="fileDropdownBtn" class="dropdown-toggle">File ▾</button>
+        <div id="fileDropdownMenu" class="dropdown-content">
+          <button id="saveBtn" title="Save current pattern">Save</button>
+          <button id="loadBtn" title="Load selected pattern">Load</button>
+          <button id="renameBtn" title="Rename selected pattern">Rename</button>
+          <button id="deleteBtn" title="Delete selected pattern">Delete</button>
+          <div class="dropdown-divider"></div>
+          <button id="exportBtn" title="Copy pattern JSON to clipboard">Export</button>
+          <button id="importBtn" title="Paste JSON to load a pattern">Import</button>
+        </div>
+      </div>
+
       <button id="shareBtn" title="Create a share link (public)">Share</button>
     </div>
 
@@ -143,9 +153,10 @@
         Compose: Off
       </button>
       <button id="gridBtn" title="Toggle between 8th and 16th grid">8ths</button>
-      <button id="handBtn" class="active" title="Toggle left/right hand coloring">Left/Right: Off</button>
+      <button id="handBtn" style="display: none;" class="active" title="Toggle left/right hand coloring">Left/Right:
+        Off</button>
       <button id="presentBtn" title="Toggle presentation mode (Esc exits)">Presentation</button>
-      <button id="calBtn" title="Toggle handpan calibration">Calibrate Map</button>
+
       <button id="openCourseModalBtn" class="admin-only" style="display: none;">Create Course</button>
       <!-- Microphone -->
       <div class="mic-section">
@@ -208,32 +219,36 @@
 
       <!-- HANDPAN OPTIONS -->
       <aside class="handpan-panel" aria-label="Handpan map">
-        <div class="grid-container handpan-options">
-          <div class="grid-child handpan-options label">
-            <h3>Scale:</h3>
-          </div>
-          <div class="grid-child handpan-options select">
+        <div class="handpan-header">
+          <button id="hpSettingsToggle" class="icon-btn" title="Settings">⚙️</button>
+        </div>
+
+        <div id="hpSettingsPanel" class="hp-settings-panel" style="display:none;">
+          <div class="setting-row">
+            <label>Scale:</label>
             <select id="scaleSelect" title="Choose your handpan scale"></select>
             <span id="scaleStatus" style="display:none; opacity:.7;font-size:13px;"></span>
           </div>
-          <div class="grid-child handpan-options label">
-            <h3>Color:</h3>
-          </div>
-          <div class="grid-child handpan-options select">
+
+          <div class="setting-row">
+            <label>Color:</label>
             <select id="handpanSelect" title="Choose your handpan color">
               <option value="Bronze">Bronze</option>
               <option value="Sketch">Sketch</option>
             </select>
           </div>
-          <div class="grid-child handpan-options label">
-            <h3>123 / ABC:</h3>
-          </div>
-          <div class="grid-child handpan-options select">
+
+          <div class="setting-row">
+            <label>Labels:</label>
             <select id="numberPitchSelect" title="Display numbers or pitches">
               <option value="default">-----</option>
               <option value="Numbers">Numbers</option>
               <option value="Pitches">Pitches</option>
             </select>
+          </div>
+
+          <div class="setting-row">
+            <button id="calBtn" class="secondary-btn small-btn" style="width:100%">Calibrate Map</button>
           </div>
         </div>
 
@@ -363,7 +378,6 @@
       <div class="modal-hint" id="authHint">Tip: Use Register once, then Sign in.</div>
 
       <div class="modal-actions">
-        <button id="authCancel">Cancel</button>
         <button id="authRegister">Register</button>
         <button id="authLogin" class="active">Sign in</button>
         <button id="authLogout" style="display:none;">Sign out</button>
@@ -563,23 +577,48 @@
 
   </script>
 
-  <script src="./js/course-creator.js"></script>
-  <script src="./js/courses.js"></script>
-  <script src="./js/range-selection.js"></script>
-  <script src="./js/measure-actions.js"></script>
-  <script src="./js/notegrid.js"></script>
-  <script src="./js/noteplayer.js"></script>
-  <script src="./js/handpanmap.js"></script>
-  <script src="./js/compose-mode.js"></script>
-  <script src="./js/transcription.js"></script>
-  <script src="./js/groove-generator.js"></script>
-  <script src="./js/presentation-mode.js"></script>
-  <script src="./js/pattern-crud.js"></script>
-  <script src="./js/controls.js"></script>
-  <script src="./js/share-patterns.js"></script>
-  <script src="./js/keyboard-shortcuts.js"></script>
-  <script src="./js/auth.js"></script>
-  <script src="./js/init.js"></script><!-- keep near bottom -->
+  <script src="./js/course-creator.js?v=3"></script>
+  <script src="./js/courses.js?v=3"></script>
+  <script src="./js/range-selection.js?v=3"></script>
+  <script src="./js/measure-actions.js?v=3"></script>
+  <script src="./js/notegrid.js?v=3"></script>
+  <script src="./js/noteplayer.js?v=3"></script>
+  <script src="./js/handpanmap.js?v=3"></script>
+  <script src="./js/compose-mode.js?v=3"></script>
+  <script src="./js/transcription.js?v=3"></script>
+  <script src="./js/groove-generator.js?v=3"></script>
+  <script src="./js/presentation-mode.js?v=3"></script>
+  <script src="./js/pattern-crud.js?v=3"></script>
+  <script src="./js/controls.js?v=3"></script>
+  <script src="./js/share-patterns.js?v=3"></script>
+  <script src="./js/keyboard-shortcuts.js?v=3"></script>
+  <script src="./js/auth.js?v=3"></script>
+  <script src="./js/init.js?v=3"></script><!-- keep near bottom -->
+  <script src="./js/ai-assistant.js?v=3"></script>
+
+  <!-- AI Assistant UI -->
+  <div id="aiFab" title="AI Assistant">
+    <svg viewBox="0 0 24 24">
+      <path
+        d="M19 9l1.25-2.75L23 5l-2.75-1.25L19 1l-1.25 2.75L15 5l2.75 1.25L19 9zm-7.5.5L9 4 6.5 9.5 1 12l5.5 2.5L9 20l2.5-5.5L17 12l-5.5-2.5zM19 15l-1.25 2.75L15 19l2.75 1.25L19 23l1.25-2.75L23 19l-2.75-1.25L19 15z" />
+    </svg>
+  </div>
+
+  <div id="aiChatContainer">
+    <div class="ai-header">
+      <h3>Rhythm Assistant</h3>
+      <button class="close-ai-btn">✕</button>
+    </div>
+    <div class="ai-messages"></div>
+    <div class="ai-input-area">
+      <input type="text" id="aiInput" placeholder="Ask for a beat or change..." autocomplete="off">
+      <button id="sendAiBtn">
+        <svg viewBox="0 0 24 24">
+          <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
+        </svg>
+      </button>
+    </div>
+  </div>
 </body>
 
 </html>

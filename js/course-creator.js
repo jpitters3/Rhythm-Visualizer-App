@@ -16,6 +16,37 @@ function addLessonToSection(sectionIndex) {
   renderCourseStructure();
 }
 
+// Function to handle remove click (2-step verification)
+function handleRemoveClick(btn, sIdx, lIdx) {
+  if (btn.getAttribute('data-confirm') === 'true') {
+    // Second click: actually remove
+    currentCourseData.sections[sIdx].lessons.splice(lIdx, 1);
+    renderCourseStructure();
+  } else {
+    // First click: ask for confirmation
+    btn.setAttribute('data-confirm', 'true');
+    btn.textContent = "Confirm?";
+    btn.style.borderColor = "#c0392b";
+    btn.style.color = "#c0392b";
+    btn.style.fontWeight = "bold";
+
+    // Reset after 3 seconds if not clicked
+    setTimeout(() => {
+      // Check if button still exists in DOM (it might be gone if other updates happened)
+      if (document.body.contains(btn)) {
+        btn.setAttribute('data-confirm', 'false');
+        btn.textContent = "Remove";
+        btn.style = ""; // Clear inline styles
+      }
+    }, 3000);
+  }
+}
+
+// Function to remove a lesson
+function removeLesson(sectionIndex, lessonIndex) {
+  // Deprecated in favor of handleRemoveClick
+}
+
 // Function to add a new section
 function addSection() {
   currentCourseData.sections.push({
@@ -36,9 +67,9 @@ function renderCourseStructure() {
     sectionEl.innerHTML = `
       <div class="section-header">
         <input type="text" value="${section.title}" onchange="currentCourseData.sections[${sIdx}].title = this.value">
-        <button onclick="addLessonToSection(${sIdx})">+ Add Lesson</button>
       </div>
       <div class="lessons-container" id="section-${sIdx}-lessons"></div>
+      <button class="add-lesson-btn" onclick="addLessonToSection(${sIdx})">+ Add Lesson</button>
     `;
 
     section.lessons.forEach((lesson, lIdx) => {
@@ -50,7 +81,10 @@ function renderCourseStructure() {
         <input type="text" value="${lesson.video_url}" placeholder="YouTube URL" onchange="currentCourseData.sections[${sIdx}].lessons[${lIdx}].video_url = this.value">
         <div class="lesson-meta">
           <span>Pattern Captured ✓</span>
-          <button class="small-btn" onclick="capturePatternForLesson(${sIdx}, ${lIdx})">Update to Current Groove</button>
+          <div class="lesson-actions">
+            <button class="remove-btn" onclick="handleRemoveClick(this, ${sIdx}, ${lIdx})">Remove</button>
+            <button class="small-btn" onclick="capturePatternForLesson(${sIdx}, ${lIdx})">Update to Current Groove</button>
+          </div>
         </div>
       `;
       sectionEl.querySelector('.lessons-container').appendChild(lessonEl);
@@ -76,11 +110,22 @@ function openCourseCreator() {
   courseModal.classList.add('open');
   courseModal.setAttribute('aria-hidden', 'false');
   // Initialize with one empty section if new
-  if (currentCourseData.sections.length === 0) {
+  if (currentCourseData.sections.length === 0 && !currentCourseData.id) {
     currentCourseData.sections.push({ title: "Section 1", lessons: [] });
   }
   renderCourseStructure();
 }
+
+window.loadCourseToEdit = function (course) {
+  currentCourseData = JSON.parse(JSON.stringify(course)); // Deep copy to avoid mutating original
+  document.getElementById('courseTitle').value = course.title;
+  document.getElementById('courseDesc').value = course.description;
+
+  const saveBtn = document.getElementById('saveCourseBtn');
+  saveBtn.textContent = "Update Course";
+
+  openCourseCreator();
+};
 
 function closeCourseCreator() {
   courseModal.classList.remove('open');
@@ -109,13 +154,19 @@ addSectionBtn?.addEventListener('click', addSection);
 const saveCourseBtn = document.getElementById('saveCourseBtn');
 
 saveCourseBtn?.addEventListener('click', async () => {
+  console.log("Save clicked!");
+
   if (!currentUser) {
+    console.warn("Save aborted: No currentUser");
     alert("Please sign in to save courses.");
     return;
   }
 
   const title = document.getElementById('courseTitle').value.trim();
   const description = document.getElementById('courseDesc').value.trim();
+
+  // Debug: Log what we are trying to save
+  console.log("Saving Course:", { title, description, currentCourseData });
 
   if (!title) {
     alert("Please enter a course title.");
@@ -126,27 +177,64 @@ saveCourseBtn?.addEventListener('click', async () => {
   saveCourseBtn.textContent = "Saving...";
 
   try {
-    // 1. Save the Course
-    const { data: course, error: cErr } = await supabase1
-      .from('courses')
-      .insert([{
-        title,
-        description,
-        owner_id: currentUser.id
-      }])
-      .select()
-      .single();
+    // 1. Check if Updating or Creating
+    let courseId = currentCourseData.id;
+    console.log("Course ID:", courseId, courseId ? "UPDATE MODE" : "CREATE MODE");
 
-    if (cErr) throw cErr;
+    if (courseId) {
+      // === UPDATE MODE ===
+      // Update metadata
+      console.log("Updating course metadata...");
+      const { error: uErr } = await supabase1
+        .from('courses')
+        .update({ title, description })
+        .eq('id', courseId);
 
-    // 2. Save Sections and Lessons
+      if (uErr) {
+        console.error("Error updating course metadata:", uErr);
+        throw uErr;
+      }
+
+      // Delete old sections
+      console.log("Deleting old sections for course:", courseId);
+      const { data: oldSections } = await supabase1.from('sections').select('id').eq('course_id', courseId);
+      if (oldSections && oldSections.length > 0) {
+        const oldSecIds = oldSections.map(s => s.id);
+        console.log("Old section IDs to delete:", oldSecIds);
+
+        await supabase1.from('lessons').delete().in('section_id', oldSecIds);
+        await supabase1.from('sections').delete().in('id', oldSecIds);
+      }
+
+    } else {
+      // === CREATE MODE ===
+      console.log("Creating new course...");
+      const { data: newCourse, error: cErr } = await supabase1
+        .from('courses')
+        .insert([{
+          title,
+          description,
+          owner_id: currentUser.id
+        }])
+        .select()
+        .single();
+
+      if (cErr) {
+        console.error("Error creating course:", cErr);
+        throw cErr;
+      }
+      courseId = newCourse.id;
+      console.log("New Course ID:", courseId);
+    }
+
+    // 2. Save Sections and Lessons (Re-insertion strategy)
+    console.log("Inserting sections and lessons...");
     for (let sIdx = 0; sIdx < currentCourseData.sections.length; sIdx++) {
       const sectionData = currentCourseData.sections[sIdx];
-
       const { data: section, error: sErr } = await supabase1
         .from('sections')
         .insert([{
-          course_id: course.id,
+          course_id: courseId,
           title: sectionData.title,
           order_index: sIdx
         }])
@@ -155,35 +243,34 @@ saveCourseBtn?.addEventListener('click', async () => {
 
       if (sErr) throw sErr;
 
-      // 3. Save Lessons for this section
       const lessonsToInsert = sectionData.lessons.map((lesson, lIdx) => ({
         section_id: section.id,
         title: lesson.title,
-        description: lesson.description,
-        video_url: lesson.video_url,
-        pattern_json: lesson.pattern_json, // Captured via serializePattern()
+        description: lesson.description || "",
+        video_url: lesson.video_url || "",
+        pattern_json: lesson.pattern_json,
         order_index: lIdx
       }));
 
       if (lessonsToInsert.length > 0) {
-        const { error: lErr } = await supabase1
-          .from('lessons')
-          .insert(lessonsToInsert);
-
+        const { error: lErr } = await supabase1.from('lessons').insert(lessonsToInsert);
         if (lErr) throw lErr;
       }
     }
 
+    console.log("Save successful!");
     alert("Course saved successfully!");
     closeCourseCreator();
 
-    // Optional: Reset form
+    // Reset form
     currentCourseData = { title: "", description: "", sections: [] };
     document.getElementById('courseTitle').value = "";
     document.getElementById('courseDesc').value = "";
+    saveCourseBtn.textContent = "Save Course"; // Reset button text
+    if (window.fetchCourses) window.fetchCourses(); // Refresh list
 
   } catch (err) {
-    console.error("Error saving course:", err);
+    console.error("Error saving course (catch block):", err);
     alert(`Failed to save course: ${err.message}`);
   } finally {
     saveCourseBtn.disabled = false;
