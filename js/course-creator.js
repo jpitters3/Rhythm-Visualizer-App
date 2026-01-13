@@ -1,8 +1,26 @@
+// ===== STATE =====
 let currentCourseData = {
   title: "",
   description: "",
   sections: []
 };
+
+let availablePatterns = []; // List of pattern names
+
+// Fetch patterns on load
+async function loadPatternOptions() {
+  try {
+    if (currentUser) {
+      availablePatterns = await dbListPatternNames();
+    } else {
+      const saved = getSavedPatterns();
+      availablePatterns = Object.keys(saved).sort((a, b) => a.localeCompare(b));
+    }
+  } catch (err) {
+    console.error("Failed to load pattern options:", err);
+    availablePatterns = [];
+  }
+}
 
 // Function to add a lesson to a section
 function addLessonToSection(sectionIndex) {
@@ -10,11 +28,49 @@ function addLessonToSection(sectionIndex) {
     title: "New Lesson",
     description: "",
     video_url: "",
-    pattern_json: serializePattern() // Captures the current grid state instantly!
+    pattern_json: serializePattern(), // Default to current grid
+    pattern_name: "" // New field for dropdown selection
   };
   currentCourseData.sections[sectionIndex].lessons.push(lesson);
   renderCourseStructure();
 }
+
+// Function to handle pattern selection in dropdown
+async function handlePatternSelect(selectEl, sIdx, lIdx) {
+  const patternName = selectEl.value;
+  if (!patternName) return;
+
+  try {
+    let patternData = null;
+
+    if (currentUser) {
+      patternData = await dbLoadPatternByName(patternName);
+    } else {
+      const saved = getSavedPatterns();
+      patternData = saved[patternName];
+    }
+
+    if (patternData) {
+      // SNAPSHOT: Store the full JSON in the lesson
+      currentCourseData.sections[sIdx].lessons[lIdx].pattern_json = patternData;
+      currentCourseData.sections[sIdx].lessons[lIdx].pattern_name = patternName;
+
+      // Visual Feedback
+      const btn = selectEl.nextElementSibling; // The 'Update' button
+      if (btn) {
+        const originalText = btn.textContent;
+        btn.textContent = "Loaded!";
+        setTimeout(() => btn.textContent = originalText, 1500);
+      }
+    } else {
+      alert("Could not load pattern data. It may have been deleted.");
+    }
+  } catch (err) {
+    console.error("Error loading pattern for lesson:", err);
+    alert("Error loading pattern data.");
+  }
+}
+
 
 // Function to handle remove click (2-step verification)
 function handleRemoveClick(btn, sIdx, lIdx) {
@@ -40,11 +96,6 @@ function handleRemoveClick(btn, sIdx, lIdx) {
       }
     }, 3000);
   }
-}
-
-// Function to remove a lesson
-function removeLesson(sectionIndex, lessonIndex) {
-  // Deprecated in favor of handleRemoveClick
 }
 
 // Function to add a new section
@@ -73,17 +124,29 @@ function renderCourseStructure() {
     `;
 
     section.lessons.forEach((lesson, lIdx) => {
+      // Generate Pattern Options
+      const patternOptions = availablePatterns.map(name =>
+        `<option value="${name}" ${lesson.pattern_name === name ? 'selected' : ''}>${name}</option>`
+      ).join('');
+
       const lessonEl = document.createElement('div');
       lessonEl.className = 'lesson-builder';
       lessonEl.innerHTML = `
         <input type="text" value="${lesson.title}" placeholder="Lesson Title" onchange="currentCourseData.sections[${sIdx}].lessons[${lIdx}].title = this.value">
         <textarea placeholder="Description" onchange="currentCourseData.sections[${sIdx}].lessons[${lIdx}].description = this.value">${lesson.description}</textarea>
         <input type="text" value="${lesson.video_url}" placeholder="YouTube URL" onchange="currentCourseData.sections[${sIdx}].lessons[${lIdx}].video_url = this.value">
-        <div class="lesson-meta">
-          <span>Pattern Captured ✓</span>
-          <div class="lesson-actions">
-            <button class="remove-btn" onclick="handleRemoveClick(this, ${sIdx}, ${lIdx})">Remove</button>
-            <button class="small-btn" onclick="capturePatternForLesson(${sIdx}, ${lIdx})">Update to Current Groove</button>
+        
+        <div class="lesson-meta" style="display:block; margin-top:12px;">
+          <div style="font-size:12px; font-weight:600; color:var(--text); opacity:0.7; margin-bottom:6px;">ASSOCIATED PATTERN</div>
+          <div style="display:flex; gap:10px; align-items:center; margin-bottom:12px;">
+            <select class="pattern-select" onchange="handlePatternSelect(this, ${sIdx}, ${lIdx})" style="flex:1; padding:8px 12px; border-radius:8px; border:1px solid var(--panel-border); background:var(--bg); color:var(--text);">
+              <option value="">-- Capture Current Grid --</option>
+              ${patternOptions}
+            </select>
+          </div>
+
+          <div class="lesson-actions" style="justify-content:flex-end;">
+            <button class="remove-btn" onclick="handleRemoveClick(this, ${sIdx}, ${lIdx})">Remove Lesson</button>
           </div>
         </div>
       `;
@@ -95,7 +158,10 @@ function renderCourseStructure() {
 }
 
 function capturePatternForLesson(sIdx, lIdx) {
+  // Manual capture fallback
   currentCourseData.sections[sIdx].lessons[lIdx].pattern_json = serializePattern();
+  currentCourseData.sections[sIdx].lessons[lIdx].pattern_name = ""; // Clear name since it's manual
+  renderCourseStructure(); // Re-render to show "Capture Current Grid" selected
   alert("Lesson pattern updated to current grid state!");
 }
 
@@ -106,7 +172,9 @@ const courseModal = document.getElementById('courseModal');
 const openCourseBtn = document.getElementById('openCourseModalBtn');
 const closeCourseBtn = document.getElementById('closeCourseModal');
 
-function openCourseCreator() {
+async function openCourseCreator() {
+  await loadPatternOptions(); // Fetch patterns before opening
+
   courseModal.classList.add('open');
   courseModal.setAttribute('aria-hidden', 'false');
   // Initialize with one empty section if new
@@ -116,7 +184,9 @@ function openCourseCreator() {
   renderCourseStructure();
 }
 
-window.loadCourseToEdit = function (course) {
+window.loadCourseToEdit = async function (course) {
+  await loadPatternOptions(); // Fetch patterns first
+
   currentCourseData = JSON.parse(JSON.stringify(course)); // Deep copy to avoid mutating original
   document.getElementById('courseTitle').value = course.title;
   document.getElementById('courseDesc').value = course.description;
@@ -248,6 +318,7 @@ saveCourseBtn?.addEventListener('click', async () => {
         description: lesson.description || "",
         video_url: lesson.video_url || "",
         pattern_json: lesson.pattern_json,
+        // Also could save pattern_name if we added a column, but sticking to JSON logic for now
         order_index: lIdx
       }));
 
