@@ -281,6 +281,11 @@ function tick() {
   // we need to use the index before we increment 'step'
   transcriptionIndex = step;
 
+  // Update Presentation View if active
+  if (typeof updatePresentationView === 'function') {
+    updatePresentationView(step);
+  }
+
   const totalSteps = measures * STEPS;
   step = (step + 1) % totalSteps;
 }

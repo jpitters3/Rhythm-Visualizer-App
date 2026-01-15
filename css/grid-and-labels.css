@@ -235,9 +235,9 @@
 }
 
 /* ===== MULTI-MEASURE WRAP ===== */
-.measures {
+/* .measures {
   max-width: 900px;
-}
+} */
 
 /* One measure = (labels row + grid row) + a + button column */
 .measure {

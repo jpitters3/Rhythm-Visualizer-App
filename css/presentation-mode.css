@@ -1,14 +1,15 @@
 /* ===== PRESENTATION MODE ===== */
 body.present {
-    padding: 0;
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;   /* vertical centering */
-    /* horizontal centering */
-    /* align-items: center;        */
-    margin: auto;
-    /* width: 50%; */
+  padding: 0;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  /* vertical centering */
+  /* horizontal centering */
+  /* align-items: center;        */
+  margin: auto;
+  /* width: 50%; */
 
 }
 
@@ -32,7 +33,9 @@ body.present .grid {
   gap: 16px;
 }
 
-body.present .cell .inner { font-size: 44px; }
+body.present .cell .inner {
+  font-size: 44px;
+}
 
 .present-exit {
   position: fixed;
@@ -47,7 +50,7 @@ body.present .cell .inner { font-size: 44px; }
   color: var(--text);
   cursor: pointer;
   font-weight: 600;
-  box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
 }
 
 body.present .present-exit {
@@ -57,7 +60,218 @@ body.present .present-exit {
 }
 
 @media (max-width: 600px) {
-  body.present .labels { font-size: 22px; }
-  body.present .cell .inner { font-size: 36px; }
-  body.present .grid { gap: 12px; }
+  body.present .labels {
+    font-size: 22px;
+  }
+
+  body.present .cell .inner {
+    font-size: 36px;
+  }
+
+  body.present .grid {
+    gap: 12px;
+  }
+}
+
+/* Vertical Scrolling Presentation Layout - FIXED SLOTS */
+body.present #measures {
+  position: relative !important;
+  display: block !important;
+  height: 100vh;
+  /* Full height */
+  overflow: hidden;
+  /* Mask only the very top to fade out exiting measures, keep current measure (at 74%) fully visible */
+  mask-image: linear-gradient(to top, black 85%, transparent 98%);
+  -webkit-mask-image: linear-gradient(to top, black 85%, transparent 98%);
+  width: 100%;
+  /* Ensure full width */
+}
+
+/* Base Measure Row Style (Hidden/Off-screen) */
+body.present .measure-row {
+  position: absolute;
+  left: 50%;
+  bottom: -100px;
+  /* Start below screen */
+  transform: translateX(-50%) scale(0.8);
+  opacity: 0;
+  pointer-events: none;
+  transition: all 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+  display: block !important;
+  /* Always valid DOM, just visual hidden */
+  min-width: 400px;
+}
+
+/* ==== PRESENTATION MODE LAYOUT (in order of appearance) ==== */
+/* ==== PRESENTATION MODE LAYOUT (in order of appearance) ==== */
+/* ==== PRESENTATION MODE LAYOUT (in order of appearance) ==== */
+
+/* SLOT 3: Next+1 Measure */
+body.present .measure-row.next-measure-2 {
+  bottom: 90%;
+  opacity: 0.2;
+  transform: translateX(-50%) scale(0.8);
+  z-index: 1;
+  width: 400px;
+}
+
+/* SLOT 2: Next Measure */
+body.present .measure-row.next-measure {
+  bottom: 84%;
+  opacity: 0.6;
+  transform: translateX(-50%) scale(0.9);
+  z-index: 5;
+  width: 450px;
+}
+
+/* Static Header Styles */
+body.present .static-labels {
+  position: fixed;
+  bottom: 70%;
+  /* Just above the current measure (which is at 50%) + gap */
+  left: 50%;
+  transform: translateX(-50%) scale(1.1);
+  /* Match current measure scale */
+  width: 600px;
+  /* Match current measure width */
+  display: grid !important;
+  grid-template-columns: repeat(var(--cols, 16), 1fr);
+  gap: 12px;
+  text-align: center;
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--text);
+  z-index: 20;
+  pointer-events: none;
+}
+
+body.present .static-labels div {
+  text-align: center;
+}
+
+/* SLOT 1: Current Measure (Raised to proper hover position) */
+body.present .measure-row.current-measure {
+  bottom: 74%;
+  opacity: 1;
+  transform: translateX(-50%) scale(1.1);
+  z-index: 10;
+  filter: drop-shadow(0 10px 30px rgba(0, 0, 0, 0.3));
+  width: 600px;
+}
+
+/* Position Handpan at Bottom Center */
+body.present .handpan-panel {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%) translateY(100%);
+  /* Scale down slightly to fit */
+  z-index: 1;
+  /* BEHIND the measures (which are 5, 10 etc) */
+  background: transparent;
+  box-shadow: none;
+  border: none;
+  display: flex !important;
+  flex-direction: column;
+  align-items: center;
+  width: auto;
+  pointer-events: none;
+  /* Let clicks pass through if needed */
+}
+
+/* Override Main Layout to remove Side-by-Side */
+body.present .main {
+  display: block !important;
+  /* Stack vertically */
+  width: 100%;
+}
+
+/* ==== END PRESENTATION MODE LAYOUT (in order of appearance) ==== */
+/* ==== END PRESENTATION MODE LAYOUT (in order of appearance) ==== */
+/* ==== END PRESENTATION MODE LAYOUT (in order of appearance) ==== */
+
+body.present .left {
+  width: 100%;
+  float: none;
+  margin: 0;
+}
+
+body.present .measure-tools {
+  display: none !important;
+}
+
+/* Fix Centering: Hide the "Add Measure" button and its grid column */
+body.present .measure {
+  grid-template-columns: repeat(var(--cols, 16), 1fr) !important;
+  /* Remove 'auto' column */
+  width: 100%;
+  justify-content: center;
+}
+
+body.present .add-measure {
+  display: none !important;
+}
+
+body.present .current-measure .sub-dot {
+  width: 30px;
+  height: 30px;
+  font-size: 24px;
+}
+
+body.present .next-measure .sub-dot {
+  width: 20px;
+  height: 20px;
+  font-size: 14px;
+}
+
+body.present .next-measure-2 .sub-dot {
+  width: 10px;
+  height: 10px;
+  font-size: 8px;
+}
+
+body.present .handpan-header,
+body.present .hp-settings-panel,
+body.present #ghostNoteSection,
+body.present .lesson-panel {
+  display: none !important;
+  /* Hide extra handpan UI, just show image */
+}
+
+/* Ensure handpan image is visible and centered */
+body.present .handpan-wrap {
+  margin: 0;
+  padding: 0;
+}
+
+/* Hide headers/labels in presentation for cleaner look? 
+   Or keep them. The prompt didn't say to hide them, but usually "Guitar Hero" is clean.
+   Let's keep them but maybe style them down if needed. 
+   For now, existing logic keeps them.
+*/
+body.present .measure-header {
+  display: none !important;
+}
+
+/* HIDE per-measure labels */
+body.present .labels {
+  display: none !important;
+}
+
+/* FORCE DESKTOP GRID LAYOUT IN PRESENTATION MODE */
+body.present .grid,
+body.present .grid.playback-mode {
+  /* Override the mobile 'repeat(4, 1fr)' or 'repeat(8, 1fr)' */
+  grid-template-columns: repeat(var(--cols, 16), 1fr) !important;
+  gap: 12px;
+}
+
+/* Reset any other mobile quirks if needed */
+body.present .grid.playback-mode .hand-column.right {
+  margin-bottom: 0;
+  margin-left: 0;
+}
+
+/* Hide horizontal keys/HRs in presentation mode */
+body.present #measures hr {
+  display: none !important;
 }
