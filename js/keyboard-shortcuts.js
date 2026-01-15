@@ -47,7 +47,8 @@ document.addEventListener('keydown', (e) => {
     }
 
     // Course Sidebar
-    if (sidebar?.classList.contains('open')) {
+    const sb = document.getElementById('courseSidebar');
+    if (sb?.classList.contains('open')) {
       closeSidebar();
       return;
     }
