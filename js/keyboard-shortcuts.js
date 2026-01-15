@@ -155,11 +155,15 @@ document.addEventListener('click', (ev) => {
 
   // Clear selection when clicking / tapping anywhere except 
   // on the beat cells, or on the handpan notes while Compose mode is ON
-  let clear = true;
-  if (!ev.target.closest('.cell')) clear = false;
-  if (composeOn && !ev.target.closest('.hp-dot')) clear = false;
+  let shouldClear = true;
 
-  if (clear) clearSelection();
+  if (ev.target.closest('.cell')) shouldClear = false;
+  if (composeOn && ev.target.closest('.hp-dot')) shouldClear = false;
+
+  // Also don't clear if interacting with key UI elements
+  if (ev.target.closest('#aiFab') || ev.target.closest('#aiChatContainer')) shouldClear = false;
+
+  if (shouldClear) clearSelection();
 });
 
 document.addEventListener('click', () => {
