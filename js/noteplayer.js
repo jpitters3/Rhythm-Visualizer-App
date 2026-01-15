@@ -456,6 +456,12 @@ function start() {
   }
 
   ensureAudio();
+
+  // Play from cursor if selected
+  if (typeof caretIndex !== 'undefined' && caretIndex !== null && caretIndex >= 0) {
+    step = caretIndex;
+  }
+
   const id = setInterval(tick, intervalMs());
   timers.push(id);
 
