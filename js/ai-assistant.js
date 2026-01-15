@@ -80,7 +80,6 @@ class AiAssistant {
         if (this.waitingForKey) {
           this.waitingForKey = false;
           this.addMessage("bot", "I've connected to the cloud! How can I help you?");
-          this.addSuggestions();
         }
       }
     } catch (err) {
@@ -96,10 +95,35 @@ class AiAssistant {
       this.addMessage("bot", "Hi! I'm your rhythm assistant. To get started, please sign in so I can access the cloud.");
       this.waitingForKey = true;
     } else {
-      this.addMessage("bot", "Hi! I'm your rhythm assistant. Tell me what kind of section you want.");
-      this.addSuggestions();
+      this.addMessage("bot", "Hi! I'm your rhythm assistant. Tell me what kind of section you want (e.g., 'happy', 'melancholic', 'fast').");
       this.waitingForKey = false;
     }
+  }
+
+  toggleChat(forceState) {
+    if (typeof forceState === 'boolean') {
+      this.isOpen = forceState;
+    } else {
+      this.isOpen = !this.isOpen;
+    }
+
+    if (this.isOpen) {
+      this.chatContainer.classList.add('open');
+      this.input.focus();
+      // Refresh suggestions (remove old, add new to trigger animation)
+      this.refreshSuggestions();
+    } else {
+      this.chatContainer.classList.remove('open');
+    }
+  }
+
+  refreshSuggestions() {
+    // Remove any existing suggestion containers to avoid duplicates/stacking
+    const existing = this.messagesArea.querySelectorAll('.suggestion-chips');
+    existing.forEach(el => el.remove());
+
+    // Add fresh suggestions
+    this.addSuggestions();
   }
 
   addSuggestions() {
@@ -131,32 +155,6 @@ class AiAssistant {
 
     this.messagesArea.appendChild(container);
     this.messagesArea.scrollTop = this.messagesArea.scrollHeight;
-  }
-
-  toggleChat(forceState) {
-    if (typeof forceState === 'boolean') {
-      this.isOpen = forceState;
-    } else {
-      this.isOpen = !this.isOpen;
-    }
-
-    if (this.isOpen) {
-      this.chatContainer.classList.add('open');
-      this.input.focus();
-      // Refresh suggestions (remove old, add new to trigger animation)
-      this.refreshSuggestions();
-    } else {
-      this.chatContainer.classList.remove('open');
-    }
-  }
-
-  refreshSuggestions() {
-    // Remove any existing suggestion containers to avoid duplicates/stacking
-    const existing = this.messagesArea.querySelectorAll('.suggestion-chips');
-    existing.forEach(el => el.remove());
-
-    // Add fresh suggestions
-    this.addSuggestions();
   }
 
   handleSend() {
