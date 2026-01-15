@@ -90,10 +90,10 @@ async function loadSharedFromURL() {
     return false;
   }
 
-  // Public read: works even when logged out (because of SELECT policy)
+  // Public read
   const { data, error } = await supabase1
     .from('shared_patterns')
-    .select('pattern_json,name')
+    .select('pattern_json, name, owner_id')  // Added owner_id
     .eq('share_id', share)
     .eq('is_public', true)
     .maybeSingle();
@@ -110,9 +110,19 @@ async function loadSharedFromURL() {
 
   applyPattern(data.pattern_json);
 
+  // Fetch creator name
+  let creatorName = "Unknown";
+  if (data.owner_id) {
+    // try global function
+    if (window.getProfileById) {
+      const p = await getProfileById(data.owner_id);
+      if (p?.username) creatorName = p.username;
+    }
+  }
+
   // Show banner
   viewingShared = true;
-  sharedMeta = { shareId: share, name: data?.name || null };
+  sharedMeta = { shareId: share, name: data?.name || null, creator: creatorName }; // added creator
   updateSharedUI();
 
   clearSelection?.();
@@ -133,14 +143,15 @@ const sharedBannerSub = document.getElementById('sharedBannerSub');
 const sharedSaveCopyBtn = document.getElementById('sharedSaveCopyBtn');
 const sharedExitBtn = document.getElementById('sharedExitBtn');
 
-function updateSharedUI(){
+function updateSharedUI() {
   if (!sharedBanner) return;
 
   sharedBanner.style.display = viewingShared ? 'flex' : 'none';
 
   if (viewingShared) {
     const nm = sharedMeta?.name ? `"${sharedMeta.name}"` : 'this pattern';
-    sharedBannerSub.textContent = `You can play and edit locally. Use “Save a copy” to keep it. (${nm})`;
+    const by = sharedMeta?.creator && sharedMeta.creator !== 'Unknown' ? ` by ${sharedMeta.creator}` : '';
+    sharedBannerSub.textContent = `You can play and edit locally. Use “Save a copy” to keep it. (${nm}${by})`;
 
     // Make shared view “read-only” in terms of destructive pattern management
     // (still allows Export/Import and other app features)

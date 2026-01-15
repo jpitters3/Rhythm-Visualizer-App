@@ -6,30 +6,59 @@ document.addEventListener('keydown', (e) => {
   // Esc
   if (e.key === 'Escape') {
 
-    // 1. Check Groove Modal
+    // 0. Priorities: Top-most overlays first
+
+    // Guided Calibration
+    const guided = document.getElementById('guidedCalModal');
+    if (guided && guided.style.display !== 'none') {
+      document.getElementById('closeGuidedBtn')?.click();
+      return;
+    }
+
+    // Profile Modal
+    if (typeof closeProfileEditor === 'function' && document.getElementById('profileModal')?.classList.contains('open')) {
+      closeProfileEditor();
+      return;
+    }
+
+    // Auth Modal
+    if (typeof closeAuthModal === 'function' && document.getElementById('authModal')?.classList.contains('open')) {
+      closeAuthModal();
+      return;
+    }
+
+    // Groove Modal
     if (grooveModal.classList.contains('open')) {
       closeGrooveModal();
       return;
     }
 
-    // 2. Check Course Modal
+    // Course Creator Modal
     if (courseModal?.classList.contains('open')) {
-      closeCourseCreator(); // Defined in course-creator.js
+      // Logic from course-creator.js
+      if (typeof closeCourseCreator === 'function') closeCourseCreator();
       return;
     }
 
-    // 3. Check Course Sidebar
+    // AI Assistant
+    if (window.aiAssistant && window.aiAssistant.isOpen) {
+      window.aiAssistant.toggleChat(false);
+      return;
+    }
+
+    // Course Sidebar
     if (sidebar?.classList.contains('open')) {
       closeSidebar();
       return;
     }
 
-    // Other Esc actions
+    // Presentation Mode
     if (document.body.classList.contains('present')) {
       setPresentation(false);
       return;
     }
 
+    // Clear Selection
     clearSelection();
     clearRange();
     return;
