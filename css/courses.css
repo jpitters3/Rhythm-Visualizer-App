@@ -52,9 +52,10 @@ body.dark .sidebar {
   font-weight: 800;
   letter-spacing: -0.5px;
 
-  /* LIGHT: Gold Gradient */
-  background: linear-gradient(135deg, #d4a017, #f39c12);
+  /* LIGHT: Indigo Gradient (Replaced Gold) */
+  background: linear-gradient(135deg, #6366f1, #8e44ad);
   -webkit-background-clip: text;
+  background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
@@ -62,6 +63,7 @@ body.dark .sidebar-header h3 {
   /* DARK: Indigo Gradient */
   background: linear-gradient(135deg, #fff, #a5b4fc);
   -webkit-background-clip: text;
+  background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
@@ -84,9 +86,10 @@ body.dark .sidebar-header h3 {
 }
 
 .browse-icon-btn:hover {
-  background: rgba(255, 201, 71, 0.2);
-  border-color: #f1c40f;
-  color: #d35400;
+  background: rgba(99, 102, 241, 0.15);
+  /* Indigo tint */
+  border-color: #6366f1;
+  color: #4f46e5;
   transform: translateY(-1px);
 }
 
@@ -129,9 +132,9 @@ body.dark .sidebar-search {
 }
 
 #courseSearchInput:focus {
-  border-color: #f1c40f;
+  border-color: #6366f1;
   background: #fff;
-  box-shadow: 0 0 0 3px rgba(241, 196, 15, 0.2);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
 }
 
 body.dark #courseSearchInput {
@@ -192,8 +195,8 @@ body.dark .empty-courses p {
 }
 
 .browse-big-btn {
-  /* LIGHT: Yellow/Orange Gradient */
-  background: linear-gradient(135deg, #f1c40f, #d35400);
+  /* LIGHT: Indigo/Purple Gradient */
+  background: linear-gradient(135deg, #6366f1, #8e44ad);
   color: white;
   border: none;
   padding: 14px 28px;
@@ -201,13 +204,13 @@ body.dark .empty-courses p {
   font-weight: 700;
   font-size: 14px;
   cursor: pointer;
-  box-shadow: 0 10px 25px rgba(243, 156, 18, 0.3);
+  box-shadow: 0 10px 25px rgba(99, 102, 241, 0.3);
   transition: all 0.3s;
 }
 
 .browse-big-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 15px 35px rgba(243, 156, 18, 0.4);
+  box-shadow: 0 15px 35px rgba(99, 102, 241, 0.4);
   filter: brightness(1.05);
 }
 
@@ -239,10 +242,10 @@ body.dark .course-item {
 
 /* --- ACTIVE --- */
 .course-item.active {
-  /* LIGHT: Yellow Glow */
-  border-color: #f1c40f;
-  background: linear-gradient(180deg, rgba(241, 196, 15, 0.1) 0%, rgba(241, 196, 15, 0.02) 100%);
-  box-shadow: 0 4px 20px rgba(243, 156, 18, 0.15);
+  /* LIGHT: Indigo Glow (Replaced Gold) */
+  border-color: #6366f1;
+  background: linear-gradient(180deg, rgba(99, 102, 241, 0.1) 0%, rgba(99, 102, 241, 0.02) 100%);
+  box-shadow: 0 4px 20px rgba(99, 102, 241, 0.15);
 }
 
 body.dark .course-item.active {
@@ -293,9 +296,9 @@ body.dark .course-header h4 {
 
 /* Active Header Text */
 .course-item.active .course-header h4 {
-  color: #d35400;
-  /* Dark Orange/Gold */
-  text-shadow: 0 0 10px rgba(243, 156, 18, 0.2);
+  color: #4f46e5;
+  /* Dark Indigo */
+  text-shadow: 0 0 10px rgba(99, 102, 241, 0.2);
 }
 
 body.dark .course-item.active .course-header h4 {
@@ -377,9 +380,9 @@ body.dark .lesson-link:hover {
 }
 
 .lesson-link.active-lesson {
-  background: rgba(241, 196, 15, 0.1);
-  border-left-color: #f1c40f;
-  color: #d35400;
+  background: rgba(99, 102, 241, 0.1);
+  border-left-color: #6366f1;
+  color: #4f46e5;
   font-weight: 600;
 }
 
@@ -403,7 +406,7 @@ body.dark .lesson-link.active-lesson {
 .lesson-link.active-lesson::after {
   opacity: 1;
   transform: translateX(0);
-  color: #f39c12;
+  color: #6366f1;
 }
 
 body.dark .lesson-link:hover::after,
