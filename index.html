@@ -99,6 +99,7 @@
   <link rel="stylesheet" href="./css/bloom-animation.css">
   <link rel="stylesheet" href="./css/ai-assistant.css">
   <link rel="stylesheet" href="css/profile.css">
+  <link rel="stylesheet" href="css/feed.css">
 </head>
 
 <body>
@@ -129,6 +130,7 @@
         </div>
 
         <button id="shareBtn" title="Create a share link (public)">Share</button>
+        <button id="communityBtn" class="primary-btn" title="Browse Community Rhythms">Community</button>
       </div>
       <div class="pattern-row grid-child account">
         <div class="dropdown account-dropdown">
@@ -452,6 +454,25 @@
     </div>
   </div>
 
+  <!-- Community Feed Modal -->
+  <div id="feedModal" class="modal-overlay" aria-hidden="true">
+    <div class="modal feed-modal">
+      <div class="feed-header">
+        <h2 class="feed-title">Community Compositions</h2>
+        <button id="closeFeedBtn" class="close-btn">&times;</button>
+      </div>
+      <div class="feed-tabs">
+        <button class="feed-tab active" data-filter="newest">Newest</button>
+        <button class="feed-tab" data-filter="top">Top Rated</button>
+        <button class="feed-tab" data-filter="mine">My Shares</button>
+      </div>
+      <div id="feedGrid" class="feed-grid">
+        <!-- Feed items will be injected here -->
+        <div class="loading-spinner">Loading...</div>
+      </div>
+    </div>
+  </div>
+
   <!-- Guided Calibration Modal -->
   <div id="guidedCalModal" class="modal-overlay" style="display: none;">
     <div class="modal-content">
@@ -688,6 +709,7 @@
   <script src="./js/courses.js?v=4"></script>
   <script src="./js/init.js?v=4"></script><!-- keep near bottom -->
   <script src="./js/ai-assistant.js?v=4"></script>
+  <script src="./js/feed.js?v=4"></script>
 
 
 </body>

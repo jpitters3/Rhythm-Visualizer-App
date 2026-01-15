@@ -30,19 +30,19 @@ async function upsertSharedPattern() {
   if (!name) return null;
 
   const row = {
-    owner_id: currentUser.id,
+    user_id: currentUser.id, // Renamed from owner_id
+    profile_id: currentUser.id, // Matches profiles.user_id
     name: name.trim(),
     pattern_json: serializePattern(),
     is_public: true,
   };
 
-  // Try update existing share for same owner+name (via unique index)
+  // Try update existing share for same user+name (via unique index)
   // If it doesn't exist, create a new one with a new share_id.
-  // We do this in two steps so share_id stays stable once created.
   const { data: existing, error: exErr } = await supabase1
     .from('shared_patterns')
     .select('share_id')
-    .eq('owner_id', currentUser.id)
+    .eq('user_id', currentUser.id)
     .eq('name', row.name)
     .maybeSingle();
 
@@ -54,7 +54,7 @@ async function upsertSharedPattern() {
 
   const { error } = await supabase1
     .from('shared_patterns')
-    .upsert({ ...row, share_id }, { onConflict: 'owner_id,name' });
+    .upsert({ ...row, share_id }, { onConflict: 'user_id,name' });
 
   if (error) {
     console.error('Share upsert error:', error);
@@ -93,7 +93,7 @@ async function loadSharedFromURL() {
   // Public read
   const { data, error } = await supabase1
     .from('shared_patterns')
-    .select('pattern_json, name, owner_id')  // Added owner_id
+    .select('pattern_json, name, user_id')  // Renamed from owner_id
     .eq('share_id', share)
     .eq('is_public', true)
     .maybeSingle();
@@ -112,10 +112,10 @@ async function loadSharedFromURL() {
 
   // Fetch creator name
   let creatorName = "Unknown";
-  if (data.owner_id) {
+  if (data.user_id) {
     // try global function
     if (window.getProfileById) {
-      const p = await getProfileById(data.owner_id);
+      const p = await getProfileById(data.user_id);
       if (p?.username) creatorName = p.username;
     }
   }
