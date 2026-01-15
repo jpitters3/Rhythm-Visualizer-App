@@ -16,6 +16,14 @@ function setupDropdown(btn, menu) {
     e.stopPropagation();
     menu.classList.toggle('show');
   });
+
+  // Auto-close when an item is clicked
+  menu.addEventListener('click', (e) => {
+    // If the clicked element is a button or inside one
+    if (e.target.tagName === 'BUTTON' || e.target.closest('button')) {
+      menu.classList.remove('show');
+    }
+  });
 }
 
 setupDropdown(dropdownBtn, dropdownMenu);

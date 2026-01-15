@@ -186,6 +186,13 @@ accountBtn?.addEventListener('click', (e) => {
   }
 });
 
+// Auto-close Account Dropdown on Item Click
+accountDropdownMenu?.addEventListener('click', (e) => {
+  if (e.target.tagName === 'BUTTON' || e.target.closest('button')) {
+    accountDropdownMenu.classList.remove('show');
+  }
+});
+
 // "Account Settings" from dropdown
 document.getElementById('openAccountAuthBtn')?.addEventListener('click', () => {
   accountDropdownMenu?.classList.remove('show');
@@ -193,11 +200,19 @@ document.getElementById('openAccountAuthBtn')?.addEventListener('click', () => {
 });
 
 authCancel?.addEventListener('click', closeAuthModal);
+document.getElementById('closeAuthBtn')?.addEventListener('click', closeAuthModal);
 
 // Close dropdown when clicking outside
 window.addEventListener('click', (e) => {
   if (accountBtn && accountDropdownMenu && !accountBtn.contains(e.target) && !accountDropdownMenu.contains(e.target)) {
     accountDropdownMenu.classList.remove('show');
+  }
+});
+
+// Close Auth Modal when clicking outside (overlay)
+authModal?.addEventListener('click', (e) => {
+  if (e.target === authModal) {
+    closeAuthModal();
   }
 });
 

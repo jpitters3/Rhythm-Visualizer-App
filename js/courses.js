@@ -86,7 +86,14 @@ function renderCourseSidebar(courses) {
     btn.className = 'browse-icon-btn';
     btn.onclick = () => window.openMarketplace();
     btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M12 8v8m-4-4h8"></path></svg> Marketplace`;
-    header.appendChild(btn);
+
+    // Insert before the close button so 'X' is always on the right
+    const closeBtn = document.getElementById('closeSidebar');
+    if (closeBtn) {
+      header.insertBefore(btn, closeBtn);
+    } else {
+      header.appendChild(btn); // Fallback
+    }
   }
 
   // 2. Sort: Active Course First
@@ -101,6 +108,14 @@ function renderCourseSidebar(courses) {
     return 0;
   });
 
+  // --- FLIP ANIMATION: PRE-CALCULATE ---
+  const firstPositions = {};
+  const currentItems = list.querySelectorAll('.course-item');
+  currentItems.forEach(item => {
+    const id = item.getAttribute('data-id');
+    if (id) firstPositions[id] = item.getBoundingClientRect().top;
+  });
+
   // 3. Render
   list.innerHTML = sortedCourses.map(course => {
     const isActive = course.id === activeCourseId;
@@ -108,7 +123,7 @@ function renderCourseSidebar(courses) {
     if (isActive) {
       // === EXPANDED (ACTIVE) ===
       return `
-        <div class="course-item active">
+        <div class="course-item active" data-id="${course.id}">
           <div class="course-header">
             <h4>${course.title}</h4>
              <div class="edit-course" onclick="editCourse('${course.id}')" title="Edit Course">
@@ -130,7 +145,7 @@ function renderCourseSidebar(courses) {
     } else {
       // === COLLAPSED (INACTIVE) ===
       return `
-        <div class="course-item collapsed" onclick="setActiveCourse('${course.id}')">
+        <div class="course-item collapsed" data-id="${course.id}" onclick="setActiveCourse('${course.id}')">
           <div class="course-header">
             <h4>${course.title}</h4>
             <span class="collapsed-hint">Click to expand</span>
@@ -139,6 +154,41 @@ function renderCourseSidebar(courses) {
       `;
     }
   }).join('');
+
+  // --- FLIP ANIMATION: PLAY ---
+  const newItems = list.querySelectorAll('.course-item');
+  newItems.forEach(item => {
+    const id = item.getAttribute('data-id');
+    const oldTop = firstPositions[id];
+
+    if (oldTop !== undefined) {
+      const newTop = item.getBoundingClientRect().top;
+      const delta = oldTop - newTop;
+
+      if (Math.abs(delta) > 0) {
+        // Invert: fake position to be where it was
+        item.style.transform = `translateY(${delta}px)`;
+        item.style.transition = 'none';
+
+        // Play: slide to new position
+        requestAnimationFrame(() => {
+          // Force layout
+          item.getBoundingClientRect();
+          item.style.transition = 'transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1)';
+          item.style.transform = '';
+        });
+      }
+    } else {
+      // Item is new (e.g. just unlocked), maybe fade it in?
+      item.style.opacity = '0';
+      item.style.transform = 'translateY(10px)';
+      requestAnimationFrame(() => {
+        item.style.transition = 'all 0.4s ease';
+        item.style.opacity = '1';
+        item.style.transform = '';
+      });
+    }
+  });
 }
 
 async function setActiveCourse(courseId) {
