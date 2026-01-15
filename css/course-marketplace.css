@@ -1,0 +1,173 @@
+.marketplace-modal {
+  width: 90%;
+  max-width: 900px;
+  height: 85vh;
+  padding: 30px;
+  display: flex;
+  flex-direction: column;
+}
+
+.market-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 5px;
+}
+
+.market-title {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text);
+  background: linear-gradient(135deg, #6366f1, #8e44ad);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.market-subtitle {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin-bottom: 25px;
+}
+
+.market-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 20px;
+  overflow-y: auto;
+  padding-bottom: 20px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) transparent;
+}
+
+/* CARD STYLES */
+.market-card {
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  border-radius: 16px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.2s, box-shadow 0.2s;
+  position: relative;
+}
+
+.market-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+  border-color: #c7d2fe;
+  /* Indigo 200 */
+}
+
+.market-card.premium {
+  border: 1px solid rgba(255, 215, 0, 0.3);
+}
+
+.market-card.premium:hover {
+  border-color: #ffd700;
+  box-shadow: 0 8px 25px rgba(255, 215, 0, 0.15);
+}
+
+.card-thumb {
+  width: 100%;
+  height: 140px;
+  background-color: #eee;
+  background-size: cover;
+  background-position: center;
+  position: relative;
+}
+
+/* Badge for Paid/Free */
+.price-badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: rgba(0, 0, 0, 0.75);
+  color: white;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 700;
+  backdrop-filter: blur(4px);
+}
+
+.price-badge.free {
+  background: rgba(46, 204, 113, 0.9);
+  /* Green */
+}
+
+.price-badge.paid {
+  background: rgba(241, 196, 15, 0.9);
+  /* Gold */
+  color: black;
+}
+
+.card-content {
+  padding: 16px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.card-title {
+  margin: 0 0 8px 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.3;
+}
+
+.card-desc {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-bottom: 16px;
+  line-height: 1.4;
+  flex: 1;
+  /* Pushes button down */
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.market-btn {
+  width: 100%;
+  padding: 10px;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.market-btn.get {
+  background: #6366f1;
+  /* Indigo */
+  color: white;
+}
+
+.market-btn.get:hover {
+  background: #4f46e5;
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+}
+
+.market-btn.buy {
+  background: linear-gradient(135deg, #f1c40f, #f39c12);
+  color: black;
+}
+
+.market-btn.buy:hover {
+  filter: brightness(1.1);
+}
+
+.market-btn.owned {
+  background: var(--panel-border);
+  color: var(--text-secondary);
+  cursor: default;
+}
+
+.market-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}

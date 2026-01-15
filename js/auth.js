@@ -70,7 +70,7 @@ const authLogoutDropdown = document.getElementById('authLogoutDropdown');
 function updateAccountUI() {
   if (!accountStatus) return;
   if (currentUser) {
-    // accountStatus.textContent = `${currentUser.email}`;
+    if (accountStatus) accountStatus.textContent = ''; // Clear "Not signed in"
     // Set button text to first letter of email
     if (accountBtn) accountBtn.textContent = currentUser.email.charAt(0).toUpperCase();
 
@@ -201,12 +201,43 @@ window.addEventListener('click', (e) => {
   }
 });
 
+// Logout Cleanup
+function performLogoutCleanup() {
+  // 1. Close Sidebar
+  if (typeof closeSidebar === 'function') {
+    closeSidebar();
+  } else {
+    // Fallback if function not global
+    const sb = document.getElementById('courseSidebar');
+    if (sb) {
+      sb.classList.remove('open');
+      sb.setAttribute('aria-hidden', 'true');
+    }
+  }
+
+  // 2. Close all other modals (except Auth)
+  const modals = document.querySelectorAll('.modal-overlay');
+  modals.forEach(modal => {
+    if (modal.id !== 'authModal') {
+      // Handle various hiding mechanisms used in the app
+      modal.classList.remove('open');
+      modal.setAttribute('aria-hidden', 'true');
+      if (modal.style.display === 'block' || modal.style.display === 'flex') {
+        modal.style.display = 'none';
+      }
+    }
+  });
+
+  // Specific check for any other floating panels if needed
+}
+
 authLogoutDropdown?.addEventListener('click', async () => {
   await supabase1.auth.signOut();
   currentUser = null;
   updateAccountUI();
   updateAdminUI();
   initScale();
+  performLogoutCleanup();
   authHint.textContent = 'Signed out.';
   accountDropdownMenu?.classList.remove('show');
 });
@@ -380,6 +411,7 @@ authLogout?.addEventListener('click', async () => {
   updateAccountUI();
   updateAdminUI();
   initScale();
+  performLogoutCleanup();
   authHint.textContent = 'Signed out.';
   accountDropdownMenu?.classList.remove('show');
 });

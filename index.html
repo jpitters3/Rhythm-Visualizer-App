@@ -104,6 +104,7 @@
   <link rel="stylesheet" href="./css/ai-assistant.css">
   <link rel="stylesheet" href="css/profile.css">
   <link rel="stylesheet" href="css/feed.css">
+  <link rel="stylesheet" href="css/course-marketplace.css">
 </head>
 
 <body>
@@ -480,6 +481,21 @@
     </div>
   </div>
 
+  <!-- Course Marketplace Modal -->
+  <div id="marketplaceModal" class="modal-overlay" aria-hidden="true">
+    <div class="modal marketplace-modal">
+      <div class="market-header">
+        <h2 class="market-title">Course Marketplace</h2>
+        <button id="closeMarketBtn" class="close-btn">&times;</button>
+      </div>
+      <div class="market-subtitle">Master the Handpan with premium and free courses.</div>
+      <div id="marketGrid" class="market-grid">
+        <!-- Course Cards injected here -->
+        <div class="loading-spinner">Loading courses...</div>
+      </div>
+    </div>
+  </div>
+
   <!-- Guided Calibration Modal -->
   <div id="guidedCalModal" class="modal-overlay" style="display: none;">
     <div class="modal-content">
@@ -505,7 +521,7 @@
   </div>
 
   <!-- Courses View -->
-  <div id="courseSidebar" class="sidebar">
+  <div id="courseSidebar" class="sidebar" aria-hidden="true">
     <div class="sidebar-header">
       <h3>Course Library</h3>
       <button id="closeSidebar" class="close-btn">&times;</button>
@@ -717,6 +733,7 @@
   <script src="./js/init.js?v=4"></script><!-- keep near bottom -->
   <script src="./js/ai-assistant.js?v=5"></script>
   <script src="./js/feed.js?v=4"></script>
+  <script src="./js/course-marketplace.js?v=1"></script>
 
 
 </body>
