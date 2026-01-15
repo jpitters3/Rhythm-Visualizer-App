@@ -1,7 +1,6 @@
-
 /**
  * AI Assistant Logic
- * Handles chat interaction and simulated pattern generation.
+ * Handles chat interaction and real AI pattern generation using Google Gemini.
  */
 
 class AiAssistant {
@@ -12,14 +11,26 @@ class AiAssistant {
     this.input = document.getElementById('aiInput');
     this.messagesArea = document.querySelector('.ai-messages');
 
+    // API KEY CONFIGURATION
+    // Fetched from Supabase for authenticated users
+    this.dbKey = null;
+
     this.isProcessing = false;
+    this.waitingForKey = false;
 
     this.init();
   }
 
-  init() {
+  async init() {
+    // Try to fetch key immediately if user is already logged in?
+    // We can also retry when they open the chat.
+    await this.fetchApiKeyFromDB();
+
     // Toggle Chat
-    this.cursor?.addEventListener('click', () => this.toggleChat());
+    this.cursor?.addEventListener('click', () => {
+      this.toggleChat();
+      if (!this.dbKey) this.fetchApiKeyFromDB(); // Retry on open
+    });
 
     // Send Message
     document.getElementById('sendAiBtn')?.addEventListener('click', () => this.handleSend());
@@ -33,9 +44,93 @@ class AiAssistant {
     // Initial Welcome
     setTimeout(() => {
       if (this.messagesArea && this.messagesArea.children.length === 0) {
-        this.addMessage("bot", "Hi! I'm your rhythm assistant. Tell me what kind of section you want to add (e.g., 'sad', 'minor', 'upbeat') or if you want to clear the grid.");
+        this.checkApiKeyAndWelcome();
       }
     }, 500);
+  }
+
+  async fetchApiKeyFromDB() {
+    if (this.dbKey) return; // already have it
+
+    // Check if Supabase client exists
+    if (typeof supabase1 === 'undefined') {
+      console.warn("Supabase client not validation yet.");
+      return;
+    }
+
+    // We can only read if authenticated (per our RLS policy)
+    // But currentUser might be null on page load.
+    // We'll try anyway; if RLS fails (null data), we handle it.
+    try {
+      const { data, error } = await supabase1
+        .from('app_config')
+        .select('value')
+        .eq('key', 'gemini_api_key')
+        .maybeSingle();
+
+      if (error) {
+        console.warn("Error fetching AI key:", error.message);
+        return;
+      }
+
+      if (data && data.value) {
+        this.dbKey = data.value;
+        console.log("AI Assistant: API Key loaded from DB");
+        // If we were waiting for a key, update UI
+        if (this.waitingForKey) {
+          this.waitingForKey = false;
+          this.addMessage("bot", "I've connected to the cloud! How can I help you?");
+          this.addSuggestions();
+        }
+      }
+    } catch (err) {
+      console.warn("Exception fetching AI key:", err);
+    }
+  }
+
+  checkApiKeyAndWelcome() {
+    // Priority: DB Key -> Local Storage -> Manual Input
+    const key = this.dbKey || localStorage.getItem('gemini_api_key');
+
+    if (!key) {
+      this.addMessage("bot", "Hi! I'm your rhythm assistant. To get started, please sign in so I can access the cloud.");
+      this.waitingForKey = true;
+    } else {
+      this.addMessage("bot", "Hi! I'm your rhythm assistant. Tell me what kind of section you want.");
+      this.addSuggestions();
+      this.waitingForKey = false;
+    }
+  }
+
+  addSuggestions() {
+    const suggestions = [
+      "Add a happy chord progression with chords on the '1' beat only, and no melody",
+      "Add a sad melody that repeats every 16 beats",
+      "Add an upbeat section"
+    ];
+
+    const container = document.createElement('div');
+    container.className = 'suggestion-chips';
+
+    suggestions.forEach((text, index) => {
+      const chip = document.createElement('div');
+      chip.className = 'suggestion-chip';
+
+      // Stagger animation: 100ms delay per item
+      chip.style.animationDelay = `${index * 0.1}s`;
+
+      chip.textContent = text;
+      chip.title = text;
+      chip.onclick = () => {
+        this.input.value = text;
+        this.handleSend();
+        container.remove(); // Remove suggestions after selection
+      };
+      container.appendChild(chip);
+    });
+
+    this.messagesArea.appendChild(container);
+    this.messagesArea.scrollTop = this.messagesArea.scrollHeight;
   }
 
   toggleChat(forceState) {
@@ -48,17 +143,42 @@ class AiAssistant {
     if (this.isOpen) {
       this.chatContainer.classList.add('open');
       this.input.focus();
+      // Refresh suggestions (remove old, add new to trigger animation)
+      this.refreshSuggestions();
     } else {
       this.chatContainer.classList.remove('open');
     }
+  }
+
+  refreshSuggestions() {
+    // Remove any existing suggestion containers to avoid duplicates/stacking
+    const existing = this.messagesArea.querySelectorAll('.suggestion-chips');
+    existing.forEach(el => el.remove());
+
+    // Add fresh suggestions
+    this.addSuggestions();
   }
 
   handleSend() {
     const text = this.input.value.trim();
     if (!text) return;
 
-    this.addMessage('user', text);
+    // UI: User Message
+    // Mask API key in UI if it looks like one (simple check)
+    if (this.waitingForKey && text.length > 20) {
+      this.addMessage('user', "••••••••••••••••••••");
+    } else {
+      this.addMessage('user', text);
+    }
+
     this.input.value = '';
+
+    if (this.waitingForKey) {
+      localStorage.setItem('gemini_api_key', text);
+      this.waitingForKey = false;
+      this.addMessage('bot', "API Key saved! How can I help you with your composition?");
+      return;
+    }
 
     this.processAiResponse(text);
   }
@@ -86,45 +206,180 @@ class AiAssistant {
 
   async processAiResponse(userText) {
     this.isProcessing = true;
-    // Simulate network delay
-    await new Promise(r => setTimeout(r, 800));
+    const loadingMsg = document.createElement('div');
+    loadingMsg.className = 'message bot loading';
+    loadingMsg.textContent = 'Thinking...';
+    this.messagesArea.appendChild(loadingMsg);
+    this.messagesArea.scrollTop = this.messagesArea.scrollHeight;
 
-    const lower = userText.toLowerCase();
-    let responseText = "";
-    let action = null;
+    try {
+      // 1. Get Key
+      const apiKey = this.dbKey || localStorage.getItem('gemini_api_key');
 
-    if (lower.includes('sad') || lower.includes('minor') || lower.includes('emotional')) {
-      const result = this.generateChordProgression('minor');
-      if (result.success) {
-        responseText = `I've generated a 4-measure ${result.scaleName} chord progression for you.`;
-        action = {
-          type: 'APPEND_PATTERN',
-          label: 'Add to Song',
-          data: result.pattern
-        };
-      } else {
-        responseText = "I couldn't find enough minor chords in the current scale (" + result.scaleName + ") to make a progression.";
+      if (!apiKey) {
+        this.messagesArea.removeChild(loadingMsg);
+
+        // If not logged in, maybe prompt
+        if (!currentUser) {
+          this.addMessage('bot', "Please sign in to use the Cloud Assistant.");
+        } else {
+          this.addMessage('bot', "I couldn't find the configuration. Please check your network or contact admin.");
+          this.waitingForKey = true; // Fallback to asking
+        }
+
+        this.isProcessing = false;
+        return;
       }
-    } else if (lower.includes('clear') || lower.includes('empty') || lower.includes('reset')) {
-      responseText = "Do you want to clear the entire grid?";
-      action = {
-        type: 'CLEAR_GRID',
-        label: 'Clear Grid'
-      };
-    } else if (lower.includes('add section') || lower.includes('extend')) {
-      responseText = "I can add 4 empty measures to the end of your track.";
-      action = {
-        type: 'APPEND_PATTERN',
-        label: 'Add 4 Measures',
-        data: this.getEmptyPattern(4)
-      };
-    }
-    else {
-      responseText = "I'm still learning! Try asking for a 'sad' section or to 'add a section'.";
-    }
 
-    this.addMessage('bot', responseText, action);
-    this.isProcessing = false;
+      // 1. Gather Context
+      const scaleSelect = document.getElementById('scaleSelect');
+      const scaleName = scaleSelect ? scaleSelect.value : "D Kurd";
+      // Ensure SCALES is available
+      const scaleData = (typeof SCALES !== 'undefined') ? SCALES[scaleName] : null;
+      const mapStr = scaleData ? JSON.stringify(scaleData.map) : "Unknown map";
+
+      // 2. Construct Prompt
+      const systemPrompt = `
+You are an expert Handpan composer assistant.
+The user is composing in the scale: ${scaleName}.
+The notes map (Number -> Pitch) is: ${mapStr}. "D" is the Ding (center/bass).
+Valid note labels are: "D", "T" (Tak), "S" (Slap), "1", "2", "3", "4", "5", "6", "7", "8".
+Rest is "".
+
+The format for patterns is a JSON object:
+{
+  "measures": number (usually 4),
+  "labels": Array of (string | Array<string>)
+}
+- "labels" array length must be measures * 16.
+- Each item corresponds to a 16th note step.
+- An item can be a single string (single note) e.g., "1" or "D" or "T".
+- An item can be an array of 4 strings for chords.
+- Chord arrays are defined as [LH-Index, LH-Thumb, RH-Index, RH-Thumb].
+- If a slot in the chord is empty, use "".
+- Chord arrays can be either [value, value, value, ""] or [value, "", value, value].
+- If left index and left thumb are both included, left index must be higher than left thumb, and their values must be no more than 2 apart.
+- If right index and right thumb are both included, right index must be higher than right thumb, and their values must be no more than 2 apart.
+- Don't include the ding (D) in chords.
+- Don't include the tak (T) in chords.
+- Don't include the slap (S) in chords.
+- Example chord: ["4", "2", "6", ""] (Left index plays 4, left thumb plays 2, right index plays 6)
+- Example chord: ["8", "", "5", "3"] (Left index plays 8, right index plays 5, right thumb plays 3)
+
+User Request: "${userText}"
+
+Task: Generate a creative, musical pattern matching the request.
+Output ONLY valid JSON. No markdown formatting.
+`;
+
+      // 3. Call Gemini with Fallback
+      // 3. Call Gemini with Robust Fallback
+      // We try different models and API versions to find one that works.
+      const candidates = [
+        { model: 'gemini-2.5-flash', version: 'v1beta' },
+        { model: 'gemini-2.5-flash-latest', version: 'v1beta' },
+        { model: 'gemini-pro', version: 'v1' }, // Stable v1 often works best for older keys
+        { model: 'gemini-2.5-pro', version: 'v1beta' },
+        { model: 'gemini-2.5-flash-8b', version: 'v1beta' }
+      ];
+
+      let data = null;
+      let usedModel = '';
+
+      for (const candidate of candidates) {
+        const { model, version } = candidate;
+        try {
+          const url = `https://generativelanguage.googleapis.com/${version}/models/${model}:generateContent?key=${apiKey}`;
+
+          const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: systemPrompt }] }]
+            })
+          });
+
+          const result = await response.json();
+
+          if (result.error) {
+            console.warn(`[AI] ${model} failed:`, result.error.message);
+
+            // If it's a "Not Found" or "Not Supported", we simply continue to the next candidate
+            const msg = result.error.message.toLowerCase();
+            if (result.error.code === 404 || msg.includes('not found') || msg.includes('not supported')) {
+              continue;
+            }
+            // If it's a permission/key error, we should probably stop and let the outer catch handle it, 
+            // BUT we re-throw to let the catch block decide.
+            throw result.error;
+          }
+
+          data = result;
+          usedModel = model;
+          break; // Success!
+
+        } catch (e) {
+          // Check if it's a critical auth error
+          if (e.code === 401 || e.code === 403 || e.status === 'PERMISSION_DENIED' || e.status === 'INVALID_ARGUMENT') {
+            // If "not found" was buried in a 400, strictly continue, otherwise throw
+            const msg = (e.message || '').toLowerCase();
+            if (!msg.includes('not found')) throw e;
+          }
+          console.warn(`[AI] Network/Other error for ${model}`, e);
+        }
+      }
+
+      this.messagesArea.removeChild(loadingMsg);
+      this.isProcessing = false;
+
+      if (!data) {
+        this.addMessage('bot', "I couldn't connect to any AI model. Please check your internet or API Key permissions.");
+        return;
+      }
+
+      if (data.error) {
+        // Should be caught above, but just in case of logic slip
+        throw data.error;
+      }
+
+
+      const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!rawText) {
+        this.addMessage('bot', "I couldn't generate a response. Try again.");
+        return;
+      }
+
+      // Cleanup JSON (remove markdown code blocks if present)
+      const jsonStr = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
+      let patternData;
+      try {
+        patternData = JSON.parse(jsonStr);
+      } catch (e) {
+        console.error("JSON Parse Error", e, jsonStr);
+        this.addMessage('bot', "I generated an invalid pattern format. Please try again with a simpler request.");
+        return;
+      }
+
+      // 4. Present Result
+      this.addMessage('bot', `Here is a pattern for "${userText}".`, {
+        type: 'APPEND_PATTERN',
+        label: 'Add to Grid',
+        data: patternData
+      });
+
+    } catch (err) {
+      console.error(err);
+      if (loadingMsg.parentNode) loadingMsg.parentNode.removeChild(loadingMsg);
+      this.isProcessing = false;
+
+      if (err.code === 401 || err.status === 'INVALID_ARGUMENT') {
+        this.addMessage('bot', "The API Key seems invalid. Please paste it again.");
+        localStorage.removeItem('gemini_api_key');
+        this.waitingForKey = true;
+      } else {
+        this.addMessage('bot', `Error: ${err.message || 'Network error'}`);
+      }
+    }
   }
 
   executeAction(action, btn) {
@@ -138,23 +393,26 @@ class AiAssistant {
       if (clearBtn) clearBtn.click();
     } else if (action.type === 'APPEND_PATTERN') {
       this.appendPatternToGrid(action.data);
+
+      // Re-show suggestions after a delay
+      setTimeout(() => {
+        this.refreshSuggestions();
+      }, 2000);
     }
   }
 
   appendPatternToGrid(pattern) {
     if (!pattern || !pattern.labels) return;
 
-    // pattern.labels is an array of strings or arrays (for chords)
-    // We append them to the global innerLabels
-    // And expand the grid if needed.
-
     // 1. Extend innerLabels
-    if (!innerLabels) innerLabels = [];
+    // Ensure innerLabels is defined globally
+    if (typeof innerLabels === 'undefined') window.innerLabels = [];
+
+    // We append to the global innerLabels
+    // pattern.labels should be an array.
     innerLabels = innerLabels.concat(pattern.labels);
 
     // 2. Recalculate 'measures' count
-    // Use the global 'STEPS' variable (8 or 16 usually)
-    // If not defined, fallback to 16
     const stepCount = (typeof STEPS !== 'undefined') ? STEPS : 16;
     measures = Math.ceil(innerLabels.length / stepCount);
 
@@ -164,181 +422,15 @@ class AiAssistant {
     } else {
       console.warn("renderAllMeasures not found!");
     }
-  }
 
-  getEmptyPattern(numMeasures) {
-    const STEPS_PER_MEASURE = 16;
-    return {
-      measures: numMeasures,
-      labels: new Array(numMeasures * STEPS_PER_MEASURE).fill("")
-    };
-  }
-
-  /*
-   * Generates a chord progression based on the current scale.
-   * Returns { success: boolean, pattern: object, scaleName: string }
-   */
-  generateChordProgression(vibe) {
-    // 1. Get Current Scale
-    const scaleSelect = document.getElementById('scaleSelect');
-    const scaleName = scaleSelect ? scaleSelect.value : "D Kurd";
-
-    // SCALES is global from noteplayer.js
-    if (typeof SCALES === 'undefined' || !SCALES[scaleName]) {
-      console.error("Scale data not found for", scaleName);
-      return { success: false, scaleName };
+    // Scroll to bottom
+    const measuresEl = document.getElementById('measures');
+    if (measuresEl) {
+      // Wait for DOM update
+      setTimeout(() => {
+        measuresEl.scrollTop = measuresEl.scrollHeight;
+      }, 100);
     }
-
-    const scaleData = SCALES[scaleName];
-    const noteMap = scaleData.map; // e.g. { "1": "A3", "2": "Bb3" ... }
-
-    // 2. Identify available notes normalized to Pitch Class (A, Bb, C...)
-    // Helper to parse "A3" -> "A"
-    const getPitchClass = (noteStr) => noteStr.replace(/[0-9]/g, '');
-
-    // Reverse Map: PitchClass -> Array of { number: "1", octave: 3, full: "A3" }
-    // We might have multiple A's (A3, A4).
-    const availableNotes = {};
-
-    Object.entries(noteMap).forEach(([num, noteStr]) => {
-      const pc = getPitchClass(noteStr); // e.g. "A"
-      if (!availableNotes[pc]) availableNotes[pc] = [];
-      availableNotes[pc].push({
-        num,
-        full: noteStr,
-        octave: parseInt(noteStr.match(/\d+/)[0])
-      });
-    });
-
-    // Also map Ding if needed? Usually Ding is the root or bass.
-    // D Kurd Ding is D3.
-    const ding = scaleData.ding;
-    if (ding) {
-      const pc = getPitchClass(ding);
-      if (!availableNotes[pc]) availableNotes[pc] = [];
-      // Ding doesn't usually have a number "1-9" in the map unless specified.
-      // We can use 'D' for Ding in the grid labels if needed.
-    }
-
-    // 3. Define Intervals for Chords (semitones from root)
-    const noteToSemi = {
-      'C': 0, 'C#': 1, 'Db': 1, 'D': 2, 'D#': 3, 'Eb': 3,
-      'E': 4, 'F': 5, 'F#': 6, 'Gb': 6, 'G': 7, 'G#': 8, 'Ab': 8,
-      'A': 9, 'A#': 10, 'Bb': 10, 'B': 11
-    };
-    const semiToNote = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'];
-
-    // Helper: Check if we can form a triad
-    const getTriad = (rootPC, type) => {
-      const rootSemi = noteToSemi[rootPC];
-      const thirdSemi = (rootSemi + (type === 'minor' ? 3 : 4)) % 12;
-      const fifthSemi = (rootSemi + 7) % 12; // Perfect fifth
-
-      const thirdPC = semiToNote[thirdSemi];
-      const fifthPC = semiToNote[fifthSemi];
-
-      // Check availability in current scale
-      if (availableNotes[rootPC] && availableNotes[rootPC].length > 0 &&
-        availableNotes[thirdPC] && availableNotes[thirdPC].length > 0 &&
-        availableNotes[fifthPC] && availableNotes[fifthPC].length > 0) {
-        return {
-          root: availableNotes[rootPC],
-          third: availableNotes[thirdPC],
-          fifth: availableNotes[fifthPC],
-          name: `${rootPC}${type === 'minor' ? 'm' : ''}`
-        };
-      }
-      return null;
-    };
-
-    // 4. Find all possible chords in this scale
-    const possibleChords = [];
-    const scalePCs = Object.keys(availableNotes);
-
-    scalePCs.forEach(pc => {
-      // Check Minor
-      const m = getTriad(pc, 'minor');
-      if (m) possibleChords.push({ ...m, type: 'minor' });
-
-      // Check Major
-      const M = getTriad(pc, 'major');
-      if (M) possibleChords.push({ ...M, type: 'major' });
-    });
-
-    // 5. Select a progression based on vibe
-    let progression = []; // Array of chords
-
-    if (vibe === 'minor') {
-      const minorChords = possibleChords.filter(c => c.type === 'minor');
-      // Try to make a 4-chord loop. 
-      if (minorChords.length > 0) {
-        // Simple logic: Pick random minor chords to fill 4 slots
-        // Better: Start with one, then try to move.
-        // For now, just cycle them.
-        for (let i = 0; i < 4; i++) {
-          progression.push(minorChords[i % minorChords.length]);
-        }
-      } else {
-        // Fallback: If we can't find pure minor triads, use what we have?
-        // Or fail.
-        if (possibleChords.length >= 1) {
-          for (let i = 0; i < 4; i++) progression.push(possibleChords[0]);
-        } else {
-          return { success: false, scaleName };
-        }
-      }
-    }
-
-    // 6. Construct Pattern JSON
-    const measures = 4;
-    const STEPS = 16;
-    const labels = new Array(measures * STEPS).fill(""); // Default empty entries
-
-    // We need to fill specific steps with chords.
-    // Let's do a simple whole note rhythm: Chord on Beat 1 of each measure.
-    // Index 0, 16, 32, 48.
-
-    progression.forEach((chord, idx) => {
-      if (idx >= measures) return;
-      const stepIndex = idx * STEPS;
-
-      // Construct the chord label array: [LH-Index, LH-Thumb, RH-Index, RH-Thumb]
-      // Mapping: 
-      // LH Thumb (1) -> Root (Lowest available note preferred)
-      // LH Index (0) -> Third 
-      // RH Index (2) -> Fifth
-      // RH Thumb (3) -> Octave or empty
-
-      // Pick standard voicings (lowest logical note for root)
-      const rootNote = chord.root.sort((a, b) => a.octave - b.octave)[0];
-      const thirdNote = chord.third.sort((a, b) => a.octave - b.octave)[0];
-      const fifthNote = chord.fifth.sort((a, b) => a.octave - b.octave)[0];
-
-      if (!rootNote || !thirdNote || !fifthNote) return;
-
-      // InnerLabels array of 4 strings
-      // [0:L-Idx, 1:L-Thumb, 2:R-Idx, 3:R-Thumb]
-
-      const chordArr = ['', '', '', ''];
-
-      // Assign
-      chordArr[1] = rootNote.num;  // LH Thumb -> Root
-      chordArr[0] = thirdNote.num; // LH Index -> Third
-      chordArr[2] = fifthNote.num; // RH Index -> Fifth
-
-      // Add it to the labels array
-      // Important: The grid expects labels[i] to be the array for that cell.
-      labels[stepIndex] = chordArr;
-    });
-
-    return {
-      success: true,
-      scaleName,
-      pattern: {
-        measures,
-        labels
-      }
-    };
   }
 }
 
