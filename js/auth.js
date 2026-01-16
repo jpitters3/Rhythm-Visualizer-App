@@ -7,8 +7,8 @@ function isAdminUser(user) {
 function updateAdminUI() {
   const show = isAdminUser(currentUser);
 
-  const calBbtn = document.getElementById("calBtn");
-  if (calBtn) calBtn.style.display = show ? "" : "none";
+  // const calBbtn = document.getElementById("calBtn");
+  // if (calBtn) calBtn.style.display = show ? "" : "none";
 
   const courseBtn = document.getElementById("openCourseModalBtn");
   if (courseBtn) courseBtn.style.display = show ? "" : "none";
@@ -75,9 +75,25 @@ function updateAccountUI() {
     if (accountBtn) accountBtn.textContent = currentUser.email.charAt(0).toUpperCase();
 
     // Signed In Mode
-    authLogout.style.display = '';
-    authLogin.style.display = 'none';
-    authRegister.style.display = 'none';
+    if (authLogout) authLogout.style.display = 'none'; // OLD logic? Wait, index.html has authLogoutDropdown button
+    // Let's rely on IDs found in index.html (authBtn, profileBtn, myScalesBtn, signOutBtn)
+
+    // Auth Modal buttons
+    if (authLogin) authLogin.style.display = 'none';
+    if (authRegister) authRegister.style.display = 'none';
+
+    // Dropdown Links
+    const profileBtn = document.getElementById('profileBtn');
+    if (profileBtn) profileBtn.style.display = 'block';
+
+    const myScalesBtn = document.getElementById('myScalesBtn');
+    if (myScalesBtn) myScalesBtn.style.display = 'block';
+
+    const signOutBtn = document.getElementById('signOutBtn') || document.getElementById('authLogoutDropdown');
+    if (signOutBtn) signOutBtn.style.display = 'block';
+
+    const authBtnLink = document.getElementById('authBtn'); // "Sign In / Register" in dropdown
+    if (authBtnLink) authBtnLink.style.display = 'none'; // Hide "Sign In" link
 
     // Default state: Hidden password update
     document.getElementById('authUpdatePassword').style.display = 'none';
@@ -104,9 +120,22 @@ function updateAccountUI() {
     if (accountDropdownMenu) accountDropdownMenu.classList.remove('show');
 
     // Signed Out Mode
-    authLogout.style.display = 'none';
-    authLogin.style.display = '';
-    authRegister.style.display = '';
+    // Dropdown Links
+    const profileBtn = document.getElementById('profileBtn');
+    if (profileBtn) profileBtn.style.display = 'none';
+
+    const myScalesBtn = document.getElementById('myScalesBtn');
+    if (myScalesBtn) myScalesBtn.style.display = 'none';
+
+    const signOutBtn = document.getElementById('signOutBtn') || document.getElementById('authLogoutDropdown');
+    if (signOutBtn) signOutBtn.style.display = 'none';
+
+    const authBtnLink = document.getElementById('authBtn');
+    if (authBtnLink) authBtnLink.style.display = 'block';
+
+    if (authLogout) authLogout.style.display = 'none';
+    if (authLogin) authLogin.style.display = '';
+    if (authRegister) authRegister.style.display = '';
 
     document.getElementById('authUpdatePassword').style.display = 'none';
     document.getElementById('authUpdateEmail').style.display = 'none';
@@ -144,6 +173,7 @@ async function initAuthSession() {
         // safe to do async work here
         await refreshPatternSelect?.();
         await loadCurrentProfile?.(); // Fetch profile (username/bio)
+        await loadAllUserHandpans?.(); // Load all custom handpans for dropdown
       } catch (e) {
         console.warn('Post-auth refresh failed:', e);
       }

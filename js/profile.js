@@ -109,11 +109,13 @@ function openProfileEditor() {
   profileBioInput.value = currentProfile.bio || '';
 
   profileModal.classList.add('open');
+  profileModal.setAttribute('aria-hidden', 'false');
   document.getElementById('accountDropdownMenu')?.classList.remove('show');
 }
 
 function closeProfileEditor() {
   profileModal.classList.remove('open');
+  profileModal.setAttribute('aria-hidden', 'true');
 }
 
 function updateProfileUI() {

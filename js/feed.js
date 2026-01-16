@@ -14,6 +14,7 @@ document.getElementById('communityBtn')?.addEventListener('click', () => {
 
 closeFeedBtn?.addEventListener('click', () => {
   feedModal.classList.remove('open');
+  feedModal.setAttribute('aria-hidden', 'true');
 });
 
 // Tab Switching
@@ -31,6 +32,7 @@ feedTabs.forEach(tab => {
 
 function openFeedModal() {
   feedModal.classList.add('open');
+  feedModal.setAttribute('aria-hidden', 'false');
   fetchFeed(currentFeedFilter);
 }
 

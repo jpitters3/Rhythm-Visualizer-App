@@ -39,7 +39,7 @@ const micBtn = document.getElementById('micBtn');
 const micCalBtn = document.getElementById('micCalBtn');
 const guidedCalBtn = document.getElementById('guidedCalBtn'); // Add this to your HTML
 const targetNoteDisplay = document.getElementById('targetNoteName');
-const calOverlay = document.getElementById('calibrationStatus');
+const micCalOverlay = document.getElementById('calibrationStatus');
 const sensValDisplay = document.getElementById('sensVal');
 const meter = document.getElementById('micVisualizer');
 
@@ -171,7 +171,7 @@ function handleCalibration(pitch, rms) {
 
         if (calIndex >= calQueue.length) {
             isCalibrating = false;
-            calOverlay.style.display = 'none';
+            micCalOverlay.style.display = 'none';
             calBtn.classList.remove('active');
             localStorage.setItem('gp_cal', JSON.stringify(noteSensitivities));
             alert("Handpan Profile Calibrated!");
@@ -346,7 +346,7 @@ micCalBtn?.addEventListener('click', () => {
     if (!isListening) return;
     isCalibrating = true;
     calIndex = 0;
-    calOverlay.style.display = 'block';
+    micCalOverlay.style.display = 'block';
     targetNoteDisplay.textContent = calQueue[0];
 });
 

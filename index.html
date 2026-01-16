@@ -105,6 +105,7 @@
   <link rel="stylesheet" href="css/profile.css">
   <link rel="stylesheet" href="css/feed.css">
   <link rel="stylesheet" href="css/course-marketplace.css">
+  <link rel="stylesheet" href="./css/calibration.css">
 </head>
 
 <body>
@@ -147,6 +148,7 @@
             <button id="toggleSidebarBtn">📚 Courses</button>
             <button id="openCourseModalBtn" class="admin-only" style="display: none;">Create Course</button>
             <div class="dropdown-divider"></div>
+            <button id="myScalesBtn" style="display:none;">My Scales</button>
             <button id="authLogoutDropdown">Sign out</button>
           </div>
         </div>
@@ -252,33 +254,71 @@
         </div>
 
         <div id="hpSettingsPanel" class="hp-settings-panel" style="display:none;">
-          <div class="setting-row">
-            <label>Scale:</label>
-            <select id="scaleSelect" title="Choose your handpan scale"></select>
-            <span id="scaleStatus" style="display:none; opacity:.7;font-size:13px;"></span>
+          <!-- Default Settings Mode -->
+          <div id="hpSettingsInitial">
+            <div class="setting-row">
+              <label>Scale:</label>
+              <select id="scaleSelect" title="Choose your handpan scale"></select>
+              <span id="scaleStatus" style="display:none; opacity:.7;font-size:13px;"></span>
+            </div>
+
+            <div class="setting-row">
+              <label>Color:</label>
+              <select id="handpanSelect" title="Choose your handpan color">
+                <option value="Bronze">Bronze</option>
+                <option value="Sketch">Sketch</option>
+                <!-- Custom option added dynamically -->
+              </select>
+            </div>
+
+            <div class="setting-row">
+              <label>Labels:</label>
+              <select id="numberPitchSelect" title="Display numbers or pitches">
+                <option value="default">-----</option>
+                <option value="Numbers">Numbers</option>
+                <option value="Pitches">Pitches</option>
+              </select>
+            </div>
+
+            <div class="setting-row" style="margin-top: 10px;">
+              <button id="calBtn" class="secondary-btn small-btn" style="width:100%">Calibrate Current Map</button>
+            </div>
+
+            <div class="setting-row"
+              style="margin-top: 10px; border-top: 1px solid var(--panel-border); padding-top: 10px;">
+              <button id="buildScaleBtn" class="primary-btn small-btn"
+                style="width:100%; background: linear-gradient(135deg, #6366f1, #8b5cf6); border:none; color:white;">Build
+                My Own Scale</button>
+            </div>
           </div>
 
-          <div class="setting-row">
-            <label>Color:</label>
-            <select id="handpanSelect" title="Choose your handpan color">
-              <option value="Bronze">Bronze</option>
-              <option value="Sketch">Sketch</option>
-            </select>
-          </div>
+          <!-- Creation Form Mode (Hidden) -->
+          <div id="hpCreationForm" style="display:none; flex-direction:column; gap:10px;">
+            <div style="display:flex; align-items:center; margin-bottom:5px;">
+              <button id="cancelBuildBtn" class="icon-btn"
+                style="font-size:16px; padding:0; margin-right:8px;">←</button>
+              <h4 style="margin:0; font-size:14px;">Review & Upload</h4>
+            </div>
 
-          <div class="setting-row">
-            <label>Labels:</label>
-            <select id="numberPitchSelect" title="Display numbers or pitches">
-              <option value="default">-----</option>
-              <option value="Numbers">Numbers</option>
-              <option value="Pitches">Pitches</option>
-            </select>
-          </div>
+            <input type="text" id="hpBuilderName" placeholder="Builder (e.g. Yishama)" class="hp-input">
+            <input type="text" id="hpScaleName" placeholder="Scale Name (e.g. D Kurd 9)" class="hp-input">
 
-          <div class="setting-row">
-            <button id="calBtn" class="secondary-btn small-btn" style="width:100%">Calibrate Map</button>
+            <label class="file-upload-label">
+              <span>Top Image (Required)</span>
+              <input type="file" id="hpTopImage" accept="image/*">
+            </label>
+
+            <!-- Bottom Image Optional (Hidden for MVP/User Request flow seems to imply streamlined) -->
+            <!-- <label class="file-upload-label">
+                <span>Bottom Image (Optional)</span>
+                <input type="file" id="hpBottomImage" accept="image/*">
+              </label> -->
+
+            <button id="saveNewHandpanBtn" class="primary-btn small-btn" style="margin-top:5px;">Next:
+              Calibrate</button>
           </div>
         </div>
+
 
         <!-- HANDPAN WRAP -->
         <div class="handpan-wrap" id="handpanWrap">
@@ -310,30 +350,32 @@
       </aside>
     </div>
 
-    <!-- Legend -->
-    <div class="legend" aria-label="Legend">
-      <div class="legend-title">Legend</div>
-      <div class="legend-row">
-        <h3>Actions for Setting the Notes</h3><br />
-      </div>
-      <div class="legend-row">
-        <span><kbd>Click</kbd> Select A Note</span>
-        <span><kbd>D</kbd> Ding</span>
-        <span><kbd>T</kbd> Tak</span>
-        <span><kbd>S</kbd> Slap</span>
-        <span><kbd>0–9</kbd> Numbered Note</span>
-        <span><kbd>Space</kbd> Ghost Note</span>
-        <span><kbd>M</kbd> Toggle metronome</span>
-        <span><kbd>Esc</kbd> Exit</span>
-      </div>
-      <div class="legend-row">
-        <h3>Labels</h3><br />
-      </div>
-      <div class="legend-row">
-        <span><kbd>Left/Right</kbd> Toggle hand icons</span>
+  </div>
 
-      </div>
+  <!-- Legend -->
+  <div class="legend" aria-label="Legend">
+    <div class="legend-title">Legend</div>
+    <div class="legend-row">
+      <h3>Actions for Setting the Notes</h3><br />
     </div>
+    <div class="legend-row">
+      <span><kbd>Click</kbd> Select A Note</span>
+      <span><kbd>D</kbd> Ding</span>
+      <span><kbd>T</kbd> Tak</span>
+      <span><kbd>S</kbd> Slap</span>
+      <span><kbd>0–9</kbd> Numbered Note</span>
+      <span><kbd>Space</kbd> Ghost Note</span>
+      <span><kbd>M</kbd> Toggle metronome</span>
+      <span><kbd>Esc</kbd> Exit</span>
+    </div>
+    <div class="legend-row">
+      <h3>Labels</h3><br />
+    </div>
+    <div class="legend-row">
+      <span><kbd>Left/Right</kbd> Toggle hand icons</span>
+
+    </div>
+  </div>
   </div><!-- container -->
 
   <div id="countdownOverlay" class="countdown-overlay" style="display: none;">
@@ -564,6 +606,21 @@
     </div>
   </div>
 
+  <!-- My Scales Management Modal -->
+  <div id="myScalesModal" class="profile-modal-overlay" aria-hidden="true" style="display:none;">
+    <div class="profile-modal">
+      <div class="profile-header">
+        <h3>My Custom Scales</h3>
+        <button id="closeMyScalesBtn" class="close-btn">&times;</button>
+      </div>
+      <div class="profile-content">
+        <div id="myScalesList" class="my-scales-list">
+          <!-- Dynamically populated -->
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Profile Editor Modal -->
   <div id="profileModal" class="profile-modal-overlay" aria-hidden="true">
     <div class="profile-modal">
@@ -585,6 +642,82 @@
         <div class="profile-actions">
           <button id="saveProfileBtn">Save Profile</button>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CALIBRATION MODE OVERLAY (Custom Handpan) -->
+  <div id="calibrationOverlay" class="cal-overlay" style="display:none;">
+    <div class="cal-header">
+      <div class="cal-title-group">
+        <h2 id="calHandpanName">Calibrating: My Scale</h2>
+        <span class="cal-status" id="calSaveStatus">All changes saved</span>
+      </div>
+      <div class="cal-actions">
+        <button id="addTonefieldBtn" class="primary-btn">＋ Add Tonefield</button>
+        <button id="calDoneBtn" class="secondary-btn">Done</button>
+      </div>
+    </div>
+
+    <div class="cal-workspace">
+      <!-- The pannable/zoomable container -->
+      <div id="calCanvasContainer" class="cal-canvas-container">
+        <img id="calHandpanImage" class="cal-bg-img" src="" draggable="false">
+        <div id="calTonefieldsLayer" class="cal-layer">
+          <!-- Tonefields go here -->
+        </div>
+      </div>
+
+      <!-- Properties Panel (Floating) -->
+      <div id="calPropertiesPanel" class="cal-properties" style="display:none;">
+        <h4 id="calPropTitle">Note Settings</h4>
+
+        <!-- Note Properties -->
+        <div id="calNoteProps">
+          <div class="prop-row">
+            <label>Pitch</label>
+            <select id="calPitchSelect"></select>
+          </div>
+          <div class="prop-row">
+            <label>Octave</label>
+            <select id="calOctaveSelect">
+              <option value="2">2</option>
+              <option value="3">3</option>
+              <option value="4">4</option>
+              <option value="5">5</option>
+              <option value="6">6</option>
+            </select>
+          </div>
+
+          <div class="prop-row">
+            <label>Size <span id="valSize"></span></label>
+            <input type="range" id="calSizeInput" min="2" max="35" step="0.5">
+          </div>
+
+          <div class="prop-row">
+            <label>Shape <span id="valShape"></span></label>
+            <input type="range" id="calShapeInput" min="0.5" max="1.5" step="0.05" title="Ovalness">
+          </div>
+
+          <div class="prop-row">
+            <label>Rotation <span id="valRot"></span></label>
+            <input type="range" id="calRotInput" min="0" max="360" step="5">
+          </div>
+
+          <button id="deleteTonefieldBtn" class="danger-btn small-btn" style="margin-top:10px;">Delete Note</button>
+        </div>
+
+        <!-- Global Handpan Properties (Shown when nothing selected) -->
+        <div id="calGlobalProps" style="display:none;">
+          <div class="prop-row">
+            <label>Image Rotation <span id="valImgRot"></span></label>
+            <input type="range" id="calImgRotInput" min="-180" max="180" step="1" value="0">
+          </div>
+        </div>
+      </div>
+
+      <div class="cal-instructions">
+        Drag to position. Click to select.
       </div>
     </div>
   </div>
@@ -737,6 +870,8 @@
   <script src="./js/ai-assistant.js?v=5"></script>
   <script src="./js/feed.js?v=4"></script>
   <script src="./js/course-marketplace.js?v=1"></script>
+  <script src="./js/calibration.js?v=1"></script>
+
 
 
 </body>

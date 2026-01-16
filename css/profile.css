@@ -22,7 +22,7 @@
 }
 
 .profile-modal {
-  width: min(400px, 90vw);
+  width: min(500px, 90vw);
   background: var(--panel);
   backdrop-filter: var(--glass);
   border: 1px solid var(--panel-border);
@@ -169,4 +169,142 @@ button#saveProfileBtn:disabled {
   60% {
     transform: translate3d(4px, 0, 0);
   }
+}
+
+/* My Scales Layout */
+.my-scales-list {
+  max-height: 350px;
+  overflow-y: auto;
+  border-top: 1px solid var(--panel-border);
+  margin-top: 10px;
+}
+
+.scale-list-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--panel-border);
+  gap: 12px;
+}
+
+.scale-info {
+  flex: 1;
+  min-width: 0;
+  /* allows text truncation */
+}
+
+.scale-name-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 2px;
+}
+
+.scale-name-text {
+  font-weight: 600;
+  color: var(--text);
+  font-size: 15px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.scale-meta {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.scale-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.icon-btn {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  font-size: 16px;
+  line-height: 1;
+}
+
+.icon-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text);
+}
+
+.icon-btn:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.icon-btn.danger-text:hover {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+}
+
+/* Edit Map Button */
+.edit-map-btn {
+  background: rgba(99, 102, 241, 0.15);
+  color: #818cf8;
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  padding: 4px 10px;
+  font-size: 11px;
+  border-radius: 6px;
+  cursor: pointer;
+  white-space: nowrap;
+  margin: 0 4px;
+}
+
+.edit-map-btn:hover {
+  background: rgba(99, 102, 241, 0.3);
+  color: #fff;
+}
+
+/* Rename Inputs */
+.edit-mode-container {
+  padding-right: 8px;
+}
+
+.rename-input {
+  width: 100%;
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--panel-border);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+  margin-bottom: 6px;
+}
+
+.rename-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.small-action-btn {
+  padding: 4px 10px;
+  font-size: 11px;
+  border-radius: 4px;
+  border: none;
+  cursor: pointer;
+}
+
+.save-btn-styles {
+  background: var(--btn-active);
+  color: var(--btn-active-text);
+}
+
+.cancel-btn-styles {
+  background: var(--panel-border);
+  color: var(--text);
 }

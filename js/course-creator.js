@@ -199,7 +199,7 @@ window.loadCourseToEdit = async function (course) {
 
 function closeCourseCreator() {
   courseModal.classList.remove('open');
-  // courseModal.setAttribute('aria-hidden', 'true');
+  courseModal.setAttribute('aria-hidden', 'true');
 }
 
 // Listeners
