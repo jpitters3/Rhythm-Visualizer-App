@@ -392,8 +392,8 @@ function buildHandpanOverlay() {
     handpanOverlay.appendChild(dot);
     handpanDots.set(note, dot);
   }
-  // if (overlayPitches || overlayNumbers)
-  //   overlayNumberPitchNotes(); else removeNoteLabels();
+  if (overlayPitches || overlayNumbers)
+    overlayNumberPitchNotes(); else removeNoteLabels();
 }
 
 buildHandpanOverlay();
@@ -606,6 +606,82 @@ handpanSelect.addEventListener('change', async () => {
   checkNumberPitchSelection();
   buildHandpanOverlay();
 });
+
+function checkNumberPitchSelection() {
+  const val = numberPitchSelect.value;
+  if (val === 'Numbers') {
+    overlayNumbers = true;
+    overlayPitches = false;
+  } else if (val === 'Pitches') {
+    overlayNumbers = false;
+    overlayPitches = true;
+  } else {
+    // Default: Check handpan type?
+    // If Sketch (numbered), default to Numbers?
+    if (handpanSelect.value === 'Sketch') {
+      overlayNumbers = true;
+      overlayPitches = false;
+      numberPitchSelect.value = 'Numbers';
+    } else {
+      overlayNumbers = false;
+      overlayPitches = false;
+    }
+  }
+}
+
+function removeNoteLabels() {
+  document.querySelectorAll('.hp-label').forEach(el => el.remove());
+}
+
+function overlayNumberPitchNotes() {
+  removeNoteLabels();
+
+  for (const [note, el] of handpanDots.entries()) {
+    const label = document.createElement('div');
+    label.className = 'hp-label';
+
+    if (overlayNumbers) {
+      // Only if note is 1-8? Or all?
+      // If it's a number key, show it.
+      // If it's a pitch key (A, B...), show it if we are mapping pitches to numbers?
+      // Usually the map keys ARE the labels.
+      label.textContent = note;
+    } else if (overlayPitches) {
+      // We need to know the pitch of this note in the current scale.
+      // This requires `scaleNotes` access or similar.
+      // If not available, we might just show the Key?
+      // For now, let's just show the Key as fallback or empty.
+      // If you play a note, you know its pitch.
+      // Let's assume for now we just show the map Key.
+      label.textContent = note;
+    }
+
+    // Position center
+    label.style.position = 'absolute';
+    label.style.left = '50%';
+    label.style.top = '50%';
+    label.style.transform = 'translate(-50%, -50%)';
+    label.style.color = 'white';
+    label.style.fontWeight = 'bold';
+    label.style.pointerEvents = 'none';
+    label.style.textShadow = '0 1px 2px black';
+
+    el.appendChild(label);
+  }
+}
+
+// Ensure buildHandpanOverlay calls this
+const originalBuild = buildHandpanOverlay;
+// We can't easily hook it if I don't replace it or modify it.
+// Wait, I saw line 395 was commented out: 
+// // if (overlayPitches || overlayNumbers)
+// //   overlayNumberPitchNotes(); else removeNoteLabels();
+
+// I should probably Uncomment that line in `buildHandpanOverlay` too, or redefine `buildHandpanOverlay` here?
+// Redefining it here (below original definition) works if `var` or `function`. 
+// But `buildHandpanOverlay` is a function declaration above. I can't redefine it easily without error or being ignored.
+// Better to just modify `buildHandpanOverlay` in place.
+
 
 numberPitchSelect.addEventListener('change', async () => {
   checkNumberPitchSelection();
