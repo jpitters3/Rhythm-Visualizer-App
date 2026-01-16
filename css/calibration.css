@@ -33,16 +33,36 @@
   color: #fff;
 }
 
-.cal-status {
-  font-size: 11px;
-  color: #aaa;
-  display: block;
-  margin-top: 2px;
+#calSaveStatus {
+  position: absolute;
+  top: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 200, 83, 0.9);
+  color: white;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-weight: 700;
+  font-size: 14px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s, transform 0.3s;
+  z-index: 10000;
+  transform: translateX(-50%) translateY(-10px);
 }
 
-.cal-status.saving {
-  color: #f1c40f;
+#calSaveStatus.saving {
+  background: #f1c40f;
+  color: #000;
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
 }
+
+/* We also need a state for "Just Saved" to show the green message briefly */
+/* But the current JS only toggles .saving */
+/* I might need to update JS to handle the "Saved" state persist */
+
 
 .cal-actions {
   display: flex;

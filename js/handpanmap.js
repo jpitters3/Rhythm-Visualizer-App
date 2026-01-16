@@ -115,7 +115,8 @@ function applyCustomHandpan(handpanData) {
       r: r,
       width: tf.width || (r * 2),
       height: tf.height || (r * 2),
-      rotation: tf.rotation || 0
+      rotation: tf.rotation || 0,
+      assignedNumber: tf.assignedNumber // New property
     };
   });
 
@@ -636,25 +637,41 @@ function removeNoteLabels() {
 function overlayNumberPitchNotes() {
   removeNoteLabels();
 
+  const isCustom = scaleSelect.value.startsWith('custom:');
+
   for (const [note, el] of handpanDots.entries()) {
+    const p = HANDPAN_MAP[note];
+    if (!p) continue;
+
     const label = document.createElement('div');
     label.className = 'hp-label';
+    let text = '';
 
     if (overlayNumbers) {
-      // Only if note is 1-8? Or all?
-      // If it's a number key, show it.
-      // If it's a pitch key (A, B...), show it if we are mapping pitches to numbers?
-      // Usually the map keys ARE the labels.
-      label.textContent = note;
+      // If Custom: Use assignedNumber if present, else fallback to '?' (or 'D' if note is D3)
+      if (isCustom) {
+        text = p.assignedNumber || (note.startsWith('D3') ? 'D' : '?');
+      } else {
+        // Standard: key IS the number (1, 2, 3...)
+        text = note;
+      }
     } else if (overlayPitches) {
-      // We need to know the pitch of this note in the current scale.
-      // This requires `scaleNotes` access or similar.
-      // If not available, we might just show the Key?
-      // For now, let's just show the Key as fallback or empty.
-      // If you play a note, you know its pitch.
-      // Let's assume for now we just show the map Key.
-      label.textContent = note;
+      // If Custom: 'note' IS the pitch (e.g. "C#4")
+      if (isCustom) {
+        text = note;
+      } else {
+        // Standard: Need to lookup pitch for number key (e.g. "1" -> "C#4")
+        if (typeof noteForLabel === 'function') {
+          const pitch = noteForLabel(note);
+          // Clean up pitch string? e.g. "Cs4" -> "C#4"?
+          text = pitch ? pitch.replace('s', '#') : '';
+        } else {
+          text = note;
+        }
+      }
     }
+
+    label.textContent = text;
 
     // Position center
     label.style.position = 'absolute';
@@ -665,6 +682,7 @@ function overlayNumberPitchNotes() {
     label.style.fontWeight = 'bold';
     label.style.pointerEvents = 'none';
     label.style.textShadow = '0 1px 2px black';
+    label.style.zIndex = '10'; // Ensure above dot
 
     el.appendChild(label);
   }

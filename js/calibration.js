@@ -20,12 +20,20 @@ const calTonefieldsLayer = document.getElementById('calTonefieldsLayer');
 const calPropertiesPanel = document.getElementById('calPropertiesPanel');
 const calPitchSelect = document.getElementById('calPitchSelect');
 const calOctaveSelect = document.getElementById('calOctaveSelect');
+const calNumberSelect = document.getElementById('calNumberSelect');
 const calSaveStatus = document.getElementById('calSaveStatus');
 
 // Initialize Dropdowns
 function initCalDropdowns() {
   if (!calPitchSelect) return;
   calPitchSelect.innerHTML = CAL_PITCHES.map(p => `<option value="${p}">${p}</option>`).join('');
+
+  // Custom Numbers: D, 1..20
+  if (calNumberSelect) {
+    const opts = ['D'];
+    for (let i = 1; i <= 20; i++) opts.push(String(i));
+    calNumberSelect.innerHTML = opts.map(n => `<option value="${n}">${n}</option>`).join('');
+  }
 }
 
 // === ENTRY POINT ===
@@ -173,6 +181,7 @@ function selectTonefield(id) {
     if (tf) {
       calPitchSelect.value = tf.note;
       calOctaveSelect.value = tf.octave;
+      if (calNumberSelect) calNumberSelect.value = tf.assignedNumber || '1';
 
       // Load Advanced Props (with defaults)
       const r = tf.r || 6;
@@ -214,34 +223,47 @@ addTonefieldBtn.addEventListener('click', () => {
   let nextPitchIndex = lastAssignedPitchIndex;
   let nextOctave = lastAssignedOctave;
 
-  // Determine next note from "last assigned" or if array is populated
+  // Smart Logic: Number (Default D if first, else last + 1)
+  let nextNum = 'D';
+
   if (currentNoteMap.length === 0) {
-    // Start at D3 (Center typically)
     nextPitchIndex = CAL_PITCHES.indexOf('D');
     nextOctave = 3;
+    nextNum = 'D';
   } else {
-    // Increment whole tone (2 semitones)
+    // Pitch Logic
     nextPitchIndex += 2;
     if (nextPitchIndex >= CAL_PITCHES.length) {
-      nextPitchIndex -= CAL_PITCHES.length; // Wrap around safely
+      nextPitchIndex -= CAL_PITCHES.length;
       nextOctave++;
     }
+
+    // Number Logic: Find max number assigned so far
+    let maxNum = 0;
+    currentNoteMap.forEach(t => {
+      if (t.assignedNumber && t.assignedNumber !== 'D') {
+        const val = parseInt(t.assignedNumber);
+        if (!isNaN(val) && val > maxNum) maxNum = val;
+      }
+    });
+    nextNum = String(maxNum + 1);
   }
 
   // Update Tracking
   lastAssignedPitchIndex = nextPitchIndex;
   lastAssignedOctave = nextOctave;
 
-  const newId = Date.now(); // Simple ID
+  const newId = Date.now();
   const newTf = {
     id: newId,
-    x: 50, // Center
+    x: 50,
     y: 50,
     width: 12,
     height: 12,
     rotation: 0,
     note: CAL_PITCHES[nextPitchIndex],
-    octave: nextOctave
+    octave: nextOctave,
+    assignedNumber: nextNum
   };
 
   currentNoteMap.push(newTf);
@@ -283,6 +305,7 @@ function updateSelectedTf(prop, value) {
 
 calPitchSelect.addEventListener('change', () => updateSelectedTf('note', calPitchSelect.value));
 calOctaveSelect.addEventListener('change', () => updateSelectedTf('octave', parseInt(calOctaveSelect.value)));
+if (calNumberSelect) calNumberSelect.addEventListener('change', () => updateSelectedTf('assignedNumber', calNumberSelect.value));
 
 // New Inputs
 calSizeInput?.addEventListener('input', () => {
@@ -349,7 +372,8 @@ function updateTonefieldLabel(id, tf) {
 
 function triggerAutoSave(saveHandpanRecord = false) {
   calSaveStatus.textContent = "Saving...";
-  calSaveStatus.classList.add('saving');
+  calSaveStatus.className = 'cal-status saving'; // Reset classes, add saving
+  calSaveStatus.style.opacity = '1';
 
   if (saveTimeout) clearTimeout(saveTimeout);
 
@@ -374,12 +398,21 @@ function triggerAutoSave(saveHandpanRecord = false) {
       error = tfErr;
     }
 
-    calSaveStatus.classList.remove('saving');
     if (error) {
       calSaveStatus.textContent = "Error saving";
+      calSaveStatus.className = 'cal-status error'; // Logic needed in CSS or reuse generic
       console.error(error);
     } else {
       calSaveStatus.textContent = "All changes saved";
+      calSaveStatus.className = 'cal-status'; // Remove 'saving', keep base
+      // Use styles to handle green color? 
+      // Reuse the base styling (green by default in CSS for #calSaveStatus)
+      calSaveStatus.style.opacity = '1';
+
+      // Fade out after 2s
+      setTimeout(() => {
+        calSaveStatus.style.opacity = '0';
+      }, 2000);
     }
   }, 1000); // 1 sec debounce
 }
