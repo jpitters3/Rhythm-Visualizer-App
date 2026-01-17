@@ -22,7 +22,6 @@
   width: 100%;
   border-radius: 18px;
   padding: 14px;
-  padding-bottom: 0;
 }
 
 .handpan-img {
@@ -33,9 +32,9 @@
 }
 
 .handpan-overlay {
+  /* match padding so overlay sits on top of image area */
   position: absolute;
   inset: 14px;
-  /* match padding so overlay sits on top of image area */
   pointer-events: none;
 }
 
@@ -65,76 +64,79 @@
 
 .hp-dot {
   position: absolute;
-  border-radius: 50%;
-  /* hidden until active */
-  /* opacity: 0.0; */
+  /* Visuals moved to ::after to isolate transform/scale */
   transition: opacity 120ms ease;
-  background: rgba(255, 255, 255, 0);
-  transition: background-color 120ms ease;
+  /* Hit area shape */
+  border-radius: 50%;
 }
 
-/* body:not(.dark) .hp-dot{ */
-/* border-color: rgba(47,47,47,0.55); */
-/* background: rgba(79, 17, 48, 0.50); */
-/* } */
+/* The visual representation */
+.hp-dot::after {
+  content: "";
+  display: block;
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
 
-.hp-dot.active {
-  opacity: 1;
-  animation: hpPulse 180ms ease-out;
+  /* Base Visuals */
+  background: rgba(255, 255, 255, 0);
+  /* border: 2px solid transparent; */
+  /* Ensure border exists */
+
+  transition: background-color 120ms ease, border-color 120ms ease, box-shadow 120ms ease, transform 180ms ease-out;
+}
+
+.hp-dot.active::after {
   box-shadow: 0 0 0 5px rgba(79, 17, 48, 0.18);
+  animation: hpPulse 180ms ease-out;
 }
 
 @keyframes hpPulse {
   0% {
-    transform: translate(-50%, -50%) scale(1);
+    transform: scale(1);
   }
 
   60% {
-    transform: translate(-50%, -50%) scale(1.18);
+    transform: scale(1.18);
   }
 
   100% {
-    transform: translate(-50%, -50%) scale(1);
+    transform: scale(1);
   }
 }
 
-/* .hp-dot{ */
-/* border: 2px solid rgba(255,255,255,0.65); */
-/* background: rgba(255,255,255,0.06); */
-/* } */
-
-body:not(.dark) .hp-dot {
+body:not(.dark) .hp-dot::after {
   border-color: rgba(47, 47, 47, 0.55);
 }
 
-.hp-dot[data-note="T"],
-.hp-dot[data-note="S"] {
+.hp-dot[data-note="T"]::after,
+.hp-dot[data-note="S"]::after {
   border-color: rgba(0, 0, 0, 0.77);
 }
 
-body:not(.dark) .hp-dot[data-note="T"],
-body:not(.dark) .hp-dot[data-note="S"] {
+body:not(.dark) .hp-dot[data-note="T"]::after,
+body:not(.dark) .hp-dot[data-note="S"]::after {
   border-style: dashed;
   border-color: rgba(0, 0, 0);
   opacity: 0.65;
 }
 
 /* Color comes from class */
-.hp-dot.hp-down {
+.hp-dot.hp-down::after {
   border-color: color-mix(in srgb, var(--down-fill) 70%, transparent);
   background: color-mix(in srgb, var(--down-fill) 50%, transparent);
 }
 
-.hp-dot.hp-up {
+.hp-dot.hp-up::after {
   border-color: color-mix(in srgb, var(--up-fill) 70%, transparent);
   background: color-mix(in srgb, var(--up-fill) 50%, transparent);
 }
 
-.hp-dot.active.hp-down {
+.hp-dot.active.hp-down::after {
   box-shadow: 0 0 0 10px color-mix(in srgb, var(--down-fill) 22%, transparent);
 }
 
-.hp-dot.active.hp-up {
+.hp-dot.active.hp-up::after {
   box-shadow: 0 0 0 10px color-mix(in srgb, var(--up-fill) 22%, transparent);
 }
 

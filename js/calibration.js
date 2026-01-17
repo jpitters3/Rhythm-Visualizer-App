@@ -49,6 +49,29 @@ async function enterCalibrationMode(handpanData, onDone = null) {
 
   // Reset UI
   calHandpanName.textContent = `Calibrating: ${handpanData.name}`;
+  // Resize container to match image aspect ratio
+  calHandpanImage.onload = function () {
+    const ratio = this.naturalHeight / this.naturalWidth;
+    const container = document.getElementById('calCanvasContainer');
+
+    // Max dimension 800px
+    let w = 800;
+    let h = 800;
+
+    if (ratio > 1) {
+      // Portrait: Constrain Height
+      h = 800;
+      w = 800 / ratio;
+    } else {
+      // Landscape: Constrain Width
+      w = 800;
+      h = 800 * ratio;
+    }
+
+    container.style.width = `${w}px`;
+    container.style.height = `${h}px`;
+  };
+
   calHandpanImage.src = handpanData.top_image_url;
 
   // Apply Image Rotation

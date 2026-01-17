@@ -41,6 +41,7 @@ const handpanDots = new Map();
 
 let overlayPitches = false;
 let overlayNumbers = false;
+let hpMapSaveTimeout = null;
 
 // Custom Handpan Cache
 let customHandpansCache = [];
@@ -127,6 +128,7 @@ function applyCustomHandpan(handpanData) {
       width: tf.width || (r * 2),
       height: tf.height || (r * 2),
       rotation: tf.rotation || 0,
+      id: tf.id, // Store ID for reverse lookup during save
     };
 
     // Musical Map (Label -> Pitch)
@@ -553,7 +555,47 @@ document.addEventListener('keydown', (e) => {
     el.style.left = `${p.x}%`;
     el.style.top = `${p.y}%`;
   }
+
+  if (hpMapSaveTimeout) clearTimeout(hpMapSaveTimeout);
+  hpMapSaveTimeout = setTimeout(saveHandpanPositions, 1000); // Auto-save after 1s of inactivity
 });
+
+async function saveHandpanPositions() {
+  if (!selectedScaleName.startsWith('custom:')) return;
+  const hpId = selectedScaleName.split(':')[1];
+
+  const customHp = customHandpansCache.find(hp => hp.id === hpId);
+  if (!customHp) return;
+
+  // Verify ownership? (RLS handles it, but good to check)
+  if (!currentUser || customHp.user_id !== currentUser.id) return;
+
+  let changed = false;
+
+  // Update the data model from the Visual Map
+  for (const [note, p] of Object.entries(window.HANDPAN_MAP)) {
+    if (!p.id) continue; // Not a custom note with ID
+    const tf = customHp.note_map.find(t => t.id === p.id);
+    if (tf) {
+      if (tf.x !== p.x || tf.y !== p.y) {
+        tf.x = p.x;
+        tf.y = p.y;
+        changed = true;
+      }
+    }
+  }
+
+  if (changed) {
+    console.log('Saving handpan positions...', customHp.name);
+    const { error } = await supabase1
+      .from('user_handpans')
+      .update({ note_map: customHp.note_map })
+      .eq('id', hpId);
+
+    if (error) console.error('Failed to save handpan:', error);
+    else console.log('Handpan saved.');
+  }
+}
 
 function clamp(v, min, max) {
   return Math.max(min, Math.min(max, v));

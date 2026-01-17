@@ -243,6 +243,10 @@ body.present .handpan-wrap {
   padding: 0;
 }
 
+body.present .handpan-overlay {
+  inset: 0;
+}
+
 /* Hide headers/labels in presentation for cleaner look? 
    Or keep them. The prompt didn't say to hide them, but usually "Guitar Hero" is clean.
    Let's keep them but maybe style them down if needed. 
