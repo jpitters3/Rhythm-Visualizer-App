@@ -61,36 +61,65 @@ function runSelfTests() {
 
 function showFatalError(err) {
   // Ensure we stop any running timers if an error happens during startup
-  try { stop(); } catch { }
+  try { if (typeof stop === 'function') stop(); } catch { }
 
   console.error(err);
-  // Avoid duplicate panels
-  if (document.getElementById('__fatal_panel__')) return;
-  console.error(err);
-  const panel = document.createElement('div');
-  panel.id = '__fatal_panel__';
-  panel.style.position = 'fixed';
-  panel.style.inset = '16px';
-  panel.style.zIndex = '9999';
-  panel.style.background = 'rgba(0,0,0,0.85)';
-  panel.style.color = 'white';
-  panel.style.padding = '16px';
-  panel.style.borderRadius = '16px';
-  panel.style.overflow = 'auto';
-  panel.innerHTML = `
-    <div style="font-weight:700; font-size:16px; margin-bottom:8px;">App failed to start</div>
-    <div style="opacity:.85; margin-bottom:12px;">This prevents the tab from "half-freezing" when there’s a runtime error.</div>
-    <pre style="white-space:pre-wrap; line-height:1.35;">${String(err?.stack || err)}</pre>
-    <button id="panicStop" style="margin-top:12px; padding:10px 14px; border-radius:999px; border:0; cursor:pointer;">Panic Stop</button>
-    <button id="panicContinue" style="margin-top:12px; padding:10px 14px; border-radius:999px; border:0; cursor:pointer;">Continue</button>
-  `;
-  document.body.appendChild(panel);
-  panel.querySelector('#panicStop')?.addEventListener('click', () => {
-    try { stop(); } catch { }
-  });
-  panel.querySelector('#panicContinue')?.addEventListener('click', () => {
-    document.getElementById('__fatal_panel__')?.remove();
-  });
+
+  const modal = document.getElementById('errorModal');
+  const stackPre = document.getElementById('errorStack');
+  const continueBtn = document.getElementById('errorContinueBtn');
+
+  if (!modal || !stackPre) {
+    // Fallback if DOM not ready or modal deleted
+    alert("App Failed: " + err);
+    return;
+  }
+
+  // Initial Render (Optimistic / Pessimistic)
+  const renderStack = (isAdm) => {
+    console.log('Rendering Error. Admin:', isAdm, 'Error:', err);
+    if (isAdm) {
+      // If stack is missing, dump the whole object header or string
+      const stackText = err?.stack || String(err);
+      stackPre.textContent = stackText;
+      document.querySelector('.error-details').open = true;
+    } else {
+      stackPre.textContent = String(err?.message || err);
+      document.querySelector('.error-details').open = false;
+    }
+  };
+
+  // Check Sync
+  let isAdmin = false;
+  const admins = (typeof ADMIN_EMAILS !== 'undefined' ? ADMIN_EMAILS : window.ADMIN_EMAILS);
+
+  try {
+    const email = currentUser?.email?.toLowerCase();
+    if (email && admins && admins.has(email)) {
+      isAdmin = true;
+    }
+  } catch (e) { }
+
+  renderStack(isAdmin);
+
+  modal.classList.add('show');
+  modal.style.display = 'flex';
+
+  // Check Async (if not already admin, maybe auth is still loading)
+  if (!isAdmin && typeof supabase1 !== 'undefined') {
+    supabase1.auth.getUser().then(({ data }) => {
+      const email = data?.user?.email?.toLowerCase();
+      if (email && admins && admins.has(email)) {
+        console.log('Async Admin Check Passed');
+        renderStack(true);
+      }
+    }).catch(() => { });
+  }
+
+  continueBtn.onclick = () => {
+    modal.classList.remove('show');
+    modal.style.display = 'none';
+  };
 }
 
 // Global error handlers (helps when a bad edit slips in)

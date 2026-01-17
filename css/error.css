@@ -1,0 +1,116 @@
+/* Error Modal Styles */
+#errorModal {
+  display: none; /* Hidden by default */
+  position: fixed;
+  z-index: 10000; /* Top most */
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  background-color: rgba(0,0,0,0.5); /* Black w/ opacity */
+  backdrop-filter: blur(5px);
+  align-items: center;
+  justify-content: center;
+}
+
+#errorModal.show {
+  display: flex !important;
+}
+
+.error-modal-content {
+  background-color: #fefefe;
+  margin: auto;
+  padding: 30px;
+  border: 1px solid #ddd;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 500px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+  font-family: system-ui, -apple-system, sans-serif;
+  text-align: center;
+  color: #333;
+}
+
+.error-modal-content h2 {
+  margin-top: 0;
+  color: #d32f2f; /* Error red usually, but user asked for friendly. slightly milder red? */
+  margin-bottom: 10px;
+  font-weight: 600;
+}
+
+.error-modal-content p {
+  color: #555;
+  line-height: 1.5;
+  margin-bottom: 20px;
+}
+
+.error-details {
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 6px;
+  text-align: left;
+  margin-bottom: 25px;
+  font-size: 0.9rem;
+}
+
+.error-details summary {
+  padding: 10px;
+  cursor: pointer;
+  color: #666;
+  font-weight: 500;
+  user-select: none;
+}
+
+.error-details summary:hover {
+  background: #f1f3f5;
+}
+
+.error-details pre {
+  margin: 0;
+  padding: 10px;
+  border-top: 1px solid #e9ecef;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  font-size: 11px;
+  color: #d32f2f;
+  max-height: 200px;
+  overflow-y: auto;
+  background: #fff;
+}
+
+.error-actions {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+}
+
+.error-btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.1s, opacity 0.2s;
+}
+
+.error-btn:active {
+  transform: scale(0.96);
+}
+
+.btn-primary {
+  background-color: #007bff;
+  color: white;
+}
+.btn-primary:hover {
+  background-color: #0069d9;
+}
+
+.btn-secondary {
+  background-color: #e9ecef;
+  color: #495057;
+}
+.btn-secondary:hover {
+  background-color: #dee2e6;
+}

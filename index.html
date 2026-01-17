@@ -106,6 +106,7 @@
   <link rel="stylesheet" href="css/feed.css">
   <link rel="stylesheet" href="css/course-marketplace.css">
   <link rel="stylesheet" href="./css/calibration.css">
+  <link rel="stylesheet" href="./css/error.css">
 </head>
 
 <body>
@@ -728,7 +729,27 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- Error Modal -->
+  <div id="errorModal" class="modal" aria-hidden="true" style="display:none;">
+    <div class="error-modal-content">
+      <h2>Oops... something went wrong</h2>
+      <p>We encountered an unexpected issue properly loading the application.</p>
+
+      <div class="error-actions">
+        <button id="errorRefreshBtn" class="error-btn btn-primary" onclick="location.reload()">Refresh Page</button>
+        <button id="errorContinueBtn" class="error-btn btn-secondary">Continue Anyway</button>
+      </div>
+
+      <br>
+      <details class="error-details">
+        <summary>View Technical Details</summary>
+        <pre id="errorStack">Loading stack trace...</pre>
+      </details>
+    </div>
+  </div>
+
   <script>
+
     const SUPABASE_URL = "https://ycdlqkaymkgpbpgtqubs.supabase.co";
     const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_ibxUdXTNfhXKhE5sh0wezA_1kigLLAZ";
 
@@ -846,6 +867,7 @@
     const ADMIN_EMAILS = new Set([
       "jpitters3@gmail.com",
     ]);
+    window.ADMIN_EMAILS = ADMIN_EMAILS;
 
     // ===== STATE =====
     let innerLabels = [];
