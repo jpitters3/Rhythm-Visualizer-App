@@ -401,10 +401,6 @@ function buildHandpanOverlay() {
     dot.style.left = `${p.x}%`;
     dot.style.top = `${p.y}%`;
 
-    // Support advanced shapes if present, else circle fallbacks
-    // existing maps might rely on 'r' logic which was r*2 size
-    // For bronze/sketch, we might not have width/height defined in the CONST objects.
-
     let w, h, rot;
     if (p.width) {
       w = p.width;
@@ -512,6 +508,112 @@ handpanOverlay?.addEventListener('click', (e) => {
     }
   }
 });
+
+// Nudge with arrow keys
+let isHpDragging = false;
+let hpDragStart = { x: 0, y: 0 }; // px
+let hpNoteStart = { x: 0, y: 0 }; // %
+
+// Drag Start
+handpanOverlay?.addEventListener('mousedown', (e) => {
+  if (!calibrating) return;
+  const dot = e.target.closest('.hp-dot');
+  if (!dot) return;
+
+  e.preventDefault(); // prevent text selection
+  const note = dot.dataset.note;
+  if (!window.HANDPAN_MAP[note]) return;
+
+  selectHpDot(note); // Selects it visually
+
+  isHpDragging = true;
+  hpDragStart = { x: e.clientX, y: e.clientY };
+  hpNoteStart = { x: window.HANDPAN_MAP[note].x, y: window.HANDPAN_MAP[note].y };
+});
+
+// Drag Move
+window.addEventListener('mousemove', (e) => {
+  if (!isHpDragging || !calibrating || !selectedHpNote) return;
+
+  const overlay = handpanOverlay.getBoundingClientRect();
+  if (overlay.width === 0 || overlay.height === 0) return;
+
+  const dxPx = e.clientX - hpDragStart.x;
+  const dyPx = e.clientY - hpDragStart.y;
+
+  const dxPct = (dxPx / overlay.width) * 100;
+  const dyPct = (dyPx / overlay.height) * 100;
+
+  const p = window.HANDPAN_MAP[selectedHpNote];
+  p.x = clamp(hpNoteStart.x + dxPct, 0, 100);
+  p.y = clamp(hpNoteStart.y + dyPct, 0, 100);
+
+  // Update DOM
+  const el = handpanDots.get(selectedHpNote);
+  if (el) {
+    el.style.left = `${p.x}%`;
+    el.style.top = `${p.y}%`;
+  }
+});
+
+// Drag End
+window.addEventListener('mouseup', () => {
+  if (isHpDragging) {
+    isHpDragging = false;
+    // Trigger Save
+    if (hpMapSaveTimeout) clearTimeout(hpMapSaveTimeout);
+    hpMapSaveTimeout = setTimeout(saveHandpanPositions, 1000);
+  }
+});
+
+/* Touch Support (Basic) */
+handpanOverlay?.addEventListener('touchstart', (e) => {
+  if (!calibrating) return;
+  const dot = e.target.closest('.hp-dot');
+  if (!dot) return;
+
+  e.preventDefault(); // prevent scroll
+  const note = dot.dataset.note;
+  if (!window.HANDPAN_MAP[note]) return;
+
+  selectHpDot(note);
+  isHpDragging = true;
+  const t = e.touches[0];
+  hpDragStart = { x: t.clientX, y: t.clientY };
+  hpNoteStart = { x: window.HANDPAN_MAP[note].x, y: window.HANDPAN_MAP[note].y };
+}, { passive: false });
+
+window.addEventListener('touchmove', (e) => {
+  if (!isHpDragging || !calibrating || !selectedHpNote) return;
+  e.preventDefault(); // prevent scroll
+  const t = e.touches[0];
+  const overlay = handpanOverlay.getBoundingClientRect();
+
+  const dxPx = t.clientX - hpDragStart.x;
+  const dyPx = t.clientY - hpDragStart.y;
+
+  const dxPct = (dxPx / overlay.width) * 100;
+  const dyPct = (dyPx / overlay.height) * 100;
+
+  const p = window.HANDPAN_MAP[selectedHpNote];
+  p.x = clamp(hpNoteStart.x + dxPct, 0, 100);
+  p.y = clamp(hpNoteStart.y + dyPct, 0, 100);
+
+  const el = handpanDots.get(selectedHpNote);
+  if (el) {
+    el.style.left = `${p.x}%`;
+    el.style.top = `${p.y}%`;
+  }
+}, { passive: false });
+
+window.addEventListener('touchend', () => {
+  if (isHpDragging) {
+    isHpDragging = false;
+    if (hpMapSaveTimeout) clearTimeout(hpMapSaveTimeout);
+    hpMapSaveTimeout = setTimeout(saveHandpanPositions, 1000);
+  }
+});
+
 
 // Nudge with arrow keys
 document.addEventListener('keydown', (e) => {
