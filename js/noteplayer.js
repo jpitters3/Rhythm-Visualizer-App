@@ -86,6 +86,7 @@ function noteToFile(note) {
 
 // Expose
 window.setCurrentScale = setCurrentScale;
+window.getScale = getScale;
 
 /* ==== Save and load scales locally and in db ==== */
 
@@ -166,7 +167,7 @@ async function preloadScaleSamples() {
   for (const n of notes) {
     let note = noteToFile(n); // includes .wav extension
     try { await loadSample(n, `./assets/audio/${note}`); }
-    catch (e) { console.log(e); }
+    catch (e) { console.log(`Error loading sample [${note}]: ${e}`); }
   }
 }
 

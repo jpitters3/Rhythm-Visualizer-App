@@ -30,9 +30,7 @@ const HANDPAN_MAP_BRONZE = {
   "S": { x: 93.3, y: 47.9, r: 7 },
 };
 
-// ... (Existing Maps)
-
-let HANDPAN_MAP = HANDPAN_MAP_BRONZE;
+window.HANDPAN_MAP = HANDPAN_MAP_BRONZE;
 
 // const HANDPAN_IMG_SKETCH = 'nine-note-handpan-numbered.png';
 const HANDPAN_IMG_SKETCH_EMPTY = 'handpan-empty-notes.png';
@@ -123,8 +121,8 @@ function applyCustomHandpan(handpanData) {
 
     // Visual Map (Label -> Visuals)
     newMap[label] = {
-      x: tf.x,
-      y: tf.y,
+      x: (typeof tf.x === 'number') ? tf.x : 50,
+      y: (typeof tf.y === 'number') ? tf.y : 50,
       r: r,
       width: tf.width || (r * 2),
       height: tf.height || (r * 2),
@@ -388,14 +386,12 @@ async function deleteUserHandpan(id) {
 // Expose
 window.loadAllUserHandpans = loadAllUserHandpans;
 
-// ... existing overlay logic
-
 function buildHandpanOverlay() {
   if (!handpanOverlay) return;
   handpanOverlay.innerHTML = '';
   handpanDots.clear();
 
-  for (const [note, p] of Object.entries(HANDPAN_MAP)) {
+  for (const [note, p] of Object.entries(window.HANDPAN_MAP)) {
     const dot = document.createElement('div');
     dot.className = 'hp-dot';
     dot.dataset.note = note; // This note key is used for playing sound
@@ -528,8 +524,8 @@ document.addEventListener('keydown', (e) => {
   // C prints current map
   if (e.key.toLowerCase() === 'c') {
     e.preventDefault();
-    console.log('HANDPAN_MAP =', JSON.parse(JSON.stringify(HANDPAN_MAP)));
-    console.log('Copy/paste version:\n' + stringifyHandpanMap(HANDPAN_MAP));
+    console.log('HANDPAN_MAP =', JSON.parse(JSON.stringify(window.HANDPAN_MAP)));
+    console.log('Copy/paste version:\n' + stringifyHandpanMap(window.HANDPAN_MAP));
     return;
   }
 
@@ -547,7 +543,7 @@ document.addEventListener('keydown', (e) => {
 
   e.preventDefault();
 
-  const p = HANDPAN_MAP[selectedHpNote];
+  const p = window.HANDPAN_MAP[selectedHpNote];
   p.x = clamp(p.x + dx, 0, 100);
   p.y = clamp(p.y + dy, 0, 100);
 
@@ -635,13 +631,13 @@ handpanSelect.addEventListener('change', async () => {
   if (selectedHandpanName === 'Bronze') {
     handpanImg.src = `./assets/images/${HANDPAN_IMG_BRONZE}`;
     handpanImg.style.transform = ''; // Reset rotation
-    HANDPAN_MAP = HANDPAN_MAP_BRONZE;
+    window.HANDPAN_MAP = HANDPAN_MAP_BRONZE;
 
   }
   else if (selectedHandpanName === 'Sketch') {
     handpanImg.src = `./assets/images/${HANDPAN_IMG_SKETCH_EMPTY}`;
     handpanImg.style.transform = ''; // Reset rotation
-    HANDPAN_MAP = HANDPAN_MAP_SKETCH;
+    window.HANDPAN_MAP = HANDPAN_MAP_SKETCH;
   }
   checkNumberPitchSelection();
   buildHandpanOverlay();
@@ -679,7 +675,7 @@ function overlayNumberPitchNotes() {
   const isCustom = scaleSelect.value.startsWith('custom:');
 
   for (const [note, el] of handpanDots.entries()) {
-    const p = HANDPAN_MAP[note];
+    const p = window.HANDPAN_MAP[note];
     if (!p) continue;
 
     const label = document.createElement('div');
@@ -687,26 +683,27 @@ function overlayNumberPitchNotes() {
     let text = '';
 
     if (overlayNumbers) {
-      // If Custom: Use assignedNumber if present, else fallback to '?' (or 'D' if note is D3)
-      if (isCustom) {
-        text = p.assignedNumber || (note.startsWith('D3') ? 'D' : '?');
-      } else {
-        // Standard: key IS the number (1, 2, 3...)
-        text = note;
+      // Unified Logic
+      text = note; // Default to key (e.g. "1", "2" or "A3")
+
+      const scale = typeof getScale === 'function' ? getScale() : null;
+      const dingPitch = scale ? scale.ding : 'D3';
+
+      // General Ding Detection (for both 'D' label and Pitch keys)
+      if (note === 'D' || note === dingPitch) {
+        text = '';
       }
     } else if (overlayPitches) {
-      // If Custom: 'note' IS the pitch (e.g. "C#4")
-      if (isCustom) {
-        text = note;
+      // Unified: Look up pitch for the label
+      if (typeof noteForLabel === 'function') {
+        const pitch = noteForLabel(note);
+        // Clean up pitch string? e.g. "Cs4" -> "C#4"?
+        // Also handle if pitch is file path? (Unified map stores "A3", "C#4")
+        text = pitch ? pitch.replace('s', '#') : '';
+
+        if (note === 'T' || note === 'S') text = note;
       } else {
-        // Standard: Need to lookup pitch for number key (e.g. "1" -> "C#4")
-        if (typeof noteForLabel === 'function') {
-          const pitch = noteForLabel(note);
-          // Clean up pitch string? e.g. "Cs4" -> "C#4"?
-          text = pitch ? pitch.replace('s', '#') : '';
-        } else {
-          text = note;
-        }
+        text = note;
       }
     }
 
@@ -729,16 +726,6 @@ function overlayNumberPitchNotes() {
 
 // Ensure buildHandpanOverlay calls this
 const originalBuild = buildHandpanOverlay;
-// We can't easily hook it if I don't replace it or modify it.
-// Wait, I saw line 395 was commented out: 
-// // if (overlayPitches || overlayNumbers)
-// //   overlayNumberPitchNotes(); else removeNoteLabels();
-
-// I should probably Uncomment that line in `buildHandpanOverlay` too, or redefine `buildHandpanOverlay` here?
-// Redefining it here (below original definition) works if `var` or `function`. 
-// But `buildHandpanOverlay` is a function declaration above. I can't redefine it easily without error or being ignored.
-// Better to just modify `buildHandpanOverlay` in place.
-
 
 numberPitchSelect.addEventListener('change', async () => {
   checkNumberPitchSelection();
@@ -756,9 +743,6 @@ ghostBtn.addEventListener('click', (e) => {
     const next = clampIndex(idx + 1);
     setCaret(next);
   }
-
-  // const noAdvance = e.altKey; // Alt = write without advancing
-  // writeToSelected('', { advance: !noAdvance });
 });
 
 lockBtn.addEventListener('click', (e) => {
