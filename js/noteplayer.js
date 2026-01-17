@@ -324,6 +324,53 @@ function playNoteByLabel(label, step) {
   const note = noteForLabel(label); // e.g. "C#", "D3_ding"
   if (note) { playNoteSample(note); }
 }
+
+let timeSignature = localStorage.getItem('defaultTimeSignature') || '4/4';
+
+const tsNumInput = document.getElementById('tsNum');
+const tsDenInput = document.getElementById('tsDen');
+
+function updateTimeSignatureFromInputs() {
+  if (!tsNumInput || !tsDenInput) return;
+  const num = Math.max(1, parseInt(tsNumInput.value) || 4);
+  const den = Math.max(1, parseInt(tsDenInput.value) || 4);
+  const ts = `${num}/${den}`;
+  setTimeSignature(ts);
+}
+
+tsNumInput?.addEventListener('change', updateTimeSignatureFromInputs);
+tsDenInput?.addEventListener('change', updateTimeSignatureFromInputs);
+
+function calculateSteps(ts, currentMode) {
+  const parts = ts.split('/');
+  const num = parseInt(parts[0]);
+  const den = parseInt(parts[1]);
+
+  const base = (currentMode === '16') ? 16 : 8;
+  const mult = base / den;
+  return num * mult;
+}
+
+function setTimeSignature(ts) {
+  if (!ts) return;
+  if (!ts.includes('/')) return;
+
+  timeSignature = ts;
+  localStorage.setItem('defaultTimeSignature', ts);
+
+  const [n, d] = ts.split('/');
+  if (tsNumInput && tsNumInput.value != n) tsNumInput.value = n;
+  if (tsDenInput && tsDenInput.value != d) tsDenInput.value = d;
+
+  STEPS = calculateSteps(timeSignature, mode);
+
+  renderAllMeasures();
+  restartIfPlaying();
+}
+
+// Initialize
+if (timeSignature) setTimeSignature(timeSignature);
+
 function setMode(nextMode) {
   measures = 1;
 
@@ -332,13 +379,17 @@ function setMode(nextMode) {
   if (wasPlaying) stop();
 
   mode = nextMode;
-  STEPS = (mode === '8') ? 8 : 16;
+  STEPS = calculateSteps(timeSignature, mode);
   gridBtn.textContent = (mode === '8') ? '8ths' : '16ths';
 
   renderAllMeasures();
 
   if (wasPlaying) start();
 }
+
+// Expose for other modules
+window.setTimeSignature = setTimeSignature;
+window.getTimeSignature = () => timeSignature;
 
 // ==== PLAY HANDPAN SOUNDS ====
 function playSample(key) {

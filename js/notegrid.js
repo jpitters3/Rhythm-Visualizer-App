@@ -16,16 +16,32 @@ function setCols(n) {
 }
 
 function labelForStep(i) {
-  if (mode === '8') {
-    const beatNumber = Math.floor(i / 2) + 1;
-    return (i % 2 === 0) ? String(beatNumber) : '+';
+  const ts = (typeof window.getTimeSignature === 'function') ? window.getTimeSignature() : '4/4';
+  let [num, den] = ts.split('/');
+  den = Number(den) || 4;
+
+  const base = (mode === '16') ? 16 : 8;
+  const stride = base / den;
+
+  const beatNumber = Math.floor(i / stride) + 1;
+  const sub = i % stride;
+
+  if (sub === 0) return String(beatNumber);
+
+  // Subdivision labels
+  if (Math.abs(stride - 4) < 0.1) {
+    if (sub === 1) return 'e';
+    if (sub === 2) return '&';
+    if (sub === 3) return 'a';
+  } else if (Math.abs(stride - 2) < 0.1) {
+    if (sub === 1) return '&';
+  } else if (Math.abs(stride - 1) < 0.1) {
+    // 1 step per beat
+    return '';
   }
-  const beatNumber = Math.floor(i / 4) + 1;
-  const pos = i % 4;
-  if (pos === 0) return String(beatNumber);
-  if (pos === 1) return 'e';
-  if (pos === 2) return '&';
-  return 'a';
+
+  // Fallback for odd meters
+  return '';
 }
 
 function clearGridDom() {

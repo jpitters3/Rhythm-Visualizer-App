@@ -190,6 +190,40 @@
       <button id="handBtn" style="display: none;" class="active" title="Toggle left/right hand coloring">Left/Right:
         Off</button>
       <button id="playBtn">►</button>
+      <div class="control-group">
+        <label>Time Sig</label>
+        <div style="display: flex; align-items: center; gap: 4px;">
+          <select id="tsNum" class="ts-select"
+            style="width: 50px; padding: 4px; border-radius: 4px; border: 1px solid #ccc; text-align: center;">
+            <option value="1">1</option>
+            <option value="2">2</option>
+            <option value="3">3</option>
+            <option value="4" selected>4</option>
+            <option value="5">5</option>
+            <option value="6">6</option>
+            <option value="7">7</option>
+            <option value="8">8</option>
+            <option value="9">9</option>
+            <option value="10">10</option>
+            <option value="11">11</option>
+            <option value="12">12</option>
+            <option value="13">13</option>
+            <option value="14">14</option>
+            <option value="15">15</option>
+            <option value="16">16</option>
+            <option value="17">17</option>
+            <option value="18">18</option>
+            <option value="19">19</option>
+          </select>
+          <span style="font-weight: bold;">/</span>
+          <select id="tsDen" class="ts-select"
+            style="width: 50px; padding: 4px; border-radius: 4px; border: 1px solid #ccc; text-align: center;">
+            <option value="2">2</option>
+            <option value="4" selected>4</option>
+            <option value="8">8</option>
+          </select>
+        </div>
+      </div>
       <label>BPM
         <input id="bpm" type="range" min="40" max="200" value="90" />
       </label>

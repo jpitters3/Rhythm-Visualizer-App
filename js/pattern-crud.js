@@ -99,7 +99,7 @@ async function refreshPatternSelect(selectedName = '') {
 
     // CLOUD MODE
     if (isAuthed()) {
-      const names = (await dbListPatternNames()).sort((a,b) => a.localeCompare(b));
+      const names = (await dbListPatternNames()).sort((a, b) => a.localeCompare(b));
       if (names.length === 0) {
         const opt = document.createElement('option');
         opt.value = '';
@@ -163,6 +163,7 @@ function serializePattern() {
     version: VERSION,
     mode,
     bpm: Number(bpmInput.value),
+    timeSignature: (typeof getTimeSignature === 'function' ? getTimeSignature() : '4/4'),
     handSplit: document.body.classList.contains('handSplit'),
     steps: STEPS,
     measures: measures,
@@ -180,6 +181,10 @@ function applyPattern(state) {
   if (wasPlaying) stop();
 
   setMode(state.mode === '16' ? '16' : '8');
+
+  if (typeof setTimeSignature === 'function') {
+    setTimeSignature(state.timeSignature || '4/4');
+  }
 
   measures = Number.isFinite(state.measures) ? Math.max(1, Math.floor(state.measures)) : 1;
 
