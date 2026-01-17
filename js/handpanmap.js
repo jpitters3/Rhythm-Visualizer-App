@@ -106,21 +106,54 @@ function applyCustomHandpan(handpanData) {
 
   // Update Map
   const newMap = {};
+  const musicalMap = {};
+  let dingPitch = "D3"; // Default
+
   handpanData.note_map.forEach(tf => {
     const key = `${tf.note}${tf.octave}`;
     const r = tf.r || 8;
-    newMap[key] = {
+
+    // Determine the label (Assigned Number OR "D" OR fallback to Pitch)
+    let label = tf.assignedNumber;
+    if (!label || label === "") {
+      // Fallback: If it's a ding, call it D? Or just use the pitch as label?
+      // Let's use the pitch as the label if no number assigned.
+      label = key;
+    }
+
+    // Visual Map (Label -> Visuals)
+    newMap[label] = {
       x: tf.x,
       y: tf.y,
       r: r,
       width: tf.width || (r * 2),
       height: tf.height || (r * 2),
       rotation: tf.rotation || 0,
-      assignedNumber: tf.assignedNumber // New property
     };
+
+    // Musical Map (Label -> Pitch)
+    if (label === 'Ding' || label === 'D') {
+      dingPitch = key;
+      // Also add to map just in case? No, ding is special property
+      newMap['D'] = newMap[label]; // Ensure 'D' key exists visually if they named it 'Ding'
+    } else {
+      musicalMap[label] = key;
+    }
   });
 
-  HANDPAN_MAP = newMap;
+  window.HANDPAN_MAP = newMap;
+
+  // Update Global Current Scale
+  if (window.setCurrentScale) {
+    window.setCurrentScale({
+      ding: dingPitch,
+      map: musicalMap
+    });
+  }
+
+  selectedScaleName = `custom:${handpanData.id}`;
+
+  preloadScaleSamples();
 
   // Update UI Selectors
   // Set Scale Select to this custom one
@@ -570,6 +603,12 @@ scaleSelect.addEventListener('change', async () => {
 
   scaleStatus.textContent = `Scale: ${selectedScaleName}`;
   saveScaleLocal(selectedScaleName);
+
+  // Update Current Scale for Standard Scales
+  if (window.setCurrentScale && window.SCALES) {
+    window.setCurrentScale(window.SCALES[selectedScaleName]);
+  }
+
   await preloadScaleSamples();
   if (currentUser) await saveScaleRemote(selectedScaleName);
   checkNumberPitchSelection();

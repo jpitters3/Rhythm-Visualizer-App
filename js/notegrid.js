@@ -169,7 +169,8 @@ function renderAllMeasures() {
           if (lbl === 'D') cell.classList.add('label-d');
           else if (lbl === 'T') cell.classList.add('label-t');
           else if (lbl === 'S') cell.classList.add('label-s');
-          else if (/^[0-9]$/.test(lbl)) cell.classList.add('label-n');
+          else if (lbl === 'S') cell.classList.add('label-s');
+          else cell.classList.add('label-n'); // Default to number style for all other inputs (custom pitches etc)
 
           // Assign hand side for visuals (per your existing logic)
           // IMPORTANT: this uses your current mode mapping (8ths/16ths)
@@ -412,7 +413,7 @@ function setInnerLabel(i, value) {
     if (v === 'D') cell.classList.add('label-d');
     else if (v === 'T') cell.classList.add('label-t');
     else if (v === 'S') cell.classList.add('label-s');
-    else if (/^[0-9]$/.test(v)) cell.classList.add('label-n');
+    else cell.classList.add('label-n'); // Default to number style
 
     cell.classList.remove('multi-mode');
 

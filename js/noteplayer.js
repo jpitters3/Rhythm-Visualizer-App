@@ -29,6 +29,12 @@ const SCALE_KEY_LOCAL = 'groovepan_scale';            // for non-logged-in users
 const SCALE_KEY_REMOTE = 'handpan_scale';             // for logged-in users in Supabase profile
 let selectedScaleName = null;
 
+// UNIFIED SCALE STATE
+let currentScale = {
+  ding: "D3",
+  map: {}
+};
+
 const scaleSelect = document.getElementById('scaleSelect');
 const scaleStatus = document.getElementById('scaleStatus');
 
@@ -48,24 +54,38 @@ function buildScaleSelect() {
 
 buildScaleSelect();
 
+function setCurrentScale(scaleObj) {
+  if (!scaleObj) return;
+  currentScale = scaleObj;
+}
+
 function getScale() {
-  return SCALES[selectedScaleName] || SCALES[Object.keys(SCALES)[0]];
+  return currentScale;
 }
 
 function noteForLabel(label) {
-  const s = getScale();
-  if (label === 'D') return `${s.ding}_ding`;     // ding note name like "D3"
-  else if (label === 'T') return SOUND_TAK;
-  else if (label === 'S') return SOUND_SLAP;
-  if (/^[1-8]$/.test(label)) return s.map[label]; // e.g. "Cs3"
-  return null; // ghosts notes
+  // 1. Common Sounds
+  if (label === 'T') return SOUND_TAK;
+  if (label === 'S') return SOUND_SLAP;
+
+  // 2. Look up in current scale (Unified)
+  if (label === 'D') return `${currentScale.ding}_ding`;
+
+  // Return Pitch if found in map (e.g. "1" -> "A3")
+  if (currentScale.map[label]) return currentScale.map[label];
+
+  return null;
 }
 
 function noteToFile(note) {
   // "C#3" -> "Cs3.wav", "F#3" -> "Fs3.wav", "Bb3" -> "Bb3.wav"
-  // TODO Map flats to sharps here
+  // TODO Map flats/sharps here
+  if (!note) return '';
   return note.replace('#', 's') + '.wav';
 }
+
+// Expose
+window.setCurrentScale = setCurrentScale;
 
 /* ==== Save and load scales locally and in db ==== */
 
@@ -142,10 +162,11 @@ function ensureAudio() {
 // Preload note samples once audio is unlocked
 async function preloadScaleSamples() {
   const s = getScale();
-  const notes = new Set([s.ding + '_ding', ...Object.values(s.map)]);
+  const notes = new Set([(s.ding || 'D3') + '_ding', ...Object.values(s.map)]);
   for (const n of notes) {
     let note = noteToFile(n); // includes .wav extension
-    await loadSample(n, `./assets/audio/${note}`);
+    try { await loadSample(n, `./assets/audio/${note}`); }
+    catch (e) { console.log(e); }
   }
 }
 

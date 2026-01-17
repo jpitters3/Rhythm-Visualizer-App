@@ -30,7 +30,7 @@ function initCalDropdowns() {
 
   // Custom Numbers: D, 1..20
   if (calNumberSelect) {
-    const opts = ['D'];
+    const opts = ['Ding'];
     for (let i = 1; i <= 20; i++) opts.push(String(i));
     calNumberSelect.innerHTML = opts.map(n => `<option value="${n}">${n}</option>`).join('');
   }
@@ -224,12 +224,12 @@ addTonefieldBtn.addEventListener('click', () => {
   let nextOctave = lastAssignedOctave;
 
   // Smart Logic: Number (Default D if first, else last + 1)
-  let nextNum = 'D';
+  let nextNum = 'Ding';
 
   if (currentNoteMap.length === 0) {
-    nextPitchIndex = CAL_PITCHES.indexOf('D');
+    nextPitchIndex = CAL_PITCHES.indexOf('Ding');
     nextOctave = 3;
-    nextNum = 'D';
+    nextNum = 'Ding';
   } else {
     // Pitch Logic
     nextPitchIndex += 2;
@@ -241,7 +241,7 @@ addTonefieldBtn.addEventListener('click', () => {
     // Number Logic: Find max number assigned so far
     let maxNum = 0;
     currentNoteMap.forEach(t => {
-      if (t.assignedNumber && t.assignedNumber !== 'D') {
+      if (t.assignedNumber && t.assignedNumber !== 'Ding') {
         const val = parseInt(t.assignedNumber);
         if (!isNaN(val) && val > maxNum) maxNum = val;
       }

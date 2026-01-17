@@ -82,10 +82,14 @@ function showFatalError(err) {
     <div style="opacity:.85; margin-bottom:12px;">This prevents the tab from "half-freezing" when there’s a runtime error.</div>
     <pre style="white-space:pre-wrap; line-height:1.35;">${String(err?.stack || err)}</pre>
     <button id="panicStop" style="margin-top:12px; padding:10px 14px; border-radius:999px; border:0; cursor:pointer;">Panic Stop</button>
+    <button id="panicContinue" style="margin-top:12px; padding:10px 14px; border-radius:999px; border:0; cursor:pointer;">Continue</button>
   `;
   document.body.appendChild(panel);
   panel.querySelector('#panicStop')?.addEventListener('click', () => {
     try { stop(); } catch { }
+  });
+  panel.querySelector('#panicContinue')?.addEventListener('click', () => {
+    document.getElementById('__fatal_panel__')?.remove();
   });
 }
 
