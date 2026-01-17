@@ -15,13 +15,14 @@ async function fetchCourses() {
 
     activeCourseId = profile?.current_course_id;
 
-    // 2. Fetch User's Enrolled Course IDs
-    const { data: enrollments } = await supabase1
-      .from('user_courses')
-      .select('course_id')
-      .eq('user_id', currentUser.id);
+    // 2. Fetch User's Enrolled Courses AND Completed Lessons
+    const [enrollRes, progressRes] = await Promise.all([
+      supabase1.from('user_courses').select('course_id').eq('user_id', currentUser.id),
+      supabase1.from('user_lesson_progress').select('lesson_id').eq('user_id', currentUser.id)
+    ]);
 
-    const enrolledIds = new Set(enrollments?.map(e => e.course_id) || []);
+    const enrolledIds = new Set(enrollRes.data?.map(e => e.course_id) || []);
+    window.completedLessonIds = new Set(progressRes.data?.map(p => p.lesson_id) || []);
 
     // 3. Fetch ALL courses (we filter in memory or complicated query)
     // A simplified approach: Fetch all, then filter. 
@@ -133,11 +134,16 @@ function renderCourseSidebar(courses) {
           <div class="course-body">
             ${course.sections.sort((a, b) => a.order_index - b.order_index).map(section => `
               <div class="section-title">${section.title}</div>
-              ${section.lessons.sort((a, b) => a.order_index - b.order_index).map(lesson => `
+              ${section.lessons.sort((a, b) => a.order_index - b.order_index).map(lesson => {
+        const isComplete = window.completedLessonIds?.has(lesson.id);
+        return `
                 <div class="lesson-link" onclick="loadLesson('${lesson.id}')">
-                  <span style="opacity:0.6; margin-right:6px;">•</span> ${lesson.title}
+                  ${isComplete
+            ? '<span style="color:#4CAF50; margin-right:6px; font-weight:bold;">✓</span>'
+            : '<span style="opacity:0.6; margin-right:6px;">•</span>'}
+                  ${lesson.title}
                 </div>
-              `).join('')}
+              `}).join('')}
             `).join('')}
           </div>
         </div>
@@ -221,6 +227,52 @@ function loadLesson(lessonId) {
   document.getElementById('activeLessonTitle').textContent = lesson.title;
   document.getElementById('lessonDescription').textContent = lesson.description;
 
+  // Completion Button
+  const btn = document.getElementById('lessonCompleteBtn');
+  const isComplete = window.completedLessonIds?.has(lesson.id);
+
+  if (btn) {
+    btn.textContent = isComplete ? '✅ Completed' : 'Mark as Complete';
+    btn.onclick = () => toggleLessonCompletion(lesson.id);
+    btn.style.display = 'inline-flex';
+  }
+
+  // Next Lesson Button
+  const nextBtn = document.getElementById('nextLessonBtn');
+  if (nextBtn) {
+    // Find the course this lesson belongs to
+    const course = window.allCourses.find(c => c.sections.some(s => s.lessons.some(l => l.id === lessonId)));
+
+    let nextLesson = null;
+
+    if (course) {
+      // Flatten lessons for THIS course only, honoring section/lesson order
+      const courseLessons = course.sections
+        .sort((a, b) => a.order_index - b.order_index)
+        .flatMap(s => s.lessons.sort((l1, l2) => l1.order_index - l2.order_index));
+
+      const idx = courseLessons.findIndex(l => l.id === lessonId);
+      if (idx !== -1 && idx < courseLessons.length - 1) {
+        nextLesson = courseLessons[idx + 1];
+      }
+    }
+
+    if (nextLesson) {
+      nextBtn.style.display = 'inline-flex';
+      nextBtn.onclick = () => loadLesson(nextLesson.id);
+      nextBtn.title = `Next: ${nextLesson.title}`;
+
+      // Initial State: Faded if current lesson not complete
+      if (window.completedLessonIds?.has(lesson.id)) {
+        nextBtn.classList.remove('faded');
+      } else {
+        nextBtn.classList.add('faded');
+      }
+    } else {
+      nextBtn.style.display = 'none';
+    }
+  }
+
   // 3. Handle Video
   const videoCont = document.getElementById('videoContainer');
   if (lesson.video_url) {
@@ -281,3 +333,87 @@ searchInput?.addEventListener('input', (e) => {
     link.style.display = text.includes(term) ? 'flex' : 'none';
   });
 });
+
+async function toggleLessonCompletion(lessonId) {
+  if (!currentUser) {
+    alert("Please sign in to track progress.");
+    return;
+  }
+
+  const isComplete = window.completedLessonIds.has(lessonId);
+
+  if (isComplete) {
+    const { error } = await supabase1
+      .from('user_lesson_progress')
+      .delete()
+      .eq('lesson_id', lessonId)
+      .eq('user_id', currentUser.id);
+
+    if (!error) window.completedLessonIds.delete(lessonId);
+  } else {
+    const { error } = await supabase1
+      .from('user_lesson_progress')
+      .insert({ user_id: currentUser.id, lesson_id: lessonId });
+
+    if (!error) {
+      window.completedLessonIds.add(lessonId);
+
+      // Check for Course Completion
+      const course = window.allCourses.find(c => c.sections.some(s => s.lessons.some(l => l.id === lessonId)));
+      if (course) {
+        const courseLessonIds = course.sections.flatMap(s => s.lessons).map(l => l.id);
+        const allComplete = courseLessonIds.every(id => window.completedLessonIds.has(id));
+        if (allComplete) {
+          triggerCourseCompletionCelebration(course.title);
+        }
+      }
+    }
+  }
+
+  // Refresh UI
+  renderCourseSidebar(window.allCourses);
+
+  // Also update current button if viewing that lesson
+  const btn = document.getElementById('lessonCompleteBtn');
+  const nextBtn = document.getElementById('nextLessonBtn');
+
+  if (btn) {
+    const newState = window.completedLessonIds.has(lessonId);
+    btn.textContent = newState ? '✅ Completed' : 'Mark as Complete';
+
+    if (nextBtn) {
+      if (newState) nextBtn.classList.remove('faded');
+      else nextBtn.classList.add('faded');
+    }
+  }
+}
+
+function triggerCourseCompletionCelebration(courseTitle) {
+  let overlay = document.getElementById('celebrationOverlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'celebrationOverlay';
+    overlay.style.cssText = `
+            position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 9999;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            opacity: 0; transition: opacity 0.5s ease; color: white; text-align: center;
+        `;
+    overlay.innerHTML = `
+            <div style="transform: scale(0.8); animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;">
+                <h1 style="font-size: 3rem; margin-bottom: 20px;">🎉 Course Completed! 🎉</h1>
+                <h2 id="celCourseTitle" style="font-size: 2rem; color: #ffd166; margin-bottom: 40px;"></h2>
+                <div style="font-size: 4rem; margin-bottom: 30px;">🏆</div>
+                <button class="primary-btn" style="font-size:1.2rem; padding: 12px 32px;" onclick="document.getElementById('celebrationOverlay').style.opacity='0'; setTimeout(()=>document.getElementById('celebrationOverlay').remove(), 500)">Continue</button>
+            </div>
+            <style>
+                @keyframes popIn { to { transform: scale(1); } }
+            </style>
+        `;
+    document.body.appendChild(overlay);
+  }
+
+  document.getElementById('celCourseTitle').textContent = courseTitle;
+  requestAnimationFrame(() => overlay.style.opacity = '1');
+}
+
+window.toggleLessonCompletion = toggleLessonCompletion;

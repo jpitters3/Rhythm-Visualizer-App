@@ -489,3 +489,21 @@ body.dark button#closeLessonBtn:hover {
     transform: translateY(0);
   }
 }
+
+/* Next Lesson Button States */
+#nextLessonBtn {
+  transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+#nextLessonBtn.faded {
+  opacity: 0.5;
+  filter: saturate(0.6);
+  transform: scale(0.96);
+  box-shadow: none;
+}
+
+#nextLessonBtn:not(.faded) {
+  opacity: 1;
+  filter: saturate(1);
+  transform: scale(1);
+}
