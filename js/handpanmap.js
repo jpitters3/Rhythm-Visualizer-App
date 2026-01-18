@@ -753,6 +753,12 @@ let lastStandardModel = 'Bronze';
 scaleSelect.addEventListener('change', async () => {
   selectedScaleName = scaleSelect.value;
 
+  // Persist Scale Selection
+  if (window.saveScaleLocal) window.saveScaleLocal(selectedScaleName);
+  if (typeof window.isAuthed === 'function' && window.isAuthed() && window.saveScaleRemote) {
+    window.saveScaleRemote(selectedScaleName);
+  }
+
   if (selectedScaleName.startsWith('custom:')) {
     const id = selectedScaleName.split(':')[1];
     const customHp = customHandpansCache.find(hp => hp.id === id);
@@ -1052,3 +1058,21 @@ saveNewHandpanBtn?.addEventListener('click', async () => {
     saveNewHandpanBtn.disabled = false;
   }
 });
+
+// Initialize Scale from previous session
+setTimeout(async () => {
+  if (window.loadScaleLocal && scaleSelect) {
+    let saved = window.loadScaleLocal();
+    // If logged in, remote check logic exists but is async. 
+    // We trust local for immediate UI feedback.
+
+    if (saved) {
+      const exists = Array.from(scaleSelect.options).some(o => o.value === saved);
+      if (exists || saved.startsWith('custom:')) {
+        scaleSelect.value = saved;
+        // Manually trigger change to apply it
+        scaleSelect.dispatchEvent(new Event('change'));
+      }
+    }
+  }
+}, 500);

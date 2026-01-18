@@ -1,4 +1,4 @@
-/* ==== Layout and structure of the notes ==== */
+
 
 const cells = () => document.querySelectorAll('.cell');
 let activeSubIndex = null; // Tracks which of the 4 circles is selected (0-3)
@@ -671,3 +671,5 @@ function attachCellListeners(cell) {
 
   cell.addEventListener('pointercancel', () => cancelLongPress());
 }
+
+

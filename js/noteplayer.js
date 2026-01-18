@@ -116,6 +116,12 @@ async function loadScaleRemote() {
   return data?.handpan_scale || null;
 }
 
+// Expose persistence
+window.saveScaleLocal = saveScaleLocal;
+window.loadScaleLocal = loadScaleLocal;
+window.saveScaleRemote = saveScaleRemote;
+window.loadScaleRemote = loadScaleRemote;
+
 
 /* Player Functionality */
 

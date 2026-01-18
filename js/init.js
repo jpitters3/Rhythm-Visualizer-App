@@ -18,15 +18,6 @@ function restorePrefs() {
   updateMetroUI();
 
   bpmVal.textContent = bpmInput.value;
-
-  if (localStorage.getItem(PRESENT_KEY) === 'on') {
-    document.body.classList.add('present');
-    presentBtn.classList.add('active');
-    presentBtn.textContent = 'Exit Presentation';
-    exitPresent.style.display = 'inline-flex';
-  } else {
-    exitPresent.style.display = 'none';
-  }
 }
 
 function runSelfTests() {
@@ -148,6 +139,21 @@ function safeInit() {
     (async () => {
       await loadSharedFromURL();
       await refreshPatternSelect();
+
+      // Synchronous Pattern Load (Prevents Race Condition)
+      let selected = (typeof patternSelect !== 'undefined') ? patternSelect.value : '';
+
+      // Fallback: If dropdown is empty, try to get last used directly
+      if (!selected && typeof LAST_USED_KEY !== 'undefined') {
+        const last = localStorage.getItem(LAST_USED_KEY);
+        if (last) selected = last;
+      }
+
+      if (selected && typeof loadPatternByName === 'function') {
+        await loadPatternByName(selected);
+      }
+
+      await setPresentation(localStorage.getItem(PRESENT_KEY) === 'on');
     })();
 
     updatePatternButtons();

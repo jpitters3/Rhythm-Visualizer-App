@@ -15,8 +15,8 @@ function getMeasureCountFromDOM() {
 function getActiveMeasureIndex() {
   const s = getStepCountPerMeasure();
   const idx = (typeof caretIndex === 'number' && caretIndex >= 0) ? caretIndex
-            : (typeof selectedIndex === 'number' && selectedIndex >= 0) ? selectedIndex
-            : 0;
+    : (typeof selectedIndex === 'number' && selectedIndex >= 0) ? selectedIndex
+      : 0;
   return Math.floor(idx / s);
 }
 

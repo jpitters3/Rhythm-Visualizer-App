@@ -1,4 +1,5 @@
-// ===== PRESENTATION MODE =====
+/* ===== PRESENTATION MODE ===== */
+var lastMeasureIndex = -1;
 async function enterFullscreenIfPossible() {
   try {
     if (!document.fullscreenElement && document.documentElement.requestFullscreen) {
@@ -23,7 +24,7 @@ async function setPresentation(on) {
   document.body.classList.toggle('present', on);
   localStorage.setItem(PRESENT_KEY, on ? 'on' : 'off');
   presentBtn.classList.toggle('active', on);
-  // presentBtn.textContent = on ? '⛶' : '⛶';
+  presentBtn.textContent = on ? '⛶' : '⛶';
   exitPresent.style.display = on ? 'inline-flex' : 'none';
 
   if (on) {
@@ -35,7 +36,6 @@ async function setPresentation(on) {
   }
 }
 
-let lastMeasureIndex = -1;
 
 function updatePresentationView(currentStep) {
   const isPresenting = document.body.classList.contains('present');
@@ -43,27 +43,26 @@ function updatePresentationView(currentStep) {
 
   // Calculate current measure index
   const stepsPerMeasure = (typeof STEPS !== 'undefined') ? STEPS : 16;
-
-  // USER REQUEST: Swap halfway through the last beat.
-  // Last beat duration is 4 steps (16th) or 2 steps (8th).
-  // Halfway is stepsPerMeasure / 8.
   const lookahead = Math.floor(stepsPerMeasure / 8);
-
-  // Calculate total steps to handle wrapping (if measures global is valid)
   const totalMeasureCount = (typeof measures !== 'undefined') ? measures : 1;
   const totalSteps = totalMeasureCount * stepsPerMeasure;
 
-  // Use modulo for seamless looping visual
   const visualStep = (currentStep + lookahead) % totalSteps;
   const currentMeasureIndex = Math.floor(visualStep / stepsPerMeasure);
 
+  console.log(`[Present] updateView: step=${currentStep} idx=${currentMeasureIndex} last=${lastMeasureIndex}`);
+
   // OPTIMIZATION: Only update DOM if measure changed
-  if (currentMeasureIndex === lastMeasureIndex) return;
+  if (currentMeasureIndex === lastMeasureIndex) {
+    console.log(`[Present] Skipped (Index match)`);
+    return;
+  }
   lastMeasureIndex = currentMeasureIndex;
 
   const measuresEl = document.getElementById('measures');
-  if (!measuresEl) return;
+  if (!measuresEl) { console.warn('[Present] measuresEl not found!'); return; }
   const measureRows = Array.from(measuresEl.getElementsByClassName('measure-row'));
+  console.log(`[Present] Found ${measureRows.length} rows`);
 
   measureRows.forEach((row, index) => {
     // Reset classes
@@ -108,5 +107,35 @@ function updateStaticHeader(cols) {
   }
 }
 
+function resetPresentationView() {
+  lastMeasureIndex = -1;
+  console.log('[Present] Cache reset via resetPresentationView');
+}
+
 // Make it global
 window.updatePresentationView = updatePresentationView;
+window.setPresentation = setPresentation;
+window.resetPresentationView = resetPresentationView;
+
+// Initialize Presentation Mode
+document.addEventListener('DOMContentLoaded', () => {
+  if (localStorage.getItem(PRESENT_KEY) === 'on') {
+    // Restore UI state immediately
+    document.body.classList.add('present');
+    const btn = document.getElementById('presentBtn');
+    if (btn) btn.classList.add('active');
+    const exit = document.getElementById('exitPresent');
+    if (exit) exit.style.display = 'inline-flex';
+
+    // Force initial render (even if empty pattern, it sets up structure)
+    updatePresentationView(0);
+  }
+});
+
+// Detect externally triggered Fullscreen exit (e.g. Esc key by user)
+document.addEventListener('fullscreenchange', () => {
+  if (!document.fullscreenElement && document.body.classList.contains('present')) {
+    // User exited fullscreen (e.g. via Esc), so we switch off presentation layout
+    setPresentation(false);
+  }
+});

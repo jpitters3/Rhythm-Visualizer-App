@@ -6,6 +6,8 @@ document.addEventListener('keydown', (e) => {
   // Esc
   if (e.key === 'Escape') {
 
+    // e.preventDefault();
+    // e.stopPropagation();
     // 0. Priorities: Top-most overlays first
 
     // Guided Calibration

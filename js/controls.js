@@ -118,7 +118,11 @@ themeBtn.addEventListener('click', () => {
 
 presentBtn.addEventListener('click', () => {
   const on = !document.body.classList.contains('present');
-  setPresentation(on);
+  if (window.setPresentation) {
+    window.setPresentation(on);
+  } else {
+    console.error('setPresentation not loaded');
+  }
 });
 
 exitPresent.addEventListener('click', () => setPresentation(false));
@@ -223,6 +227,14 @@ async function loadPatternByName(pattern) {
     if (!saved[name]) return;
     applyPattern(saved[name]);
     localStorage.setItem(LAST_USED_KEY, name);
+
+    // Force refresh presentation view if active (fixes blank screen on refresh)
+    // Force refresh presentation view if active (fixes blank screen on refresh)
+    if (window.updatePresentationView) {
+      // Reset cache because applyPattern rebuilt the DOM
+      if (window.resetPresentationView) window.resetPresentationView();
+      window.updatePresentationView(0);
+    }
   } catch (err) {
     console.error(err);
     alert(`Load failed: ${err?.message || err}`);
@@ -347,3 +359,8 @@ importBtn.addEventListener('click', async () => {
     alert('That did not parse as JSON.');
   }
 });
+
+// Initialize Pattern from previous session
+// Wait for DOM and refreshPatternSelect
+// Initialize Pattern from previous session
+// MOVED TO init.js to prevent race condition
