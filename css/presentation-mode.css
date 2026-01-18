@@ -157,7 +157,6 @@ body.present .static-labels div {
 body.present .measure-row.current-measure {
   bottom: auto;
   top: 26vh;
-  /* Significant drop from original ~26% (74% bottom) to 32vh for better visibility on wide screens */
   opacity: 1;
   transform: translateX(-50%) scale(1.1);
   z-index: 10;
@@ -166,12 +165,17 @@ body.present .measure-row.current-measure {
 }
 
 /* Position Handpan at Bottom Center */
+/* Position Handpan at Bottom Center */
 body.present .handpan-panel {
   position: fixed;
   left: 50%;
-  transform: translateX(-50%) translateY(100%);
-  /* Scale down slightly to fit */
-  z-index: 1;
+  top: 48vh;
+  /* Starts below the rhythm highway */
+  bottom: auto;
+  /* Ensure bottom doesn't conflict */
+  transform: translateX(-50%);
+  /* Only center horizontally */
+  z-index: 100;
   /* BEHIND the measures (which are 5, 10 etc) */
   background: transparent;
   box-shadow: none;
