@@ -108,7 +108,9 @@ body.present .measure-row {
 
 /* SLOT 3: Next+1 Measure */
 body.present .measure-row.next-measure-2 {
-  bottom: 90%;
+  bottom: auto;
+  top: 5vh;
+  /* Fixed visual top anchor */
   opacity: 0.2;
   transform: translateX(-50%) scale(0.8);
   z-index: 1;
@@ -117,7 +119,8 @@ body.present .measure-row.next-measure-2 {
 
 /* SLOT 2: Next Measure */
 body.present .measure-row.next-measure {
-  bottom: 84%;
+  bottom: auto;
+  top: 12vh;
   opacity: 0.6;
   transform: translateX(-50%) scale(0.9);
   z-index: 5;
@@ -127,8 +130,9 @@ body.present .measure-row.next-measure {
 /* Static Header Styles */
 body.present .static-labels {
   position: fixed;
-  bottom: 70%;
-  /* Just above the current measure (which is at 50%) + gap */
+  bottom: auto;
+  top: 36vh;
+  /* Placed below current measure (32vh + height) */
   left: 50%;
   transform: translateX(-50%) scale(1.1);
   /* Match current measure scale */
@@ -151,7 +155,9 @@ body.present .static-labels div {
 
 /* SLOT 1: Current Measure (Raised to proper hover position) */
 body.present .measure-row.current-measure {
-  bottom: 74%;
+  bottom: auto;
+  top: 26vh;
+  /* Significant drop from original ~26% (74% bottom) to 32vh for better visibility on wide screens */
   opacity: 1;
   transform: translateX(-50%) scale(1.1);
   z-index: 10;
@@ -191,6 +197,8 @@ body.present .main {
 
 body.present .left {
   width: 100%;
+  max-width: 100%;
+  /* Override 60% limit from main layout */
   float: none;
   margin: 0;
 }
@@ -243,7 +251,8 @@ body.present .handpan-wrap {
   padding: 0;
 }
 
-body.present .handpan-overlay {
+body.present .handpan-overlay,
+body.present .v-hand-layer {
   inset: 0;
 }
 

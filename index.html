@@ -94,6 +94,8 @@
   <link rel="stylesheet" href="./css/groove-modal.css">
   <link rel="stylesheet" href="./css/presentation-mode.css">
   <link rel="stylesheet" href="./css/handpanmap.css">
+  <link rel="stylesheet" href="css/handpan-overlays.css">
+  <link rel="stylesheet" href="css/hand-cursors.css"> <!-- Virtual Hands -->
   <link rel="stylesheet" href="./css/shared-pattern-banner.css">
   <link rel="stylesheet" href="./css/action-bar.css">
   <link rel="stylesheet" href="./css/measure-actions.css">
@@ -320,6 +322,14 @@
               </select>
             </div>
 
+            <div class="setting-row">
+              <label>Hands:</label>
+              <div class="toggle-wrapper" style="display:flex; align-items:center; gap:8px;">
+                <input type="checkbox" id="vHandsToggle" checked style="width:auto;">
+                <label for="vHandsToggle" style="font-size:12px; font-weight:400; cursor:pointer; margin:0;">Show Ghost
+                  Hands</label>
+              </div>
+            </div>
             <div class="setting-row" style="margin-top: 10px;">
               <button id="calBtn" class="secondary-btn small-btn" style="width:100%">Calibrate Current Map</button>
             </div>
@@ -946,6 +956,9 @@
   <script src="./js/notegrid.js?v=4"></script>
   <script src="./js/noteplayer.js"></script>
   <script src="./js/handpanmap.js?v=4"></script>
+  <script src="./js/lesson-player.js"></script>
+  <script src="./js/metronome.js"></script>
+  <script src="./js/virtual-hands.js"></script>
   <script src="./js/compose-mode.js?v=4"></script>
   <script src="./js/transcription.js?v=4"></script>
   <script src="./js/groove-generator.js?v=4"></script>

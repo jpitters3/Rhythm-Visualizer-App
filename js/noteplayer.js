@@ -273,18 +273,72 @@ function tick() {
 
   const currentData = innerLabels[step];
 
+  // Virtual Hand Collections
+  const stepNotes = [];
+  const stepHands = [];
+  const currentHandsData = window.innerHands ? window.innerHands[step] : null;
+
+  // Helper for Sticking Logic
+  function resolveHand(stepIdx, handData, subIdx = 0) {
+    let explicit = null;
+    if (Array.isArray(handData)) {
+      explicit = handData[subIdx];
+    } else if (typeof handData === 'string') {
+      explicit = handData;
+    }
+
+    if (explicit === 'L') return 'L';
+    if (explicit === 'R') return 'R';
+    return isDownbeatStep(stepIdx) ? 'R' : 'L'; // Default logic
+  }
+
   // Play and Highlight Multiple Notes
   if (Array.isArray(currentData)) {
-    currentData.forEach(label => {
+    currentData.forEach((label, subIdx) => {
       if (label) {
         playNoteByLabel(label, step);
         highlightHandpan(label, step);
+        stepNotes.push(label);
+        stepHands.push(resolveHand(step, currentHandsData, subIdx));
       }
     });
-    //Play and Highlight Single Note
   } else if (currentData) {
     playNoteByLabel(currentData, step);
     highlightHandpan(currentData, step);
+    stepNotes.push(currentData);
+    stepHands.push(resolveHand(step, currentHandsData, 0));
+  }
+
+  // --- LOOKAHEAD FOR VIRTUAL HANDS ---
+  let nextL = null;
+  let nextR = null;
+
+  if (window.virtualHands && window.virtualHands.enabled) {
+    const maxLookahead = 16;
+    const totalSteps = cells().length;
+
+    for (let i = 1; i <= maxLookahead; i++) {
+      if (nextL && nextR) break;
+
+      const futureStep = (step + i) % totalSteps;
+      const futureData = innerLabels[futureStep];
+      const futureHands = window.innerHands ? window.innerHands[futureStep] : null;
+
+      if (!futureData) continue;
+
+      const labels = Array.isArray(futureData) ? futureData : [futureData];
+      labels.forEach((lbl, sIdx) => {
+        if (!lbl) return;
+        const h = resolveHand(futureStep, futureHands, sIdx);
+        if (h === 'L' && !nextL) nextL = lbl;
+        if (h === 'R' && !nextR) nextR = lbl;
+      });
+    }
+  }
+
+  // Update Visual Hands
+  if (window.virtualHands) {
+    virtualHands.update(stepNotes, stepHands, nextL, nextR);
   }
 
   // Remove styles of previously played steps
