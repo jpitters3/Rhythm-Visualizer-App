@@ -331,6 +331,7 @@ const tsNumInput = document.getElementById('tsNum');
 const tsDenInput = document.getElementById('tsDen');
 
 function updateTimeSignatureFromInputs() {
+  if (window.HistoryManager) window.HistoryManager.pushState();
   if (!tsNumInput || !tsDenInput) return;
   const num = Math.max(1, parseInt(tsNumInput.value) || 4);
   const den = Math.max(1, parseInt(tsDenInput.value) || 4);

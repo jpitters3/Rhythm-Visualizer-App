@@ -46,6 +46,7 @@ function advanceSelection(delta = 1) {
 }
 
 function writeToSelected(label, { advance = true } = {}) {
+  if (window.HistoryManager) window.HistoryManager.pushState();
   if (selectedIndex === null) return;
 
   setInnerLabel(selectedIndex, label);

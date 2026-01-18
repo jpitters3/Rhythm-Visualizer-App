@@ -264,6 +264,7 @@ function renderAllMeasures() {
           // Right-click to toggle Sticking (Shift = Invert Following)
           cell.addEventListener('contextmenu', (e) => {
             e.preventDefault();
+            if (window.HistoryManager) window.HistoryManager.pushState(); // SAVE STATE
             if (e.shiftKey) {
               window.invertFollowing(g);
             } else {
@@ -330,6 +331,7 @@ function copySelection() {
 
 function pasteSelection() {
   if (!beatClipboard || beatClipboard.type !== 'beats') return;
+  if (window.HistoryManager) window.HistoryManager.pushState();
 
   const startAt = (caretIndex !== null) ? caretIndex : (getRange()?.start ?? 0);
   const cells = allCells();
@@ -349,6 +351,7 @@ function pasteSelection() {
 function deleteSelection() {
   const r = getRange();
   if (!r) return;
+  if (window.HistoryManager) window.HistoryManager.pushState();
 
   for (let i = r.start; i <= r.end; i++) setBeatToGhost(i);
 }
@@ -562,6 +565,7 @@ function attachCellListeners(cell) {
 
     // CHECK EDIT HANDS MODE
     if (window.editHandsMode) {
+      if (window.HistoryManager) window.HistoryManager.pushState();
       window.toggleSticking(i);
       setCaret(i); // Update selection so "Flip Rest" knows where to start
       return;

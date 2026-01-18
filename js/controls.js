@@ -54,6 +54,10 @@ document.addEventListener('visibilitychange', () => {
   if (document.hidden && playing) stop();
 });
 
+bpmInput.addEventListener('mousedown', () => {
+  if (window.HistoryManager) window.HistoryManager.pushState();
+});
+
 bpmInput.addEventListener('input', () => {
   bpmVal.textContent = bpmInput.value;
   restartIfPlaying();
@@ -129,6 +133,7 @@ metroBtn.addEventListener('click', () => {
 });
 
 clearBtn.addEventListener('click', () => {
+  if (window.HistoryManager) window.HistoryManager.pushState();
   innerLabels = Array(measures * STEPS).fill('');
   window.innerHands = Array(measures * STEPS).fill(null);
 
