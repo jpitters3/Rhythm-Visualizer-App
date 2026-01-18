@@ -9,6 +9,7 @@
   font-weight: 500;
   opacity: 0.8;
   text-align: center;
+  pointer-events: none;
 }
 
 .grid {
@@ -57,6 +58,7 @@
   position: relative;
   user-select: none;
   overflow: hidden;
+  pointer-events: auto;
   /* keeps half-fills clean */
 }
 
@@ -87,7 +89,7 @@
   width: auto;
   height: auto;
   z-index: 10 !important;
-  pointer-events: auto !important;
+  pointer-events: none !important;
   display: flex;
   flex-direction: row;
   justify-content: center;
@@ -130,6 +132,7 @@
   display: flex;
   /* Stack from bottom up */
   flex-direction: column;
+  pointer-events: none;
 }
 
 /* Individual finger circles */

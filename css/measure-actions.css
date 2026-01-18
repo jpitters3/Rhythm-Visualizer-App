@@ -1,4 +1,4 @@
-.measure-tools{
+.measure-tools {
   display: inline-flex;
   align-items: center;
   gap: 10px;
@@ -8,17 +8,19 @@
   border: 1px solid var(--panel-border);
 }
 
-.measure-tools-label{
+.measure-tools-label {
   font-size: 12px;
   font-weight: 650;
   opacity: 0.75;
   margin-right: 2px;
 }
 
-.measure-row{
+.measure-row {
   margin-bottom: 18px;
+  pointer-events: none;
 }
-.measure-header{
+
+.measure-header {
   font-size: 12px;
   opacity: 0.65;
   margin: 0 0 8px 2px;
