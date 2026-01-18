@@ -1,0 +1,16 @@
+{
+  "name": "rhythm-visualizer",
+  "version": "1.0.0",
+  "description": "Rhythm Visualizer with Automated Tests",
+  "scripts": {
+    "test": "npx playwright test",
+    "test:ui": "npx playwright test --ui",
+    "test:report": "npx playwright show-report"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@playwright/test": "^1.57.0"
+  }
+}
