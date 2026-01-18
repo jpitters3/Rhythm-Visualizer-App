@@ -168,6 +168,7 @@ function serializePattern() {
     steps: STEPS,
     measures: measures,
     labels: innerLabels.slice(),
+    hands: window.innerHands ? window.innerHands.slice() : [],
   };
 }
 
@@ -205,6 +206,7 @@ function applyPattern(state) {
 
   // Apply labels across all steps
   innerLabels = state.labels;
+  window.innerHands = Array.isArray(state.hands) ? state.hands : Array(innerLabels.length).fill(null);
   renderAllMeasures();
 
   clearSelection();

@@ -433,7 +433,17 @@ function highlightHandpan(note, stepIndex) {
   const el = handpanDots.get(key);
   if (!el) return;
 
-  const down = isDownbeatStep(stepIndex);
+  // Sticking Override
+  let down;
+  const sticking = (window.innerHands && window.innerHands[stepIndex]);
+
+  if (sticking === 'R') {
+    down = true;
+  } else if (sticking === 'L') {
+    down = false;
+  } else {
+    down = isDownbeatStep(stepIndex);
+  }
 
   el.classList.remove('hp-down', 'hp-up', 'active');
   el.classList.add(down ? 'hp-down' : 'hp-up');

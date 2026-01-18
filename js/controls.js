@@ -70,6 +70,43 @@ handBtn.addEventListener('click', () => {
   handBtn.textContent = on ? 'Left/Right: On' : 'Left/Right: Off';
 });
 
+// Sticking Mode (Mobile Friendly)
+window.editHandsMode = false;
+const stickingBtn = document.getElementById('stickingBtn');
+const flipHandsBtn = document.getElementById('flipHandsBtn');
+
+if (stickingBtn) {
+  stickingBtn.addEventListener('click', () => {
+    window.editHandsMode = !window.editHandsMode;
+    stickingBtn.classList.toggle('active', window.editHandsMode);
+
+    if (window.editHandsMode) {
+      document.body.dataset.cursor = 'hand';
+      if (flipHandsBtn) flipHandsBtn.style.display = 'inline-block';
+    } else {
+      delete document.body.dataset.cursor;
+      if (flipHandsBtn) flipHandsBtn.style.display = 'none';
+    }
+  });
+}
+
+if (flipHandsBtn) {
+  flipHandsBtn.addEventListener('click', () => {
+    // 1. Check for Range Selection
+    const r = (typeof getRange === 'function') ? getRange() : null;
+
+    if (r && window.invertRange) {
+      window.invertRange(r.start, r.end);
+    } else {
+      // 2. Fallback to Flip Following from Caret
+      const start = (typeof caretIndex !== 'undefined' && caretIndex !== null) ? caretIndex : 0;
+      if (window.invertFollowing) window.invertFollowing(start);
+    }
+
+    if (navigator.vibrate) navigator.vibrate([50, 50, 50]);
+  });
+}
+
 themeBtn.addEventListener('click', () => {
   document.body.classList.toggle('dark');
   localStorage.setItem('theme', document.body.classList.contains('dark') ? 'dark' : 'light');
@@ -93,6 +130,7 @@ metroBtn.addEventListener('click', () => {
 
 clearBtn.addEventListener('click', () => {
   innerLabels = Array(measures * STEPS).fill('');
+  window.innerHands = Array(measures * STEPS).fill(null);
 
   cells().forEach((c) => {
     c.classList.remove('label-d', 'label-t', 'label-s', 'label-n', 'has-label', 'selected', 'play');

@@ -412,6 +412,37 @@ body:not(.handSplit) .cell.has-label:not(.multi-mode) {
 }
 
 /* Hide dot once a label is set */
+/* Hide dot once a label is set */
 .cell.has-label .ghost-dot {
   display: none;
+}
+
+/* Manual Sticking Overrides */
+.cell.force-hand-r {
+  --beat-fill: var(--down-fill) !important;
+}
+
+.cell.force-hand-l {
+  --beat-fill: var(--up-fill) !important;
+}
+
+/* Sticking Badge (R / L) */
+.cell[data-sticking="R"]::after,
+.cell[data-sticking="L"]::after {
+  content: attr(data-sticking);
+  position: absolute;
+  bottom: 4px;
+  right: 6px;
+  font-size: 11px;
+  font-weight: 800;
+  opacity: 0.9;
+  color: white;
+  pointer-events: none;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+}
+
+/* Ensure background color logic respects the new variable overrides */
+body.handSplit .cell.force-hand-r,
+body.handSplit .cell.force-hand-l {
+  background: color-mix(in srgb, var(--beat-fill) var(--mix), var(--cell-bg));
 }

@@ -10,6 +10,52 @@ fingerMap.set("lh-thumb", 1);
 fingerMap.set("rh-index", 2);
 fingerMap.set("rh-thumb", 3);
 
+// Hand Sticking State (Parallel to innerLabels)
+// 'R' = Right, 'L' = Left, null/'' = Default/Auto
+window.innerHands = [];
+
+window.toggleSticking = function (index) {
+  const current = window.innerHands[index];
+  let next = null;
+  if (!current) next = 'R';
+  else if (current === 'R') next = 'L';
+  else next = null; // Back to auto
+
+  window.innerHands[index] = next;
+  renderAllMeasures();
+};
+
+window.getEffectiveHand = function (index) {
+  const manual = window.innerHands[index];
+  if (manual) return manual;
+
+  // Default Logic
+  if (mode === '8') {
+    return (index % 2 === 0) ? 'R' : 'L';
+  } else {
+    // 16th note default (Standard Alternating: R L R L)
+    const pos = index % 4;
+    return (pos === 0 || pos === 2) ? 'R' : 'L';
+  }
+};
+
+window.invertRange = function (start, end) {
+  const cells = document.querySelectorAll('.cell');
+  const max = Math.min(window.innerHands.length, cells.length);
+  const limit = Math.min(end + 1, max); // end is inclusive in range, loop is exclusive
+
+  for (let i = start; i < limit; i++) {
+    const current = window.getEffectiveHand(i);
+    const flipped = (current === 'R' ? 'L' : 'R');
+    window.innerHands[i] = flipped;
+  }
+  renderAllMeasures();
+};
+
+window.invertFollowing = function (startIndex) {
+  window.invertRange(startIndex, Infinity);
+};
+
 function setCols(n) {
   // Apply to the measures wrapper (it cascades to measure children)
   if (measuresEl) measuresEl.style.setProperty('--cols', String(n));
@@ -188,16 +234,42 @@ function renderAllMeasures() {
           else if (lbl === 'S') cell.classList.add('label-s');
           else cell.classList.add('label-n'); // Default to number style for all other inputs (custom pitches etc)
 
-          // Assign hand side for visuals (per your existing logic)
-          // IMPORTANT: this uses your current mode mapping (8ths/16ths)
+          // Assign hand side (Auto or Manual)
+          const sticking = window.innerHands[g];
+
+          if (sticking === 'R') {
+            cell.classList.add('hand-r', 'force-hand-r');
+            cell.dataset.sticking = 'R';
+          } else if (sticking === 'L') {
+            cell.classList.add('hand-l', 'force-hand-l');
+            cell.dataset.sticking = 'L';
+          } else {
+            // Default Logic
+            if (mode === '8') {
+              cell.classList.add((i % 2 === 0) ? 'hand-r' : 'hand-l');
+            } else {
+              const pos = i % 4;
+              cell.classList.add((pos === 0 || pos === 2) ? 'hand-r' : 'hand-l');
+            }
+          }
+
+          // Downbeat/Upbeat logic (Independent of hand)
           if (mode === '8') {
-            cell.classList.add((i % 2 === 0) ? 'hand-r' : 'hand-l');
             cell.classList.add((i % 2 === 0) ? 'downbeat' : 'upbeat');
           } else {
             const pos = i % 4;
-            cell.classList.add((pos === 0 || pos === 2) ? 'hand-r' : 'hand-l');
             cell.classList.add((pos === 0 || pos === 2) ? 'downbeat' : 'upbeat');
           }
+
+          // Right-click to toggle Sticking (Shift = Invert Following)
+          cell.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            if (e.shiftKey) {
+              window.invertFollowing(g);
+            } else {
+              window.toggleSticking(g);
+            }
+          });
         }
       }
 
@@ -487,6 +559,13 @@ function attachCellListeners(cell) {
     // 1. Calculate the index immediately so it is available for all logic
     const i = indexFromCellEl(cell);
     if (i < 0) return;
+
+    // CHECK EDIT HANDS MODE
+    if (window.editHandsMode) {
+      window.toggleSticking(i);
+      setCaret(i); // Update selection so "Flip Rest" knows where to start
+      return;
+    }
 
     if (subDot && isEditMulti) {
       // Transition to multi-mode visually

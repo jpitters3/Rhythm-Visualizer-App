@@ -83,7 +83,7 @@ function startLongPress(cellEl) {
   longPressTimer = setTimeout(() => {
     longPressFired = true;
     selecting = true;
-    
+
     // Add Haptic Feedback
     // if ('vibrate' in navigator) {
     //   navigator.vibrate(50); // Short 50ms pulse
@@ -91,8 +91,8 @@ function startLongPress(cellEl) {
 
     anchorIndex = idx;
     setCaret(idx);
-    setRange(idx, idx); 
-  }, 450); 
+    setRange(idx, idx);
+  }, 450);
 }
 
 function cancelLongPress() {
