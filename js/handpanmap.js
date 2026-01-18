@@ -894,7 +894,7 @@ function overlayNumberPitchNotes() {
       }
     }
 
-    // USER REQUEST: Never show label for Ding
+    // Never show label for Ding
     // Check key ('D'), full label ('Ding'), or if it matches current scale ding pitch
     const scale = typeof getScale === 'function' ? getScale() : null;
     const dingPitch = scale ? scale.ding : 'D3'; // Default to D3
