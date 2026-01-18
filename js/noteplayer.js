@@ -314,7 +314,8 @@ function tick() {
   let nextR = null;
 
   if (window.virtualHands && window.virtualHands.enabled) {
-    const maxLookahead = 16;
+    // Limit lookahead to ~2 beats (8 sub-steps) to prevent moving too early
+    const maxLookahead = 8;
     const totalSteps = cells().length;
 
     for (let i = 1; i <= maxLookahead; i++) {
