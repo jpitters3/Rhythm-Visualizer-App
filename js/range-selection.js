@@ -58,7 +58,9 @@ function updateRangeUI() {
   // Update action bar
   const count = r ? r.length : 0;
   if (selBar) {
-    selBar.style.display = (count > 1) ? 'flex' : 'none';  // show only for multi-select; change to >=1 if you prefer
+    const showBar = (count > 1);
+    selBar.style.display = showBar ? 'flex' : 'none';
+    document.body.classList.toggle('has-selection', showBar);
   }
   if (selBarText) selBarText.textContent = `${count} selected`;
   if (selPasteBtn) selPasteBtn.disabled = !beatClipboard;

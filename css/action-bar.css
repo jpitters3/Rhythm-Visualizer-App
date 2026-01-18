@@ -3,12 +3,31 @@
 /* Enhanced Range Selection */
 .cell.range {
   box-shadow: 0 0 0 4px var(--btn-active);
-  background: color-mix(in srgb, var(--btn-active) 20%, var(--cell-bg)) !important;
+  position: relative;
+}
+
+/* Transparent overlay using pseudo-element so we don't hide the beat color */
+.cell.range::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: var(--btn-active);
+  /* "Yellow" usually */
+  opacity: 0.3;
+  /* Transparent enough to see Red/Blue flip */
+  pointer-events: none;
+  z-index: 0;
 }
 
 /* Add distinct handles to the first and last items in the range */
-.cell.range-start { border-radius: 50% 0 0 50%; }
-.cell.range-end { border-radius: 0 50% 50% 0; }
+.cell.range-start {
+  border-radius: 50% 0 0 50%;
+}
+
+.cell.range-end {
+  border-radius: 0 50% 50% 0;
+}
 
 body.dark .cell.range {
   box-shadow: 0 0 0 6px rgba(234, 234, 240, 0.16);
@@ -28,7 +47,7 @@ body.dark .cell.range {
   border-radius: 16px;
   background: var(--panel);
   border: 1px solid var(--panel-border);
-  box-shadow: 0 18px 60px rgba(0,0,0,0.22);
+  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.22);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -49,5 +68,7 @@ body.dark .cell.range {
 
 /* Optional: make buttons slightly smaller on mobile */
 @media (max-width: 600px) {
-  .sel-bar-actions button { padding: 8px 12px; }
+  .sel-bar-actions button {
+    padding: 8px 12px;
+  }
 }
