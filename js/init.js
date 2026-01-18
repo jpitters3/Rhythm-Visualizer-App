@@ -154,6 +154,11 @@ function safeInit() {
     updateComposeUI();
 
     if (DEBUG) runSelfTests();
+
+    // Initial Snapshot
+    if (typeof serializePattern === 'function') {
+      window.lastSavedState = JSON.stringify(serializePattern());
+    }
   } catch (err) {
     showFatalError(err);
   }

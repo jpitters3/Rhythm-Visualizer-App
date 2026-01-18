@@ -218,6 +218,11 @@ async function setActiveCourse(courseId) {
 
 
 function loadLesson(lessonId) {
+  // Check unsaved changes
+  if (typeof window.hasUnsavedChanges === 'function' && window.hasUnsavedChanges()) {
+    if (!confirm('You have unsaved changes. Discard them?')) return;
+  }
+
   const lesson = window.allLessons.find(l => l.id === lessonId);
   if (!lesson) return;
 

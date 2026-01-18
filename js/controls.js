@@ -144,6 +144,10 @@ clearBtn.addEventListener('click', () => {
   });
   selectedIndex = null;
   step = 0;
+
+  if (typeof serializePattern === 'function') {
+    window.lastSavedState = JSON.stringify(serializePattern());
+  }
 });
 
 saveBtn.addEventListener('click', async () => {
@@ -312,6 +316,10 @@ exportBtn.addEventListener('click', async () => {
 });
 
 importBtn.addEventListener('click', async () => {
+  if (typeof window.hasUnsavedChanges === 'function' && window.hasUnsavedChanges()) {
+    if (!confirm('You have unsaved changes. Discard them?')) return;
+  }
+
   const raw = prompt('Paste pattern JSON here:');
   if (!raw) return;
   try {

@@ -1,4 +1,12 @@
 // SAVE / LOAD PATTERNS WITH SUPABASE
+window.lastSavedState = ''; // Snapshot for data loss prevention
+
+window.hasUnsavedChanges = function () {
+  if (typeof serializePattern !== 'function') return false;
+  const current = JSON.stringify(serializePattern());
+  return current !== window.lastSavedState;
+};
+
 function isAuthed() {
   return !!currentUser;
 }
@@ -38,6 +46,7 @@ async function dbSavePattern(name, stateObj) {
     .upsert(row, { onConflict: 'user_id,name' });
 
   if (error) throw error;
+  window.lastSavedState = JSON.stringify(stateObj);
 }
 
 function withTimeout(promise, ms = 3000, label = 'timeout') {
@@ -211,6 +220,7 @@ function applyPattern(state) {
 
   clearSelection();
   if (wasPlaying) start();
+  window.lastSavedState = JSON.stringify(state);
 }
 
 function ensureHasSelection() {
