@@ -69,29 +69,44 @@ async function loadAllUserHandpans() {
 }
 
 function renderCustomOptions() {
-  // TARGET: scaleSelect (Musical Scales)
+  // REORDER: Custom Scales First, then System Scales
+  // Fix: SCALES is global const, not on window
+  if (typeof SCALES === 'undefined') return;
 
-  // Remove old custom options
-  Array.from(scaleSelect.options).forEach(opt => {
-    if (opt.dataset.custom) opt.remove();
-  });
+  const currentVal = scaleSelect.value;
+  scaleSelect.innerHTML = '';
 
-  // Remove dividers if any left
-
+  // 1. My Scales
   if (customHandpansCache.length > 0) {
-    const divider = document.createElement('option');
-    divider.disabled = true;
-    divider.textContent = '── MY SCALES ──';
-    divider.dataset.custom = 'true';
-    scaleSelect.appendChild(divider);
+    const header = document.createElement('option');
+    header.disabled = true;
+    header.textContent = '── MY SCALES ──';
+    scaleSelect.appendChild(header);
 
     customHandpansCache.forEach(hp => {
       const opt = document.createElement('option');
       opt.value = `custom:${hp.id}`;
       opt.textContent = hp.name;
-      opt.dataset.custom = 'true';
       scaleSelect.appendChild(opt);
     });
+
+    const divider = document.createElement('option');
+    divider.disabled = true;
+    divider.textContent = '── SYSTEM SCALES ──';
+    scaleSelect.appendChild(divider);
+  }
+
+  // 2. System Scales
+  for (const name of Object.keys(SCALES)) {
+    const opt = document.createElement('option');
+    opt.value = name;
+    opt.textContent = name;
+    scaleSelect.appendChild(opt);
+  }
+
+  // Restore selection if possible
+  if (currentVal) {
+    scaleSelect.value = currentVal;
   }
 }
 
@@ -161,14 +176,14 @@ function applyCustomHandpan(handpanData) {
   scaleStatus.textContent = `Custom Scale: ${handpanData.name}`;
 
   // Force Handpan Select to 'Custom' visual
-  let opt = document.querySelector('#handpanSelect option[value="Custom"]');
-  if (!opt) {
-    opt = document.createElement('option');
-    opt.value = 'Custom';
-    opt.textContent = "Custom Image";
-    handpanSelect.appendChild(opt);
-  }
-  handpanSelect.value = 'Custom';
+  // Force Handpan Select to 'Custom' visual
+  // User Request: Hide the entire Color/Image dropdown when using a custom scale
+  const row = handpanSelect.closest('.setting-row');
+  if (row) row.style.display = 'none';
+
+  // Ensure we don't leave a "Custom" option sticking around if we switch back
+  const customOpt = document.querySelector('#handpanSelect option[value="Custom"]');
+  if (customOpt) customOpt.remove();
 
   buildHandpanOverlay();
 }
@@ -733,6 +748,7 @@ function stringifyHandpanMap(map) {
 }
 
 // Event handlers
+let lastStandardModel = 'Bronze';
 
 scaleSelect.addEventListener('change', async () => {
   selectedScaleName = scaleSelect.value;
@@ -754,9 +770,32 @@ scaleSelect.addEventListener('change', async () => {
   scaleStatus.textContent = `Scale: ${selectedScaleName}`;
   saveScaleLocal(selectedScaleName);
 
+  // Restore visual map if we were previously on a custom scale
+  let currentModel = handpanSelect.value;
+
+  // Show the dropdown again (User Request: Show only for System Scales)
+  const row = handpanSelect.closest('.setting-row');
+  if (row) row.style.display = 'flex'; // or block/flex based on CSS
+
+  // If current model is custom (or we just hid it), revert to last standard
+  if (currentModel.startsWith('custom:') || currentModel === 'Custom') {
+    currentModel = lastStandardModel;
+    handpanSelect.value = currentModel; // Update Dropdown UI
+  }
+
+  if (currentModel === 'Bronze') {
+    handpanImg.src = `./assets/images/${HANDPAN_IMG_BRONZE}`;
+    handpanImg.style.transform = '';
+    window.HANDPAN_MAP = HANDPAN_MAP_BRONZE;
+  } else if (currentModel === 'Sketch') {
+    handpanImg.src = `./assets/images/${HANDPAN_IMG_SKETCH_EMPTY}`;
+    handpanImg.style.transform = '';
+    window.HANDPAN_MAP = HANDPAN_MAP_SKETCH;
+  }
+
   // Update Current Scale for Standard Scales
-  if (window.setCurrentScale && window.SCALES) {
-    window.setCurrentScale(window.SCALES[selectedScaleName]);
+  if (window.setCurrentScale && SCALES) {
+    window.setCurrentScale(SCALES[selectedScaleName]);
   }
 
   await preloadScaleSamples();
@@ -783,12 +822,14 @@ handpanSelect.addEventListener('change', async () => {
   }
 
   if (selectedHandpanName === 'Bronze') {
+    lastStandardModel = 'Bronze';
     handpanImg.src = `./assets/images/${HANDPAN_IMG_BRONZE}`;
     handpanImg.style.transform = ''; // Reset rotation
     window.HANDPAN_MAP = HANDPAN_MAP_BRONZE;
 
   }
   else if (selectedHandpanName === 'Sketch') {
+    lastStandardModel = 'Sketch';
     handpanImg.src = `./assets/images/${HANDPAN_IMG_SKETCH_EMPTY}`;
     handpanImg.style.transform = ''; // Reset rotation
     window.HANDPAN_MAP = HANDPAN_MAP_SKETCH;
@@ -839,14 +880,6 @@ function overlayNumberPitchNotes() {
     if (overlayNumbers) {
       // Unified Logic
       text = note; // Default to key (e.g. "1", "2" or "A3")
-
-      const scale = typeof getScale === 'function' ? getScale() : null;
-      const dingPitch = scale ? scale.ding : 'D3';
-
-      // General Ding Detection (for both 'D' label and Pitch keys)
-      if (note === 'D' || note === dingPitch) {
-        text = '';
-      }
     } else if (overlayPitches) {
       // Unified: Look up pitch for the label
       if (typeof noteForLabel === 'function') {
@@ -859,6 +892,17 @@ function overlayNumberPitchNotes() {
       } else {
         text = note;
       }
+    }
+
+    // USER REQUEST: Never show label for Ding
+    // Check key ('D'), full label ('Ding'), or if it matches current scale ding pitch
+    const scale = typeof getScale === 'function' ? getScale() : null;
+    const dingPitch = scale ? scale.ding : 'D3'; // Default to D3
+
+    // Check note key (e.g. 'D') or resolved pitch text (e.g. 'D3_ding')
+    // noteForLabel('D') returns 'D3_ding' usually.
+    if (note === 'D' || note === 'Ding' || text.includes('_ding') || text === dingPitch) {
+      text = '';
     }
 
     label.textContent = text;
