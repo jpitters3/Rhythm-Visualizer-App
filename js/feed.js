@@ -115,6 +115,7 @@ function renderFeed(patterns) {
             </div>
             <div class="feed-card-actions">
                 <button class="play-pattern-btn primary-btn" data-id="${p.id}">Play</button>
+                <button class="add-practice-btn secondary-btn" data-id="${p.id}" data-title="${safeName}" style="padding: 8px 12px; font-size: 13px;">➕ Add to Plan</button>
             </div>
         `;
 
@@ -123,6 +124,15 @@ function renderFeed(patterns) {
     playBtn.addEventListener('click', () => {
       loadPatternFromFeed(p.pattern_json, p.name);
       feedModal.classList.remove('open');
+    });
+
+    const pracBtn = card.querySelector('.add-practice-btn');
+    pracBtn?.addEventListener('click', (e) => {
+      if (window.addToPractice) {
+        window.addToPractice('pattern', p.id, p.name);
+        pracBtn.textContent = '✅ Added';
+        setTimeout(() => pracBtn.textContent = '➕ Add to Plan', 2000);
+      }
     });
 
     const likeBtn = card.querySelector('.like-btn');

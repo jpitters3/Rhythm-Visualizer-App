@@ -143,14 +143,15 @@
         <div class="dropdown account-dropdown">
           <button id="accountBtn" title="Account">Account</button>
           <div id="accountDropdownMenu" class="dropdown-content right-aligned">
-            <button id="openProfileBtn">Edit Profile</button>
-            <button id="openAccountAuthBtn">Account Settings</button>
+            <button id="openProfileBtn">👤 Edit Profile</button>
+            <button id="openAccountAuthBtn">⚙️ Account Settings</button>
             <div class="dropdown-divider"></div>
             <button id="toggleSidebarBtn">📚 Courses</button>
-            <button id="openCourseModalBtn" class="admin-only" style="display: none;">Create Course</button>
+            <button id="openCourseModalBtn" class="admin-only" style="display: none;">➕ Create Course</button>
+            <button id="togglePracticeBtn">📋 Practice Plan</button>
             <div class="dropdown-divider"></div>
-            <button id="myScalesBtn" style="display:none;">My Scales</button>
-            <button id="authLogoutDropdown">Sign out</button>
+            <button id="myScalesBtn" style="display:none;">🛸 My Scales</button>
+            <button id="authLogoutDropdown">🚪 Sign out</button>
           </div>
         </div>
         <span id="accountStatus" style="opacity:.75;font-size:13px;"></span>
@@ -173,7 +174,7 @@
     <!-- Control buttons -->
     <div class="controls pattern-row">
       <button id="themeBtn" title="Toggle light / dark mode">☀︎ / ☾</button>
-      <button id="grooveBtn" title="Generate a random groove">Give me a groove!</button>
+      <button id="grooveBtn" style="display:none;" title="Generate a random groove">Give me a groove!</button>
       <button id="metroBtn" title="Toggle metronome click"
         style="display:flex; align-items:center; justify-content:center;">
         <svg xmlns="http://www.w3.org/2000/svg" width="25" height="25" viewBox="0 0 24 24" fill="none"
@@ -189,12 +190,10 @@
       <button id="gridBtn" title="Toggle between 8th and 16th grid">8ths</button>
       <button id="handBtn" style="display: none;" class="active" title="Toggle left/right hand coloring">Left/Right:
         Off</button>
-      <button id="playBtn">►</button>
       <div class="control-group">
-        <label>Time Sig</label>
-        <div style="display: flex; align-items: center; gap: 4px;">
-          <select id="tsNum" class="ts-select"
-            style="width: 50px; padding: 4px; border-radius: 4px; border: 1px solid #ccc; text-align: center;">
+        <!-- <label>Time</label> -->
+        <div class="ts-wrapper">
+          <select id="tsNum" class="ts-select">
             <option value="1">1</option>
             <option value="2">2</option>
             <option value="3">3</option>
@@ -215,15 +214,15 @@
             <option value="18">18</option>
             <option value="19">19</option>
           </select>
-          <span style="font-weight: bold;">/</span>
-          <select id="tsDen" class="ts-select"
-            style="width: 50px; padding: 4px; border-radius: 4px; border: 1px solid #ccc; text-align: center;">
+          <span class="ts-sep">/</span>
+          <select id="tsDen" class="ts-select">
             <option value="2">2</option>
             <option value="4" selected>4</option>
             <option value="8">8</option>
           </select>
         </div>
       </div>
+      <button id="playBtn">►</button>
       <label>BPM
         <input id="bpm" type="range" min="40" max="200" value="90" />
       </label>
@@ -623,6 +622,23 @@
     </div>
   </div>
 
+  <!-- Practice Sidebar -->
+  <div id="practiceSidebar" class="sidebar" aria-hidden="true">
+    <div class="sidebar-header">
+      <h3>Daily Practice</h3>
+      <button id="closePracticeSidebar" class="close-btn">&times;</button>
+    </div>
+    <div class="sidebar-search">
+      <div style="display:flex; gap:10px;">
+        <button id="startPracticeBtn" class="primary-btn" style="flex:1;">▶ Start</button>
+        <button id="refreshPracticeBtn" class="secondary-btn" title="Refresh">↻</button>
+      </div>
+    </div>
+    <div id="practiceList" class="sidebar-content">
+      <!-- Items go here -->
+    </div>
+  </div>
+
   <!-- Radial Bloom -->
   <div id="bloom-ui-layer"></div>
 
@@ -669,7 +685,7 @@
   <div id="profileModal" class="profile-modal-overlay" aria-hidden="true">
     <div class="profile-modal">
       <div class="profile-header">
-        <h3>Edit Profile</h3>
+        <h3>👤 Edit Profile</h3>
         <button id="closeProfileBtn" class="close-btn">&times;</button>
       </div>
       <div id="profileError" class="profile-error" style="display: none;"></div>
@@ -941,6 +957,7 @@
   <script src="./js/feed.js?v=4"></script>
   <script src="./js/course-marketplace.js?v=1"></script>
   <script src="./js/calibration.js?v=1"></script>
+  <script src="./js/practice.js?v=1"></script>
 
 
 

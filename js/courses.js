@@ -1,6 +1,8 @@
 // ===== SIDEBAR LOGIC (OWNED COURSES) =====
 
 let activeCourseId = null;
+window.allCourses = [];
+window.allLessons = [];
 
 async function fetchCourses() {
   if (!currentUser) return; // Wait for auth
@@ -224,7 +226,43 @@ function loadLesson(lessonId) {
 
   // 2. Show UI info
   document.getElementById('lessonPlayer').style.display = 'block';
-  document.getElementById('activeLessonTitle').textContent = lesson.title;
+  const titleEl = document.getElementById('activeLessonTitle');
+  titleEl.textContent = lesson.title;
+
+  // Inject Practice Button into Header
+  const header = titleEl.parentElement;
+  if (!header.classList.contains('lesson-header')) header.classList.add('lesson-header');
+
+  let pBtn = document.getElementById('addPracticeBtn');
+  if (!pBtn) {
+    pBtn = document.createElement('button');
+    pBtn.id = 'addPracticeBtn';
+    pBtn.className = 'practice-btn';
+    header.appendChild(pBtn);
+  }
+
+  // Set Initial State
+  const updateBtnState = () => {
+    const isAdded = window.isItemInPractice && window.isItemInPractice('lesson', lesson.id);
+    pBtn.innerHTML = isAdded ? '⛔️ Remove' : '➕ Add to Plan';
+    if (isAdded) {
+      pBtn.style.borderColor = 'rgba(255,0,0,0.2)';
+      pBtn.style.backgroundColor = 'rgba(255,0,0,0.02)';
+    } else {
+      pBtn.style.borderColor = 'var(--panel-border)';
+      pBtn.style.backgroundColor = 'transparent';
+    }
+  };
+  updateBtnState();
+
+  pBtn.onclick = async (e) => {
+    e.stopPropagation();
+    if (window.togglePracticeItem) {
+      await window.togglePracticeItem('lesson', lesson.id, lesson.title);
+      updateBtnState();
+    }
+  };
+
   document.getElementById('lessonDescription').textContent = lesson.description;
 
   // Completion Button
@@ -310,10 +348,17 @@ function extractYouTubeId(url) {
 // Sidebar Toggles
 const sidebarEl = document.getElementById('courseSidebar');
 document.getElementById('toggleSidebarBtn').onclick = () => {
+  // Close Practice Sidebar if open
+  const practiceSb = document.getElementById('practiceSidebar');
+  if (practiceSb && practiceSb.classList.contains('open')) {
+    practiceSb.classList.remove('open');
+    practiceSb.setAttribute('aria-hidden', 'true');
+  }
+
   const isOpen = sidebarEl.classList.toggle('open');
   if (isOpen) {
     sidebarEl.removeAttribute('aria-hidden');
-    fetchCourses();
+    if (!window.allCourses || window.allCourses.length === 0) fetchCourses();
   } else {
     sidebarEl.setAttribute('aria-hidden', 'true');
   }

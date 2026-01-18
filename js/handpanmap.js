@@ -872,9 +872,17 @@ function overlayNumberPitchNotes() {
 const originalBuild = buildHandpanOverlay;
 
 numberPitchSelect.addEventListener('change', async () => {
+  localStorage.setItem('handpanLabelPref', numberPitchSelect.value);
   checkNumberPitchSelection();
   buildHandpanOverlay();
 });
+
+// Initial Load
+const savedLabelPref = localStorage.getItem('handpanLabelPref');
+if (savedLabelPref) {
+  numberPitchSelect.value = savedLabelPref;
+  checkNumberPitchSelection();
+}
 
 ghostBtn.addEventListener('click', (e) => {
   const idx = (caretIndex !== null) ? caretIndex : (typeof selectedIndex !== 'undefined' ? selectedIndex : null);

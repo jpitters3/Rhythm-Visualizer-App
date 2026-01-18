@@ -153,3 +153,50 @@ input[type=range] {
   text-overflow: ellipsis;
   max-width: 200px;
 }
+
+/* Time Signature Controls */
+.ts-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  background: var(--btn-bg);
+  padding: 0 12px;
+  border-radius: 999px;
+  height: 50px;
+  box-sizing: border-box;
+}
+
+.ts-select {
+  appearance: none;
+  -webkit-appearance: none;
+  background: transparent;
+  border: none;
+  color: var(--text);
+  font-weight: 600;
+  font-size: 16px;
+  padding: 0 2px;
+  text-align: center;
+  cursor: pointer;
+  min-width: 24px;
+  font-family: inherit;
+}
+
+.ts-select:focus {
+  outline: none;
+  color: #6366f1;
+}
+
+.ts-select option {
+  background: var(--panel);
+  color: var(--text);
+}
+
+.ts-sep {
+  color: var(--text);
+  opacity: 0.4;
+  font-weight: 300;
+  font-size: 20px;
+  user-select: none;
+  margin: 0 4px;
+  transform: translateY(-1px);
+}
