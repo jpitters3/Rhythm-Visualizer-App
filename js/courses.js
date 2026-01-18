@@ -36,7 +36,7 @@ async function fetchCourses() {
         sections (
           id, title, order_index,
           lessons (
-            id, title, description, video_url, pattern_json, order_index
+            id, title, description, video_url, pattern_json, pattern_name, order_index
           )
         )
       `)
@@ -227,7 +227,14 @@ function loadLesson(lessonId) {
   if (!lesson) return;
 
   // 1. Apply the groove to the grid
-  if (lesson.pattern_json) applyPattern(lesson.pattern_json);
+  if (lesson.pattern_json) {
+    applyPattern(lesson.pattern_json);
+    // Explicitly sync lastSavedState to the *serialized* version of what we just loaded
+    // This prevents false positives if the saved JSON differs slightly from fresh serialization
+    if (typeof serializePattern === 'function') {
+      window.lastSavedState = JSON.stringify(serializePattern());
+    }
+  }
 
   // 2. Show UI info
   document.getElementById('lessonPlayer').style.display = 'block';

@@ -318,7 +318,7 @@ saveCourseBtn?.addEventListener('click', async () => {
         description: lesson.description || "",
         video_url: lesson.video_url || "",
         pattern_json: lesson.pattern_json,
-        // Also could save pattern_name if we added a column, but sticking to JSON logic for now
+        pattern_name: lesson.pattern_name,
         order_index: lIdx
       }));
 
