@@ -233,100 +233,95 @@
 
         </div>
 
-        <!-- Handpan Settings Drawer-->
-        <div id="handpanSettingsDrawer" class="handpan-settings collapsed">
-          <div class="drawer-header" id="handpanSettingsDrawerHeader">
-            <span class="drawer-title">Handpan Settings</span>
-            <div class="drawer-meta">
-              <span class="toggle-icon">▼</span>
-            </div>
-          </div>
-          <div id="handpanSettingsDrawerContent" class="drawer-content">
-            <!-- Default Settings Mode -->
-            <div id="hpSettingsInitial">
-              <div class="setting-row">
-                <label>Scale:</label>
-                <select id="scaleSelect" title="Choose your handpan scale"></select>
-                <span id="scaleStatus" style="display:none; opacity:.7;font-size:13px;"></span>
-              </div>
+        <!-- TABS -->
+        <div class="handpan-tabs">
+          <button class="tab-btn" data-tab="handpanSettingsDrawer" title="Settings">⚙️</button>
+          <button class="tab-btn" data-tab="chordDrawer" title="Chords">🎶</button>
+          <button class="tab-btn" data-tab="customizeDrawer" title="Customize">🛠️</button>
+        </div>
 
-              <div class="setting-row">
-                <label>Color:</label>
-                <select id="handpanSelect" title="Choose your handpan color">
-                  <option value="Bronze">Bronze</option>
-                  <option value="Sketch">Sketch</option>
-                  <!-- Custom option added dynamically -->
-                </select>
-              </div>
+        <!-- TAB PANES -->
 
-              <div class="setting-row">
-                <label>Labels:</label>
-                <select id="numberPitchSelect" title="Display numbers or pitches">
-                  <option value="default">-----</option>
-                  <option value="Numbers">Numbers</option>
-                  <option value="Pitches">Pitches</option>
-                </select>
-              </div>
-
-              <div class="setting-row">
-                <label>Hands:</label>
-                <div class="toggle-wrapper" style="display:flex; align-items:center; gap:8px;">
-                  <input type="checkbox" id="vHandsToggle" checked style="width:auto;">
-                  <label for="vHandsToggle" style="font-size:12px; font-weight:400; cursor:pointer; margin:0;">Show
-                    Ghost
-                    Hands</label>
-                </div>
-              </div>
-              <div class="setting-row" style="margin-top: 10px;">
-                <button id="calBtn" class="secondary-btn small-btn" style="width:100%">Calibrate Current Map</button>
-              </div>
-
-              <div class="setting-row"
-                style="margin-top: 10px; border-top: 1px solid var(--panel-border); padding-top: 10px;">
-                <button id="buildScaleBtn" class="primary-btn small-btn"
-                  style="width:100%; background: linear-gradient(135deg, #6366f1, #8b5cf6); border:none; color:white;">Build
-                  My Own Scale</button>
-              </div>
+        <!-- 1. SETTINGS -->
+        <div id="handpanSettingsDrawer" class="tab-pane">
+          <div class="drawer-content"> <!-- Keep wrapper for padding inheritance -->
+            <div class="setting-row">
+              <label>Scale:</label>
+              <select id="scaleSelect" title="Choose your handpan scale"></select>
+              <span id="scaleStatus" style="display:none; opacity:.7;font-size:13px;"></span>
             </div>
 
-            <!-- Creation Form Mode (Hidden) -->
-            <div id="hpCreationForm" style="display:none; flex-direction:column; gap:10px;">
-              <div style="display:flex; align-items:center; margin-bottom:5px;">
-                <button id="cancelBuildBtn" class="icon-btn"
-                  style="font-size:16px; padding:0; margin-right:8px;">←</button>
-                <h4 style="margin:0; font-size:14px;">Review & Upload</h4>
+            <div class="setting-row">
+              <label>Color:</label>
+              <select id="handpanSelect" title="Choose your handpan color">
+                <option value="Bronze">Bronze</option>
+                <option value="Sketch">Sketch</option>
+              </select>
+            </div>
+
+            <div class="setting-row">
+              <label>Labels:</label>
+              <select id="numberPitchSelect" title="Display numbers or pitches">
+                <option value="default">-----</option>
+                <option value="Numbers">Numbers</option>
+                <option value="Pitches">Pitches</option>
+              </select>
+            </div>
+
+            <div class="setting-row">
+              <label>Hands:</label>
+              <div class="toggle-wrapper" style="display:flex; align-items:center; gap:8px;">
+                <input type="checkbox" id="vHandsToggle" checked style="width:auto;">
+                <label for="vHandsToggle" style="font-size:12px; font-weight:400; cursor:pointer; margin:0;">Show Ghost
+                  Hands</label>
               </div>
-
-              <input type="text" id="hpBuilderName" placeholder="Builder (e.g. Yishama)" class="hp-input">
-              <input type="text" id="hpScaleName" placeholder="Scale Name (e.g. D Kurd 9)" class="hp-input">
-
-              <label class="file-upload-label">
-                <span>Top Image (Required)</span>
-                <input type="file" id="hpTopImage" accept="image/*">
-              </label>
-
-              <!-- Bottom Image Optional (Hidden for MVP/User Request flow seems to imply streamlined) -->
-              <!-- <label class="file-upload-label">
-                <span>Bottom Image (Optional)</span>
-                <input type="file" id="hpBottomImage" accept="image/*">
-              </label> -->
-
-              <button id="saveNewHandpanBtn" class="primary-btn small-btn" style="margin-top:5px;">Next:
-                Calibrate</button>
             </div>
           </div>
         </div>
-        <!-- Chord Library Drawer -->
-        <div id="chordDrawer" class="chord-drawer collapsed">
-          <div class="drawer-header" id="chordDrawerHeader">
-            <span class="drawer-title">Available Chords</span>
-            <div class="drawer-meta">
-              <span id="chordCount" class="chord-count">0</span>
-              <span class="toggle-icon">▼</span>
-            </div>
-          </div>
+
+        <!-- 2. CHORDS -->
+        <div id="chordDrawer" class="tab-pane">
           <div id="chordList" class="drawer-content">
             <!-- Chords injected here -->
+          </div>
+          <div class="drawer-meta" style="text-align:center; font-size:12px; margin-top:8px; opacity:0.7">
+            <span id="chordCount">0</span> chords available
+          </div>
+        </div>
+
+        <!-- 3. CUSTOMIZE -->
+        <div id="customizeDrawer" class="tab-pane">
+          <div id="hpCustomizeControls">
+            <div class="setting-row" style="margin-top: 5px;">
+              <button id="calBtn" class="secondary-btn small-btn" style="width:100%">Calibrate Current Map</button>
+            </div>
+
+            <div class="setting-row"
+              style="margin-top: 10px; border-top: 1px solid var(--panel-border); padding-top: 10px;">
+              <button id="buildScaleBtn" class="primary-btn small-btn"
+                style="width:100%; background: linear-gradient(135deg, #6366f1, #8b5cf6); border:none; color:white;">Build
+                My Own Scale</button>
+            </div>
+          </div>
+
+          <!-- Creation Form Mode (Hidden initially) -->
+          <div id="hpCreationForm" style="display:none; flex-direction:column; gap:10px; margin-top:10px;">
+            <div style="display:flex; align-items:center; margin-bottom:5px;">
+              <button id="cancelBuildBtn" class="icon-btn"
+                style="font-size:16px; padding:0; margin-right:8px;">←</button>
+              <h4 style="margin:0; font-size:14px;">Review & Upload</h4>
+            </div>
+
+            <input type="text" id="hpBuilderName" placeholder="Builder (e.g. Yishama)" class="hp-input">
+            <input type="text" id="hpScaleName" placeholder="Scale Name (e.g. D Kurd 9)" class="hp-input">
+
+            <label class="file-upload-label">
+              <span>Top Image (Required)</span>
+              <input type="file" id="hpTopImage" accept="image/*">
+            </label>
+
+            <button id="saveNewHandpanBtn" class="primary-btn small-btn" style="margin-top:5px;">Next:
+              Calibrate</button>
           </div>
         </div>
 

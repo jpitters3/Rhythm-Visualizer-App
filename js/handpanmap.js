@@ -974,7 +974,7 @@ hpSettingsToggle?.addEventListener('click', (e) => {
 });
 
 // === CUSTOM HANDPAN UI ===
-const hpSettingsInitial = document.getElementById('hpSettingsInitial');
+const hpSettingsInitial = document.getElementById('hpSettingsInitial') || document.getElementById('hpCustomizeControls');
 const hpCreationForm = document.getElementById('hpCreationForm');
 const buildScaleBtn = document.getElementById('buildScaleBtn');
 const cancelBuildBtn = document.getElementById('cancelBuildBtn');
@@ -1079,47 +1079,34 @@ setTimeout(async () => {
 }, 500);
 
 // === DRAWER MANAGER ===
-// === DRAWER MANAGER ===
-(function initDrawers() {
+// === TAB MANAGER ===
+(function initTabs() {
   const run = () => {
-    console.log('Initializing Drawer Manager');
-    const drawers = [
-      document.getElementById('handpanSettingsDrawer'),
-      document.getElementById('chordDrawer')
-    ];
+    console.log('Initializing Tab Manager');
+    const tabs = document.querySelectorAll('.tab-btn');
+    const panes = document.querySelectorAll('.tab-pane');
 
-    drawers.forEach(drawer => {
-      if (!drawer) return;
-      const header = drawer.querySelector('.drawer-header');
+    tabs.forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        const targetId = btn.getAttribute('data-tab');
+        const targetPane = document.getElementById(targetId);
 
-      if (header) {
-        header.addEventListener('click', (e) => {
-          e.stopPropagation();
-          e.preventDefault();
+        if (!targetPane) return;
 
-          const isCollapsed = drawer.classList.contains('collapsed');
+        // Check if currently active (before clearing)
+        const wasActive = btn.classList.contains('active');
 
-          // MUTUAL EXCLUSIVITY: If opening this drawer, close others
-          if (isCollapsed) {
-            drawers.forEach(other => {
-              if (other && other !== drawer && !other.classList.contains('collapsed')) {
-                other.classList.add('collapsed');
-                const otherIcon = other.querySelector('.toggle-icon');
-                if (otherIcon) otherIcon.style.transform = 'rotate(0deg)';
-              }
-            });
-          }
+        // Deactivate all
+        tabs.forEach(t => t.classList.remove('active'));
+        panes.forEach(p => p.classList.remove('active'));
 
-          // TOGGLE SELF
-          drawer.classList.toggle('collapsed');
-
-          // ROTATE ICON
-          const icon = drawer.querySelector('.toggle-icon');
-          if (icon) {
-            icon.style.transform = drawer.classList.contains('collapsed') ? 'rotate(0deg)' : 'rotate(180deg)';
-          }
-        });
-      }
+        // Toggle: Only activate if it wasn't already active
+        if (!wasActive) {
+          btn.classList.add('active');
+          targetPane.classList.add('active');
+        }
+      });
     });
   };
 
