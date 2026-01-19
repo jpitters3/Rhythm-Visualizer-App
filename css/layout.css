@@ -1,0 +1,234 @@
+/* ===== GLOBAL LAYOUT & HEADER ===== */
+
+.footer {
+  margin-top: 18px;
+  font-size: 13px;
+  opacity: 0.6;
+}
+
+div.grid-container.top-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  position: relative;
+  /* Context for absolute menu */
+}
+
+/* Hamburger Button (Hidden on Desktop) */
+.hamburger-btn {
+  display: none;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 8px;
+  color: var(--text);
+  border-radius: 8px;
+}
+
+.hamburger-btn:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+/* Menu Items Wrapper (Desktop) */
+.header-menu-items {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  /* Take remaining space */
+  justify-content: space-between;
+  /* Spread Pattern vs Account */
+  gap: 20px;
+}
+
+/* Mobile Responsive */
+@media (max-width: 900px) {
+
+  /* Show Hamburger earlier (tablets too) */
+  .hamburger-btn {
+    display: block;
+  }
+
+  /* Adjust Logo */
+  div.logo img.logo-img {
+    height: 60px;
+    /* Smaller Logo */
+    padding-bottom: 0;
+    max-height: none;
+  }
+
+  /* Hide Menu Items by default */
+  .header-menu-items {
+    display: none;
+    position: absolute;
+    top: 100%;
+    /* Drop below header */
+    left: 0;
+    right: 0;
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    border-radius: 12px;
+    padding: 20px;
+    z-index: 1000;
+    flex-direction: column;
+    align-items: stretch;
+    /* Full width items */
+    gap: 16px;
+  }
+
+  /* Layout inside menu */
+  div.grid-child.pattern-select,
+  div.grid-child.account {
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+    justify-content: center;
+    gap: 12px;
+  }
+
+  /* Reset account alignment */
+  div.grid-child.account {
+    justify-content: center;
+  }
+
+  /* Make buttons bigger on mobile menu */
+  .header-menu-items button,
+  .header-menu-items select {
+    width: 100%;
+    min-height: 44px;
+    /* Touch target */
+  }
+
+  /* Open State */
+  .header-menu-items.open {
+    display: flex;
+    animation: slideDown 0.2s ease-out;
+  }
+
+  /* ===== FLATTEN ACCOUNT DROPDOWN ON MOBILE ===== */
+  /* Hide the trigger button ("Account" or "J") */
+  .account-dropdown #accountBtn {
+    display: none;
+  }
+
+  /* Make the dropdown content always visible and static */
+  .account-dropdown .dropdown-content {
+    display: flex !important;
+    /* Override inline/JS toggles */
+    flex-direction: column;
+    position: static;
+    /* Flow naturally */
+    box-shadow: none;
+    border: none;
+    background: transparent;
+    padding: 0;
+    width: 100%;
+    gap: 4px;
+    opacity: 1;
+    pointer-events: auto;
+    transform: none;
+  }
+
+  /* Style items to match other menu buttons */
+  .account-dropdown .dropdown-content button {
+    text-align: left;
+    padding: 12px;
+    background: rgba(0, 0, 0, 0.03);
+    /* Slight background to distinguish */
+    border-radius: 8px;
+  }
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+div.logo img.logo-img {
+  max-height: 120px;
+  padding-bottom: 20px;
+}
+
+div.grid-child.pattern-select {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  /* Allow wrapping on small screens */
+  gap: 8px;
+  /* Add spacing between elements */
+}
+
+/* Ensure buttons don't shrink too much */
+button {
+  min-width: 50px;
+}
+
+div.grid-child.account {
+  justify-content: right;
+  justify-self: right;
+  display: flex;
+  /* Ensure alignment */
+}
+
+div.grid-container.handpan-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 1fr;
+  gap: 10px;
+}
+
+div.grid-child.handpan-options.label {
+  text-align: right;
+  padding-right: 10px;
+}
+
+div.grid-child.handpan-options.select {
+  align-content: center;
+}
+
+div.container {
+  margin: 0 auto;
+  width: 98%;
+  padding: 50px;
+  max-width: 1200px;
+  background-color: var(--panel);
+  /* Use var(--panel) for theme consistency, falling back to --bg if needed, but --panel was not in original inline def? Original had #ffffff then var(--bg). I'll stick to var(--panel) usually used for containers */
+  /* Original: background-color: #ffffff; background-color: var(--bg); */
+  /* If var(--bg) is the page background, then container should likely be var(--panel) or white. */
+  background-color: var(--panel);
+  border-radius: 25px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+  /* Add subtle shadow to lift it */
+}
+
+@media (max-width: 768px) {
+  div.container {
+    margin: 0 auto;
+    width: 98%;
+    padding: 10px 0;
+    /* Reduced padding */
+  }
+}
+
+/* Background overlay logic moved from inline */
+div.container::after {
+  /* content: "";  <-- This was in inline, but "background-color: aliceblue; opacity: 0.5;" implies it might be an overlay? 
+     But ::after needs content. 
+     If it was just background-color, maybe it was a mistake? 
+     I'll preserve it but add content: "" if missing in original to avoid it being broken. 
+     Actually, looking at original: div.container::after { background-color: aliceblue; opacity: 0.5; } 
+     It had no content property, so it probably did NOTHING. 
+     I will comment it out as "broken/unused". */
+  /* content: ""; background-color: aliceblue; opacity: 0.5; position: absolute; inset: 0; pointer-events: none; */
+}
+
+select#patternSelect {
+  max-width: 160px;
+}

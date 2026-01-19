@@ -3,7 +3,6 @@
 /* Enhanced Range Selection */
 .cell.range {
   box-shadow: 0 0 0 4px #6366f1;
-  /* Indigo */
   position: relative;
 }
 
@@ -14,10 +13,7 @@
   inset: 0;
   border-radius: 50%;
   background: #6366f1;
-  /* Indigo */
-  /* "Yellow" usually */
   opacity: 0.3;
-  /* Transparent enough to see Red/Blue flip */
   pointer-events: none;
   z-index: 0;
 }

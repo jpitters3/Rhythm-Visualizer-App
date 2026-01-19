@@ -42,7 +42,7 @@ h2 {
 :root {
   /* LIGHT MODE */
   --bg: #f7f6f2;
-  --panel: #ffffff;
+  --panel: #f0f0f0;
   --panel-border: #e2ded3;
   --text: #2f2f2f;
   --cell-bg: #ffffff;

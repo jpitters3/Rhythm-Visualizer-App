@@ -6,7 +6,7 @@
   flex-wrap: wrap;
   padding: 12px 14px;
   border-radius: 16px;
-  background: var(--panel);
+  background: #f8f8f8;
   border: 1px solid var(--panel-border);
 }
 
