@@ -30,7 +30,6 @@
 .handpan-wrap {
   position: relative;
   width: 100%;
-  border-radius: 18px;
   padding: 14px;
 }
 
@@ -191,7 +190,7 @@ body.dark.calibrating .hp-dot.selected {
 
 div.under-handpan {
   position: relative;
-  height: 50px;
+  height: 60px;
 }
 
 div.under-handpan button {
@@ -233,6 +232,10 @@ div.lock-btn {
     background: var(--bg);
   }
 
+  .handpan-wrap {
+    max-width: 340px;
+  }
+
   .handpan-wrap.locked {
     z-index: 1;
     bottom: 50px;
@@ -242,11 +245,8 @@ div.lock-btn {
   div.under-handpan.locked {
     /* ghost note button */
     position: fixed;
-    justify-self: center;
-    padding: 5px;
     bottom: 0px;
     width: 100%;
-    margin: 5px;
     z-index: 1;
   }
 }

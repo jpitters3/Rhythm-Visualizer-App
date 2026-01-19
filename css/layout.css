@@ -203,7 +203,7 @@ div.container {
   /* Original: background-color: #ffffff; background-color: var(--bg); */
   /* If var(--bg) is the page background, then container should likely be var(--panel) or white. */
   background-color: var(--panel);
-  border-radius: 25px;
+  /* border-radius: 25px; */
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
   /* Add subtle shadow to lift it */
 }
@@ -211,9 +211,8 @@ div.container {
 @media (max-width: 768px) {
   div.container {
     margin: 0 auto;
-    width: 98%;
-    padding: 10px 0;
-    /* Reduced padding */
+    width: 100%;
+    padding: 5px 5px;
   }
 }
 

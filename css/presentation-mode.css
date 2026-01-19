@@ -292,3 +292,69 @@ body.present .grid.playback-mode .hand-column.right {
 body.present #measures hr {
   display: none !important;
 }
+
+/* ===== MOBILE PRESENTATION FIXES ===== */
+@media (max-width: 768px) {
+  body.present {
+    padding: 0;
+    overflow-x: hidden;
+    /* Prevent horizontal scroll */
+  }
+
+  /* 1. Constrain Measure Width */
+  /* Target the absolute rows (current, next, etc.) */
+  body.present .measure-row.current-measure,
+  body.present .measure-row.next-measure,
+  body.present .measure-row.next-measure-2,
+  body.present .static-labels {
+    width: 95vw !important;
+    /* Force to fit screen */
+    max-width: 95vw !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    /* Reset scale if needed, or adjust below */
+  }
+
+  /* Specific scaling adjustments for mobile depth */
+  body.present .measure-row.current-measure {
+    transform: translateX(-50%) scale(1) !important;
+    top: 28vh;
+  }
+
+  body.present .measure-row.next-measure {
+    transform: translateX(-50%) scale(0.85) !important;
+    top: 15vh;
+  }
+
+  body.present .measure-row.next-measure-2 {
+    transform: translateX(-50%) scale(0.7) !important;
+    top: 8vh;
+  }
+
+  body.present .static-labels {
+    transform: translateX(-50%) scale(1) !important;
+    top: 38vh;
+    font-size: 14px;
+  }
+
+  /* Tighter Grid Gaps */
+  body.present .grid {
+    gap: 2px !important;
+  }
+
+  /* 2. Handpan Sizing */
+  body.present .handpan-panel {
+    top: 55vh;
+    /* Lower it slightly */
+    width: 100% !important;
+    /* Allow full width */
+    max-width: 400px;
+    transform: translateX(-50%) scale(1.3) !important;
+    /* Scale UP */
+  }
+
+  body.present .handpan-img {
+    width: 100%;
+    margin-top: 20px;
+  }
+}

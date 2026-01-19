@@ -142,11 +142,20 @@
   }
 
   .quad-container {
-    opacity: 1;
+    opacity: 0;
+    /* Hidden by default, like desktop */
     width: 40px;
     justify-self: center;
     align-items: center;
     padding: 0;
+    pointer-events: none;
+    /* Prevent clicks when hidden */
+  }
+
+  /* Only show when in multi-mode */
+  .cell.multi-mode .quad-container {
+    opacity: 1;
+    pointer-events: auto;
   }
 
   /* Increase sub-dot size on mobile for better touch targets */

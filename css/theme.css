@@ -10,23 +10,27 @@ body {
   background: var(--bg);
   background-blend-mode: overlay;
   color: var(--text);
+  min-height: 100vh;
+  /* Ensure body fills screen */
+  position: relative;
 }
 
 /* Comment this section to remove the background */
 body::after {
   content: "";
   background-image: url('../assets/images/backgrounds/turquoise-sky.jpg');
-  background-repeat: no-repeat;
-  background-attachment: fixed;
-  background-position: center;
-  background-size: cover;
+  background-repeat: repeat-y;
+  background-attachment: scroll;
+  /* Standard tiling within fixed container */
+  background-position: center top;
+  background-size: 100% auto;
   opacity: 0.8;
-  top: 0;
-  left: 0;
-  bottom: 0;
-  right: 0;
-  position: absolute;
+  position: fixed;
+  /* Fix layer to viewport */
+  inset: 0;
+  /* Full coverage */
   z-index: -1;
+  pointer-events: none;
 }
 
 body.dark::after {
@@ -65,4 +69,13 @@ body.dark {
   --play-glow: rgba(91, 140, 255, 0.45);
   --btn-bg: #2a2a38;
   --btn-active: #5b8cff;
+}
+
+/* Mobile Background: Fill vertically */
+@media (max-width: 768px) {
+  body::after {
+    background-size: cover;
+    background-repeat: no-repeat;
+    background-position: center center;
+  }
 }
