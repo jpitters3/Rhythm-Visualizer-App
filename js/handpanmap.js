@@ -186,6 +186,7 @@ function applyCustomHandpan(handpanData) {
   if (customOpt) customOpt.remove();
 
   buildHandpanOverlay();
+  window.dispatchEvent(new Event('handpan-loaded'));
 }
 
 // === MY SCALES MANAGEMENT ===
@@ -755,7 +756,7 @@ scaleSelect.addEventListener('change', async () => {
 
   // Persist Scale Selection
   if (window.saveScaleLocal) window.saveScaleLocal(selectedScaleName);
-  if (typeof window.isAuthed === 'function' && window.isAuthed() && window.saveScaleRemote) {
+  if (typeof window.isAuthed === 'function' && (await window.isAuthed()) && window.saveScaleRemote) {
     window.saveScaleRemote(selectedScaleName);
   }
 

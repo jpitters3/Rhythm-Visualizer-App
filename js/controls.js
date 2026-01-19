@@ -170,7 +170,7 @@ async function saveCurrentPatternAs(name) {
   if (!trimmed) return false;
 
   try {
-    if (isAuthed()) {
+    if (await isAuthed()) {
       await dbSavePattern(trimmed, serializePattern());
       localStorage.setItem(LAST_USED_KEY, trimmed);
       await refreshPatternSelect(trimmed);
@@ -193,7 +193,7 @@ async function saveCurrentPatternAs(name) {
 async function loadPatternByName(pattern) {
   try {
     // CLOUD MODE
-    if (isAuthed()) {
+    if (await isAuthed()) {
       if (!pattern) {
         alert('Select a saved pattern first.');
         return;
@@ -259,7 +259,7 @@ renameBtn.addEventListener('click', async () => {
   if (!trimmed || trimmed === oldName) return;
 
   try {
-    if (isAuthed()) {
+    if (await isAuthed()) {
       await dbRenamePattern(oldName, trimmed);
       localStorage.setItem(LAST_USED_KEY, trimmed);
       await refreshPatternSelect(trimmed);
@@ -295,7 +295,7 @@ deleteBtn.addEventListener('click', async () => {
   if (!ok) return;
 
   try {
-    if (isAuthed()) {
+    if (await isAuthed()) {
       await dbDeletePattern(name);
       if (localStorage.getItem(LAST_USED_KEY) === name) localStorage.removeItem(LAST_USED_KEY);
       await refreshPatternSelect();
@@ -344,7 +344,7 @@ importBtn.addEventListener('click', async () => {
       const suggested = obj.name || `Imported ${new Date().toLocaleString()}`;
       const name = prompt('Save imported pattern as:', suggested);
       if (name) {
-        if (isAuthed()) {
+        if (await isAuthed()) {
           await dbSavePattern(name, obj);
           await refreshPatternSelect(name);
         } else {

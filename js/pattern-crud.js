@@ -7,8 +7,9 @@ window.hasUnsavedChanges = function () {
   return current !== window.lastSavedState;
 };
 
-function isAuthed() {
-  return !!currentUser;
+async function isAuthed() {
+  const { data, error } = await supabase1.auth.getUser();
+  return !!(data?.user);
 }
 
 async function dbListPatternNames() {
@@ -107,7 +108,7 @@ async function refreshPatternSelect(selectedName = '') {
     patternSelect.innerHTML = '';
 
     // CLOUD MODE
-    if (isAuthed()) {
+    if (await isAuthed()) {
       const names = (await dbListPatternNames()).sort((a, b) => a.localeCompare(b));
       if (names.length === 0) {
         const opt = document.createElement('option');

@@ -162,22 +162,27 @@ async function initAuthSession() {
   authInitDone = true;
 
   // Subscribe ONCE
-  supabase1.auth.onAuthStateChange(async (_event, session) => {
+  // Subscribe ONCE
+  supabase1.auth.onAuthStateChange(async (event, session) => {
+    // Ensure accurate global state
     currentUser = session?.user ?? null;
+    window.currentUser = currentUser; // Explicit global
+
     updateAccountUI();
     updateAdminUI();
 
-    // IMPORTANT: never await Supabase calls inside this callback
-    queueMicrotask(async () => {
+    // IMPORTANT: never await Supabase calls inside this callback directly to avoid blocking
+    // We utilize a small timeout to allow internal Supabase client headers to update
+    setTimeout(async () => {
       try {
         // safe to do async work here
-        await refreshPatternSelect?.();
-        await loadCurrentProfile?.(); // Fetch profile (username/bio)
-        await loadAllUserHandpans?.(); // Load all custom handpans for dropdown
+        if (typeof refreshPatternSelect === 'function') await refreshPatternSelect();
+        if (typeof loadCurrentProfile === 'function') await loadCurrentProfile();
+        if (typeof loadAllUserHandpans === 'function') await loadAllUserHandpans();
       } catch (e) {
         console.warn('Post-auth refresh failed:', e);
       }
-    });
+    }, 500); // 500ms delay to ensure token propagation
   });
 }
 
