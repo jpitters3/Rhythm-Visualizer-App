@@ -1131,7 +1131,7 @@ setTimeout(async () => {
     console.warn('[VirtualControls] Container not found');
     return;
   }
-  console.log('[VirtualControls] Initialized. Elements found:', { vBpmInput, vMetroBtn });
+
 
   const getReal = (id) => document.getElementById(id);
 
@@ -1172,16 +1172,12 @@ setTimeout(async () => {
     const realPlayBtn = getReal('playBtn');
     const realMetroBtn = getReal('metroBtn');
 
-    // Debug State Unconditionally
-    console.log('[VirtualControls] Sync State:', {
-      realVal: realBpmInput ? realBpmInput.value : 'MISSING',
-      virtVal: vBpmInput ? vBpmInput.value : 'MISSING'
-    });
+
 
     // BPM
     if (realBpmInput && vBpmInput) {
       if (vBpmInput.value !== realBpmInput.value) {
-        console.log(`[VirtualControls] BPM Mismatch! Real: ${realBpmInput.value}, Virt: ${vBpmInput.value}. Syncing...`);
+
         vBpmInput.value = realBpmInput.value;
         if (vBpmVal) vBpmVal.textContent = realBpmInput.value;
       }
