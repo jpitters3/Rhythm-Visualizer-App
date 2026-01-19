@@ -2,7 +2,8 @@
 
 /* Enhanced Range Selection */
 .cell.range {
-  box-shadow: 0 0 0 4px var(--btn-active);
+  box-shadow: 0 0 0 4px #6366f1;
+  /* Indigo */
   position: relative;
 }
 
@@ -12,21 +13,13 @@
   position: absolute;
   inset: 0;
   border-radius: 50%;
-  background: var(--btn-active);
+  background: #6366f1;
+  /* Indigo */
   /* "Yellow" usually */
   opacity: 0.3;
   /* Transparent enough to see Red/Blue flip */
   pointer-events: none;
   z-index: 0;
-}
-
-/* Add distinct handles to the first and last items in the range */
-.cell.range-start {
-  border-radius: 50% 0 0 50%;
-}
-
-.cell.range-end {
-  border-radius: 0 50% 50% 0;
 }
 
 body.dark .cell.range {

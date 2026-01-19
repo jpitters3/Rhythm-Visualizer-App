@@ -87,9 +87,9 @@ function startLongPress(cellEl) {
     selecting = true;
 
     // Add Haptic Feedback
-    // if ('vibrate' in navigator) {
-    //   navigator.vibrate(50); // Short 50ms pulse
-    // }
+    if ('vibrate' in navigator) {
+      navigator.vibrate(50); // Short 50ms pulse
+    }
 
     anchorIndex = idx;
     setCaret(idx);
@@ -109,3 +109,16 @@ function updateDragSelectionOver(cellEl) {
   setCaret(idx);
   setRange(anchorIndex, idx);
 }
+
+// Click outside to clear range
+window.addEventListener('click', (e) => {
+  // Check if we have an active selection
+  if (typeof hasRange === 'function' && !hasRange()) return;
+
+  // If click is inside a cell or the selection bar, ignore
+  if (e.target.closest('.cell')) return;
+  if (e.target.closest('.sel-bar')) return;
+
+  // Otherwise, clear selection
+  if (typeof clearRange === 'function') clearRange();
+});

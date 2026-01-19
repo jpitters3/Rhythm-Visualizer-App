@@ -356,118 +356,6 @@ function deleteSelection() {
   for (let i = r.start; i <= r.end; i++) setBeatToGhost(i);
 }
 
-// Bloom for mobile note selection //
-
-function showChoiceMenu(cell, globalIndex) {
-  const uiLayer = document.getElementById('bloom-ui-layer'); // Get it here!
-  if (!uiLayer) return;
-  uiLayer.innerHTML = ''; // Clear previous UI
-  const rect = cell.getBoundingClientRect();
-
-  const menu = document.createElement('div');
-  menu.className = 'choice-menu';
-
-  // Position menu near the touch point, but keep it on screen
-  menu.style.left = `${Math.min(window.innerWidth - 180, Math.max(10, rect.left))}px`;
-  menu.style.top = `${rect.top - 120}px`;
-
-  const btnChord = document.createElement('button');
-  btnChord.textContent = "Set Chord (Bloom)";
-  btnChord.onclick = () => {
-    console.log(`I'm the best mayne... I deeed it.`);
-    uiLayer.innerHTML = '';
-    openRadialBloom(cell, globalIndex);
-  };
-
-  const btnRange = document.createElement('button');
-  btnRange.textContent = "Select Range";
-  btnRange.onclick = () => {
-    uiLayer.innerHTML = '';
-    selecting = true;
-    anchorIndex = globalIndex;
-    updateDragSelectionOver(cell);
-  };
-
-  menu.appendChild(btnChord);
-  menu.appendChild(btnRange);
-  uiLayer.appendChild(menu);
-
-  // Close menu if clicking outside
-  // setTimeout(() => {
-  //     const closer = () => { uiLayer.innerHTML = ''; window.removeEventListener('click', closer); };
-  //     window.addEventListener('click', closer);
-  // }, 10);
-}
-
-function openRadialBloom(cell, globalIndex) {
-  const uiLayer = document.getElementById('bloom-ui-layer'); // Get it here too!
-  if (!uiLayer) return;
-
-  const rect = cell.getBoundingClientRect();
-  const centerX = rect.left + rect.width / 2;
-  const centerY = rect.top + rect.height / 2;
-
-  // Clear the layer first to ensure no stale menus are blocking view
-  uiLayer.innerHTML = '';
-
-  const container = document.createElement('div');
-  container.className = 'bloom-container';
-
-  // EDGE DETECTION
-  const dist = 75; // Distance from center
-  let xMult = 1;   // Default right
-  let yMult = 1;   // Default down
-
-  if (centerX > window.innerWidth - 100) xMult = -1; // Shift left if at right edge
-  if (centerY > window.innerHeight - 150) yMult = -1; // Shift up if at bottom edge
-
-  const fingerPositions = [
-    { label: 'LH-I', tx: -dist * xMult, ty: -dist * yMult }, // Left Index
-    { label: 'RH-I', tx: dist * xMult, ty: -dist * yMult }, // Right Index
-    { label: 'LH-T', tx: -dist * xMult, ty: dist * yMult },  // Left Thumb
-    { label: 'RH-T', tx: dist * xMult, ty: dist * yMult }   // Right Thumb
-  ];
-
-  fingerPositions.forEach((pos, idx) => {
-    const sat = document.createElement('div');
-    sat.className = 'bloom-satellite';
-    sat.style.left = `${centerX}px`;
-    sat.style.top = `${centerY}px`;
-    sat.style.setProperty('--tx', `${pos.tx}px`);
-    sat.style.setProperty('--ty', `${pos.ty}px`);
-    sat.textContent = pos.label;
-
-    sat.onclick = (e) => {
-      e.stopPropagation();
-      activeSubIndex = idx;
-      cell.classList.add('multi-mode');
-      sat.classList.add('selected');
-
-      // Set caret so the handpan knows which cell to fill
-      setCaret(globalIndex);
-
-      setTimeout(() => uiLayer.innerHTML = '', 300);
-    };
-    container.appendChild(sat);
-  });
-
-  uiLayer.appendChild(container);
-
-  // This double-frame delay ensures the browser registers the initial 
-  // position before triggering the 'bloom' transform animation.
-  // requestAnimationFrame(() => {
-  container.classList.add('active');
-  // });
-
-  container.style.pointerEvents = 'auto';
-
-  // Close the bloom when we click the container
-  container.onclick = () => {
-    container.classList.remove('active');
-    setTimeout(() => uiLayer.innerHTML = '', 300);
-  };
-}
-
 // EVENT LISTENERS //
 
 selCopyBtn?.addEventListener('click', () => copySelection());
@@ -661,12 +549,6 @@ function attachCellListeners(cell) {
 
   cell.addEventListener('pointerup', () => {
     cancelLongPress();
-    if (longPressFired) {
-      longPressFired = false;
-      const i = indexFromCellEl(cell);
-      showChoiceMenu(cell, i); // This opens the choice menu
-      return;
-    }
   });
 
   cell.addEventListener('pointercancel', () => cancelLongPress());
