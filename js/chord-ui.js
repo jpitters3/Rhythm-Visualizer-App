@@ -85,8 +85,12 @@ const ChordUI = (function () {
       return;
     }
 
+    let activeChordId = null;
+
     chords.forEach(chord => {
       const chip = document.createElement('div');
+      const cId = chord.notes.join(','); // unique ID based on notes
+
       chip.className = `chord-chip ${chord.quality.toLowerCase()}`;
       // Content
       chip.innerHTML = `
@@ -95,11 +99,52 @@ const ChordUI = (function () {
                 <div class="chord-notes">${chord.notes.join(' - ')}</div>
             `;
 
-      // Interaction
-      chip.addEventListener('mouseenter', () => highlightChord(chord.notes, true));
-      chip.addEventListener('mouseleave', () => highlightChord(chord.notes, false));
-      chip.addEventListener('click', () => {
-        playChord(chord.notes);
+      const activate = () => {
+        // Clear previous active chip if any
+        if (activeChordId && activeChordId !== cId) {
+          const prev = list.querySelector('.chord-chip.active');
+          if (prev) prev.classList.remove('active');
+          // Clear globals
+          document.querySelectorAll('.chord-highlight').forEach(el => el.classList.remove('chord-highlight'));
+        }
+
+        activeChordId = cId;
+        chip.classList.add('active');
+        highlightChord(chord.notes, true);
+      };
+
+      const deactivate = () => {
+        if (activeChordId === cId) {
+          activeChordId = null;
+          chip.classList.remove('active');
+          highlightChord(chord.notes, false);
+        }
+      };
+
+      // Desktop Hover: Activates immediately
+      chip.addEventListener('mouseenter', () => {
+        activate();
+      });
+      chip.addEventListener('mouseleave', () => {
+        deactivate();
+      });
+
+      // Click / Tap Logic
+      chip.addEventListener('click', (e) => {
+        // On Desktop: mouseenter already ran, so it is active -> Plays immediately.
+        // On Mobile: mouseenter didn't run.
+
+        if (activeChordId === cId) {
+          // Already highlighted -> Play
+          playChord(chord.notes);
+
+          // Visual pop
+          chip.style.transform = "scale(0.95)";
+          setTimeout(() => chip.style.transform = "", 100);
+        } else {
+          // Not active -> Highlight (Mobile First Tap)
+          activate();
+        }
       });
 
       list.appendChild(chip);
@@ -138,7 +183,7 @@ const ChordUI = (function () {
   }
 
   function playChord(notes) {
-    if (window.playNote) {
+    if (window.playNoteByLabel) {
       const scale = window.getScale ? window.getScale() : null;
       const labelToPitch = scale ? scale.map : null;
       const dingPitch = scale ? scale.ding : null;
@@ -155,7 +200,8 @@ const ChordUI = (function () {
         }
 
         if (targetLabel) {
-          setTimeout(() => window.playNote(targetLabel), i * 50);
+          // setTimeout(() => window.playNoteByLabel(targetLabel), i * 50);
+          window.playNoteByLabel(targetLabel);
         }
       });
     }

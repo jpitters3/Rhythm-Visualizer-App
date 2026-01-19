@@ -407,7 +407,8 @@ body.dark .icon-btn.active {
   text-align: center;
 }
 
-.chord-chip:hover {
+.chord-chip:hover,
+.chord-chip.active {
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   border-color: var(--primary);
