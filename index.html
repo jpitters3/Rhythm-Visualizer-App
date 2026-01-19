@@ -343,6 +343,37 @@
       </aside>
     </div>
 
+
+    <!-- PRESENTATION MODE PLAYBACK MENU -->
+    <!-- PRESENTATION MODE PLAYBACK MENU -->
+    <!-- PRESENTATION MODE PLAYBACK MENU -->
+    <div id="presentationControls" class="present-controls" style="display:none;">
+      <!-- Metronome Proxy -->
+      <button id="presentMetroBtn" title="Metronome">
+        <svg xmlns="http://www.w3.org/2000/svg" width="25" height="25" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 18v-8" />
+          <path d="M7 21h10" />
+          <path d="M6 21l5-16 5 16" />
+          <path d="M12 18a2 2 0 1 0 0 4 2 2 0 0 0 0-4Z" />
+        </svg>
+      </button>
+
+      <!-- BPM Proxy -->
+      <div class="control-group bpm-group">
+        <label>BPM
+          <input id="presentBpmInput" type="range" min="40" max="200" value="90">
+        </label>
+        <span id="presentBpmVal">90</span>
+      </div>
+
+      <!-- Play/Stop Proxy -->
+      <button id="presentPlayBtn" class="play-btn">►</button>
+    </div>
+    <!-- END PRESENTATION MODE PLAYBACK MENU -->
+    <!-- END PRESENTATION MODE PLAYBACK MENU -->
+    <!-- END PRESENTATION MODE PLAYBACK MENU -->
+
   </div>
 
   <!-- Legend -->
@@ -753,6 +784,9 @@
       </details>
     </div>
   </div>
+
+
+
 
   <script>
 

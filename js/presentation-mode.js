@@ -50,7 +50,7 @@ function updatePresentationView(currentStep) {
   const visualStep = (currentStep + lookahead) % totalSteps;
   const currentMeasureIndex = Math.floor(visualStep / stepsPerMeasure);
 
-  console.log(`[Present] updateView: step=${currentStep} idx=${currentMeasureIndex} last=${lastMeasureIndex}`);
+  //console.log(`[Present] updateView: step=${currentStep} idx=${currentMeasureIndex} last=${lastMeasureIndex}`);
 
   // OPTIMIZATION: Only update DOM if measure changed
   if (currentMeasureIndex === lastMeasureIndex) {
@@ -135,7 +135,120 @@ document.addEventListener('DOMContentLoaded', () => {
 // Detect externally triggered Fullscreen exit (e.g. Esc key by user)
 document.addEventListener('fullscreenchange', () => {
   if (!document.fullscreenElement && document.body.classList.contains('present')) {
-    // User exited fullscreen (e.g. via Esc), so we switch off presentation layout
+    // User exited fullscreen, switch off
     setPresentation(false);
   }
 });
+
+document.addEventListener('mozfullscreenchange', () => {
+  if (!document.fullscreenElement && document.body.classList.contains('present')) {
+    setPresentation(false);
+  }
+});
+
+document.addEventListener('webkitfullscreenchange', () => {
+  if (!document.fullscreenElement && document.body.classList.contains('present')) {
+    setPresentation(false);
+  }
+});
+
+/* ===== PRESENTATION CONTROLS PROXY ===== */
+function initPresentationControls() {
+  const pControls = document.getElementById('presentationControls');
+  if (!pControls) return;
+
+  // Metronome
+  const metroBtn = document.getElementById('metroBtn');
+  const pMetroBtn = document.getElementById('presentMetroBtn');
+  if (metroBtn && pMetroBtn) {
+    pMetroBtn.addEventListener('click', () => {
+      metroBtn.click();
+      syncPresentationControls();
+    });
+  }
+
+  // BPM
+  const bpmInput = document.getElementById('bpmInput');
+  const pBpmInput = document.getElementById('presentBpmInput');
+  const pBpmVal = document.getElementById('presentBpmVal');
+  if (bpmInput && pBpmInput) {
+    pBpmInput.addEventListener('input', (e) => {
+      bpmInput.value = e.target.value;
+      bpmInput.dispatchEvent(new Event('input'));
+      if (pBpmVal) pBpmVal.textContent = e.target.value;
+    });
+  }
+
+  // Play/Stop
+  const playBtn = document.getElementById('playBtn');
+  const pPlayBtn = document.getElementById('presentPlayBtn');
+  if (playBtn && pPlayBtn) {
+    pPlayBtn.addEventListener('click', () => {
+      playBtn.click();
+      syncPresentationControls();
+    });
+  }
+}
+
+function syncPresentationControls() {
+  const pControls = document.getElementById('presentationControls');
+  if (!pControls || pControls.style.display === 'none') {
+    // If hidden, maybe we should show it if in presentation mode
+    if (document.body.classList.contains('present')) {
+      pControls.style.display = 'flex';
+      // Initialize values once on show
+    } else {
+      return;
+    }
+  } else if (!document.body.classList.contains('present')) {
+    pControls.style.display = 'none';
+    return;
+  }
+
+  // Sync Values from Real -> Proxy
+  const tsNum = document.getElementById('tsNum');
+  const pTsNum = document.getElementById('presentTsNum');
+  if (tsNum && pTsNum && pTsNum.value !== tsNum.value) pTsNum.value = tsNum.value;
+
+  const tsDen = document.getElementById('tsDen');
+  const pTsDen = document.getElementById('presentTsDen');
+  if (tsDen && pTsDen && pTsDen.value !== tsDen.value) pTsDen.value = tsDen.value;
+
+  const metroBtn = document.getElementById('metroBtn');
+  const pMetroBtn = document.getElementById('presentMetroBtn');
+  if (metroBtn && pMetroBtn) {
+    const isActive = metroBtn.classList.contains('active');
+    pMetroBtn.classList.toggle('active', isActive);
+    pMetroBtn.style.opacity = isActive ? '1' : '0.5';
+  }
+
+  const playBtn = document.getElementById('playBtn');
+  const pPlayBtn = document.getElementById('presentPlayBtn');
+  if (playBtn && pPlayBtn) {
+    // Copy text content (Play/Stop symbol)
+    pPlayBtn.textContent = playBtn.textContent;
+    // Copy class (active/playing)
+    const isPlaying = playBtn.classList.contains('playing') || playBtn.textContent !== '►';
+    pPlayBtn.classList.toggle('playing', isPlaying);
+  }
+
+  const bpmInput = document.getElementById('bpmInput');
+  const pBpmInput = document.getElementById('presentBpmInput');
+  const pBpmVal = document.getElementById('presentBpmVal');
+  if (bpmInput && pBpmInput && pBpmInput.value !== bpmInput.value) {
+    pBpmInput.value = bpmInput.value;
+    if (pBpmVal) pBpmVal.textContent = bpmInput.value;
+  }
+}
+
+// Hook into the Update Loop
+const originalUpdateView = window.updatePresentationView;
+window.updatePresentationView = function (step) {
+  // Run original
+  if (originalUpdateView) originalUpdateView(step);
+  // Run sync
+  syncPresentationControls();
+};
+
+// Hook into Init
+document.addEventListener('DOMContentLoaded', initPresentationControls);

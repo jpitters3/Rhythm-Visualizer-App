@@ -1,16 +1,34 @@
 /* ===== PRESENTATION MODE ===== */
 body.present {
+  height: 100vh;
+  margin: 0;
+  overflow: hidden;
+  /* Prevent body scroll */
+  /* Horizon Variable: The anchor point for the "Current Measure" */
+  --horizon: 30%;
+}
+
+body.present {
   padding: 0;
-  min-height: 100vh;
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  /* vertical centering */
-  /* horizontal centering */
-  /* align-items: center;        */
-  margin: auto;
-  /* width: 50%; */
+}
 
+body.present #aiFab {
+  display: none;
+}
+
+body.present .container,
+body.present .main,
+body.present .left {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 100%;
+  padding: 0;
+  flex-grow: 1;
+  /* Propagate growth */
 }
 
 body.present h2,
@@ -77,21 +95,19 @@ body.present .present-exit {
 body.present #measures {
   position: relative !important;
   display: block !important;
-  height: 100vh;
-  /* Full height */
+  flex-grow: 1;
+  /* Eat all available space */
+  height: 100% !important;
+  /* Force full height usage to prevent collapse */
+  min-height: 0;
   overflow: hidden;
-  /* Mask only the very top to fade out exiting measures, keep current measure (at 74%) fully visible */
-  mask-image: linear-gradient(to top, black 85%, transparent 98%);
-  -webkit-mask-image: linear-gradient(to top, black 85%, transparent 98%);
-  width: 100%;
-  /* Ensure full width */
 }
 
 /* Base Measure Row Style (Hidden/Off-screen) */
 body.present .measure-row {
   position: absolute;
   left: 50%;
-  bottom: -100px;
+  top: 100vh;
   /* Start below screen */
   transform: translateX(-50%) scale(0.8);
   opacity: 0;
@@ -102,15 +118,15 @@ body.present .measure-row {
   min-width: 400px;
 }
 
-/* ==== PRESENTATION MODE LAYOUT (in order of appearance) ==== */
-/* ==== PRESENTATION MODE LAYOUT (in order of appearance) ==== */
-/* ==== PRESENTATION MODE LAYOUT (in order of appearance) ==== */
+/* ==== PRESENTATION MODE LAYOUT (Standardized) ==== */
+/* ==== PRESENTATION MODE LAYOUT (Standardized) ==== */
+/* ==== PRESENTATION MODE LAYOUT (Standardized) ==== */
 
 /* SLOT 3: Next+1 Measure */
 body.present .measure-row.next-measure-2 {
   bottom: auto;
-  top: 5vh;
-  /* Fixed visual top anchor */
+  top: calc(var(--horizon) - 180px);
+  /* Wider spacing */
   opacity: 0.2;
   transform: translateX(-50%) scale(0.8);
   z-index: 1;
@@ -120,7 +136,8 @@ body.present .measure-row.next-measure-2 {
 /* SLOT 2: Next Measure */
 body.present .measure-row.next-measure {
   bottom: auto;
-  top: 12vh;
+  top: calc(var(--horizon) - 120px);
+  /* Wider spacing */
   opacity: 0.6;
   transform: translateX(-50%) scale(0.9);
   z-index: 5;
@@ -131,8 +148,8 @@ body.present .measure-row.next-measure {
 body.present .static-labels {
   position: fixed;
   bottom: auto;
-  top: 36vh;
-  /* Placed below current measure (32vh + height) */
+  top: calc(var(--horizon) + 50px);
+  /* 100px below current */
   left: 50%;
   transform: translateX(-50%) scale(1.1);
   /* Match current measure scale */
@@ -156,7 +173,8 @@ body.present .static-labels div {
 /* SLOT 1: Current Measure (Raised to proper hover position) */
 body.present .measure-row.current-measure {
   bottom: auto;
-  top: 26vh;
+  top: var(--horizon);
+  /* ANCHOR */
   opacity: 1;
   transform: translateX(-50%) scale(1.1);
   z-index: 10;
@@ -293,6 +311,17 @@ body.present #measures hr {
   display: none !important;
 }
 
+body.present div.present-controls {
+  position: absolute;
+  bottom: 3vh;
+  justify-self: center;
+}
+
+body.present div.present-controls div.bpm-group {
+  transform: translateY(25%);
+  margin: 0px 5px;
+}
+
 /* ===== MOBILE PRESENTATION FIXES ===== */
 @media (max-width: 768px) {
   body.present {
@@ -301,45 +330,64 @@ body.present #measures hr {
     /* Prevent horizontal scroll */
   }
 
+  body.present .handpan-wrap {
+    transform: translateX(0) scale(0.8) !important;
+    bottom: 10vh;
+    top: auto;
+    width: 90vw !important;
+    /* Force to fit screen */
+    max-width: 90vw !important;
+  }
+
   /* 1. Constrain Measure Width */
   /* Target the absolute rows (current, next, etc.) */
   body.present .measure-row.current-measure,
   body.present .measure-row.next-measure,
   body.present .measure-row.next-measure-2,
   body.present .static-labels {
-    width: 95vw !important;
+    width: 80vw !important;
     /* Force to fit screen */
-    max-width: 95vw !important;
+    max-width: 80vw !important;
     left: 50% !important;
     transform: translateX(-50%) !important;
-    /* Reset scale if needed, or adjust below */
-  }
-
-  /* Specific scaling adjustments for mobile depth */
-  body.present .measure-row.current-measure {
-    transform: translateX(-50%) scale(1) !important;
-    top: 28vh;
-  }
-
-  body.present .measure-row.next-measure {
-    transform: translateX(-50%) scale(0.85) !important;
-    top: 15vh;
   }
 
   body.present .measure-row.next-measure-2 {
-    transform: translateX(-50%) scale(0.7) !important;
-    top: 8vh;
+    transform: translateX(-50%) scale(0.65) !important;
+    top: calc(30% - 160px) !important;
+    /* Tighter gap */
+  }
+
+  body.present .measure-row.next-measure {
+    transform: translateX(-50%) scale(0.75) !important;
+    top: calc(30% - 100px) !important;
+    /* Tighter gap */
   }
 
   body.present .static-labels {
     transform: translateX(-50%) scale(1) !important;
-    top: 38vh;
-    font-size: 14px;
+    top: calc(30% + 10px) !important;
+    font-size: 18px;
+  }
+
+  /* Specific scaling adjustments for mobile depth */
+  body.present .measure-row.current-measure {
+    transform: translateX(-50%) scale(0.85) !important;
+    top: 30%;
+    /* Mobile Horizon */
+    width: 70vw !important;
+    /* Force to fit screen */
+    max-width: 70vw !important;
+    gap: 15px !important;
   }
 
   /* Tighter Grid Gaps */
   body.present .grid {
-    gap: 2px !important;
+    gap: 10px !important;
+  }
+
+  body.present .quad-container {
+    width: 70%;
   }
 
   /* 2. Handpan Sizing */
@@ -356,5 +404,15 @@ body.present #measures hr {
   body.present .handpan-img {
     width: 100%;
     margin-top: 20px;
+  }
+
+  body.present div.present-controls {
+    position: absolute;
+    bottom: 5vh;
+    left: 5vw;
+  }
+
+  body.present #lockBtn {
+    display: none;
   }
 }
