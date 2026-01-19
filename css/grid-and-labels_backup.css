@@ -19,6 +19,32 @@
   max-width: 900px;
 }
 
+/* Define the mobile-only playback layout */
+@media (max-width: 768px) {
+
+  /* When NOT playing, show 8 beats for context */
+  .grid {
+    grid-template-columns: repeat(8, 1fr);
+  }
+
+  /* When PLAYING, shift to 4 beats for focus and legibility */
+  .grid.playback-mode {
+    grid-template-columns: repeat(4, 1fr) !important;
+  }
+
+  /* Increase sub-dot size during playback so they "pop" */
+  .grid.playback-mode .sub-dot {
+    width: 28px;
+    height: 28px;
+    font-size: 14px;
+  }
+
+  /* Staggered hand layout needs more space in 4-col mode */
+  .grid.playback-mode .hand-column.right {
+    margin-bottom: 16px;
+    margin-left: -2px;
+  }
+}
 
 .cell {
   touch-action: none;
@@ -95,6 +121,12 @@
   display: none;
 }
 
+.sub-dot {
+  pointer-events: auto;
+  /* Crucial for catching clicks */
+  cursor: pointer;
+}
+
 /* Vertical columns for fingers */
 .hand-column {
   display: flex;
@@ -123,40 +155,6 @@
   transition: all 0.2s ease;
   cursor: pointer;
 }
-
-/* Define the mobile-only layout (Max 4 beats per row) */
-@media (max-width: 768px) {
-
-  /* Force 4-column grid for consistent alignment */
-  .grid,
-  .labels {
-    grid-template-columns: repeat(4, 1fr) !important;
-    gap: 6px;
-  }
-
-  /* Ensure the measure container also respects this, keeping the `+` button in check */
-  .measure {
-    /* Columns 1-4 for beats, Col 5 for the + button (which spans rows) */
-    grid-template-columns: repeat(4, 1fr) auto !important;
-    gap: 6px;
-  }
-
-  .quad-container {
-    opacity: 1;
-    width: 40px;
-    justify-self: center;
-    align-items: center;
-    padding: 0;
-  }
-
-  /* Increase sub-dot size on mobile for better touch targets */
-  .sub-dot {
-    width: 38px;
-    height: 38px;
-    font-size: 18px;
-  }
-}
-
 
 /* Active state for recorded notes */
 .sub-dot.active {
@@ -355,7 +353,11 @@ body.dark {
   --mix: 68%;
 }
 
-
+@media (max-width: 768px) {
+  .cell.has-label {
+    --mix: 0%;
+  }
+}
 
 /* Choose fill based on beat position */
 .cell.downbeat {

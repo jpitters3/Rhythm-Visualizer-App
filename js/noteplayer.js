@@ -567,19 +567,7 @@ function playNoteSample(n) {
   src.start();
 }
 
-function togglePlaybackLayout(isActive) {
-  const gridEls = document.getElementsByClassName('grid');
-  if (!gridEls) return;
 
-  for (const g of gridEls) {
-    if (isActive) {
-      g.classList.add('playback-mode');
-    } else {
-      g.classList.remove('playback-mode');
-    }
-  }
-
-}
 
 function start() {
   // Unlock audio
@@ -610,7 +598,6 @@ function start() {
   playBtn.classList.add('active');
   playBtn2.textContent = '⏹';
   playBtn2.classList.add('active');
-  togglePlaybackLayout(playing); // Trigger the layout shift for mobile
 }
 
 function stop() {
@@ -625,7 +612,6 @@ function stop() {
   playBtn2.textContent = '►';
   playBtn2.classList.remove('active');
   cells().forEach(c => c.classList.remove('play'));
-  togglePlaybackLayout(playing); // Trigger the layout shift for mobile
 }
 
 function restartIfPlaying() {

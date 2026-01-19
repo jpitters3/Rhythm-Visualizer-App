@@ -11,6 +11,14 @@
   min-width: 0;
 }
 
+/* Mobile */
+@media (max-width: 768px) {
+  .left {
+    flex: 0 0 100%;
+    max-width: 100%;
+  }
+}
+
 .handpan-panel {
   flex: 0 0 40%;
   max-width: 40%;
