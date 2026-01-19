@@ -1116,3 +1116,114 @@ setTimeout(async () => {
     run();
   }
 })();
+
+// === VIRTUAL PLAYBACK CONTROLS ===
+(function initVirtualControls() {
+  const vControls = document.getElementById('virtualHandpanPlaybackControls');
+
+  // Elements (Closured)
+  const vMetroBtn = document.getElementById('virtualHandpanMetroBtn');
+  const vBpmInput = document.getElementById('virtualHandpanBpmInput');
+  const vBpmVal = document.getElementById('virtualHandpanBpmVal');
+  const vPlayBtn = document.getElementById('virtualHandpanPlayBtn');
+
+  if (!vControls) {
+    console.warn('[VirtualControls] Container not found');
+    return;
+  }
+  console.log('[VirtualControls] Initialized. Elements found:', { vBpmInput, vMetroBtn });
+
+  const getReal = (id) => document.getElementById(id);
+
+  // LISTENERS (Proxy -> Real)
+  if (vMetroBtn) {
+    vMetroBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const real = getReal('metroBtn');
+      if (real) real.click();
+      syncVirtualControls();
+    });
+  }
+
+  if (vPlayBtn) {
+    vPlayBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const real = getReal('playBtn');
+      if (real) real.click();
+      syncVirtualControls();
+    });
+  }
+
+  if (vBpmInput) {
+    vBpmInput.addEventListener('input', (e) => {
+      e.stopPropagation();
+      const real = getReal('bpmInput');
+      if (real) {
+        real.value = e.target.value;
+        real.dispatchEvent(new Event('input'));
+      }
+      if (vBpmVal) vBpmVal.textContent = e.target.value;
+    });
+  }
+
+  // SYNC FUNCTION (Real -> Proxy)
+  function syncVirtualControls() {
+    const realBpmInput = getReal('bpmInput');
+    const realPlayBtn = getReal('playBtn');
+    const realMetroBtn = getReal('metroBtn');
+
+    // Debug State Unconditionally
+    console.log('[VirtualControls] Sync State:', {
+      realVal: realBpmInput ? realBpmInput.value : 'MISSING',
+      virtVal: vBpmInput ? vBpmInput.value : 'MISSING'
+    });
+
+    // BPM
+    if (realBpmInput && vBpmInput) {
+      if (vBpmInput.value !== realBpmInput.value) {
+        console.log(`[VirtualControls] BPM Mismatch! Real: ${realBpmInput.value}, Virt: ${vBpmInput.value}. Syncing...`);
+        vBpmInput.value = realBpmInput.value;
+        if (vBpmVal) vBpmVal.textContent = realBpmInput.value;
+      }
+    }
+
+    // Play State
+    if (realPlayBtn && vPlayBtn) {
+      // Copy text (Play arrow vs Stop square)
+      vPlayBtn.textContent = realPlayBtn.textContent;
+      const isPlaying = realPlayBtn.classList.contains('active');
+      vPlayBtn.classList.toggle('active', isPlaying);
+      vPlayBtn.classList.toggle('playing', isPlaying);
+    }
+
+    // Metronome
+    if (realMetroBtn && vMetroBtn) {
+      const isOn = realMetroBtn.classList.contains('active') || (typeof metronomeOn !== 'undefined' && metronomeOn);
+      vMetroBtn.classList.toggle('active', isOn);
+      vMetroBtn.style.opacity = isOn ? '1' : '0.5';
+    }
+  }
+
+  // EXPOSE GLOBAL (for init.js)
+  window.syncVirtualHandpanControls = syncVirtualControls;
+
+  // HOOK UPDATE LOOP AND INIT
+  function installHook() {
+    // Wait a tick to ensure presentation-mode.js has run if it loaded after us? 
+    // DOMContentLoaded covers script load order usually, but safer to check.
+    const existingHook = window.updatePresentationView;
+    window.updatePresentationView = function (step) {
+      if (existingHook) existingHook(step);
+      syncVirtualControls();
+    };
+
+    // Run once immediately
+    syncVirtualControls();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', installHook);
+  } else {
+    installHook();
+  }
+})();

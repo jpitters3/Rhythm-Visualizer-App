@@ -45,10 +45,6 @@ playBtn.addEventListener('click', () => {
   else start();
 });
 
-playBtn2.addEventListener('click', () => {
-  playBtn.click();
-});
-
 // If the tab is hidden, stop playback to avoid runaway timers in the background
 document.addEventListener('visibilitychange', () => {
   if (document.hidden && playing) stop();

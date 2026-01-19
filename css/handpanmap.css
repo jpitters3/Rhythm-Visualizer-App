@@ -213,6 +213,16 @@ div.lock-btn {
   display: none;
 }
 
+.present-controls {
+  margin-top: 10px;
+  justify-self: center;
+}
+
+.present-controls .bpm-group {
+  display: inline-flex;
+  margin: 0 10px;
+}
+
 @media (max-width: 768px) {
   div.lock-btn {
     display: block;
@@ -364,8 +374,8 @@ body.dark .icon-btn.active {
 
 .tab-pane {
   display: none;
-  background: var(--panel);
-  border: 1px solid var(--panel-border);
+  background: var(--offwhite);
+  border: 1px solid var(--offwhite);
   border-radius: 12px;
   padding: 16px;
   backdrop-filter: blur(10px);
@@ -394,6 +404,7 @@ body.dark .icon-btn.active {
   border: none;
   overflow: visible;
   max-height: none;
+  background-color: var(--offwhite);
 }
 
 /* Restore Chord List Scroll & Layout */

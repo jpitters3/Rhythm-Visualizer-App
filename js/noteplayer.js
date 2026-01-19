@@ -596,8 +596,6 @@ function start() {
   playing = true;
   playBtn.textContent = '⏹';
   playBtn.classList.add('active');
-  playBtn2.textContent = '⏹';
-  playBtn2.classList.add('active');
 }
 
 function stop() {
@@ -609,8 +607,6 @@ function stop() {
   step = 0;
   playBtn.textContent = '►';
   playBtn.classList.remove('active');
-  playBtn2.textContent = '►';
-  playBtn2.classList.remove('active');
   cells().forEach(c => c.classList.remove('play'));
 }
 

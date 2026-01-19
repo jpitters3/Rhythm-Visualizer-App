@@ -154,6 +154,11 @@ function safeInit() {
       }
 
       await setPresentation(localStorage.getItem(PRESENT_KEY) === 'on');
+
+      // Force Sync of Virtual Handpan Proxy Controls (AFTER Pattern Load)
+      if (typeof window.syncVirtualHandpanControls === 'function') {
+        window.syncVirtualHandpanControls();
+      }
     })();
 
     updatePatternButtons();

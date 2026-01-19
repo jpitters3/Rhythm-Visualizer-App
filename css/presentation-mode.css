@@ -5,7 +5,7 @@ body.present {
   overflow: hidden;
   /* Prevent body scroll */
   /* Horizon Variable: The anchor point for the "Current Measure" */
-  --horizon: 30%;
+  --horizon: 20%;
 }
 
 body.present {
@@ -187,7 +187,7 @@ body.present .measure-row.current-measure {
 body.present .handpan-panel {
   position: fixed;
   left: 50%;
-  top: 48vh;
+  top: calc(var(--horizon) + 20vh);
   /* Starts below the rhythm highway */
   bottom: auto;
   /* Ensure bottom doesn't conflict */
@@ -312,14 +312,27 @@ body.present #measures hr {
 }
 
 body.present div.present-controls {
-  position: absolute;
+  position: fixed;
   bottom: 3vh;
-  justify-self: center;
+  left: 50%;
+  transform: translateX(-50%);
 }
 
 body.present div.present-controls div.bpm-group {
   transform: translateY(25%);
   margin: 0px 5px;
+}
+
+body.present div.handpan-tabs {
+  display: none !important;
+}
+
+body.present div#virtualHandpanPlaybackControls {
+  display: none !important;
+}
+
+body.present div#ghostNoteSection {
+  display: none !important;
 }
 
 /* ===== MOBILE PRESENTATION FIXES ===== */

@@ -224,20 +224,11 @@
 
       <!-- HANDPAN OPTIONS -->
       <aside class="handpan-panel" aria-label="Handpan map">
-        <div class="handpan-header">
-          <button id="playBtn2" title="Play">►</button>
-          <button id="hpSettingsToggle" class="icon-btn" title="Settings">⚙️</button>
-        </div>
-
-        <div id="hpSettingsPanel" class="hp-settings-panel" style="display:none;">
-
-        </div>
-
         <!-- TABS -->
         <div class="handpan-tabs">
           <button class="tab-btn" data-tab="handpanSettingsDrawer" title="Settings">⚙️</button>
           <button class="tab-btn" data-tab="chordDrawer" title="Chords">🎶</button>
-          <button class="tab-btn" data-tab="customizeDrawer" title="Customize">🛠️</button>
+          <button class="tab-btn" data-tab="customizeDrawer" title="Customize">🛸</button>
         </div>
 
         <!-- TAB PANES -->
@@ -339,6 +330,33 @@
           <button id="ghostBtn"><img src="./assets/images/ghost.png" /></button>
         </div>
 
+
+        <!-- PLAYBACK MENU -->
+        <div id="virtualHandpanPlaybackControls" class="present-controls">
+          <!-- Metronome Proxy -->
+          <button id="virtualHandpanMetroBtn" title="Metronome">
+            <svg xmlns="http://www.w3.org/2000/svg" width="25" height="25" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 18v-8" />
+              <path d="M7 21h10" />
+              <path d="M6 21l5-16 5 16" />
+              <path d="M12 18a2 2 0 1 0 0 4 2 2 0 0 0 0-4Z" />
+            </svg>
+          </button>
+
+          <!-- BPM Proxy -->
+          <div class="control-group bpm-group">
+            <label>BPM
+              <input id="virtualHandpanBpmInput" type="range" min="40" max="200" value="90">
+            </label>
+            <span id="virtualHandpanBpmVal">90</span>
+          </div>
+
+          <!-- Play/Stop Proxy -->
+          <button id="virtualHandpanPlayBtn" class="play-btn">►</button>
+        </div>
+        <!-- PLAYBACK MENU -->
+
         <!-- Lesson Player -->
         <br />
         <div id="lessonPlayer" style="display: none;" class="lesson-panel">
@@ -367,8 +385,6 @@
 
 
     <!-- PRESENTATION MODE PLAYBACK MENU -->
-    <!-- PRESENTATION MODE PLAYBACK MENU -->
-    <!-- PRESENTATION MODE PLAYBACK MENU -->
     <div id="presentationControls" class="present-controls" style="display:none;">
       <!-- Metronome Proxy -->
       <button id="presentMetroBtn" title="Metronome">
@@ -392,8 +408,6 @@
       <!-- Play/Stop Proxy -->
       <button id="presentPlayBtn" class="play-btn">►</button>
     </div>
-    <!-- END PRESENTATION MODE PLAYBACK MENU -->
-    <!-- END PRESENTATION MODE PLAYBACK MENU -->
     <!-- END PRESENTATION MODE PLAYBACK MENU -->
 
   </div>
