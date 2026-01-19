@@ -1077,3 +1077,55 @@ setTimeout(async () => {
     }
   }
 }, 500);
+
+// === DRAWER MANAGER ===
+// === DRAWER MANAGER ===
+(function initDrawers() {
+  const run = () => {
+    console.log('Initializing Drawer Manager');
+    const drawers = [
+      document.getElementById('handpanSettingsDrawer'),
+      document.getElementById('chordDrawer')
+    ];
+
+    drawers.forEach(drawer => {
+      if (!drawer) return;
+      const header = drawer.querySelector('.drawer-header');
+
+      if (header) {
+        header.addEventListener('click', (e) => {
+          e.stopPropagation();
+          e.preventDefault();
+
+          const isCollapsed = drawer.classList.contains('collapsed');
+
+          // MUTUAL EXCLUSIVITY: If opening this drawer, close others
+          if (isCollapsed) {
+            drawers.forEach(other => {
+              if (other && other !== drawer && !other.classList.contains('collapsed')) {
+                other.classList.add('collapsed');
+                const otherIcon = other.querySelector('.toggle-icon');
+                if (otherIcon) otherIcon.style.transform = 'rotate(0deg)';
+              }
+            });
+          }
+
+          // TOGGLE SELF
+          drawer.classList.toggle('collapsed');
+
+          // ROTATE ICON
+          const icon = drawer.querySelector('.toggle-icon');
+          if (icon) {
+            icon.style.transform = drawer.classList.contains('collapsed') ? 'rotate(0deg)' : 'rotate(180deg)';
+          }
+        });
+      }
+    });
+  };
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', run);
+  } else {
+    run();
+  }
+})();

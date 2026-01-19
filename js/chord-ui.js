@@ -15,11 +15,7 @@ const ChordUI = (function () {
   function init() {
     if (!drawer) return;
 
-    // Toggle Drawer
-    header.addEventListener('click', () => {
-      drawer.classList.toggle('collapsed');
-      if (toggleIcon) toggleIcon.style.transform = drawer.classList.contains('collapsed') ? 'rotate(0deg)' : 'rotate(180deg)';
-    });
+    // Toggle Drawer logic moved to centralized DrawerManager (see handpanmap.js)
 
     // Initial Load
     updateLibraryFromState();

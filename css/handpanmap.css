@@ -326,8 +326,9 @@ body.dark .icon-btn.active {
   width: 100%;
 }
 
-/* ==== CHORD LIBRARY ==== */
-.chord-drawer {
+/* ==== CHORD LIBRARY & SETTINGS DRAWERS ==== */
+.chord-drawer,
+.handpan-settings {
   background: var(--panel);
   border: 1px solid var(--panel-border);
   border-radius: 12px;
@@ -339,7 +340,8 @@ body.dark .icon-btn.active {
   backdrop-filter: blur(10px);
 }
 
-.chord-drawer.collapsed .drawer-content {
+.chord-drawer.collapsed .drawer-content,
+.handpan-settings.collapsed .drawer-content {
   display: none;
 }
 
@@ -349,12 +351,34 @@ body.dark .icon-btn.active {
   justify-content: space-between;
   align-items: center;
   cursor: pointer;
-  background: rgba(0, 0, 0, 0.02);
+  /* background: #ffe180; */
+  background: #666edf;
+  color: white;
+  /* Theme Yellow Tint */
   user-select: none;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+body.dark .drawer-header {
+  background: rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid var(--panel-border);
 }
 
 .drawer-header:hover {
-  background: rgba(0, 0, 0, 0.05);
+  filter: brightness(0.98);
+}
+
+.handpan-settings select {
+  background-color: #ffffff;
+  border: 1px solid var(--panel-border);
+  border-radius: 6px;
+  padding: 6px;
+  color: inherit;
+}
+
+body.dark .handpan-settings select {
+  background-color: var(--btn-bg);
+  color: var(--text);
 }
 
 .drawer-title {
