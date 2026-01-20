@@ -7,11 +7,10 @@ function isAdminUser(user) {
 function updateAdminUI() {
   const show = isAdminUser(currentUser);
 
-  // const calBbtn = document.getElementById("calBtn");
-  // if (calBtn) calBtn.style.display = show ? "" : "none";
-
-  const courseBtn = document.getElementById("openCourseModalBtn");
-  if (courseBtn) courseBtn.style.display = show ? "" : "none";
+  // Toggle all admin-only elements
+  document.querySelectorAll('.admin-only').forEach(el => {
+    el.style.display = show ? "" : "none";
+  });
 
   // if they were calibrating and lost admin (logout), force it off
   if (!show && document.body.classList.contains("calibrating")) {

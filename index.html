@@ -29,6 +29,7 @@
   <link rel="stylesheet" href="css/course-marketplace.css">
   <link rel="stylesheet" href="./css/calibration.css">
   <link rel="stylesheet" href="./css/error.css">
+  <link rel="stylesheet" href="./css/pattern-of-the-week.css">
 </head>
 
 <body>
@@ -83,6 +84,7 @@
               <div class="dropdown-divider"></div>
               <button id="toggleSidebarBtn">📚 Courses</button>
               <button id="openCourseModalBtn" class="admin-only" style="display: none;">➕ Create Course</button>
+              <button id="openPotwModalBtn" class="admin-only" style="display: none;">🛠️ POTW Dashboard</button>
               <button id="togglePracticeBtn">📋 Practice Plan</button>
               <div class="dropdown-divider"></div>
               <button id="myScalesBtn" style="display:none;">🛸 My Scales</button>
@@ -981,8 +983,79 @@
   <script src="./js/calibration.js?v=1"></script>
   <script src="./js/practice.js?v=1"></script>
   <script src="./js/mobile-menu.js"></script>
+  <script src="./js/pattern-of-the-week.js?v=1"></script>
 
 
+  <!-- POTW MODAL -->
+  <div id="potwModal" class="modal-overlay" aria-hidden="true" style="display: none;">
+    <div class="modal-content potw-modal">
+      <div class="modal-header">
+        <h2>Pattern of the Week</h2>
+        <button class="close-modal-btn" id="closePotwBtn">&times;</button>
+      </div>
+
+      <!-- TABS -->
+      <div class="potw-tabs">
+        <button class="potw-tab active" data-tab="potwSchedule">Schedule</button>
+        <button class="potw-tab" data-tab="potwManage">Manage & History</button>
+      </div>
+
+      <div class="modal-body">
+
+        <!-- SCHEDULE TAB -->
+        <div id="potwSchedule" class="potw-tab-content active">
+          <div class="potw-section">
+            <h3>Schedule Weekly Pattern</h3>
+            <p class="desc">Select a pattern from your saved library to feature.</p>
+
+            <div class="form-group">
+              <label>Saved Pattern</label>
+              <select id="potwPatternSelect" class="full-width">
+                <option value="">Loading...</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label>Launch Date</label>
+              <input type="date" id="potwLaunchDate" class="full-width" />
+            </div>
+
+            <div class="form-group">
+              <label>Difficulty (1-10)</label>
+              <input type="number" id="potwDifficulty" min="1" max="10" value="5" class="full-width" />
+            </div>
+
+            <div class="form-group">
+              <label>Description</label>
+              <textarea id="potwDesc" rows="3" placeholder="Why is this pattern cool?"></textarea>
+            </div>
+
+            <button id="potwScheduleBtn" class="primary-btn full-width">Schedule Pattern</button>
+            <div id="potwStatus" class="status-msg"></div>
+          </div>
+        </div>
+
+        <!-- MANAGE TAB -->
+        <div id="potwManage" class="potw-tab-content">
+          <div class="potw-section">
+            <h3>Upcoming Patterns</h3>
+            <div id="potwUpcomingList" class="potw-list">Loading...</div>
+          </div>
+
+          <div class="potw-section">
+            <h3>Active Now</h3>
+            <div id="potwActiveList" class="potw-list">Loading...</div>
+          </div>
+
+          <div class="potw-section">
+            <h3>History</h3>
+            <div id="potwHistoryList" class="potw-list">Loading...</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
 
 </body>
 
