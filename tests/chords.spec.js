@@ -3,9 +3,22 @@ const { test, expect } = require('@playwright/test');
 
 test.describe('Chords & Chords', () => {
 
+  // Helper for mobile menu
+  async function ensureMenuClosed(page) {
+    if (await page.locator('#mobileMenuBtn').isVisible()) {
+      const menu = page.locator('#headerMenu');
+      const isOpen = await menu.evaluate(el => el.classList.contains('open'));
+      if (isOpen) {
+        await page.click('#mobileMenuBtn');
+        await expect(menu).not.toHaveClass(/open/);
+      }
+    }
+  }
+
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
     page.once('dialog', dialog => dialog.accept());
+    await ensureMenuClosed(page);
     await page.click('#clearBtn');
   });
 
@@ -41,6 +54,7 @@ test.describe('Chords & Chords', () => {
 
     // 4. Start Playback
     await page.click('#playBtn');
+    await expect(page.locator('#playBtn')).toHaveClass(/active/);
 
     // 5. Verify Handpan Map Visualization
     // When playback hits step 0, both Note '1' and Note '3' should light up.

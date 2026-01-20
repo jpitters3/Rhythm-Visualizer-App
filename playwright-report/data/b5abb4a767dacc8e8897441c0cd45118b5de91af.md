@@ -1,0 +1,155 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e3]:
+      - img [ref=e5]
+      - button "Menu" [ref=e6] [cursor=pointer]:
+        - img [ref=e7]
+    - generic [ref=e8]:
+      - button "☀︎ / ☾" [ref=e9] [cursor=pointer]
+      - button "Toggle metronome click" [ref=e10] [cursor=pointer]:
+        - img [ref=e11]
+      - button "🎼" [ref=e14] [cursor=pointer]
+      - button "🤚" [ref=e15] [cursor=pointer]
+      - generic [ref=e17]:
+        - combobox [ref=e18] [cursor=pointer]:
+          - option "1"
+          - option "2"
+          - option "3"
+          - option "4" [selected]
+          - option "5"
+          - option "6"
+          - option "7"
+          - option "8"
+          - option "9"
+          - option "10"
+          - option "11"
+          - option "12"
+          - option "13"
+          - option "14"
+          - option "15"
+          - option "16"
+          - option "17"
+          - option "18"
+          - option "19"
+        - generic [ref=e19]: /
+        - combobox [ref=e20] [cursor=pointer]:
+          - option "2"
+          - option "4" [selected]
+          - option "8"
+      - button "⏹" [ref=e21] [cursor=pointer]
+      - generic [ref=e22]:
+        - text: BPM
+        - slider "BPM" [ref=e23]: "90"
+      - generic [ref=e24]: "90"
+      - button "Clear" [ref=e25] [cursor=pointer]
+      - button "↩️" [ref=e26] [cursor=pointer]
+      - button "↪️" [disabled] [ref=e27]
+      - button "🎤" [ref=e29] [cursor=pointer]
+      - button "⛶" [ref=e30] [cursor=pointer]
+    - generic [ref=e31]:
+      - generic [ref=e32]:
+        - generic "Rhythm grid" [ref=e33]:
+          - generic:
+            - generic: Measure 1
+            - generic:
+              - generic: "1"
+              - generic: "&"
+              - generic: "2"
+              - generic: "&"
+              - generic: "3"
+              - generic: "&"
+              - generic: "4"
+              - generic: "&"
+            - generic [ref=e34] [cursor=pointer]:
+              - generic:
+                - generic [ref=e36]: "1"
+                - generic [ref=e38]: "3"
+          - separator [ref=e74]
+        - generic [ref=e75]:
+          - generic [ref=e76]: Measure
+          - button "＋" [ref=e77] [cursor=pointer]
+          - button "−" [ref=e78] [cursor=pointer]
+          - button "Copy" [ref=e79] [cursor=pointer]
+          - button "Paste" [disabled] [ref=e80]
+      - complementary "Handpan map" [ref=e81]:
+        - generic [ref=e82]:
+          - button "⚙️" [ref=e83] [cursor=pointer]
+          - button "🎶" [ref=e84] [cursor=pointer]
+          - button "🛸" [ref=e85] [cursor=pointer]
+        - generic [ref=e86]:
+          - img "Lock handpan" [ref=e87]
+          - img "Handpan note layout" [ref=e88]
+          - generic:
+            - generic: L
+            - generic: R
+        - button [ref=e102] [cursor=pointer]:
+          - img [ref=e103]
+        - generic [ref=e104]:
+          - button "Metronome" [ref=e105] [cursor=pointer]:
+            - img [ref=e106]
+          - generic [ref=e109]:
+            - generic [ref=e110]:
+              - text: BPM
+              - slider "BPM" [ref=e111]: "90"
+            - generic [ref=e112]: "90"
+          - button "⏹" [ref=e113] [cursor=pointer]
+  - generic "Legend" [ref=e114]:
+    - generic [ref=e115]: Legend
+    - heading "Actions for Setting the Notes" [level=3] [ref=e117]
+    - generic [ref=e118]:
+      - generic [ref=e119]: Click Select A Note
+      - generic [ref=e120]: D Ding
+      - generic [ref=e121]: T Tak
+      - generic [ref=e122]: S Slap
+      - generic [ref=e123]: 0–9 Numbered Note
+      - generic [ref=e124]: Space Ghost Note
+      - generic [ref=e125]: M Toggle metronome
+      - generic [ref=e126]: Esc Exit
+    - heading "Labels" [level=3] [ref=e128]
+    - generic [ref=e130]: Left/Right Toggle hand icons
+  - generic [ref=e131]:
+    - generic [ref=e132]:
+      - heading [level=3] [ref=e133]: Course Library
+      - button [ref=e134] [cursor=pointer]: ×
+    - textbox [ref=e136]:
+      - /placeholder: Search lessons or scales...
+    - paragraph [ref=e138]: Loading courses...
+  - generic [ref=e139]:
+    - generic [ref=e140]:
+      - heading [level=3] [ref=e141]: Daily Practice
+      - button [ref=e142] [cursor=pointer]: ×
+    - generic [ref=e144]:
+      - button [ref=e145] [cursor=pointer]: ▶ Start
+      - button [ref=e146] [cursor=pointer]: ↻
+  - generic "AI Assistant" [ref=e148] [cursor=pointer]:
+    - img [ref=e149]
+  - generic:
+    - generic:
+      - heading "Rhythm Assistant" [level=3]
+      - button "✕"
+    - generic:
+      - generic: Hi! I'm your rhythm assistant. To get started, please sign in so I can access the cloud.
+    - generic:
+      - textbox "Ask for a beat or change..."
+      - button:
+        - img
+  - generic:
+    - generic:
+      - generic:
+        - heading [level=3]: 👤 Edit Profile
+        - button: ×
+      - generic:
+        - generic:
+          - generic: Username
+          - textbox:
+            - /placeholder: e.g. RhythmMaster
+        - generic:
+          - generic: Bio
+          - textbox:
+            - /placeholder: Tell us about your rhythm journey...
+        - generic:
+          - button: Save Profile
+```

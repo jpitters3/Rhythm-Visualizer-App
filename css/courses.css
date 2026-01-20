@@ -342,7 +342,8 @@ body.dark .course-body {
   text-transform: uppercase;
   letter-spacing: 1px;
   color: #888;
-  font-weight: 700;
+  font-weight: 900;
+  background-color: rgba(0, 0, 0, 0.05);
 }
 
 body.dark .section-title {
@@ -562,7 +563,7 @@ body.dark button#closeLessonBtn:hover {
 /* Helper for Lesson Description */
 .text-area {
   padding: 12px;
-  background: rgba(0,0,0,0.02);
+  background: rgba(0, 0, 0, 0.02);
   border-radius: 8px;
   font-size: 14px;
   line-height: 1.5;

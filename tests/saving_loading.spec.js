@@ -5,9 +5,33 @@ test.describe('Pattern Management', () => {
 
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
-    // Clear local storage to start fresh for each test? 
-    // Or at least ensure no collision. Using unique names is better.
   });
+
+  // Helper for mobile menu
+  async function ensureMenuOpen(page) {
+    // Only act if we are in mobile view (button is visible)
+    if (await page.locator('#mobileMenuBtn').isVisible()) {
+      const menu = page.locator('#headerMenu');
+      // Only click if NOT already open
+      const isOpen = await menu.evaluate(el => el.classList.contains('open'));
+      if (!isOpen) {
+        await page.click('#mobileMenuBtn');
+        await expect(menu).toHaveClass(/open/);
+      }
+    }
+  }
+
+  async function ensureMenuClosed(page) {
+    // Only act if we are in mobile view (button is visible)
+    if (await page.locator('#mobileMenuBtn').isVisible()) {
+      const menu = page.locator('#headerMenu');
+      const isOpen = await menu.evaluate(el => el.classList.contains('open'));
+      if (isOpen) {
+        await page.click('#mobileMenuBtn');
+        await expect(menu).not.toHaveClass(/open/);
+      }
+    }
+  }
 
   test('Save and Load Pattern', async ({ page }) => {
     const uniqueName = `Test Pattern ${Date.now()}`;
@@ -26,6 +50,7 @@ test.describe('Pattern Management', () => {
       dialog.accept(uniqueName);
     });
 
+    await ensureMenuOpen(page); // OPEN MENU IF NEEDED
     await page.click('#fileDropdownBtn');
     await page.click('#saveBtn');
 
@@ -35,6 +60,7 @@ test.describe('Pattern Management', () => {
     await expect(select).toHaveValue(uniqueName);
 
     // 3. Clear Grid
+    await ensureMenuClosed(page); // Ensure menu is closed so we can click Clear
     // Handle Clear Confirm
     page.once('dialog', dialog => {
       dialog.accept();
@@ -44,12 +70,14 @@ test.describe('Pattern Management', () => {
 
     // 4. Load Pattern
     // Select is already set to uniqueName from save, but let's Ensure
+    await ensureMenuOpen(page); // Ensure menu is visible to select pattern
     await select.selectOption(uniqueName);
 
     // Handle "Unsaved Changes" check (since we cleared, it might be clean, but just in case)
     // Actually, confirm logic for Load might trigger if state is dirty.
     // We just cleared, so it should be clean.
 
+    await ensureMenuOpen(page); // OPEN MENU IF NEEDED
     await page.click('#fileDropdownBtn');
     await page.click('#loadBtn');
 
@@ -62,6 +90,8 @@ test.describe('Pattern Management', () => {
 
     // 1. Save dummy pattern
     page.once('dialog', dialog => dialog.accept(uniqueName));
+
+    await ensureMenuOpen(page); // OPEN MENU IF NEEDED
     await page.click('#fileDropdownBtn');
     await page.click('#saveBtn');
 
@@ -72,14 +102,14 @@ test.describe('Pattern Management', () => {
       dialog.accept();
     });
 
+    await ensureMenuOpen(page); // OPEN MENU IF NEEDED
     await page.click('#fileDropdownBtn');
     await page.click('#deleteBtn');
 
     // 3. Verify Removal
-    // The select should no longer have this option
-    const options = page.locator('#patternSelect option');
-    const texts = await options.allInnerTexts();
-    expect(texts).not.toContain(uniqueName);
+    // 3. Verify Removal
+    // The select should no longer have this option (retry until update happens)
+    await expect(page.locator('#patternSelect')).not.toContainText(uniqueName);
   });
 
 });

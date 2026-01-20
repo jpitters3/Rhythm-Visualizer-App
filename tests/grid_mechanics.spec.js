@@ -3,10 +3,23 @@ const { test, expect } = require('@playwright/test');
 
 test.describe('Grid Mechanics', () => {
 
+  // Helper for mobile menu
+  async function ensureMenuClosed(page) {
+    if (await page.locator('#mobileMenuBtn').isVisible()) {
+      const menu = page.locator('#headerMenu');
+      const isOpen = await menu.evaluate(el => el.classList.contains('open'));
+      if (isOpen) {
+        await page.click('#mobileMenuBtn');
+        await expect(menu).not.toHaveClass(/open/);
+      }
+    }
+  }
+
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
     // Helper to clear grid
     page.once('dialog', dialog => dialog.accept());
+    await ensureMenuClosed(page);
     await page.click('#clearBtn');
   });
 
