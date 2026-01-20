@@ -6,6 +6,8 @@
 const ChordUI = (function () {
 
   let currentChords = [];
+  let favoriteChords = new Set();
+  const FAV_KEY = 'groovepan_favorite_chords';
   const drawer = document.getElementById('chordDrawer');
   const header = document.getElementById('chordDrawerHeader');
   const list = document.getElementById('chordList');
@@ -14,6 +16,14 @@ const ChordUI = (function () {
 
   function init() {
     if (!drawer) return;
+
+    // Load Favorites
+    try {
+      const saved = localStorage.getItem(FAV_KEY);
+      if (saved) {
+        favoriteChords = new Set(JSON.parse(saved));
+      }
+    } catch (e) { console.warn('Failed to load favorites', e); }
 
     // Toggle Drawer logic moved to centralized DrawerManager (see handpanmap.js)
 
@@ -31,6 +41,20 @@ const ChordUI = (function () {
 
     // Also listen for detailed events if they exist
     window.addEventListener('handpan-loaded', updateLibraryFromState);
+  }
+
+  function toggleFavorite(cId) {
+    if (favoriteChords.has(cId)) {
+      favoriteChords.delete(cId);
+    } else {
+      favoriteChords.add(cId);
+    }
+    saveFavorites();
+    updateLibraryFromState(); // Re-render to update visuals
+  }
+
+  function saveFavorites() {
+    localStorage.setItem(FAV_KEY, JSON.stringify([...favoriteChords]));
   }
 
   function updateLibraryFromState() {
@@ -74,26 +98,58 @@ const ChordUI = (function () {
 
   function renderList(chords) {
     if (!list) return;
+
+    // Clean up existing highlights
+    document.querySelectorAll('.chord-highlight').forEach(el => el.classList.remove('chord-highlight'));
+
     list.innerHTML = '';
+
     if (chords.length === 0) {
       list.innerHTML = '<div class="empty-state">No triads found in this scale.</div>';
       countLabel.textContent = '0';
       return;
     }
 
+    // Sort: Favorites first
+    chords.sort((a, b) => {
+      const aId = a.notes.join(',');
+      const bId = b.notes.join(',');
+      const aFav = favoriteChords.has(aId);
+      const bFav = favoriteChords.has(bId);
+      if (aFav && !bFav) return -1;
+      if (!aFav && bFav) return 1;
+      return 0; // maintain original order otherwise (usually root pitch)
+    });
+
     let activeChordId = null;
 
     chords.forEach(chord => {
       const chip = document.createElement('div');
       const cId = chord.notes.join(','); // unique ID based on notes
+      const isFav = favoriteChords.has(cId);
 
       chip.className = `chord-chip ${chord.quality.toLowerCase()}`;
+      if (isFav) chip.classList.add('favorited');
+
+      // Star Icon
+      const star = isFav ? '★' : '☆';
+
       // Content
       chip.innerHTML = `
-                <span class="chord-root">${chord.root}</span>
-                <span class="chord-qual">${chord.quality}</span>
-                <div class="chord-notes">${chord.notes.join(' - ')}</div>
+                <button class="chord-fav-btn" title="Toggle Favorite">${star}</button>
+                <div class="chord-info">
+                  <span class="chord-root">${chord.root}</span>
+                  <span class="chord-qual">${chord.quality}</span>
+                  <div class="chord-notes">${chord.notes.join(' - ')}</div>
+                </div>
             `;
+
+      // Fav Button Logic
+      const favBtn = chip.querySelector('.chord-fav-btn');
+      favBtn.addEventListener('click', (e) => {
+        e.stopPropagation(); // Stop bubbling (don't play/select)
+        toggleFavorite(cId);
+      });
 
       const activate = () => {
         // Clear previous active chip if any
@@ -127,12 +183,15 @@ const ChordUI = (function () {
 
       // Click / Tap Logic
       chip.addEventListener('click', (e) => {
+        e.stopPropagation(); // Prevent unselecting grid cell
+
         // On Desktop: mouseenter already ran, so it is active -> Plays immediately.
         // On Mobile: mouseenter didn't run.
 
         if (activeChordId === cId) {
           // Already highlighted -> Play
           playChord(chord.notes);
+
 
           // Visual pop
           chip.style.transform = "scale(0.95)";
@@ -186,6 +245,9 @@ const ChordUI = (function () {
 
       if (!labelToPitch) return;
 
+      const targetLabels = [];
+      const playedNotes = [];
+
       notes.forEach((pitch, i) => {
         let targetLabel = null;
         if (pitch === dingPitch) targetLabel = 'D';
@@ -196,10 +258,15 @@ const ChordUI = (function () {
         }
 
         if (targetLabel) {
-          // setTimeout(() => window.playNoteByLabel(targetLabel), i * 50);
+          targetLabels.push(targetLabel);
           window.playNoteByLabel(targetLabel);
         }
       });
+
+      // Inject to Grid if a cell is selected
+      if (typeof window.assignChordToSelectedCell === 'function') {
+        window.assignChordToSelectedCell(targetLabels);
+      }
     }
   }
 

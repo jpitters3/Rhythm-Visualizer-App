@@ -213,7 +213,7 @@ function renderAllMeasures() {
         // Set multi-note cell labels
         cell.classList.add('multi-mode');
         const allSubs = cell.querySelectorAll('.sub-dot');
-        for (let idx = 0; idx < allSubs.length - 1; idx++) {
+        for (let idx = 0; idx < allSubs.length; idx++) {
           allSubs[idx].textContent = lbl[idx];
         };
       }
@@ -553,5 +553,124 @@ function attachCellListeners(cell) {
 
   cell.addEventListener('pointercancel', () => cancelLongPress());
 }
+
+// ==== CHORD INJECTION LOGIC ====
+
+window.assignChordToSelectedCell = function (labels) {
+  // Find selected cell
+  const cells = document.querySelectorAll('.cell');
+  let selectedIndex = -1;
+  for (let i = 0; i < cells.length; i++) {
+    if (cells[i].classList.contains('selected')) {
+      selectedIndex = i;
+      break;
+    }
+  }
+
+  if (selectedIndex === -1) return false;
+
+  if (window.HistoryManager) window.HistoryManager.pushState();
+
+  // Slots: 0=LI, 1=LT, 2=RI, 3=RT
+  const slots = ['', '', '', ''];
+
+  // Filter for Numbers (1-9) vs Others
+  // We assume user rules apply to numbered notes
+  const numericLabels = [];
+  const otherLabels = [];
+
+  labels.forEach(l => {
+    const n = parseInt(l);
+    if (!isNaN(n)) numericLabels.push(n);
+    else otherLabels.push(l);
+  });
+
+  numericLabels.sort((a, b) => a - b);
+
+  // Split into Left (Evens) and Right (Odds)
+  // Assumption: 1,3,5,7... are Right. 2,4,6,8... are Left.
+  let rightNotes = numericLabels.filter(n => n % 2 !== 0);
+  let leftNotes = numericLabels.filter(n => n % 2 === 0);
+
+  const usedNotes = new Set();
+  let rightPairFound = false;
+  let leftPairFound = false;
+
+  // RULE 1: Right Side Pair (Odds)
+  // "If a chord contains 2 notes that are next to each other on the right side"
+  if (rightNotes.length >= 2) {
+    for (let i = 0; i < rightNotes.length - 1; i++) {
+      const n1 = rightNotes[i];     // Lower
+      const n2 = rightNotes[i + 1];   // Higher
+
+      // Assign: Lower -> RT (3), Higher -> RI (2)
+      slots[3] = String(n1);
+      slots[2] = String(n2);
+
+      usedNotes.add(n1);
+      usedNotes.add(n2);
+      rightPairFound = true;
+      break;
+    }
+  }
+
+  // RULE 2: Left Side Pair (Evens)
+  // "Same rules apply for the left side... higher -> LI, lower -> LT"
+  if (leftNotes.length >= 2) {
+    for (let i = 0; i < leftNotes.length - 1; i++) {
+      const n1 = leftNotes[i];     // Lower
+      const n2 = leftNotes[i + 1];   // Higher
+
+      if (!slots[0] && !slots[1]) { // If free
+        slots[0] = String(n2); // Higher -> LI
+        slots[1] = String(n1); // Lower -> LT
+
+        usedNotes.add(n1);
+        usedNotes.add(n2);
+        leftPairFound = true;
+        break;
+      }
+    }
+  }
+
+  // Handle Third Note / Remainder
+  const remainder = numericLabels.filter(n => !usedNotes.has(n));
+  otherLabels.forEach(l => remainder.push(l));
+
+  remainder.forEach(note => {
+    note = String(note);
+    // If Right Pair triggered (Rule 1): Third note -> Left Index (0)
+    if (rightPairFound && !leftPairFound) {
+      if (!slots[0]) slots[0] = note;
+      else if (!slots[1]) slots[1] = note; // Fallback
+      else if (!slots[2]) slots[2] = note;
+      else if (!slots[3]) slots[3] = note;
+    }
+    // If Left Pair triggered (Rule 2): Third note -> Right Index (2)
+    else if (leftPairFound && !rightPairFound) {
+      if (!slots[2]) slots[2] = note;
+      else if (!slots[3]) slots[3] = note; // Fallback
+      else if (!slots[0]) slots[0] = note;
+      else if (!slots[1]) slots[1] = note;
+    }
+    else {
+      // No pairs, or pairs on both sides (full).
+      // Fill empty slots
+      if (!slots[0]) slots[0] = note;
+      else if (!slots[2]) slots[2] = note;
+      else if (!slots[1]) slots[1] = note;
+      else if (!slots[3]) slots[3] = note;
+    }
+  });
+
+  // Apply to Grid
+  // This enters "Multi-Mode" for the cell
+  innerLabels[selectedIndex] = slots; // Array of 4
+
+  // Trigger DOM Update
+  renderAllMeasures();
+
+  return true;
+};
 
 

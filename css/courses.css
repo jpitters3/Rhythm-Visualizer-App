@@ -570,3 +570,56 @@ body.dark button#closeLessonBtn:hover {
   color: inherit;
   white-space: pre-wrap;
 }
+
+/* Chord Favorites */
+.chord-chip {
+  position: relative;
+  /* Context */
+  display: flex !important;
+  flex-direction: row;
+  align-items: center;
+  /* Override innerHTML structure related styles if needed */
+}
+
+.chord-info {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.chord-fav-btn {
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  color: rgba(0, 0, 0, 0.2);
+  transition: all 0.2s ease;
+  padding: 0 8px 0 0;
+  /* spacing */
+  line-height: 1;
+  text-shadow: 0 0 2px rgba(255, 255, 255, 0.5);
+}
+
+body.dark .chord-fav-btn {
+  color: rgba(255, 255, 255, 0.2);
+  text-shadow: 0 0 2px rgba(0, 0, 0, 0.5);
+}
+
+.chord-chip:hover .chord-fav-btn,
+.chord-chip.favorited .chord-fav-btn {
+  color: #FFD700;
+  /* Gold */
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.chord-chip.favorited {
+  border: 1px solid #FFD700;
+  box-shadow: 0 0 8px rgba(255, 215, 0, 0.3);
+}
+
+/* Ensure visibility on yellow backgrounds (Major) */
+.chord-chip.major.favorited .chord-fav-btn {
+  color: #FFD700;
+  text-shadow: 0 0 3px rgba(0, 0, 0, 0.8);
+  /* Strong shadow for contrast */
+}
