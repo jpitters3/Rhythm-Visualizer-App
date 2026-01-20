@@ -5,7 +5,13 @@ let currentCourseData = {
   sections: []
 };
 
-let availablePatterns = []; // List of pattern names
+let availablePatterns = [];
+const expandedSections = new Set();
+const expandedLessons = new Set(); // Strings "sIdx-lIdx"
+
+// Drag State
+let dragEl = null;
+let dragSrcData = null;
 
 // Fetch patterns on load
 async function loadPatternOptions() {
@@ -32,6 +38,11 @@ function addLessonToSection(sectionIndex) {
     pattern_name: "" // New field for dropdown selection
   };
   currentCourseData.sections[sectionIndex].lessons.push(lesson);
+
+  // Auto-expand section and new lesson
+  expandedSections.add(sectionIndex);
+  expandedLessons.add(`${sectionIndex}-${currentCourseData.sections[sectionIndex].lessons.length - 1}`);
+
   renderCourseStructure();
 }
 
@@ -104,8 +115,131 @@ function addSection() {
     title: `Section ${currentCourseData.sections.length + 1}`,
     lessons: []
   });
+  // Auto-expand new section
+  expandedSections.add(currentCourseData.sections.length - 1);
   renderCourseStructure();
 }
+
+function toggleSection(sIdx) {
+  if (expandedSections.has(sIdx)) {
+    expandedSections.delete(sIdx);
+  } else {
+    expandedSections.add(sIdx);
+  }
+  renderCourseStructure();
+}
+
+function toggleLesson(sIdx, lIdx) {
+  const key = `${sIdx}-${lIdx}`;
+  if (expandedLessons.has(key)) expandedLessons.delete(key);
+  else expandedLessons.add(key);
+  renderCourseStructure();
+}
+
+// --- DRAG AND DROP HANDLERS ---
+
+function courseDragStart(e, type, sIdx, lIdx = null) {
+  dragEl = e.target; // The element being dragged
+  dragSrcData = { type, sIdx, lIdx };
+
+  e.dataTransfer.effectAllowed = 'move';
+  // Use a dummy text for Firefox/others to allow drag
+  e.dataTransfer.setData('text/plain', JSON.stringify({ type, sIdx, lIdx }));
+
+  // Add dragging class for visuals
+  setTimeout(() => e.target.classList.add('dragging'), 0);
+}
+
+function courseDragOver(e) {
+  if (e.preventDefault) e.preventDefault(); // Necessary to allow dropping
+  e.dataTransfer.dropEffect = 'move';
+  return false;
+}
+
+function courseDragEnter(e) {
+  // Add visual cue
+  const target = e.target.closest(dragSrcData.type === 'section' ? '.section-builder' : '.lesson-builder');
+  if (target && target !== dragEl) {
+    target.classList.add('drop-target');
+  }
+}
+
+function courseDragLeave(e) {
+  const target = e.target.closest(dragSrcData.type === 'section' ? '.section-builder' : '.lesson-builder');
+  if (target) {
+    target.classList.remove('drop-target');
+  }
+}
+
+function courseDragEnd(e) {
+  // Cleanup classes
+  document.querySelectorAll('.dragging').forEach(el => el.classList.remove('dragging'));
+  document.querySelectorAll('.drop-target').forEach(el => el.classList.remove('drop-target'));
+  dragEl = null;
+  dragSrcData = null;
+}
+
+function courseDrop(e, type, targetSIdx, targetLIdx = null) {
+  if (e.stopPropagation) e.stopPropagation();
+
+  // Source Data
+  const src = dragSrcData;
+  if (!src) return false;
+
+  // Logic for swapping
+  if (src.type !== type) return false; // Can't drop section on lesson or vice versa (for now)
+
+  if (src.type === 'section') {
+    // Reorder Sections
+    if (src.sIdx !== targetSIdx) {
+      const sections = currentCourseData.sections;
+      const [moved] = sections.splice(src.sIdx, 1);
+      sections.splice(targetSIdx, 0, moved);
+
+      // Fix expanded Set indices maps (bit complex, so just clear or re-calc?)
+      // Simplest: If the moved one was expanded, track it.
+      // Actually, indices change, so the Set is now invalid.
+      // Let's just clear expanded state or try to be smart.
+      // Being dumb is safer: clear expanded to avoid confusion
+      expandedSections.clear();
+      expandedLessons.clear();
+      // Or maybe expand the one we just moved
+      expandedSections.add(targetSIdx);
+
+      renderCourseStructure();
+    }
+  } else if (src.type === 'lesson') {
+    // Reorder Lessons
+    // Allow cross-section drops
+    const sections = currentCourseData.sections;
+    const sourceList = sections[src.sIdx].lessons;
+    const targetList = sections[targetSIdx].lessons;
+
+    // Remove from source
+    const [moved] = sourceList.splice(src.lIdx, 1);
+
+    // Add to target
+    // If dropping onto a specific lesson, insert at that index
+    // If targetLIdx is null (e.g. dropped on section header), append?
+    // But our drop targets are ONLY lessons (handleDrop called from lesson-builder)
+
+    if (targetLIdx !== null) {
+      targetList.splice(targetLIdx, 0, moved);
+    } else {
+      // Should verify where it was dropped. For now, we only bind drop on .lesson-builder
+      targetList.push(moved);
+    }
+
+    // Ensure new host section is expanded
+    expandedSections.add(targetSIdx);
+    expandedLessons.clear(); // Reset lesson expansion on drop to avoid mismatch
+
+    renderCourseStructure();
+  }
+
+  return false;
+}
+
 
 // Function to render the UI for the course builder
 function renderCourseStructure() {
@@ -113,48 +247,109 @@ function renderCourseStructure() {
   container.innerHTML = '';
 
   currentCourseData.sections.forEach((section, sIdx) => {
+    const isExpanded = expandedSections.has(sIdx);
+
     const sectionEl = document.createElement('div');
     sectionEl.className = 'section-builder';
+    sectionEl.setAttribute('draggable', 'true');
+
+    // Drag Events
+    sectionEl.addEventListener('dragstart', (e) => courseDragStart(e, 'section', sIdx));
+    sectionEl.addEventListener('dragover', courseDragOver);
+    sectionEl.addEventListener('dragenter', courseDragEnter);
+    sectionEl.addEventListener('dragleave', courseDragLeave);
+    sectionEl.addEventListener('drop', (e) => courseDrop(e, 'section', sIdx));
+    sectionEl.addEventListener('dragend', courseDragEnd);
+
+
     sectionEl.innerHTML = `
-      <div class="section-header">
-        <input type="text" value="${section.title}" onchange="currentCourseData.sections[${sIdx}].title = this.value">
+      <div class="section-header-bar">
+          <div class="drag-handle" title="Drag to reorder section">☰</div>
+          <button class="toggle-btn" onclick="toggleSection(${sIdx})">
+             ${isExpanded ? '▼' : '▶'}
+          </button>
+          <div class="section-title-input">
+             <input type="text" value="${section.title}" onchange="currentCourseData.sections[${sIdx}].title = this.value" placeholder="Section Title">
+          </div>
+          <button class="icon-btn remove-section-btn" onclick="removeSection(${sIdx})" title="Remove Section">&times;</button>
       </div>
-      <div class="lessons-container" id="section-${sIdx}-lessons"></div>
-      <button class="add-lesson-btn" onclick="addLessonToSection(${sIdx})">+ Add Lesson</button>
+      
+      <div class="lessons-container ${isExpanded ? 'active' : ''}" id="section-${sIdx}-lessons"></div>
+      
+      ${isExpanded ? `<button class="add-lesson-btn" onclick="addLessonToSection(${sIdx})">+ Add Lesson</button>` : ''}
     `;
 
-    section.lessons.forEach((lesson, lIdx) => {
-      // Generate Pattern Options
-      const patternOptions = availablePatterns.map(name =>
-        `<option value="${name}" ${lesson.pattern_name === name ? 'selected' : ''}>${name}</option>`
-      ).join('');
+    const lessonsContainer = sectionEl.querySelector('.lessons-container');
 
-      const lessonEl = document.createElement('div');
-      lessonEl.className = 'lesson-builder';
-      lessonEl.innerHTML = `
-        <input type="text" value="${lesson.title}" placeholder="Lesson Title" onchange="currentCourseData.sections[${sIdx}].lessons[${lIdx}].title = this.value">
-        <textarea placeholder="Description" onchange="currentCourseData.sections[${sIdx}].lessons[${lIdx}].description = this.value">${lesson.description}</textarea>
-        <input type="text" value="${lesson.video_url}" placeholder="YouTube URL" onchange="currentCourseData.sections[${sIdx}].lessons[${lIdx}].video_url = this.value">
-        
-        <div class="lesson-meta" style="display:block; margin-top:12px;">
-          <div style="font-size:12px; font-weight:600; color:var(--text); opacity:0.7; margin-bottom:6px;">ASSOCIATED PATTERN</div>
-          <div style="display:flex; gap:10px; align-items:center; margin-bottom:12px;">
-            <select class="pattern-select" onchange="handlePatternSelect(this, ${sIdx}, ${lIdx})" style="flex:1; padding:8px 12px; border-radius:8px; border:1px solid var(--panel-border); background:var(--bg); color:var(--text);">
-              <option value="">-- Capture Current Grid --</option>
-              ${patternOptions}
-            </select>
-          </div>
+    if (isExpanded) {
+      section.lessons.forEach((lesson, lIdx) => {
+        const isLessonExpanded = expandedLessons.has(`${sIdx}-${lIdx}`);
 
-          <div class="lesson-actions" style="justify-content:flex-end;">
-            <button class="remove-btn" onclick="handleRemoveClick(this, ${sIdx}, ${lIdx})">Remove Lesson</button>
-          </div>
-        </div>
-      `;
-      sectionEl.querySelector('.lessons-container').appendChild(lessonEl);
-    });
+        // Generate Pattern Options
+        const patternOptions = availablePatterns.map(name =>
+          `<option value="${name}" ${lesson.pattern_name === name ? 'selected' : ''}>${name}</option>`
+        ).join('');
+
+        const lessonEl = document.createElement('div');
+        lessonEl.className = 'lesson-builder';
+        lessonEl.setAttribute('draggable', 'true');
+
+        // Drag Events (Lesson)
+        lessonEl.addEventListener('dragstart', (e) => {
+          e.stopPropagation(); // Don't drag section!
+          courseDragStart(e, 'lesson', sIdx, lIdx);
+        });
+        lessonEl.addEventListener('dragover', courseDragOver);
+        lessonEl.addEventListener('dragenter', courseDragEnter);
+        lessonEl.addEventListener('dragleave', courseDragLeave);
+        lessonEl.addEventListener('drop', (e) => {
+          e.stopPropagation();
+          courseDrop(e, 'lesson', sIdx, lIdx);
+        });
+        lessonEl.addEventListener('dragend', courseDragEnd);
+
+        lessonEl.innerHTML = `
+            <div class="lesson-header-bar" onclick="if(event.target.tagName !== 'INPUT' && event.target.tagName !== 'BUTTON') toggleLesson(${sIdx}, ${lIdx})">
+                <div class="lesson-drag-handle" title="Drag to reorder lesson">::</div>
+                <button class="toggle-btn lesson-toggle-btn" onclick="event.stopPropagation(); toggleLesson(${sIdx}, ${lIdx})">
+                     ${isLessonExpanded ? '▼' : '▶'}
+                </button>
+                <input type="text" class="lesson-title-input" value="${lesson.title}" placeholder="Lesson Title" onclick="event.stopPropagation()" onchange="currentCourseData.sections[${sIdx}].lessons[${lIdx}].title = this.value">
+                <button class="icon-btn remove-btn-small" onclick="event.stopPropagation(); handleRemoveClick(this, ${sIdx}, ${lIdx})" title="Remove Lesson">&times;</button>
+            </div>
+
+            <div class="lesson-content ${isLessonExpanded ? 'active' : ''}">
+                <textarea placeholder="Description" onchange="currentCourseData.sections[${sIdx}].lessons[${lIdx}].description = this.value">${lesson.description}</textarea>
+                <div class="input-with-icon">
+                    <span>📺</span>
+                    <input type="text" value="${lesson.video_url}" placeholder="YouTube URL" onchange="currentCourseData.sections[${sIdx}].lessons[${lIdx}].video_url = this.value">
+                </div>
+                
+                <div class="lesson-meta-box">
+                  <div class="meta-label">ASSOCIATED PATTERN</div>
+                  <div class="pattern-control-row">
+                    <select class="pattern-select" onchange="handlePatternSelect(this, ${sIdx}, ${lIdx})">
+                      <option value="">-- Capture Current Grid --</option>
+                      ${patternOptions}
+                    </select>
+                    <button class="small-capture-btn" onclick="capturePatternForLesson(${sIdx}, ${lIdx})" title="Save current grid as pattern">📸</button>
+                  </div>
+                </div>
+            </div>
+          `;
+        lessonsContainer.appendChild(lessonEl);
+      });
+    }
 
     container.appendChild(sectionEl);
   });
+}
+
+function removeSection(sIdx) {
+  if (confirm("Delete section and all its lessons?")) {
+    currentCourseData.sections.splice(sIdx, 1);
+    renderCourseStructure();
+  }
 }
 
 function capturePatternForLesson(sIdx, lIdx) {
@@ -180,6 +375,7 @@ async function openCourseCreator() {
   // Initialize with one empty section if new
   if (currentCourseData.sections.length === 0 && !currentCourseData.id) {
     currentCourseData.sections.push({ title: "Section 1", lessons: [] });
+    expandedSections.add(0);
   }
   renderCourseStructure();
 }
@@ -193,6 +389,9 @@ window.loadCourseToEdit = async function (course) {
 
   const saveBtn = document.getElementById('saveCourseBtn');
   saveBtn.textContent = "Update Course";
+
+  // Collapse all by default on edit
+  expandedSections.clear();
 
   openCourseCreator();
 };

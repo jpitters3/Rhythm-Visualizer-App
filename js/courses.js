@@ -218,123 +218,160 @@ async function setActiveCourse(courseId) {
 
 
 function loadLesson(lessonId) {
-  // Check unsaved changes
-  if (typeof window.hasUnsavedChanges === 'function' && window.hasUnsavedChanges()) {
-    if (!confirm('You have unsaved changes. Discard them?')) return;
-  }
-
-  const lesson = window.allLessons.find(l => l.id === lessonId);
-  if (!lesson) return;
-
-  // 1. Apply the groove to the grid
-  if (lesson.pattern_json) {
-    applyPattern(lesson.pattern_json);
-    // Explicitly sync lastSavedState to the *serialized* version of what we just loaded
-    // This prevents false positives if the saved JSON differs slightly from fresh serialization
-    if (typeof serializePattern === 'function') {
-      window.lastSavedState = JSON.stringify(serializePattern());
-    }
-  }
-
-  // 2. Show UI info
-  document.getElementById('lessonPlayer').style.display = 'block';
-  const titleEl = document.getElementById('activeLessonTitle');
-  titleEl.textContent = lesson.title;
-
-  // Inject Practice Button into Header
-  const header = titleEl.parentElement;
-  if (!header.classList.contains('lesson-header')) header.classList.add('lesson-header');
-
-  let pBtn = document.getElementById('addPracticeBtn');
-  if (!pBtn) {
-    pBtn = document.createElement('button');
-    pBtn.id = 'addPracticeBtn';
-    pBtn.className = 'practice-btn';
-    header.appendChild(pBtn);
-  }
-
-  // Set Initial State
-  const updateBtnState = () => {
-    const isAdded = window.isItemInPractice && window.isItemInPractice('lesson', lesson.id);
-    pBtn.innerHTML = isAdded ? '⛔️ Remove' : '➕ Add to Plan';
-    if (isAdded) {
-      pBtn.style.borderColor = 'rgba(255,0,0,0.2)';
-      pBtn.style.backgroundColor = 'rgba(255,0,0,0.02)';
-    } else {
-      pBtn.style.borderColor = 'var(--panel-border)';
-      pBtn.style.backgroundColor = 'transparent';
-    }
-  };
-  updateBtnState();
-
-  pBtn.onclick = async (e) => {
-    e.stopPropagation();
-    if (window.togglePracticeItem) {
-      await window.togglePracticeItem('lesson', lesson.id, lesson.title);
-      updateBtnState();
-    }
-  };
-
-  document.getElementById('lessonDescription').textContent = lesson.description;
-
-  // Completion Button
-  const btn = document.getElementById('lessonCompleteBtn');
-  const isComplete = window.completedLessonIds?.has(lesson.id);
-
-  if (btn) {
-    btn.textContent = isComplete ? '✅ Completed' : 'Mark as Complete';
-    btn.onclick = () => toggleLessonCompletion(lesson.id);
-    btn.style.display = 'inline-flex';
-  }
-
-  // Next Lesson Button
-  const nextBtn = document.getElementById('nextLessonBtn');
-  if (nextBtn) {
-    // Find the course this lesson belongs to
-    const course = window.allCourses.find(c => c.sections.some(s => s.lessons.some(l => l.id === lessonId)));
-
-    let nextLesson = null;
-
-    if (course) {
-      // Flatten lessons for THIS course only, honoring section/lesson order
-      const courseLessons = course.sections
-        .sort((a, b) => a.order_index - b.order_index)
-        .flatMap(s => s.lessons.sort((l1, l2) => l1.order_index - l2.order_index));
-
-      const idx = courseLessons.findIndex(l => l.id === lessonId);
-      if (idx !== -1 && idx < courseLessons.length - 1) {
-        nextLesson = courseLessons[idx + 1];
-      }
+  try {
+    // Check unsaved changes
+    if (typeof window.hasUnsavedChanges === 'function' && window.hasUnsavedChanges()) {
+      if (!confirm('You have unsaved changes. Discard them?')) return;
     }
 
-    if (nextLesson) {
-      nextBtn.style.display = 'inline-flex';
-      nextBtn.onclick = () => loadLesson(nextLesson.id);
-      nextBtn.title = `Next: ${nextLesson.title}`;
+    // DEBUG: Trace execution
+    // alert(`DEBUG: Loading lesson ID: ${lessonId}`);
 
-      // Initial State: Faded if current lesson not complete
-      if (window.completedLessonIds?.has(lesson.id)) {
-        nextBtn.classList.remove('faded');
+    const lesson = window.allLessons.find(l => l.id === lessonId);
+    if (!lesson) {
+      alert(`DEBUG ERROR: Lesson not found! ID: ${lessonId}. Total lessons loaded: ${window.allLessons.length}`);
+      return;
+    }
+
+    // alert(`DEBUG: Found lesson: ${lesson.title}`);
+
+    // 1. Apply the groove to the grid
+    if (lesson.pattern_json) {
+      if (typeof applyPattern === 'function') {
+        applyPattern(lesson.pattern_json);
       } else {
-        nextBtn.classList.add('faded');
+        console.error("applyPattern function missing");
       }
-    } else {
-      nextBtn.style.display = 'none';
+
+      // Explicitly sync lastSavedState to the *serialized* version of what we just loaded
+      // This prevents false positives if the saved JSON differs slightly from fresh serialization
+      if (typeof serializePattern === 'function') {
+        window.lastSavedState = JSON.stringify(serializePattern());
+      }
     }
-  }
 
-  // 3. Handle Video
-  const videoCont = document.getElementById('videoContainer');
-  if (lesson.video_url) {
-    const videoId = extractYouTubeId(lesson.video_url);
-    videoCont.innerHTML = `<iframe src="https://www.youtube.com/embed/${videoId}" frameborder="0" allowfullscreen></iframe>`;
-    videoCont.style.display = 'block';
-  } else {
-    videoCont.style.display = 'none';
-  }
+    // 2. Show UI info
+    const player = document.getElementById('lessonPlayer');
+    if (!player) {
+      alert("DEBUG ERROR: #lessonPlayer element not found in DOM!");
+      return;
+    }
 
-  // On Mobile, maybe close sidebar? On desktop, keep open?
-  if (window.innerWidth < 768) closeSidebar();
+    // Force visible
+    player.style.display = 'block';
+
+    // alert(`DEBUG: Player display set to block. Classes: ${player.className}`);
+
+    const titleEl = document.getElementById('activeLessonTitle');
+    if (titleEl) titleEl.textContent = lesson.title;
+
+    // Inject Practice Button into Header
+    const header = titleEl?.parentElement;
+    if (header) {
+      if (!header.classList.contains('lesson-header')) header.classList.add('lesson-header');
+
+      let pBtn = document.getElementById('addPracticeBtn');
+      if (!pBtn) {
+        pBtn = document.createElement('button');
+        pBtn.id = 'addPracticeBtn';
+        pBtn.className = 'practice-btn';
+        header.appendChild(pBtn);
+      }
+
+      // Set Initial State
+      const updateBtnState = () => {
+        const isAdded = (typeof window.isItemInPractice === 'function') && window.isItemInPractice('lesson', lesson.id);
+        pBtn.innerHTML = isAdded ? '⛔️ Remove' : '➕ Add to Plan';
+        if (isAdded) {
+          pBtn.style.borderColor = 'rgba(255,0,0,0.2)';
+          pBtn.style.backgroundColor = 'rgba(255,0,0,0.02)';
+        } else {
+          pBtn.style.borderColor = 'var(--panel-border)';
+          pBtn.style.backgroundColor = 'transparent';
+        }
+      };
+      updateBtnState();
+
+      pBtn.onclick = async (e) => {
+        e.stopPropagation();
+        if (window.togglePracticeItem) {
+          await window.togglePracticeItem('lesson', lesson.id, lesson.title);
+          updateBtnState();
+        }
+      };
+    }
+
+    const descEl = document.getElementById('lessonDescription');
+    if (descEl) descEl.textContent = lesson.description || '';
+
+    const lessonContentEl = document.getElementsByClassName('lesson-content')[0];
+    if (lessonContentEl) lessonContentEl.style.display = 'block';
+
+    // Completion Button
+    const btn = document.getElementById('lessonCompleteBtn');
+    const isComplete = window.completedLessonIds?.has(lesson.id);
+
+    if (btn) {
+      btn.textContent = isComplete ? '✅ Completed' : 'Mark as Complete';
+      btn.onclick = () => toggleLessonCompletion(lesson.id);
+      btn.style.display = 'inline-flex';
+    }
+
+    // Next Lesson Button
+    const nextBtn = document.getElementById('nextLessonBtn');
+    if (nextBtn) {
+      // Find the course this lesson belongs to
+      const course = window.allCourses.find(c => c.sections.some(s => s.lessons.some(l => l.id === lessonId)));
+
+      let nextLesson = null;
+
+      if (course) {
+        // Flatten lessons for THIS course only, honoring section/lesson order
+        const courseLessons = course.sections
+          .sort((a, b) => a.order_index - b.order_index)
+          .flatMap(s => s.lessons.sort((l1, l2) => l1.order_index - l2.order_index));
+
+        const idx = courseLessons.findIndex(l => l.id === lessonId);
+        if (idx !== -1 && idx < courseLessons.length - 1) {
+          nextLesson = courseLessons[idx + 1];
+        }
+      }
+
+      if (nextLesson) {
+        nextBtn.style.display = 'inline-flex';
+        nextBtn.onclick = () => loadLesson(nextLesson.id);
+        nextBtn.title = `Next: ${nextLesson.title}`;
+
+        // Initial State: Faded if current lesson not complete
+        if (window.completedLessonIds?.has(lesson.id)) {
+          nextBtn.classList.remove('faded');
+        } else {
+          nextBtn.classList.add('faded');
+        }
+      } else {
+        nextBtn.style.display = 'none';
+      }
+    }
+
+    // 3. Handle Video
+    const videoCont = document.getElementById('videoContainer');
+    if (videoCont) {
+      if (lesson.video_url) {
+        const videoId = extractYouTubeId(lesson.video_url);
+        videoCont.innerHTML = `<iframe src="https://www.youtube.com/embed/${videoId}" frameborder="0" allowfullscreen></iframe>`;
+        videoCont.style.display = 'block';
+      } else {
+        videoCont.style.display = 'none';
+      }
+    }
+
+    // On Mobile, maybe close sidebar? On desktop, keep open?
+    if (window.innerWidth < 768) closeSidebar();
+
+  } catch (err) {
+    console.error("loadLesson Error:", err);
+    alert("Error loading lesson: " + err.message);
+  }
 }
 
 function editCourse(courseId) {
