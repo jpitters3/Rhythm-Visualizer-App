@@ -572,18 +572,34 @@
   <!-- Community Feed Modal -->
   <div id="feedModal" class="modal-overlay" aria-hidden="true">
     <div class="modal feed-modal">
-      <div class="feed-header">
-        <h2 class="feed-title">Community Compositions</h2>
+      <div class="feed-main-header">
+        <div class="feed-nav-group">
+          <button id="navDiscussionBtn" class="feed-main-tab active">Discussion</button>
+          <button id="navCompositionsBtn" class="feed-main-tab">Compositions</button>
+        </div>
         <button id="closeFeedBtn" class="close-btn">&times;</button>
       </div>
-      <div class="feed-tabs">
-        <button class="feed-tab active" data-filter="newest">Newest</button>
-        <button class="feed-tab" data-filter="top">Top Rated</button>
-        <button class="feed-tab" data-filter="mine">My Shares</button>
+
+      <!-- COMPOSITIONS VIEW -->
+      <div id="compositionsView" class="feed-view" style="display:none;">
+        <div class="feed-filters">
+          <button class="feed-filter-tab active" data-filter="newest">Newest</button>
+          <button class="feed-filter-tab" data-filter="top">Top Rated</button>
+          <button class="feed-filter-tab" data-filter="mine">My Shares</button>
+        </div>
+        <div id="feedGrid" class="feed-grid">
+          <div class="loading-spinner">Loading...</div>
+        </div>
       </div>
-      <div id="feedGrid" class="feed-grid">
-        <!-- Feed items will be injected here -->
-        <div class="loading-spinner">Loading...</div>
+
+      <!-- DISCUSSION VIEW -->
+      <div id="discussionView" class="feed-view active">
+        <div id="createPostContainer" class="create-post-container">
+          <!-- Dynamic Input Area -->
+        </div>
+        <div id="postsFeed" class="posts-feed">
+          <div class="loading-spinner">Loading discussion...</div>
+        </div>
       </div>
     </div>
   </div>
@@ -976,7 +992,8 @@
   <script src="./js/chord-ui.js"></script>
   <script src="./js/init.js?v=4"></script><!-- keep near bottom -->
   <script src="./js/ai-assistant.js?v=5"></script>
-  <script src="./js/feed.js?v=4"></script>
+  <script src="./js/feed.js?v=6"></script>
+  <script src="./js/community-posts.js?v=1"></script>
   <script src="./js/course-marketplace.js?v=1"></script>
   <script src="./js/calibration.js?v=1"></script>
   <script src="./js/practice.js?v=1"></script>

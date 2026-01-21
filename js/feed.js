@@ -1,9 +1,14 @@
 // Community Feed Logic
-
 const feedModal = document.getElementById('feedModal');
 const closeFeedBtn = document.getElementById('closeFeedBtn');
 const feedGrid = document.getElementById('feedGrid');
-const feedTabs = document.querySelectorAll('.feed-tab');
+const feedFilterTabs = document.querySelectorAll('.feed-filter-tab'); // Inner filters
+
+// Top Level Nav
+const navCompositionsBtn = document.getElementById('navCompositionsBtn');
+const navDiscussionBtn = document.getElementById('navDiscussionBtn');
+const compositionsView = document.getElementById('compositionsView');
+const discussionView = document.getElementById('discussionView');
 
 let currentFeedFilter = 'newest'; // newest, top, mine
 
@@ -17,11 +22,41 @@ closeFeedBtn?.addEventListener('click', () => {
   feedModal.setAttribute('aria-hidden', 'true');
 });
 
+let compositionsLoaded = false;
+
+// Main Tab Logic
+function switchMainTab(tabName) {
+  if (tabName === 'discussion') {
+    navDiscussionBtn.classList.add('active');
+    navCompositionsBtn.classList.remove('active');
+    discussionView.style.display = 'block';
+    compositionsView.style.display = 'none';
+
+    // Lazy Init Discussion
+    if (window.initCommunityPosts) window.initCommunityPosts();
+  } else {
+    navCompositionsBtn.classList.add('active');
+    navDiscussionBtn.classList.remove('active');
+    compositionsView.style.display = 'block';
+    discussionView.style.display = 'none';
+
+    // Lazy Load Compositions
+    if (!compositionsLoaded) {
+      fetchFeed(currentFeedFilter);
+      compositionsLoaded = true;
+    }
+  }
+}
+
+navCompositionsBtn?.addEventListener('click', () => switchMainTab('compositions'));
+navDiscussionBtn?.addEventListener('click', () => switchMainTab('discussion'));
+
+
 // Tab Switching
-feedTabs.forEach(tab => {
+feedFilterTabs.forEach(tab => {
   tab.addEventListener('click', () => {
     // Update active state
-    feedTabs.forEach(t => t.classList.remove('active'));
+    feedFilterTabs.forEach(t => t.classList.remove('active'));
     tab.classList.add('active');
 
     // Fetch
@@ -33,7 +68,8 @@ feedTabs.forEach(tab => {
 function openFeedModal() {
   feedModal.classList.add('open');
   feedModal.setAttribute('aria-hidden', 'false');
-  fetchFeed(currentFeedFilter);
+  // Default to Discussion
+  switchMainTab('discussion');
 }
 
 async function fetchFeed(filter) {
@@ -76,10 +112,10 @@ async function fetchFeed(filter) {
     return;
   }
 
-  renderFeed(data);
+  renderPatternsFeed(data);
 }
 
-function renderFeed(patterns) {
+function renderPatternsFeed(patterns) {
   feedGrid.innerHTML = '';
 
   if (!patterns || patterns.length === 0) {
@@ -92,7 +128,6 @@ function renderFeed(patterns) {
     card.className = 'feed-card';
 
     const authorName = p.profiles?.username || 'Unknown';
-    const isOwner = currentUser && p.user_id === currentUser.id;
 
     // Escape HTML to prevent XSS
     const safeName = escapeHtml(p.name);
