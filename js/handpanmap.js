@@ -60,10 +60,16 @@ async function loadAllUserHandpans() {
     customHandpansCache = data;
     renderCustomOptions();
 
-    // Check for active custom scale
-    const active = data.find(h => h.is_active);
-    if (active) {
-      applyCustomHandpan(active);
+    // Only apply if the currently selected scale (from init/profile) is a custom one we just loaded.
+    // This prevents overriding the user's choice on background refreshes,
+    // while ensuring Custom Scales load correctly on initial startup.
+    const currentSelection = scaleSelect.value;
+    if (currentSelection && currentSelection.startsWith('custom:')) {
+      const id = currentSelection.split(':')[1];
+      const target = data.find(h => h.id === id);
+      if (target) {
+        applyCustomHandpan(target);
+      }
     }
   }
 }

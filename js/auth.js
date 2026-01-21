@@ -282,13 +282,7 @@ function performLogoutCleanup() {
 
 authLogoutDropdown?.addEventListener('click', async () => {
   await supabase1.auth.signOut();
-  currentUser = null;
-  updateAccountUI();
-  updateAdminUI();
-  initScale();
-  performLogoutCleanup();
-  authHint.textContent = 'Signed out.';
-  accountDropdownMenu?.classList.remove('show');
+  window.location.reload();
 });
 
 
@@ -456,11 +450,5 @@ authUpdateEmail?.addEventListener('click', async () => {
 // Keep existing logout for safety if it exists elsewhere
 authLogout?.addEventListener('click', async () => {
   await supabase1.auth.signOut();
-  currentUser = null;
-  updateAccountUI();
-  updateAdminUI();
-  initScale();
-  performLogoutCleanup();
-  authHint.textContent = 'Signed out.';
-  accountDropdownMenu?.classList.remove('show');
+  window.location.reload();
 });
