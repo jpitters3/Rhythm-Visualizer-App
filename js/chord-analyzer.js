@@ -18,6 +18,10 @@ const ChordAnalyzer = (function () {
     'C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'
   ];
 
+  const REVERSE_NOTE_MAP_FLAT = [
+    'C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'
+  ];
+
   /**
    * Parse "D3" or "F#4" into { note: "D", octave: 3, midi: 50, original: "D3" }
    */
@@ -70,7 +74,7 @@ const ChordAnalyzer = (function () {
    * Check if 3 notes form a chord
    * Returns { root: "D", quality: "Minor", name: "D Minor" } or null
    */
-  function identifyTriad(notesObjArr) {
+  function identifyTriad(notesObjArr, useFlats) {
     // Sort by pitch
     const sorted = [...notesObjArr].sort((a, b) => a.midi - b.midi);
     const [n1, n2, n3] = sorted;
@@ -84,6 +88,7 @@ const ChordAnalyzer = (function () {
     const pc3 = n3.midi % 12;
 
     const pcs = [pc1, pc2, pc3].sort((a, b) => a - b);
+    const map = useFlats ? REVERSE_NOTE_MAP_FLAT : REVERSE_NOTE_MAP;
 
     // Check for Root Position shapes in Pitch Class space
     // Try each note as potential root
@@ -93,18 +98,18 @@ const ChordAnalyzer = (function () {
       const fifth = (root + 7) % 12;
       if (pcs.includes(third) && pcs.includes(fifth)) {
         return {
-          root: REVERSE_NOTE_MAP[root],
+          root: map[root],
           quality: 'Major',
-          name: REVERSE_NOTE_MAP[root] + ' Major'
+          name: map[root] + ' Major'
         };
       }
 
       const minorThird = (root + 3) % 12;
       if (pcs.includes(minorThird) && pcs.includes(fifth)) {
         return {
-          root: REVERSE_NOTE_MAP[root],
+          root: map[root],
           quality: 'Minor',
-          name: REVERSE_NOTE_MAP[root] + ' Minor'
+          name: map[root] + ' Minor'
         };
       }
 
@@ -112,9 +117,9 @@ const ChordAnalyzer = (function () {
       const dimFifth = (root + 6) % 12;
       if (pcs.includes(minorThird) && pcs.includes(dimFifth)) {
         return {
-          root: REVERSE_NOTE_MAP[root],
+          root: map[root],
           quality: 'Diminished',
-          name: REVERSE_NOTE_MAP[root] + ' Dim'
+          name: map[root] + ' Dim'
         };
       }
     }
@@ -126,6 +131,9 @@ const ChordAnalyzer = (function () {
     analyze: function (scaleNotes) {
       // scaleNotes is array of strings e.g. ["D3", "A3", ...]
       const parsedNotes = scaleNotes.map(parseNote).filter(n => n !== null);
+
+      // Determine if context is "Flat" based on input notes
+      const useFlats = scaleNotes.some(s => s.match(/[A-G]b/i));
 
       // Deduplicate by strict name+octave to avoid double counting same note
       // Handpans rarely have duplicates, but if so, ignore.
@@ -148,7 +156,7 @@ const ChordAnalyzer = (function () {
       // Let's return individual voicings for now. We can group them in UI.
 
       combos.forEach(combo => {
-        const result = identifyTriad(combo);
+        const result = identifyTriad(combo, useFlats);
         if (result) {
           // Create unique ID for this specific voicing
           const noteIds = combo.map(n => n.original).sort().join(',');
