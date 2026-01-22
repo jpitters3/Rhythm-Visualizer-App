@@ -260,10 +260,8 @@ function loadLesson(lessonId) {
     // Force visible
     player.style.display = 'block';
 
-    // alert(`DEBUG: Player display set to block. Classes: ${player.className}`);
-
     const titleEl = document.getElementById('activeLessonTitle');
-    if (titleEl) titleEl.textContent = lesson.title;
+    if (titleEl) titleEl.textContent = '▲ ' + lesson.title;
 
     // Inject Practice Button into Header
     const header = titleEl?.parentElement;
@@ -377,6 +375,24 @@ function loadLesson(lessonId) {
   }
 }
 
+const titleEl = document.getElementById('activeLessonTitle');
+const lessonHeader = document.getElementById('lessonHeader');
+const lessonContent = document.getElementById('lessonContent')
+
+lessonHeader.addEventListener('click', () => {
+  if (lessonContent.style.display === 'none') {
+    lessonContent.style.display = 'block';
+    if (titleEl) titleEl.textContent = '▲ ' + titleEl.textContent.replace('▼ ', '');
+  } else {
+    lessonContent.style.display = 'none';
+    if (titleEl) titleEl.textContent = '▼ ' + titleEl.textContent.replace('▲ ', '');
+  }
+});
+
+
+// ============================================================================
+// Sidebar Functions
+// ============================================================================
 function editCourse(courseId) {
   if (event) event.stopPropagation(); // Prevent collapsing/expanding if clicking edit
   const course = window.allCourses.find(c => c.id === courseId);

@@ -423,6 +423,7 @@ body.dark .lesson-link.active-lesson::after {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 20px;
+  cursor: pointer;
 }
 
 .lesson-header h2 {
