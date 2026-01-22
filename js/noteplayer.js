@@ -611,6 +611,7 @@ function stop() {
   playBtn.textContent = '►';
   playBtn.classList.remove('active');
   cells().forEach(c => c.classList.remove('play'));
+  if (window.syncVirtualHandpanControls) window.syncVirtualHandpanControls();
 }
 
 function restartIfPlaying() {
