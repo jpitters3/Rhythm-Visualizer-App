@@ -315,42 +315,64 @@ function loadLesson(lessonId) {
       btn.style.display = 'inline-flex';
     }
 
-    // Next Lesson Button
+    // Navigation Logic (Prev / Next)
     const nextBtn = document.getElementById('nextLessonBtn');
-    if (nextBtn) {
+    const prevBtn = document.getElementById('prevLessonBtn');
+
+    if (nextBtn || prevBtn) {
       // Find the course this lesson belongs to
       const course = window.allCourses.find(c => c.sections.some(s => s.lessons.some(l => l.id === lessonId)));
 
       let nextLesson = null;
+      let prevLesson = null;
 
       if (course) {
-        // Flatten lessons for THIS course only, honoring section/lesson order
+        // Flatten lessons for THIS course only
         const courseLessons = course.sections
           .sort((a, b) => a.order_index - b.order_index)
           .flatMap(s => s.lessons.sort((l1, l2) => l1.order_index - l2.order_index));
 
         const idx = courseLessons.findIndex(l => l.id === lessonId);
-        if (idx !== -1 && idx < courseLessons.length - 1) {
-          nextLesson = courseLessons[idx + 1];
+
+        if (idx !== -1) {
+          if (idx < courseLessons.length - 1) nextLesson = courseLessons[idx + 1];
+          if (idx > 0) prevLesson = courseLessons[idx - 1];
         }
       }
 
-      if (nextLesson) {
-        nextBtn.style.display = 'inline-flex';
-        nextBtn.onclick = () => {
-          if (typeof stop === 'function') stop();
-          loadLesson(nextLesson.id);
-        };
-        nextBtn.title = `Next: ${nextLesson.title}`;
+      // NEXT BUTTON
+      if (nextBtn) {
+        if (nextLesson) {
+          nextBtn.style.display = 'inline-flex';
+          nextBtn.onclick = () => {
+            if (typeof stop === 'function') stop();
+            loadLesson(nextLesson.id);
+          };
+          nextBtn.title = `Next: ${nextLesson.title}`;
 
-        // Initial State: Faded if current lesson not complete
-        if (window.completedLessonIds?.has(lesson.id)) {
-          nextBtn.classList.remove('faded');
+          // Visual cue : Faded if current lesson not complete
+          if (window.completedLessonIds?.has(lesson.id)) {
+            nextBtn.classList.remove('faded');
+          } else {
+            nextBtn.classList.add('faded');
+          }
         } else {
-          nextBtn.classList.add('faded');
+          nextBtn.style.display = 'none';
         }
-      } else {
-        nextBtn.style.display = 'none';
+      }
+
+      // PREV BUTTON
+      if (prevBtn) {
+        if (prevLesson) {
+          prevBtn.style.display = 'inline-flex';
+          prevBtn.onclick = () => {
+            if (typeof stop === 'function') stop();
+            loadLesson(prevLesson.id);
+          };
+          prevBtn.title = `Previous: ${prevLesson.title}`;
+        } else {
+          prevBtn.style.display = 'none';
+        }
       }
     }
 
