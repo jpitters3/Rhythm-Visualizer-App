@@ -77,6 +77,8 @@
   transition: opacity 120ms ease;
   /* Hit area shape */
   border-radius: 50%;
+  pointer-events: auto;
+  cursor: pointer;
 }
 
 /* The visual representation */
@@ -171,7 +173,22 @@ body .handpan-overlay {
 
 /* Make dots visible while calibrating (even when not playing) */
 body.calibrating .hp-dot {
-  opacity: 0.55;
+  opacity: 1;
+  /* Keep fully opaque parent so child opacity logic works */
+  pointer-events: auto;
+  cursor: grab;
+}
+
+body.calibrating .hp-dot::after {
+  background: rgba(255, 255, 255, 0.25);
+  border: 2px solid rgba(255, 255, 255, 0.8);
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+/* Dark mode tweaks */
+body.dark.calibrating .hp-dot::after {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.6);
 }
 
 /* Selected dot styling */
