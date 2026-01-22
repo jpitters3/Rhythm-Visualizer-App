@@ -18,6 +18,7 @@ document.getElementById('communityBtn')?.addEventListener('click', () => {
 });
 
 closeFeedBtn?.addEventListener('click', () => {
+  document.body.style.overflow = '';
   feedModal.classList.remove('open');
   feedModal.setAttribute('aria-hidden', 'true');
 });
@@ -66,6 +67,7 @@ feedFilterTabs.forEach(tab => {
 });
 
 function openFeedModal() {
+  document.body.style.overflow = 'hidden';
   feedModal.classList.add('open');
   feedModal.setAttribute('aria-hidden', 'false');
   // Default to Discussion
@@ -158,6 +160,7 @@ function renderPatternsFeed(patterns) {
     const playBtn = card.querySelector('.play-pattern-btn');
     playBtn.addEventListener('click', () => {
       loadPatternFromFeed(p.pattern_json, p.name);
+      document.body.style.overflow = '';
       feedModal.classList.remove('open');
     });
 
