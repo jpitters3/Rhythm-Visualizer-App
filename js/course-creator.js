@@ -450,80 +450,127 @@ saveCourseBtn?.addEventListener('click', async () => {
     console.log("Course ID:", courseId, courseId ? "UPDATE MODE" : "CREATE MODE");
 
     if (courseId) {
-      // === UPDATE MODE ===
-      // Update metadata
-      console.log("Updating course metadata...");
+      // === UPDATE Metatdata ===
       const { error: uErr } = await supabase1
         .from('courses')
         .update({ title, description })
         .eq('id', courseId);
-
-      if (uErr) {
-        console.error("Error updating course metadata:", uErr);
-        throw uErr;
-      }
-
-      // Delete old sections
-      console.log("Deleting old sections for course:", courseId);
-      const { data: oldSections } = await supabase1.from('sections').select('id').eq('course_id', courseId);
-      if (oldSections && oldSections.length > 0) {
-        const oldSecIds = oldSections.map(s => s.id);
-        console.log("Old section IDs to delete:", oldSecIds);
-
-        await supabase1.from('lessons').delete().in('section_id', oldSecIds);
-        await supabase1.from('sections').delete().in('id', oldSecIds);
-      }
-
+      if (uErr) throw uErr;
     } else {
-      // === CREATE MODE ===
-      console.log("Creating new course...");
+      // === CREATE New Course ===
       const { data: newCourse, error: cErr } = await supabase1
         .from('courses')
-        .insert([{
-          title,
-          description,
-          owner_id: currentUser.id
-        }])
-        .select()
-        .single();
-
-      if (cErr) {
-        console.error("Error creating course:", cErr);
-        throw cErr;
-      }
+        .insert([{ title, description, owner_id: currentUser.id }])
+        .select().single();
+      if (cErr) throw cErr;
       courseId = newCourse.id;
-      console.log("New Course ID:", courseId);
+      // Update local ref
+      currentCourseData.id = courseId;
     }
 
-    // 2. Save Sections and Lessons (Re-insertion strategy)
-    console.log("Inserting sections and lessons...");
+    // 2. Upsert Sections & Lessons
+    console.log("Upserting sections and lessons...");
+    const keptSectionIds = [];
+    const keptLessonIds = [];
+
     for (let sIdx = 0; sIdx < currentCourseData.sections.length; sIdx++) {
-      const sectionData = currentCourseData.sections[sIdx];
-      const { data: section, error: sErr } = await supabase1
-        .from('sections')
-        .insert([{
-          course_id: courseId,
-          title: sectionData.title,
-          order_index: sIdx
-        }])
-        .select()
-        .single();
+      const sData = currentCourseData.sections[sIdx];
+      let sId = sData.id;
 
-      if (sErr) throw sErr;
+      if (sId) {
+        // Update Existing Section
+        const { error: sUpdErr } = await supabase1
+          .from('sections')
+          .update({ title: sData.title, order_index: sIdx })
+          .eq('id', sId);
+        if (sUpdErr) throw sUpdErr;
+      } else {
+        // Insert New Section
+        const { data: newSec, error: sInsErr } = await supabase1
+          .from('sections')
+          .insert([{ course_id: courseId, title: sData.title, order_index: sIdx }])
+          .select().single();
+        if (sInsErr) throw sInsErr;
+        sId = newSec.id;
+        sData.id = sId; // Update local state
+      }
+      keptSectionIds.push(sId);
 
-      const lessonsToInsert = sectionData.lessons.map((lesson, lIdx) => ({
-        section_id: section.id,
-        title: lesson.title,
-        description: lesson.description || "",
-        video_url: lesson.video_url || "",
-        pattern_json: lesson.pattern_json,
-        pattern_name: lesson.pattern_name,
-        order_index: lIdx
-      }));
+      // Handle Lessons for this Section
+      for (let lIdx = 0; lIdx < sData.lessons.length; lIdx++) {
+        const lData = sData.lessons[lIdx];
+        let lId = lData.id;
+        const lPayload = {
+          section_id: sId,
+          title: lData.title,
+          description: lData.description || "",
+          video_url: lData.video_url || "",
+          pattern_json: lData.pattern_json,
+          pattern_name: lData.pattern_name,
+          order_index: lIdx
+        };
 
-      if (lessonsToInsert.length > 0) {
-        const { error: lErr } = await supabase1.from('lessons').insert(lessonsToInsert);
-        if (lErr) throw lErr;
+        if (lId) {
+          // Update Existing Lesson
+          const { error: lUpdErr } = await supabase1
+            .from('lessons')
+            .update(lPayload)
+            .eq('id', lId);
+          if (lUpdErr) throw lUpdErr;
+        } else {
+          // Insert New Lesson
+          const { data: newLes, error: lInsErr } = await supabase1
+            .from('lessons')
+            .insert([lPayload])
+            .select().single();
+          if (lInsErr) throw lInsErr;
+          lId = newLes.id;
+          lData.id = lId; // Update local state
+        }
+        keptLessonIds.push(lId);
+      }
+    }
+
+    // 3. Prune Orphans
+    console.log("Pruning orphans...");
+
+    // A. Delete Removed Lessons (from kept sections)
+    if (keptSectionIds.length > 0) {
+      const { data: existingLessons } = await supabase1
+        .from('lessons')
+        .select('id')
+        .in('section_id', keptSectionIds);
+
+      if (existingLessons) {
+        const toDeleteIds = existingLessons
+          .map(l => l.id)
+          .filter(id => !keptLessonIds.includes(id));
+
+        if (toDeleteIds.length > 0) {
+          console.log("Deleting orphaned lessons:", toDeleteIds);
+          await supabase1.from('lessons').delete().in('id', toDeleteIds);
+        }
+      }
+    }
+
+    // B. Delete Removed Sections
+    // Fetch all sections for this course to find what was removed
+    const { data: existingSections } = await supabase1
+      .from('sections')
+      .select('id')
+      .eq('course_id', courseId);
+
+    if (existingSections) {
+      const secToDelete = existingSections
+        .map(s => s.id)
+        .filter(id => !keptSectionIds.includes(id));
+
+      if (secToDelete.length > 0) {
+        console.log("Deleting orphaned sections:", secToDelete);
+        // Note: Supabase/Postgres usually cascades delete to lessons, 
+        // but explicit delete is safer if cascade isn't set.
+        await supabase1.from('lessons').delete().in('section_id', secToDelete);
+        await supabase1.from('sections').delete().in('id', secToDelete);
       }
     }
 
