@@ -340,12 +340,19 @@ function pasteSelection() {
   for (let k = 0; k < beatClipboard.steps.length; k++) {
     const idx = startAt + k;
     if (idx > max) break;
-    applyBeat(idx, beatClipboard.steps[k]);
+
+    // Direct Model Update (like assignChordToSelectedCell)
+    // beatClipboard.steps[k] is { label: ... } from snapshotBeat
+    innerLabels[idx] = beatClipboard.steps[k].label;
   }
 
+  // Full Render to apply classes (multi-mode vs single)
+  renderAllMeasures();
+
   // Keep caret at end of paste
-  setCaret(clampIndex(startAt + beatClipboard.steps.length - 1));
-  setRange(startAt, clampIndex(startAt + beatClipboard.steps.length - 1));
+  const endIdx = clampIndex(startAt + beatClipboard.steps.length - 1);
+  setCaret(endIdx);
+  setRange(startAt, endIdx);
 }
 
 function deleteSelection() {
