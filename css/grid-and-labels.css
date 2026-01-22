@@ -214,18 +214,13 @@
 /* Transform-based animation so other beats never move */
 .cell {
   transform: translateZ(0) scale(1);
-  transition: transform 250ms ease;
+  transition: transform 250ms ease, box-shadow 250ms ease;
   will-change: transform;
 }
 
-/* Expand only when playing AND not a ghost note */
-.cell.play:not(.ghost) {
+/* Expand only when playing - Applies to all notes now */
+.cell.play {
   transform: translateZ(0) scale(1.2);
-}
-
-/* Never expand ghost notes */
-.cell.ghost.play {
-  transform: translateZ(0) scale(1);
 }
 
 .cell .inner {

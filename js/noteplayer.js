@@ -139,7 +139,7 @@ let audioCtx = null;
 let audioUnlocked = false;
 let samplesPreloaded = false;
 
-const AUDIO_DELAY = 0.35; // 350ms delay to sync audio with visual pulse expansion
+const AUDIO_DELAY = 0.3; // 300ms delay to sync audio with visual pulse expansion
 
 function unlockAudio() {
   audioUnlocked = true;
