@@ -139,6 +139,8 @@ let audioCtx = null;
 let audioUnlocked = false;
 let samplesPreloaded = false;
 
+const AUDIO_DELAY = 0.2; // 200ms delay to sync audio with visual pulse expansion
+
 function unlockAudio() {
   audioUnlocked = true;
   ensureAudio();
@@ -199,7 +201,7 @@ function metroClick(kind) {
   ensureAudio();
   if (!audioCtx) return;
 
-  const t = audioCtx.currentTime;
+  const t = audioCtx.currentTime + (AUDIO_DELAY || 0);
   const osc = audioCtx.createOscillator();
   const gain = audioCtx.createGain();
 
@@ -564,7 +566,7 @@ function playNoteSample(n) {
   const src = audioCtx.createBufferSource();
   src.buffer = buffer;
   src.connect(audioCtx.destination);
-  src.start();
+  src.start(audioCtx.currentTime + AUDIO_DELAY || 0);
 }
 
 
