@@ -215,23 +215,20 @@
         <h2 id="activeLessonTitle">Lesson Name</h2>
       </div>
       <div id="lessonContent" class="lesson-content">
-        <div id="videoContainer" class="video-wrapper"></div>
         <div id="lessonDescription" class="text-area"></div>
+        <div id="videoContainer" class="video-wrapper"></div>
         <div id="activeLessonFooter" style="margin-top:24px;">
           <div
             style="display:grid; grid-template-columns: 180px auto; gap:16px; align-items:center; justify-content:center; margin-bottom:16px;">
             <button id="lessonCompleteBtn" class="secondary-btn"
               style="white-space:nowrap; width:100%; justify-content:center;">✅ Mark as Complete</button>
             <button id="nextLessonBtn" class="primary-btn" style="white-space:nowrap;">Next Lesson &rarr;</button>
+            <button id="closeLessonBtn" class="text-btn" style="color: var(--text-secondary); font-size: 0.9em;">❌
+              Exit Lesson</button>
             <button id="prevLessonBtn" class="primary-btn"
               style="white-space:nowrap; background-color: #f9e17f;">&larr;</button>
-            <div style="display:flex; align-items:center; gap:12px; justify-content:center;">
-              <button id="closeLessonBtn" class="text-btn" style="color: var(--text-secondary); font-size: 0.9em;">❌
-                Exit Lesson</button>
-            </div>
           </div>
           <div class="lesson-controls" style="display:flex; align-items:center; gap:12px; justify-content:center;">
-            <button id="collapseLessonBtn" class="collapse-btn">^</button>
             <button id="vLessonPlayBtn" class="play-btn">►</button>
           </div>
         </div>
