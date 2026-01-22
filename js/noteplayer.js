@@ -197,11 +197,11 @@ async function loadSample(key, url) {
   samples[key] = await audioCtx.decodeAudioData(arrayBuffer);
 }
 
-function metroClick(kind) {
+function metroClick(kind, delay = 0) {
   ensureAudio();
   if (!audioCtx) return;
 
-  const t = audioCtx.currentTime + (AUDIO_DELAY || 0);
+  const t = audioCtx.currentTime + (delay || 0);
   const osc = audioCtx.createOscillator();
   const gain = audioCtx.createGain();
 
@@ -264,7 +264,7 @@ function tick() {
     showCountdown(countdownRemaining);
 
     // Play metronome click (Low pitch for count-in)
-    if (metronomeOn) metroClick(getMetroClickKind('beat'));
+    if (metronomeOn) metroClick(getMetroClickKind('beat'), AUDIO_DELAY);
 
     // Decrement for the NEXT tick
     countdownRemaining--;
@@ -304,14 +304,14 @@ function tick() {
   if (Array.isArray(currentData)) {
     currentData.forEach((label, subIdx) => {
       if (label) {
-        playNoteByLabel(label, step);
+        playNoteByLabel(label, step, AUDIO_DELAY);
         highlightHandpan(label, step);
         stepNotes.push(label);
         stepHands.push(resolveHand(step, currentHandsData, subIdx));
       }
     });
   } else if (currentData) {
-    playNoteByLabel(currentData, step);
+    playNoteByLabel(currentData, step, AUDIO_DELAY);
     highlightHandpan(currentData, step);
     stepNotes.push(currentData);
     stepHands.push(resolveHand(step, currentHandsData, 0));
@@ -359,7 +359,7 @@ function tick() {
 
   // Metronome click
   if (metronomeOn) {
-    metroClick(getMetroClickKind());
+    metroClick(getMetroClickKind(), AUDIO_DELAY);
   }
 
   // Since transcription happens after tick(), 
@@ -383,9 +383,10 @@ function getMetroClickKind() {
   return kind;
 }
 
-function playNoteByLabel(label, step) {
+function playNoteByLabel(label, step, delay = 0) {
   const note = noteForLabel(label); // e.g. "C#", "D3_ding"
-  if (note) { playNoteSample(note); }
+  if (note) { playNoteSample(note, delay); }
+
 }
 
 let timeSignature = localStorage.getItem('defaultTimeSignature') || '4/4';
@@ -558,7 +559,7 @@ async function loadNoteSample(n) {
   }
 }
 
-function playNoteSample(n) {
+function playNoteSample(n, delay = 0) {
   ensureAudio();
   const buffer = samples[n];
   if (!audioCtx || !buffer) return;
@@ -566,7 +567,7 @@ function playNoteSample(n) {
   const src = audioCtx.createBufferSource();
   src.buffer = buffer;
   src.connect(audioCtx.destination);
-  src.start(audioCtx.currentTime + AUDIO_DELAY || 0);
+  src.start(audioCtx.currentTime + delay);
 }
 
 
