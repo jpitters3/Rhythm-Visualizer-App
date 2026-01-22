@@ -314,7 +314,7 @@ function createPostCard(post) {
   let patternHtml = '';
   if (post.shared_pattern_id && post.pattern) {
     patternHtml = `
-            <div class="post-pattern-card" onclick="loadPatternFromFeed(null, '${post.pattern.name}');  // We need logic to fetch pattern content if not here">
+            <div class="post-pattern-card">
                 <div class="pp-icon">🎵</div>
                 <div class="pp-info">
                     <div class="pp-name">${post.pattern.name}</div>
@@ -323,9 +323,12 @@ function createPostCard(post) {
                 <button class="pp-play-btn">▶ Load</button>
             </div>
         `;
-    // Hack: loadPatternFromFeed expects JSON. We only have ID here.
-    // We will need to fetch it or attach onclick listener differently.
   }
+
+  const isOwner = currentUser && currentUser.id === post.user_id;
+  const deleteBtnHtml = isOwner
+    ? `<button class="pf-btn delete-post-btn" onclick="deletePost('${post.id}', this)" title="Delete Post">🗑️ Delete</button>`
+    : '';
 
   card.innerHTML = `
         <div class="post-header">
@@ -349,6 +352,7 @@ function createPostCard(post) {
             <div class="pf-actions">
                 <button class="pf-btn like-btn" onclick="togglePostLike('${post.id}', this)">👍 Like</button>
                 <button class="pf-btn comment-btn" onclick="toggleComments('${post.id}')">💬 Comment</button>
+                ${deleteBtnHtml}
             </div>
         </div>
         
@@ -377,7 +381,31 @@ function createPostCard(post) {
   return card;
 }
 
-// Global scope for onclicks (quick refactor needed later for module safety)
+window.deletePost = async function (postId, btn) {
+  if (!confirm('Are you sure you want to delete this post?')) return;
+
+  const { error } = await supabase1
+    .from('community_posts')
+    .delete()
+    .eq('id', postId)
+    .eq('user_id', currentUser.id);
+
+  if (error) {
+    console.error('Delete error:', error);
+    alert('Failed to delete post: ' + error.message);
+    return;
+  }
+
+  // Remove from UI
+  // Find parent .post-card
+  let el = btn.closest('.post-card');
+  if (el) el.remove();
+
+  if (postsFeed.children.length === 0) {
+    postsFeed.innerHTML = '<div class="empty-state">No discussions yet. Be the first!</div>';
+  }
+};
+
 window.togglePostLike = async function (postId, btn) {
   if (!currentUser) return alert('Sign in to like');
   // Optimistic Logic specific to posts

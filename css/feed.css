@@ -264,7 +264,7 @@
   resize: none;
   color: var(--text);
   font-size: 1rem;
-  padding: 8px 0;
+  padding: 12px;
   outline: none;
   min-height: 40px;
 }
@@ -309,7 +309,7 @@
 .cp-publish-btn {
   background: var(--btn-active, #f59e0b);
   /* Yellow Accent (Theme dependent) */
-  color: var(--bg);
+  color: black;
   /* Contrast text */
   border: none;
   padding: 8px 20px;
@@ -450,6 +450,10 @@
   border-radius: 6px;
   font-size: 0.8rem;
   cursor: pointer;
+}
+
+.delete-post-btn {
+  float: right;
 }
 
 /* Attachments Preview in Create Box */
