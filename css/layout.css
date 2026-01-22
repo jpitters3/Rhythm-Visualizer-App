@@ -198,14 +198,18 @@ div.container {
   width: 98%;
   padding: 50px;
   max-width: 1200px;
-  background-color: var(--panel);
-  /* Use var(--panel) for theme consistency, falling back to --bg if needed, but --panel was not in original inline def? Original had #ffffff then var(--bg). I'll stick to var(--panel) usually used for containers */
-  /* Original: background-color: #ffffff; background-color: var(--bg); */
-  /* If var(--bg) is the page background, then container should likely be var(--panel) or white. */
-  background-color: var(--panel);
-  /* border-radius: 25px; */
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
-  /* Add subtle shadow to lift it */
+  /* Glassmorphism Update */
+  background: rgba(245, 245, 245, 0.7);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.2) inset;
+}
+
+body.dark div.container {
+  background: rgba(22, 22, 31, 0.75);
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
 }
 
 @media (max-width: 768px) {
