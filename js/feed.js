@@ -92,14 +92,15 @@ async function fetchFeed(filter) {
 
   // Apply Filters
   if (filter === 'newest') {
-    query = query.order('created_at', { ascending: false });
+    query = query.eq('is_public', true).order('created_at', { ascending: false });
   } else if (filter === 'top') {
-    query = query.order('likes_count', { ascending: false });
+    query = query.eq('is_public', true).order('likes_count', { ascending: false });
   } else if (filter === 'mine') {
     if (!currentUser) {
       feedGrid.innerHTML = '<div class="empty-state">Sign in to see your shared patterns.</div>';
       return;
     }
+    // "Mine" shows everything I shared, private or public
     query = query.eq('user_id', currentUser.id).order('created_at', { ascending: false });
   }
 

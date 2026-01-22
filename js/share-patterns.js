@@ -34,14 +34,13 @@ async function upsertSharedPattern() {
     profile_id: currentUser.id, // Matches profiles.user_id
     name: name.trim(),
     pattern_json: serializePattern(),
-    is_public: true,
   };
 
   // Try update existing share for same user+name (via unique index)
   // If it doesn't exist, create a new one with a new share_id.
   const { data: existing, error: exErr } = await supabase1
     .from('shared_patterns')
-    .select('share_id')
+    .select('share_id, is_public')
     .eq('user_id', currentUser.id)
     .eq('name', row.name)
     .maybeSingle();
@@ -52,9 +51,14 @@ async function upsertSharedPattern() {
 
   let share_id = existing?.share_id || genShareId();
 
+  // Preserve existing public status if available, otherwise default to false
+  const is_public_val = existing?.is_public ?? false;
+
   const { error } = await supabase1
     .from('shared_patterns')
-    .upsert({ ...row, share_id }, { onConflict: 'user_id,name' });
+    // We explicitly set is_public. If it was already true, it stays true.
+    // If it was undefined (new), it becomes false.
+    .upsert({ ...row, share_id, is_public: is_public_val }, { onConflict: 'user_id,name' });
 
   if (error) {
     console.error('Share upsert error:', error);
@@ -62,17 +66,40 @@ async function upsertSharedPattern() {
     return null;
   }
 
-  return share_id;
+  return { share_id, is_public: is_public_val };
 }
 
 shareBtn?.addEventListener('click', async () => {
   try {
-    const share_id = await upsertSharedPattern();
-    if (!share_id) return;
+    const result = await upsertSharedPattern();
+    if (!result) return;
+    const { share_id, is_public } = result;
 
     const url = `${location.origin}${location.pathname}?share=${encodeURIComponent(share_id)}`;
     await copyText(url);
-    alert('Share link copied!');
+
+    // If already public, just notify
+    if (is_public) {
+      alert('Link copied! (This pattern is Public)');
+      return;
+    }
+
+    // Ask if they want to publish to community
+    if (confirm('Link copied! Would you also like to publish this pattern to the Community Feed?')) {
+      const { error } = await supabase1
+        .from('shared_patterns')
+        .update({ is_public: true })
+        .eq('share_id', share_id);
+
+      if (error) {
+        console.error('Failed to publish', error);
+        alert('Link worked, but failed to publish to community feed.');
+      } else {
+        alert('Published to Community Feed!');
+      }
+    } else {
+      alert('Link copied! Pattern is private (only people with the link can see it).');
+    }
   } catch (e) {
     console.error(e);
     alert('Share failed (see console).');
@@ -94,8 +121,8 @@ async function loadSharedFromURL() {
   const { data, error } = await supabase1
     .from('shared_patterns')
     .select('pattern_json, name, user_id')  // Renamed from owner_id
+    // Public read or Private Link
     .eq('share_id', share)
-    .eq('is_public', true)
     .maybeSingle();
 
   if (error) {
