@@ -121,6 +121,10 @@
   overscroll-behavior: contain;
 }
 
+.delete-pattern-btn {
+  float: right;
+}
+
 /* --- Compositions Card Styles --- */
 .feed-card {
   background: var(--panel);

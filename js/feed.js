@@ -130,31 +130,37 @@ function renderPatternsFeed(patterns) {
     card.className = 'feed-card';
 
     const authorName = p.profiles?.username || 'Unknown';
+    const isOwner = currentUser && currentUser.id === p.user_id;
 
     // Escape HTML to prevent XSS
     const safeName = escapeHtml(p.name);
     const safeDesc = p.description ? escapeHtml(p.description) : '';
 
+    const deleteBtnHtml = isOwner
+      ? `<button class="delete-pattern-btn" data-id="${p.id}" title="Unshare Pattern">🗑️</button>`
+      : '';
+
     card.innerHTML = `
-            <div class="feed-card-header">
-                <h3>${safeName}</h3>
-                <span class="author">by ${authorName}</span>
-            </div>
-            <div class="feed-card-body">
-                <p>${safeDesc}</p>
-                <div class="feed-stats">
-                    <button class="like-btn" data-id="${p.id}">
-                        <span class="heart-icon">♥</span> 
-                        <span class="likes-count">${p.likes_count || 0}</span>
-                    </button>
-                    <span class="date">${new Date(p.created_at).toLocaleDateString()}</span>
-                </div>
-            </div>
-            <div class="feed-card-actions">
-                <button class="play-pattern-btn primary-btn" data-id="${p.id}">Play</button>
-                <button class="add-practice-btn secondary-btn" data-id="${p.id}" data-title="${safeName}" style="padding: 8px 12px; font-size: 13px;">➕ Add to Plan</button>
-            </div>
-        `;
+              <div class="feed-card-header">
+                  <h3>${safeName}</h3>
+                  <span class="author">by ${authorName}</span>
+              </div>
+              <div class="feed-card-body">
+                  <p>${safeDesc}</p>
+                  <div class="feed-stats">
+                      <button class="like-btn" data-id="${p.id}">
+                          <span class="heart-icon">♥</span> 
+                          <span class="likes-count">${p.likes_count || 0}</span>
+                      </button>
+                      <span class="date">${new Date(p.created_at).toLocaleDateString()}</span>
+                  </div>
+              </div>
+              <div class="feed-card-actions">
+                  <button class="play-pattern-btn primary-btn" data-id="${p.id}">Play</button>
+                  <button class="add-practice-btn secondary-btn" data-id="${p.id}" data-title="${safeName}" style="padding: 8px 12px; font-size: 13px;">➕ Add to Plan</button>
+                  ${deleteBtnHtml}
+              </div>
+          `;
 
     // Attach Event Listeners
     const playBtn = card.querySelector('.play-pattern-btn');
@@ -176,8 +182,37 @@ function renderPatternsFeed(patterns) {
     const likeBtn = card.querySelector('.like-btn');
     likeBtn.addEventListener('click', (e) => toggleLike(e, p.id, likeBtn));
 
+    if (isOwner) {
+      const delBtn = card.querySelector('.delete-pattern-btn');
+      delBtn?.addEventListener('click', (e) => deleteSharedPattern(p.id, card));
+    }
+
     feedGrid.appendChild(card);
   });
+}
+
+async function deleteSharedPattern(id, cardElement) {
+  if (!confirm('Are you sure you want to unshare this pattern? It will be removed from the community feed.')) return;
+
+  const { error } = await supabase1
+    .from('shared_patterns')
+    .delete()
+    .eq('id', id)
+    .eq('user_id', currentUser.id); // Extra safety check
+
+  if (error) {
+    console.error('Error deleting pattern:', error);
+    alert('Failed to delete pattern: ' + error.message);
+    return;
+  }
+
+  // Remove from UI
+  cardElement.remove();
+
+  // Check if empty
+  if (feedGrid.children.length === 0) {
+    feedGrid.innerHTML = '<div class="empty-state">No patterns found in this category.</div>';
+  }
 }
 
 function loadPatternFromFeed(json, name) {
