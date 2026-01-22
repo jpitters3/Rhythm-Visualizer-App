@@ -51,6 +51,11 @@ function writeToSelected(label, { advance = true } = {}) {
 
   setInnerLabel(selectedIndex, label);
 
+  // If clearing a note (especially if it was multi-mode), force render to restore classes
+  if (!label && typeof renderAllMeasures === 'function') {
+    renderAllMeasures();
+  }
+
   // Compose advance unless Alt is held
   if (composeOn && advance) advanceSelection(1);
 }

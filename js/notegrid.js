@@ -360,7 +360,13 @@ function deleteSelection() {
   if (!r) return;
   if (window.HistoryManager) window.HistoryManager.pushState();
 
-  for (let i = r.start; i <= r.end; i++) setBeatToGhost(i);
+  // Update model directly
+  for (let i = r.start; i <= r.end; i++) {
+    innerLabels[i] = '';
+  }
+
+  // Full render to restore 'ghost' state with correct hand/beat classes
+  renderAllMeasures();
 }
 
 // EVENT LISTENERS //
