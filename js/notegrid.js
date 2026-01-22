@@ -515,6 +515,9 @@ function attachCellListeners(cell) {
     selecting = false;
     anchorIndex = i;
     setCaret(i);
+
+    // Ensure single click sets a range of 1 so Copy works
+    if (typeof setRange === 'function') setRange(i, i);
   });
 
   cell.addEventListener('dblclick', (ev) => {
