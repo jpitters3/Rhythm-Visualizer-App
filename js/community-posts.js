@@ -370,7 +370,6 @@ function createPostCard(post) {
         </div>
     `;
 
-  // Pattern Click Handler fix
   if (post.shared_pattern_id) {
     const pCard = card.querySelector('.post-pattern-card');
     if (pCard) {

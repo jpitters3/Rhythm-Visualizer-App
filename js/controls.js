@@ -1,6 +1,9 @@
 // ==== EVENTS FOR BUTTONS / CONTROLS ====
 
 patternSelect.addEventListener('change', updatePatternButtons);
+vLessonPlayBtn = document.getElementById('vLessonPlayBtn');
+
+const getReal = (id) => document.getElementById(id);
 
 // Dropdown Logic
 // Dropdown Logic
@@ -360,3 +363,128 @@ importBtn.addEventListener('click', async () => {
 // Wait for DOM and refreshPatternSelect
 // Initialize Pattern from previous session
 // MOVED TO init.js to prevent race condition
+
+// === VIRTUAL PLAYBACK CONTROLS (Moved from handpanmap.js) ===
+(function initVirtualControls() {
+  const vControls = document.getElementById('virtualHandpanPlaybackControls');
+
+  // Elements (Closured)
+  const vMetroBtn = document.getElementById('virtualHandpanMetroBtn');
+  const vBpmInput = document.getElementById('virtualHandpanBpmInput');
+  const vBpmVal = document.getElementById('virtualHandpanBpmVal');
+  const vPlayBtn = document.getElementById('virtualHandpanPlayBtn');
+
+  // Lesson Player Play Button
+  const vLessonPlayBtn = document.getElementById('vLessonPlayBtn');
+
+  // We don't return early if vControls is missing, because vLessonPlayBtn might exist independently
+  // but we can check if individual elements exist before adding listeners.
+
+  const getReal = (id) => document.getElementById(id);
+
+  // LISTENERS (Proxy -> Real)
+  if (vMetroBtn) {
+    vMetroBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const real = getReal('metroBtn');
+      if (real) real.click();
+      syncVirtualControls();
+    });
+  }
+
+  if (vPlayBtn) {
+    vPlayBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const real = getReal('playBtn');
+      if (real) real.click();
+      syncVirtualControls();
+    });
+  }
+
+  if (vLessonPlayBtn) {
+    vLessonPlayBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const real = getReal('playBtn');
+      if (real) real.click();
+      syncVirtualControls();
+    });
+  }
+
+  if (vBpmInput) {
+    vBpmInput.addEventListener('input', (e) => {
+      e.stopPropagation();
+      const real = getReal('bpmInput');
+      if (real) {
+        real.value = e.target.value;
+        real.dispatchEvent(new Event('input'));
+      }
+      if (vBpmVal) vBpmVal.textContent = e.target.value;
+    });
+  }
+
+  // SYNC FUNCTION (Real -> Proxy)
+  function syncVirtualControls() {
+    const realBpmInput = getReal('bpmInput');
+    const realPlayBtn = getReal('playBtn');
+    const realMetroBtn = getReal('metroBtn');
+
+    // BPM
+    if (realBpmInput && vBpmInput) {
+      if (vBpmInput.value !== realBpmInput.value) {
+        vBpmInput.value = realBpmInput.value;
+        if (vBpmVal) vBpmVal.textContent = realBpmInput.value;
+      }
+    }
+
+    // Play State
+    if (realPlayBtn) {
+      const isPlaying = realPlayBtn.classList.contains('active');
+
+      if (vPlayBtn) {
+        vPlayBtn.textContent = realPlayBtn.textContent;
+        vPlayBtn.classList.toggle('active', isPlaying);
+        vPlayBtn.classList.toggle('playing', isPlaying);
+      }
+
+      if (vLessonPlayBtn) {
+        if (isPlaying) {
+          vLessonPlayBtn.textContent = '⏹';
+          vLessonPlayBtn.classList.add('active');
+        } else {
+          vLessonPlayBtn.textContent = '►';
+          vLessonPlayBtn.classList.remove('active');
+        }
+      }
+    }
+
+    // Metronome
+    if (realMetroBtn && vMetroBtn) {
+      const isOn = realMetroBtn.classList.contains('active') || (typeof metronomeOn !== 'undefined' && metronomeOn);
+      vMetroBtn.classList.toggle('active', isOn);
+      vMetroBtn.style.opacity = isOn ? '1' : '0.5';
+    }
+  }
+
+  // EXPOSE GLOBAL (for init.js)
+  window.syncVirtualHandpanControls = syncVirtualControls;
+
+  // HOOK UPDATE LOOP AND INIT
+  function installHook() {
+    // Wait a tick to ensure presentation-mode.js has run if it loaded after us? 
+    // DOMContentLoaded covers script load order usually, but safer to check.
+    const existingHook = window.updatePresentationView;
+    window.updatePresentationView = function (step) {
+      if (existingHook) existingHook(step);
+      syncVirtualControls();
+    };
+
+    // Run once immediately
+    syncVirtualControls();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', installHook);
+  } else {
+    installHook();
+  }
+})();
