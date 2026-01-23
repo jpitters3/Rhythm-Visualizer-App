@@ -78,6 +78,8 @@ async function getProfileById(userId) {
 
 const profileModal = document.getElementById('profileModal');
 const profileUsernameInput = document.getElementById('profileUsername');
+const profileFirstNameInput = document.getElementById('profileFirstName');
+const profileLastNameInput = document.getElementById('profileLastName');
 const profileBioInput = document.getElementById('profileBio');
 const profileError = document.getElementById('profileError');
 const openProfileBtn = document.getElementById('openProfileBtn');
@@ -106,6 +108,8 @@ function openProfileEditor() {
   clearError();
   // Populate fields
   profileUsernameInput.value = currentProfile.username || '';
+  if (profileFirstNameInput) profileFirstNameInput.value = currentProfile.first_name || '';
+  if (profileLastNameInput) profileLastNameInput.value = currentProfile.last_name || '';
   profileBioInput.value = currentProfile.bio || '';
 
   profileModal.classList.add('open');
@@ -149,6 +153,8 @@ closeProfileBtn?.addEventListener('click', closeProfileEditor);
 
 saveProfileBtn?.addEventListener('click', async () => {
   const newUsername = profileUsernameInput.value.trim();
+  const newFirstName = profileFirstNameInput ? profileFirstNameInput.value.trim() : '';
+  const newLastName = profileLastNameInput ? profileLastNameInput.value.trim() : '';
   const newBio = profileBioInput.value.trim();
 
   clearError();
@@ -168,6 +174,8 @@ saveProfileBtn?.addEventListener('click', async () => {
     .from('profiles')
     .update({
       username: newUsername,
+      first_name: newFirstName,
+      last_name: newLastName,
       bio: newBio,
       updated_at: new Date(),
     })
@@ -187,7 +195,13 @@ saveProfileBtn?.addEventListener('click', async () => {
   }
 
   // Success
-  currentProfile = { ...currentProfile, username: newUsername, bio: newBio };
+  currentProfile = {
+    ...currentProfile,
+    username: newUsername,
+    first_name: newFirstName,
+    last_name: newLastName,
+    bio: newBio
+  };
   updateProfileUI();
 
   alert(`Profile updated!`);

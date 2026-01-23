@@ -111,9 +111,9 @@ function updateAccountUI() {
     }
 
   } else {
-    accountStatus.textContent = 'Not signed in';
+    accountStatus.textContent = '';
     // Reset button text
-    if (accountBtn) accountBtn.textContent = 'Account';
+    if (accountBtn) accountBtn.textContent = 'Sign In / Register';
 
     // Close dropdown if open
     if (accountDropdownMenu) accountDropdownMenu.classList.remove('show');
@@ -325,9 +325,10 @@ authRegister?.addEventListener('click', async () => {
   authHint.textContent = 'Registering...';
   const { data, error } = await supabase1.auth.signUp({ email, password });
   if (error) { authHint.textContent = error.message; return; }
-  authHint.textContent = data?.user
-    ? 'Registered! Now click Sign in.'
-    : 'Registered! Check your email for confirmation (if enabled), then Sign in.';
+  authHint.textContent = 'Registered! Please check your email for confirmation, then sign in.';
+  authEmail.value = '';
+  authPass.value = '';
+  authPassConfirm.value = '';
 });
 
 authLogin?.addEventListener('click', async () => {
