@@ -74,6 +74,15 @@ function noteForLabel(label) {
   // Return Pitch if found in map (e.g. "1" -> "A3")
   if (currentScale.map[label]) return currentScale.map[label];
 
+  // 3. Absolute Pitch Fallback (for MIDI songs)
+  // If label looks like "C#4", "Bb3" etc. return it as the note name.
+  // Regex: [A-G] followed by optional [#s] (we use 's' internally but label might be #), then digit
+  // Our system expects "Cs4" for file loading, but here we return the 'Note Name' which noteToFile converts.
+  // Actually, noteToFile handles 'C#4' -> 'Cs4.wav'. So we just need to pass it through.
+  if (label.match(/^[A-G][#b]?[0-9]$/)) {
+    return label;
+  }
+
   return null;
 }
 

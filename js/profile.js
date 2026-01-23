@@ -26,7 +26,6 @@ async function loadCurrentProfile() {
       currentProfile = data;
       // Sync Preference to LocalStorage & UI immediately if set
       if (currentProfile.label_preference) {
-        // Only override if it's different or just force it? Let's force it to sync across devices.
         localStorage.setItem('handpanLabelPref', currentProfile.label_preference);
 
         // Try to update UI if it exists

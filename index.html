@@ -13,6 +13,7 @@
   <link rel="stylesheet" href="./css/hand-icons.css">
   <link rel="stylesheet" href="./css/legend.css">
   <link rel="stylesheet" href="./css/groove-modal.css">
+  <link rel="stylesheet" href="./css/song-library.css"> <!-- New CSS -->
   <link rel="stylesheet" href="./css/presentation-mode.css">
   <link rel="stylesheet" href="./css/handpanmap.css">
   <link rel="stylesheet" href="css/handpan-overlays.css">
@@ -68,6 +69,10 @@
               <div class="dropdown-divider"></div>
               <button id="exportBtn" title="Copy pattern JSON to clipboard">Export</button>
               <button id="importBtn" title="Paste JSON to load a pattern">Import</button>
+              <div class="dropdown-divider"></div>
+              <button id="songLibraryBtn" title="Browse playable songs">Song Library</button>
+              <button id="importMidiBtn" title="Import MIDI file">Import MIDI</button>
+              <input type="file" id="midiFileInput" accept=".mid,.midi,.kar" style="display:none;">
             </div>
           </div>
 
@@ -627,6 +632,20 @@
     </div>
   </div>
 
+  <!-- Song Library Modal -->
+  <div id="songLibraryModal" class="modal-overlay" aria-hidden="true">
+    <div class="modal song-library-modal">
+      <div class="modal-header">
+        <h2 class="modal-title">Song Library</h2>
+        <button id="closeSongLibBtn" class="close-btn">&times;</button>
+      </div>
+      <div class="modal-subtitle">Select a song to load. Colors indicate compatibility with your current scale.</div>
+      <div id="songLibraryList" class="song-list-container">
+        <div class="loading-spinner">Loading songs...</div>
+      </div>
+    </div>
+  </div>
+
   <!-- Guided Calibration Modal -->
   <div id="guidedCalModal" class="modal-overlay" style="display: none;">
     <div class="modal-content">
@@ -1017,7 +1036,13 @@
   <script src="./js/practice.js?v=1"></script>
   <script src="./js/mobile-menu.js"></script>
   <script src="./js/pattern-of-the-week.js?v=1"></script>
+  <script src="./js/mobile-menu.js"></script>
+  <script src="./js/pattern-of-the-week.js?v=1"></script>
 
+  <!-- MIDI & Song Library -->
+  <script src="https://cdn.jsdelivr.net/npm/midi-parser-js@4.0.4/src/main.min.js"></script>
+  <script src="./js/midi-importer.js"></script>
+  <script src="./js/song-library.js"></script>
 
   <!-- POTW MODAL -->
   <div id="potwModal" class="modal-overlay" aria-hidden="true" style="display: none;">

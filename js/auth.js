@@ -9,6 +9,8 @@ function updateAdminUI() {
 
   // Toggle all admin-only elements
   document.querySelectorAll('.admin-only').forEach(el => {
+    // Force specific display type for buttons if needed, or just let CSS/default handle it
+    // Some buttons need 'block', others 'inline'. "" lets CSS take over.
     el.style.display = show ? "" : "none";
   });
 
