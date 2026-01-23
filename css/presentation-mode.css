@@ -312,10 +312,16 @@ body.present #measures hr {
 }
 
 body.present div.present-controls {
+  display: flex !important;
+  /* Force show when in present mode */
   position: fixed;
   bottom: 3vh;
   left: 50%;
   transform: translateX(-50%);
+}
+
+#presentationControls {
+  display: none;
 }
 
 body.present div.present-controls div.bpm-group {

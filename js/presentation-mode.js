@@ -33,6 +33,8 @@ async function setPresentation(on) {
     updatePresentationView(0); // Initialize view
   } else {
     await exitFullscreenIfPossible();
+    const pControls = document.getElementById('presentationControls');
+    if (pControls) pControls.style.display = 'none';
   }
 }
 
