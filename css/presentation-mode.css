@@ -420,9 +420,8 @@ body.present div#ghostNoteSection {
   }
 
   body.present div.present-controls {
-    position: absolute;
+    position: fixed;
     bottom: 5vh;
-    left: 5vw;
   }
 
   body.present #lockBtn {
