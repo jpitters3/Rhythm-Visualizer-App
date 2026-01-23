@@ -178,6 +178,8 @@ async function initAuthSession() {
         if (typeof refreshPatternSelect === 'function') await refreshPatternSelect();
         if (typeof loadCurrentProfile === 'function') await loadCurrentProfile();
         if (typeof loadAllUserHandpans === 'function') await loadAllUserHandpans();
+
+        window.dispatchEvent(new Event('handpan-loaded'));
       } catch (e) {
         console.warn('Post-auth refresh failed:', e);
       }
