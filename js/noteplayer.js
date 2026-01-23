@@ -315,19 +315,23 @@ function tick() {
   if (Array.isArray(currentData)) {
     currentData.forEach((label, subIdx) => {
       if (label) {
+        // Resolve hand first
+        const hand = resolveHand(step, currentHandsData, subIdx, true);
+
         playNoteByLabel(label, step, AUDIO_DELAY);
-        highlightHandpan(label, step);
+        highlightHandpan(label, step, hand); // Pass resolved hand
         stepNotes.push(label);
-        // Pass isChord=true
-        stepHands.push(resolveHand(step, currentHandsData, subIdx, true));
+        stepHands.push(hand);
       }
     });
   } else if (currentData) {
+    // Resolve hand first
+    const hand = resolveHand(step, currentHandsData, 0, false);
+
     playNoteByLabel(currentData, step, AUDIO_DELAY);
-    highlightHandpan(currentData, step);
+    highlightHandpan(currentData, step, hand); // Pass resolved hand
     stepNotes.push(currentData);
-    // Pass isChord=false
-    stepHands.push(resolveHand(step, currentHandsData, 0, false));
+    stepHands.push(hand);
   }
 
   // --- LOOKAHEAD FOR VIRTUAL HANDS ---

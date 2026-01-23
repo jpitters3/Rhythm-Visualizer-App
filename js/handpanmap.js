@@ -449,14 +449,14 @@ buildHandpanOverlay();
 
 let hpPulseTimers = new Map();
 
-function highlightHandpan(note, stepIndex) {
+function highlightHandpan(note, stepIndex, forceHand = null) {
   const key = String(note || '').toUpperCase();
   const el = handpanDots.get(key);
   if (!el) return;
 
   // Sticking Override
   let down;
-  const sticking = (window.innerHands && window.innerHands[stepIndex]);
+  const sticking = forceHand || (window.innerHands && window.innerHands[stepIndex]);
 
   if (sticking === 'R') {
     down = true;
