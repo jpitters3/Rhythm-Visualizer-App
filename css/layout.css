@@ -155,6 +155,7 @@ div.grid-container.top-row {
 div.logo img.logo-img {
   max-height: 120px;
   padding-bottom: 20px;
+  max-width: 200px;
 }
 
 div.grid-child.pattern-select {
