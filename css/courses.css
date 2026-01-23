@@ -8,6 +8,8 @@
   width: 360px;
   height: 100%;
   z-index: 2000;
+  overflow-y: scroll;
+  overscroll-behavior: contain;
 
   /* DEFAULT: LIGHT MODE (Premium Gold/White) */
   background: rgba(255, 255, 255, 0.85);
