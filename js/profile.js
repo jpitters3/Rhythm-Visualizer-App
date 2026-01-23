@@ -24,6 +24,21 @@ async function loadCurrentProfile() {
 
     if (data) {
       currentProfile = data;
+      // Sync Preference to LocalStorage & UI immediately if set
+      if (currentProfile.label_preference) {
+        // Only override if it's different or just force it? Let's force it to sync across devices.
+        localStorage.setItem('handpanLabelPref', currentProfile.label_preference);
+
+        // Try to update UI if it exists
+        const sel = document.getElementById('numberPitchSelect');
+        if (sel) {
+          sel.value = currentProfile.label_preference;
+          // Trigger update logic
+          if (typeof window.checkNumberPitchSelection === 'function') window.checkNumberPitchSelection();
+          if (typeof window.buildHandpanOverlay === 'function') window.buildHandpanOverlay();
+          if (typeof window.renderAllMeasures === 'function') window.renderAllMeasures();
+        }
+      }
     } else {
       // Profile doesn't exist yet (maybe trigger failed or old user)
       // We can try to create one lazily
@@ -34,6 +49,22 @@ async function loadCurrentProfile() {
     updateProfileUI(); // Update any UI components depending on profile
   } catch (err) {
     console.error('Profile load exception:', err);
+  }
+}
+
+// Save preference to DB
+async function updateUserLabelPreference(newPref) {
+  if (!currentUser) return;
+  // fast local update
+  if (currentProfile) currentProfile.label_preference = newPref;
+
+  try {
+    await supabase1
+      .from('profiles')
+      .update({ label_preference: newPref, updated_at: new Date() })
+      .eq('user_id', currentUser.id);
+  } catch (e) {
+    console.warn('Failed to save label preference:', e);
   }
 }
 

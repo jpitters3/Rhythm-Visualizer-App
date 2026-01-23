@@ -938,9 +938,17 @@ function overlayNumberPitchNotes() {
 const originalBuild = buildHandpanOverlay;
 
 numberPitchSelect.addEventListener('change', async () => {
-  localStorage.setItem('handpanLabelPref', numberPitchSelect.value);
+  const val = numberPitchSelect.value;
+  localStorage.setItem('handpanLabelPref', val);
+
+  // Save to DB if logged in
+  if (typeof updateUserLabelPreference === 'function') {
+    updateUserLabelPreference(val);
+  }
+
   checkNumberPitchSelection();
   buildHandpanOverlay();
+  if (typeof window.renderAllMeasures === 'function') window.renderAllMeasures();
 });
 
 // Initial Load

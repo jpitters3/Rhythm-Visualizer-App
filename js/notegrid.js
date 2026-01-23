@@ -207,7 +207,33 @@ function renderAllMeasures() {
 
       if (!isMultiCell) {
         // Set single-note cell labels
-        inner.textContent = lbl;
+        // Resolve Display Text (Number vs Pitch)
+        let displayText = lbl;
+        const pref = localStorage.getItem('handpanLabelPref');
+        if (pref === 'Pitches' && lbl !== '' && window.getScale) {
+          const scale = window.getScale();
+          if (scale && scale.map) {
+            // Find pitch for this label
+            let pitch = scale.map[lbl];
+
+            // Special handling for Ding if mapped differently
+            if (!pitch && (lbl === 'D' || lbl === 'Ding')) pitch = scale.ding;
+
+            if (pitch) {
+              // Format: "C#4" -> "C#" (cleaner for grid)
+              displayText = pitch.replace('s', '#').replace(/[0-9]/g, '');
+
+              // Visual Ding Logic
+              const isDing = (lbl === '0' || lbl === 'D' || lbl === 'Ding');
+              if (isDing) {
+                cell.classList.add('visual-ding');
+                displayText = ''; // Clear text so we see the egg
+              }
+            }
+          }
+        }
+
+        inner.textContent = displayText;
       }
       else {
         // Set multi-note cell labels

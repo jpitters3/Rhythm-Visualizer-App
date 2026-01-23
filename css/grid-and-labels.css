@@ -451,3 +451,33 @@ body.handSplit .cell.force-hand-r,
 body.handSplit .cell.force-hand-l {
   background: color-mix(in srgb, var(--beat-fill) var(--mix), var(--cell-bg));
 }
+
+/* ===== VISUAL DING (EGG) ===== */
+.cell.visual-ding .inner::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 40%;
+  height: 45%;
+  /* Egg-ish aspect ratio */
+  background: #ffffff;
+  /* Nice Gold */
+  border-radius: 50% 50% 50% 50%;
+  /* Egg shape curvature */
+  /* box-shadow: 0 0 8px rgba(255, 255, 255, 0.6); */
+  z-index: -1;
+  pointer-events: none;
+}
+
+/* Dark mode adjustment if needed */
+body.dark .cell.visual-ding .inner::before {
+  background: #ffd700;
+  box-shadow: 0 0 12px rgba(255, 215, 0, 0.4);
+}
+
+/* Ensure no text interferes if it somehow gets there */
+.cell.visual-ding .inner {
+  color: transparent !important;
+}
