@@ -287,7 +287,8 @@ function tick() {
   const currentHandsData = window.innerHands ? window.innerHands[step] : null;
 
   // Helper for Sticking Logic
-  function resolveHand(stepIdx, handData, subIdx = 0) {
+  function resolveHand(stepIdx, handData, subIdx = 0, isChord = false) {
+    // 1. Explicit Sticking (manual override)
     let explicit = null;
     if (Array.isArray(handData)) {
       explicit = handData[subIdx];
@@ -297,7 +298,17 @@ function tick() {
 
     if (explicit === 'L') return 'L';
     if (explicit === 'R') return 'R';
-    return isDownbeatStep(stepIdx) ? 'R' : 'L'; // Default logic
+
+    // 2. Chord / Slot Logic
+    // If it's a chord (array), we follow the convention:
+    // Index 0, 1 -> Left Hand
+    // Index 2, 3 -> Right Hand
+    if (isChord) {
+      return (subIdx <= 1) ? 'L' : 'R';
+    }
+
+    // 3. Default Time-Based Logic (for single notes)
+    return isDownbeatStep(stepIdx) ? 'R' : 'L';
   }
 
   // Play and Highlight Multiple Notes
@@ -307,14 +318,16 @@ function tick() {
         playNoteByLabel(label, step, AUDIO_DELAY);
         highlightHandpan(label, step);
         stepNotes.push(label);
-        stepHands.push(resolveHand(step, currentHandsData, subIdx));
+        // Pass isChord=true
+        stepHands.push(resolveHand(step, currentHandsData, subIdx, true));
       }
     });
   } else if (currentData) {
     playNoteByLabel(currentData, step, AUDIO_DELAY);
     highlightHandpan(currentData, step);
     stepNotes.push(currentData);
-    stepHands.push(resolveHand(step, currentHandsData, 0));
+    // Pass isChord=false
+    stepHands.push(resolveHand(step, currentHandsData, 0, false));
   }
 
   // --- LOOKAHEAD FOR VIRTUAL HANDS ---
@@ -336,9 +349,11 @@ function tick() {
       if (!futureData) continue;
 
       const labels = Array.isArray(futureData) ? futureData : [futureData];
+      const isChord = Array.isArray(futureData);
+
       labels.forEach((lbl, sIdx) => {
         if (!lbl) return;
-        const h = resolveHand(futureStep, futureHands, sIdx);
+        const h = resolveHand(futureStep, futureHands, sIdx, isChord);
         if (h === 'L' && !nextL) nextL = lbl;
         if (h === 'R' && !nextR) nextR = lbl;
       });
