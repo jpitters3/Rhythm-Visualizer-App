@@ -55,6 +55,8 @@ function renderMarketplace(courses, ownedIds) {
     return;
   }
 
+  const isAdmin = typeof isAdminUser === 'function' ? isAdminUser(currentUser) : false;
+
   courses.forEach(course => {
     const isOwned = ownedIds.has(course.id);
     const isPaid = course.is_paid;
@@ -96,6 +98,17 @@ function renderMarketplace(courses, ownedIds) {
       ? `background-image: url('${course.thumbnail_url}')`
       : `background: linear-gradient(135deg, #1e3c72, #2a5298)`; // fallback gradient
 
+    let adminActions = '';
+    if (isAdmin) {
+      adminActions = `
+            <button class="market-btn" 
+                onclick="deleteCourse('${course.id}')" 
+                style="background-color: #e74c3c; margin-top: 8px; border: none;">
+                Delete
+            </button>
+        `;
+    }
+
     card.innerHTML = `
       <div class="card-thumb" style="${thumbStyle}">
         <div class="price-badge ${badgeClass}">${badgeText}</div>
@@ -108,12 +121,34 @@ function renderMarketplace(courses, ownedIds) {
           onclick="${btnAction}">
           ${btnText}
         </button>
+        ${adminActions}
       </div>
     `;
 
     marketGrid.appendChild(card);
   });
 }
+
+window.deleteCourse = async function (courseId) {
+  if (!confirm("ADMIN: Are you sure you want to delete this course? This action cannot be undone.")) return;
+
+  try {
+    const { error } = await supabase1
+      .from('courses')
+      .delete()
+      .eq('id', courseId);
+
+    if (error) throw error;
+
+    alert("Course deleted successfully.");
+    // Reload
+    openMarketplace();
+
+  } catch (err) {
+    console.error("Delete failed:", err);
+    alert("Failed to delete course: " + err.message);
+  }
+};
 
 window.unlockCourse = async function (courseId, isPaid) {
   if (!currentUser) {
