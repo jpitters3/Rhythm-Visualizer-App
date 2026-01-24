@@ -113,7 +113,8 @@ function handleRemoveClick(btn, sIdx, lIdx) {
 function addSection() {
   currentCourseData.sections.push({
     title: `Section ${currentCourseData.sections.length + 1}`,
-    lessons: []
+    lessons: [],
+    is_published: false // Default to draft
   });
   // Auto-expand new section
   expandedSections.add(currentCourseData.sections.length - 1);
@@ -263,7 +264,7 @@ function renderCourseStructure() {
 
 
     sectionEl.innerHTML = `
-      <div class="section-header-bar">
+      <div class="section-header-bar" style="${!section.is_published ? 'border-bottom: 2px dashed #f39c12;' : ''}">
           <div class="drag-handle" title="Drag to reorder section">☰</div>
           <button class="toggle-btn" onclick="toggleSection(${sIdx})">
              ${isExpanded ? '▼' : '▶'}
@@ -271,10 +272,20 @@ function renderCourseStructure() {
           <div class="section-title-input">
              <input type="text" value="${section.title}" onchange="currentCourseData.sections[${sIdx}].title = this.value" placeholder="Section Title">
           </div>
+          
+          <div class="section-publish-toggle" style="margin-right: 10px; display: flex; align-items: center; gap: 5px;">
+             <input type="checkbox" id="sec-pub-${sIdx}" 
+                ${section.is_published ? 'checked' : ''} 
+                onchange="currentCourseData.sections[${sIdx}].is_published = this.checked; renderCourseStructure();">
+             <label for="sec-pub-${sIdx}" style="font-size: 0.8rem; cursor: pointer; color: ${section.is_published ? '#2ecc71' : '#f39c12'};">
+                ${section.is_published ? 'Published' : 'Draft'}
+             </label>
+          </div>
+
           <button class="icon-btn remove-section-btn" onclick="removeSection(${sIdx})" title="Remove Section">&times;</button>
       </div>
       
-      <div class="lessons-container ${isExpanded ? 'active' : ''}" id="section-${sIdx}-lessons"></div>
+      <div class="lessons-container ${isExpanded ? 'active' : ''}" id="section-${sIdx}-lessons" style="${!section.is_published ? 'opacity: 0.8;' : ''}"></div>
       
       ${isExpanded ? `<button class="add-lesson-btn" onclick="addLessonToSection(${sIdx})">+ Add Lesson</button>` : ''}
     `;
@@ -460,7 +471,12 @@ saveCourseBtn?.addEventListener('click', async () => {
       // === CREATE New Course ===
       const { data: newCourse, error: cErr } = await supabase1
         .from('courses')
-        .insert([{ title, description, owner_id: currentUser.id }])
+        .insert([{
+          title,
+          description,
+          owner_id: currentUser.id,
+          is_published: false // Explicitly draft
+        }])
         .select().single();
       if (cErr) throw cErr;
       courseId = newCourse.id;
@@ -481,14 +497,23 @@ saveCourseBtn?.addEventListener('click', async () => {
         // Update Existing Section
         const { error: sUpdErr } = await supabase1
           .from('sections')
-          .update({ title: sData.title, order_index: sIdx })
+          .update({
+            title: sData.title,
+            order_index: sIdx,
+            is_published: sData.is_published
+          })
           .eq('id', sId);
         if (sUpdErr) throw sUpdErr;
       } else {
         // Insert New Section
         const { data: newSec, error: sInsErr } = await supabase1
           .from('sections')
-          .insert([{ course_id: courseId, title: sData.title, order_index: sIdx }])
+          .insert([{
+            course_id: courseId,
+            title: sData.title,
+            order_index: sIdx,
+            is_published: sData.is_published ?? false
+          }])
           .select().single();
         if (sInsErr) throw sInsErr;
         sId = newSec.id;

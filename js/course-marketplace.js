@@ -16,7 +16,7 @@ window.openMarketplace = async function () {
     // 1. Fetch ALL courses
     const { data: allCourses, error: cErr } = await supabase1
       .from('courses')
-      .select('id, title, description, price, is_paid, thumbnail_url, owner_id')
+      .select('id, title, description, price, is_paid, thumbnail_url, owner_id, is_published')
       .order('created_at', { ascending: false });
 
     if (cErr) throw cErr;
@@ -50,17 +50,23 @@ window.openMarketplace = async function () {
 function renderMarketplace(courses, ownedIds) {
   marketGrid.innerHTML = '';
 
-  if (courses.length === 0) {
+  const isAdmin = typeof isAdminUser === 'function' ? isAdminUser(currentUser) : false;
+
+  // Filter: If NOT admin, show only published
+  const visibleCourses = courses.filter(c => {
+    if (isAdmin) return true; // Admins see everything
+    return c.is_published === true;
+  });
+
+  if (visibleCourses.length === 0) {
     marketGrid.innerHTML = '<p>No courses available right now.</p>';
     return;
   }
 
-  const isAdmin = typeof isAdminUser === 'function' ? isAdminUser(currentUser) : false;
-
-  courses.forEach(course => {
+  visibleCourses.forEach(course => {
     const isOwned = ownedIds.has(course.id);
     const isPaid = course.is_paid;
-    const priceDisplay = isPaid ? `$${course.price}` : 'Free';
+    const isPublished = course.is_published; // explicitly check boolean logic if needed, but truthy works for true
 
     // Badge
     let badgeClass = 'free';
@@ -69,8 +75,14 @@ function renderMarketplace(courses, ownedIds) {
       badgeClass = 'paid';
       badgeText = `$${course.price}`;
     }
-    if (isOwned) {
-      badgeClass = 'free'; // Just use green for owned? Or maybe hide badge?
+
+    // Admin Draft Badge override
+    if (isAdmin && !isPublished) {
+      badgeClass = 'paid'; // reusing 'paid' color (often red/orange) or custom
+      badgeText = 'DRAFT';
+    } else if (isOwned && isPublished) {
+      // Only show "OWNED" if it's actually published (or if admin is viewing a published course they own)
+      badgeClass = 'free';
       badgeText = 'OWNED';
     }
 
@@ -87,25 +99,37 @@ function renderMarketplace(courses, ownedIds) {
     if (isOwned) {
       btnClass = 'market-btn owned';
       btnText = 'Owned';
-      btnAction = ''; // No action or maybe 'Open'
+      btnAction = '';
     }
 
     const card = document.createElement('div');
     card.className = `market-card ${isPaid ? 'premium' : ''}`;
+    // Visual opacity for draft
+    if (!isPublished) card.style.opacity = '0.85';
 
     // Thumbnail placeholder if null
     const thumbStyle = course.thumbnail_url
       ? `background-image: url('${course.thumbnail_url}')`
-      : `background: linear-gradient(135deg, #1e3c72, #2a5298)`; // fallback gradient
+      : `background: linear-gradient(135deg, #1e3c72, #2a5298)`;
 
     let adminActions = '';
     if (isAdmin) {
+      const publishLabel = isPublished ? 'Unpublish' : 'Publish';
+      const publishColor = isPublished ? '#f39c12' : '#27ae60'; // Orange to unpublish, Green to publish
+
       adminActions = `
-            <button class="market-btn" 
-                onclick="deleteCourse('${course.id}')" 
-                style="background-color: #e74c3c; margin-top: 8px; border: none;">
-                Delete
-            </button>
+            <div style="display:flex; gap:8px; margin-top:8px;">
+                <button class="market-btn" 
+                    onclick="togglePublish('${course.id}', ${isPublished})" 
+                    style="background-color: ${publishColor}; border: none; flex:1;">
+                    ${publishLabel}
+                </button>
+                <button class="market-btn" 
+                    onclick="deleteCourse('${course.id}')" 
+                    style="background-color: #e74c3c; border: none; flex:1;">
+                    Delete
+                </button>
+            </div>
         `;
     }
 
@@ -114,7 +138,7 @@ function renderMarketplace(courses, ownedIds) {
         <div class="price-badge ${badgeClass}">${badgeText}</div>
       </div>
       <div class="card-content">
-        <h3 class="card-title">${course.title}</h3>
+        <h3 class="card-title">${course.title} ${(!isPublished && isAdmin) ? '(Draft)' : ''}</h3>
         <div class="card-desc">${course.description || 'No description provided.'}</div>
         <button class="${btnClass}" 
           ${isOwned ? 'disabled' : ''} 
@@ -128,6 +152,41 @@ function renderMarketplace(courses, ownedIds) {
     marketGrid.appendChild(card);
   });
 }
+
+window.togglePublish = async function (courseId, currentStatus) {
+  const newStatus = !currentStatus;
+  const action = newStatus ? "PUBLISH" : "UNPUBLISH";
+
+  if (!confirm(`ADMIN: Are you sure you want to ${action} this course?`)) return;
+
+  try {
+    // 1. Update Course
+    const { error: cErr } = await supabase1
+      .from('courses')
+      .update({ is_published: newStatus })
+      .eq('id', courseId);
+
+    if (cErr) throw cErr;
+
+    // 2. Cascade to Sections (ONLY if Publishing)
+    // If Unpublishing, we hide the course, so sections state doesn't really matter (safe to leave as-is)
+    // But if Publishing, we want to ensure valid content is visible.
+    if (newStatus === true) {
+      const { error: sErr } = await supabase1
+        .from('sections')
+        .update({ is_published: true })
+        .eq('course_id', courseId);
+
+      if (sErr) throw sErr;
+    }
+
+    // Reload
+    openMarketplace();
+  } catch (err) {
+    console.error("Publish toggle failed:", err);
+    alert("Failed to update status: " + err.message);
+  }
+};
 
 window.deleteCourse = async function (courseId) {
   if (!confirm("ADMIN: Are you sure you want to delete this course? This action cannot be undone.")) return;

@@ -32,9 +32,9 @@ async function fetchCourses() {
     const { data: allCourses, error } = await supabase1
       .from('courses')
       .select(`
-        id, title, description, owner_id,
+        id, title, description, owner_id, is_published,
         sections (
-          id, title, order_index,
+          id, title, order_index, is_published,
           lessons (
             id, title, description, video_url, pattern_json, pattern_name, order_index
           )
@@ -45,9 +45,16 @@ async function fetchCourses() {
     if (error) throw error;
 
     // Filter: User Owns (Creator) OR User Enrolled
-    const myCourses = allCourses.filter(c =>
-      c.owner_id === currentUser.id || enrolledIds.has(c.id)
-    );
+    // AND: Must be Published, UNLESS User is Owner+Admin
+    const isAdmin = typeof isAdminUser === 'function' && isAdminUser(currentUser);
+
+    const myCourses = allCourses.filter(c => {
+      const isOwner = c.owner_id === currentUser.id;
+      const isEnrolled = enrolledIds.has(c.id);
+      const canView = c.is_published || (isOwner && isAdmin);
+
+      return (isOwner || isEnrolled) && canView;
+    });
 
     window.allCourses = myCourses;
     window.allLessons = myCourses.flatMap(c => c.sections.flatMap(s => s.lessons));
@@ -134,15 +141,23 @@ function renderCourseSidebar(courses) {
              </div>` : ''}
           </div>
           <div class="course-body">
-            ${course.sections.sort((a, b) => a.order_index - b.order_index).map(section => `
-              <div class="section-title">${section.title}</div>
+            ${course.sections
+          .filter(s => {
+            const isAdmin = typeof isAdminUser === 'function' ? isAdminUser(currentUser) : false;
+            const isOwner = course.owner_id === currentUser?.id;
+            return s.is_published || isAdmin || isOwner;
+          })
+          .sort((a, b) => a.order_index - b.order_index).map(section => `
+              <div class="section-title" style="${!section.is_published ? 'opacity: 0.6; font-style: italic;' : ''}">
+                ${section.title} ${!section.is_published ? '(Draft)' : ''}
+              </div>
               ${section.lessons.sort((a, b) => a.order_index - b.order_index).map(lesson => {
-        const isComplete = window.completedLessonIds?.has(lesson.id);
-        return `
+            const isComplete = window.completedLessonIds?.has(lesson.id);
+            return `
                 <div class="lesson-link" onclick="loadLesson('${lesson.id}')">
                   ${isComplete
-            ? '<span style="color:#4CAF50; margin-right:6px; font-weight:bold;">✓</span>'
-            : '<span style="opacity:0.6; margin-right:6px;">•</span>'}
+                ? '<span style="color:#4CAF50; margin-right:6px; font-weight:bold;">✓</span>'
+                : '<span style="opacity:0.6; margin-right:6px;">•</span>'}
                   ${lesson.title}
                 </div>
               `}).join('')}
