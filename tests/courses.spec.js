@@ -20,6 +20,7 @@ test.describe('Course Creator', () => {
         select: () => mockQueryBuilder,
         order: () => mockQueryBuilder,
         eq: () => mockQueryBuilder, // Chainable
+        in: () => mockQueryBuilder, // Chainable
         limit: () => mockQueryBuilder, // Added missing limit
         single: () => Promise.resolve({ data: { id: 'new-id-123' }, error: null }),
         maybeSingle: () => Promise.resolve({ data: null, error: null }),

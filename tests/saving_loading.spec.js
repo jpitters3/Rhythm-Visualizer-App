@@ -9,14 +9,19 @@ test.describe('Pattern Management', () => {
 
   // Helper for mobile menu
   async function ensureMenuOpen(page) {
-    // Only act if we are in mobile view (button is visible)
     if (await page.locator('#mobileMenuBtn').isVisible()) {
       const menu = page.locator('#headerMenu');
-      // Only click if NOT already open
-      const isOpen = await menu.evaluate(el => el.classList.contains('open'));
-      if (!isOpen) {
-        await page.click('#mobileMenuBtn');
-        await expect(menu).toHaveClass(/open/);
+      if (await menu.evaluate(el => el.classList.contains('open'))) return;
+
+      await page.click('#mobileMenuBtn');
+      try {
+        await expect(menu).toHaveClass(/open/, { timeout: 2000 });
+      } catch (e) {
+        // Retry once
+        if (await menu.evaluate(el => !el.classList.contains('open'))) {
+          await page.click('#mobileMenuBtn');
+          await expect(menu).toHaveClass(/open/);
+        }
       }
     }
   }
