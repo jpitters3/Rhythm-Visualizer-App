@@ -55,19 +55,7 @@ test.describe('Rhythm Visualizer Features', () => {
     await page.locator('.cell').nth(0).click();
     await page.keyboard.press('1');
 
-    // 3. Try to load (Mock confirm)
-    page.on('dialog', dialog => {
-      expect(dialog.message()).toContain('Unsaved changes');
-      dialog.accept(); // Discard changes
-    });
-
-    // Trigger load (simulating prompt/import)
-    // Actually, simpler to test "Import" button flow if possible, 
-    // or just toggle a sidebar lesson if sidebar is open.
-    // Let's assume Import button click with a prompt mock?
-    // Too complex for basic test.
-
-    // Let's test the `hasUnsavedChanges` function directly via evaluate
+    // 3. Test Function directly
     const dirty = await page.evaluate(() => window.hasUnsavedChanges());
     expect(dirty).toBeTruthy();
 
@@ -75,6 +63,36 @@ test.describe('Rhythm Visualizer Features', () => {
     await page.keyboard.press('Meta+z');
     const clean = await page.evaluate(() => window.hasUnsavedChanges());
     expect(clean).toBeFalsy();
+  });
+
+  /*
+   * Export / Import
+   */
+  /*
+   * Export / Import
+   */
+
+
+  /*
+   * Share Pattern
+   */
+  test('Share Pattern: Auth Check', async ({ page }) => {
+    // 1. Unauthenticated (Default)
+    // Clicking share should trigger alert
+    page.once('dialog', dialog => {
+      expect(dialog.message()).toContain('Please sign in');
+      dialog.accept();
+    });
+
+    // Mobile Handling
+    if (await page.locator('#mobileMenuBtn').isVisible()) {
+      const menu = page.locator('#headerMenu');
+      if (!await menu.evaluate(el => el.classList.contains('open'))) {
+        await page.click('#mobileMenuBtn');
+      }
+    }
+
+    await page.click('#shareBtn');
   });
 
 });

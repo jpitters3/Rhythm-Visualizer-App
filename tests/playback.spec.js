@@ -68,4 +68,82 @@ test.describe('Playback & Controls', () => {
     await expect(metroBtn).not.toHaveClass(/active/);
   });
 
+  /* 
+   * Looping 
+   */
+  test('Looping: Playback cycles correctly', async ({ page }) => {
+    // Setup: 1 measure.
+    // Set BPM slower to ensure Playwright catches the class change
+    await page.fill('#bpmInput', '60');
+    await page.evaluate(() => {
+      const bpm = document.getElementById('bpmInput');
+      if (bpm) { bpm.value = '60'; bpm.dispatchEvent(new Event('input')); }
+    });
+
+    // Start Playback
+    await page.click('#playBtn');
+
+    // Verify playback started (button text change from ► to ⏹ or class active)
+    await expect(page.locator('#playBtn')).toHaveClass(/active/);
+
+    // Spy on the step update hook
+    await page.evaluate(() => {
+      window.__testStepLog = [];
+      // Hook into the player's external callback (or overwrite it if existing matches)
+      // noteplayer.js calls updatePresentationView(step) inside tick()
+      window.updatePresentationView = (s) => window.__testStepLog.push(s);
+    });
+
+    // Wait enough time for >1 loop (8 steps * 500ms = 4s). Wait 6s.
+    await page.waitForTimeout(6000);
+
+    // Analyze steps
+    const steps = await page.evaluate(() => window.__testStepLog);
+
+    // Check progression
+    expect(steps.length).toBeGreaterThan(5);
+    // Check wrapping (should see 0 after 7, or similar)
+    const hasWrap = steps.some((s, i) => i > 0 && s < steps[i - 1]);
+    expect(hasWrap).toBe(true, 'Sequencer did not wrap/loop');
+  });
+
+  /* 
+   * Sample Loading 
+   */
+  test('Sample Loading: Assets load check', async ({ page }) => {
+    // We monitor network requests to ensure audio files return 200
+    // and that no console errors occurred regarding audio.
+
+    const failedRequests = [];
+    page.on('requestfailed', request => {
+      if (request.url().endsWith('.wav')) failedRequests.push(request.url());
+    });
+
+    const responses = [];
+    page.on('response', response => {
+      if (response.url().endsWith('.wav')) {
+        if (response.status() !== 200 && response.status() !== 304) {
+          failedRequests.push(`${response.url()} [${response.status()}]`);
+        }
+      }
+    });
+
+    // Trigger audio unlock/load
+    // Clicking play usually unlocks audio context and loads samples
+    await page.click('#playBtn');
+
+    // Wait a bit for loading
+    await page.waitForTimeout(2000);
+
+    if (failedRequests.length > 0) {
+      console.error('Failed Audio Requests:', failedRequests);
+    }
+    expect(failedRequests).toEqual([]);
+
+    // Also check if SCALES are defined (implied but good to check)
+    const scales = await page.evaluate(() => window.SCALES);
+    expect(scales).toBeTruthy();
+    expect(Object.keys(scales).length).toBeGreaterThan(0);
+  });
+
 });
