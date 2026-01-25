@@ -2,6 +2,7 @@
 
 let activeCourseId = null;
 window.allCourses = [];
+window.allSections = [];
 window.allLessons = [];
 
 async function fetchCourses() {
@@ -36,7 +37,7 @@ async function fetchCourses() {
         sections (
           id, title, order_index, is_published,
           lessons (
-            id, title, description, video_url, pattern_json, pattern_name, order_index
+            id, title, description, video_url, pattern_json, pattern_name, order_index, section_id
           )
         )
       `)
@@ -57,6 +58,7 @@ async function fetchCourses() {
     });
 
     window.allCourses = myCourses;
+    window.allSections = myCourses.flatMap(c => c.sections.map(s => ({ ...s, courseTitle: c.title, courseId: c.id })));
     window.allLessons = myCourses.flatMap(c => c.sections.flatMap(s => s.lessons));
 
     renderCourseSidebar(myCourses);
@@ -278,8 +280,19 @@ function loadLesson(lessonId) {
     // Force visible
     player.style.display = 'block';
 
+    const section = window.allSections.find(s => s.id === lesson.section_id);
+    const sectionTitle = section ? section.title : 'Unknown Section';
+
+    // Also update the separate section header if it exists (for layout flexibility)
+    const secTitleEl = document.getElementById('activeSectionTitle');
+    const courseTitle = section ? section.courseTitle : 'Unknown Course';
+    if (secTitleEl) secTitleEl.textContent = `${courseTitle} • ${sectionTitle}`;
+
     const titleEl = document.getElementById('activeLessonTitle');
-    if (titleEl) titleEl.textContent = '▲ ' + lesson.title;
+    if (titleEl) {
+      // Format: "▲ Lesson Title • Section Title"
+      titleEl.textContent = `▲ ${lesson.title}`;
+    }
 
     // Inject Practice Button into Header
     const header = titleEl?.parentElement;

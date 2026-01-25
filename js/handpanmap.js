@@ -806,8 +806,8 @@ scaleSelect.addEventListener('change', async () => {
   }
 
   // Update Current Scale for Standard Scales
-  if (window.setCurrentScale && SCALES) {
-    window.setCurrentScale(SCALES[selectedScaleName]);
+  if (window.setCurrentScale && window.SCALES) {
+    window.setCurrentScale(window.SCALES[selectedScaleName]);
   }
 
   await preloadScaleSamples();

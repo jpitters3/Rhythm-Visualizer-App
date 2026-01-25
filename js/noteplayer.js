@@ -22,6 +22,8 @@ const SCALES = {
   }
 };
 
+window.SCALES = SCALES;
+
 const SOUND_TAK = 'Tak';
 const SOUND_SLAP = 'Slap';
 
@@ -32,7 +34,7 @@ let selectedScaleName = null;
 // UNIFIED SCALE STATE
 let currentScale = {
   ding: "D3",
-  map: {}
+  map: { "1": "A3", "2": "Bb3", "3": "C4", "4": "D4", "5": "E4", "6": "F4", "7": "G4", "8": "A4" }
 };
 
 const scaleSelect = document.getElementById('scaleSelect');
