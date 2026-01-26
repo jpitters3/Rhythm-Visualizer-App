@@ -150,7 +150,7 @@ function renderCourseSidebar(courses) {
             return s.is_published || isAdmin || isOwner;
           })
           .sort((a, b) => a.order_index - b.order_index).map(section => `
-              <div class="section-title" style="${!section.is_published ? 'opacity: 0.6; font-style: italic;' : ''}">
+              <div class="section-title" style="${!section.is_published ? 'opacity: 0.8; font-style: italic;' : ''}">
                 ${section.title} ${!section.is_published ? '(Draft)' : ''}
               </div>
               ${section.lessons.sort((a, b) => a.order_index - b.order_index).map(lesson => {
