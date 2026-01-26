@@ -46,31 +46,7 @@ addMeasureBtn?.addEventListener('click', () => {
   setCaret?.(start);
 });
 
-// ===== Copy/Paste/Delete measure =====
-
-function copyMeasure(mIndex) {
-  const { start, end } = measureRange(mIndex);
-  const steps = [];
-  for (let i = start; i <= end; i++) {
-    steps.push(snapshotBeat(i)); // from earlier selection patch
-  }
-  measureClipboard = { type: 'measure', steps, stepsCount: steps.length };
-  if (pasteMeasureBtn) pasteMeasureBtn.disabled = false;
-}
-
-function pasteMeasureInto(mIndex) {
-  if (!measureClipboard || measureClipboard.type !== 'measure') return;
-
-  const { start, end } = measureRange(mIndex);
-  const maxLen = Math.min(end - start + 1, measureClipboard.steps.length);
-
-  for (let k = 0; k < maxLen; k++) {
-    applyBeat(start + k, measureClipboard.steps[k]); // from earlier selection patch
-  }
-
-  // Keep caret at start of pasted measure
-  setCaret?.(start);
-}
+// ===== Delete measure =====
 
 function deleteMeasure(mIndex) {
   const s = getStepCountPerMeasure();
@@ -166,17 +142,8 @@ function duplicateSelection() {
   }
 }
 
-midDupSelBtn?.addEventListener('click', duplicateSelection);
-
-copyMeasureBtn?.addEventListener('click', () => {
-  copyMeasure(getActiveMeasureIndex());
-});
-
-pasteMeasureBtn?.addEventListener('click', () => {
-  pasteMeasureInto(getActiveMeasureIndex());
-});
+selDuplicateBtn?.addEventListener('click', duplicateSelection);
 
 delMeasureBtn?.addEventListener('click', () => {
   deleteMeasure(getActiveMeasureIndex());
 });
-

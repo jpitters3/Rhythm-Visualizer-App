@@ -64,11 +64,6 @@ function updateRangeUI() {
   }
   if (selBarText) selBarText.textContent = `${count} selected`;
   if (selPasteBtn) selPasteBtn.disabled = !beatClipboard;
-
-  // Toggle Measure Action Buttons
-  const hasSelection = (r !== null && count > 0);
-  if (window.copyMeasureBtn) window.copyMeasureBtn.disabled = !hasSelection;
-  if (window.midDupSelBtn) window.midDupSelBtn.disabled = !hasSelection;
 }
 
 // ===== MOBILE LONG-PRESS RANGE SELECTION =====
