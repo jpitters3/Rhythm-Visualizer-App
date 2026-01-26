@@ -326,7 +326,11 @@ function renderAllMeasures() {
 
 function snapshotBeat(i) {
   // Adjust if your state storage differs:
-  const label = Array.isArray(innerLabels) ? (innerLabels[i] || '') : '';
+  let label = Array.isArray(innerLabels) ? (innerLabels[i] || '') : '';
+  // Deep copy if it is a multi-cell array, so we don't store a reference
+  if (Array.isArray(label)) {
+    label = [...label];
+  }
   return { label };
 }
 
@@ -334,7 +338,13 @@ function applyBeat(i, beat) {
   // Adjust if your state storage differs:
   const cell = allCells()[i];
 
-  if (typeof setInnerLabel === 'function') setInnerLabel(i, beat.label || '');
+  let val = beat.label || '';
+  // Deep copy on paste/apply so multiple pastes don't share references
+  if (Array.isArray(val)) {
+    val = [...val];
+  }
+
+  if (typeof setInnerLabel === 'function') setInnerLabel(i, val);
 }
 
 function setBeatToGhost(i) {
@@ -369,7 +379,14 @@ function pasteSelection() {
 
     // Direct Model Update (like assignChordToSelectedCell)
     // beatClipboard.steps[k] is { label: ... } from snapshotBeat
-    innerLabels[idx] = beatClipboard.steps[k].label;
+    let val = beatClipboard.steps[k].label;
+
+    // DEEP COPY to prevent shared references
+    if (Array.isArray(val)) {
+      val = [...val];
+    }
+
+    innerLabels[idx] = val;
   }
 
   // Full Render to apply classes (multi-mode vs single)

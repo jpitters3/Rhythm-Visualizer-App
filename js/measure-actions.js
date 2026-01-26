@@ -101,6 +101,73 @@ function deleteMeasure(mIndex) {
   clearRange?.(); // clears multi-select range if it was spanning measures
 }
 
+// ===== Duplicate Selection =====
+
+function duplicateSelection() {
+  // 1. Get current selection
+  const r = (typeof getRange === 'function') ? getRange() : null;
+  if (!r) {
+    alert('Please select a range of notes to duplicate.');
+    return;
+  }
+
+  const s = getStepCountPerMeasure();
+
+  // 2. Calculate steps in selection
+  const totalSelectedSteps = r.length;
+
+  // 3. Calculate measures needed
+  const measuresNeeded = Math.ceil(totalSelectedSteps / s);
+
+  // 4. Append new measures
+  const oldTotalSteps = (Array.isArray(innerLabels) ? innerLabels.length : 0);
+
+  if (Array.isArray(innerLabels)) {
+    // Add N empty measures
+    const newStepsCount = measuresNeeded * s;
+    innerLabels.push(...Array(newStepsCount).fill(''));
+  }
+
+  // 5. Copy & Paste
+  // We can manually copy from [r.start ... r.end] to [oldTotalSteps ... ]
+
+  const destStart = oldTotalSteps;
+
+  for (let i = 0; i < totalSelectedSteps; i++) {
+    const srcIdx = r.start + i;
+    const destIdx = destStart + i;
+
+    // Use snapshotBeat to get data (deep copy already fixed in notegrid.js) but we need to extract .label
+    const data = snapshotBeat(srcIdx);
+
+    // We need to act like pasteSelection -> update innerLabels directly
+    // snapshotBeat returns { label: ... } structure
+    // innerLabels is the raw array
+
+    let val = data.label;
+
+    // REDUNDANT DEEP COPY just to be safe (though snapshotBeat handles it now)
+    if (Array.isArray(val)) {
+      val = [...val];
+    }
+
+    innerLabels[destIdx] = val;
+  }
+
+  // 6. Render
+  renderAllMeasures();
+
+  // Optional: Move selection to the new copy?
+  // For now, keep original selection or clear? Standard behavior usually keeps selection or moves it.
+  // Let's move selection to the new copy so user sees it.
+  if (typeof setRange === 'function') {
+    setRange(destStart, destStart + totalSelectedSteps - 1);
+    if (typeof setCaret === 'function') setCaret(destStart);
+  }
+}
+
+midDupSelBtn?.addEventListener('click', duplicateSelection);
+
 copyMeasureBtn?.addEventListener('click', () => {
   copyMeasure(getActiveMeasureIndex());
 });
