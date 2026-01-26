@@ -142,8 +142,43 @@ function duplicateSelection() {
   }
 }
 
+// ===== Delete Multi-Measure Range =====
+
+function deleteMeasuresRange(startM, endM) {
+  const s = getStepCountPerMeasure();
+  const countToDelete = (endM - startM + 1);
+
+  if (!confirm(`Delete ${countToDelete} selected measure(s)?`)) return;
+
+  if (Array.isArray(innerLabels)) {
+    innerLabels.splice(startM * s, countToDelete * s);
+
+    // If we deleted everything, add one empty measure back
+    if (innerLabels.length === 0) {
+      innerLabels.push(...Array(s).fill(''));
+    }
+  }
+
+  renderAllMeasures();
+
+  // UI Cleanup
+  if (typeof clearRange === 'function') clearRange();
+  const totalMeasures = getMeasureCountFromDOM();
+  const nextM = Math.min(startM, totalMeasures - 1);
+  const nextStart = nextM * s;
+  if (typeof setCaret === 'function') setCaret(nextStart);
+}
+
 selDuplicateBtn?.addEventListener('click', duplicateSelection);
 
 delMeasureBtn?.addEventListener('click', () => {
-  deleteMeasure(getActiveMeasureIndex());
+  const range = (typeof getRange === 'function') ? getRange() : null;
+  if (range && range.length > 1) {
+    const s = getStepCountPerMeasure();
+    const startM = Math.floor(range.start / s);
+    const endM = Math.floor(range.end / s);
+    deleteMeasuresRange(startM, endM);
+  } else {
+    deleteMeasure(getActiveMeasureIndex());
+  }
 });
