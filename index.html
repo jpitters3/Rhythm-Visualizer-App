@@ -128,7 +128,7 @@
           <path d="M12 18a2 2 0 1 0 0 4 2 2 0 0 0 0-4Z" />
         </svg>
       </button>
-      <button id="labelNotationBtn" title="Toggle label notation (Musical vs Numeric)">1&2</button>
+      <button id="labelNotationBtn" title="Toggle label notation (Musical vs Numeric)">1 2 3</button>
       <button id="composeBtn"
         title="Compose mode: writing advances to the next beat (Alt = write without advance)">🎼</button>
       <button id="gridBtn" style="display:none;" title="Toggle between 8th and 16th grid">8ths</button>
@@ -579,7 +579,10 @@
       </div>
 
       <div class="modal-footer">
+        <span id="courseSaveStatus" class="status-msg"
+          style="margin-right: auto; color: #2ecc71; font-weight: bold; opacity: 0; transition: opacity 0.3s; pointer-events: none;">Saved!</span>
         <button id="addSectionBtn" class="secondary-btn">+ Add Section</button>
+        <button id="saveAndContinueBtn" class="secondary-btn">Save & Continue</button>
         <button id="saveCourseBtn" class="primary-btn">Save Course</button>
       </div>
     </div>

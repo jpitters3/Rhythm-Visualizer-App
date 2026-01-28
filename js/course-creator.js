@@ -399,7 +399,9 @@ window.loadCourseToEdit = async function (course) {
   document.getElementById('courseDesc').value = course.description;
 
   const saveBtn = document.getElementById('saveCourseBtn');
-  saveBtn.textContent = "Update Course";
+  const contBtn = document.getElementById('saveAndContinueBtn');
+  if (saveBtn) saveBtn.textContent = "Update Course";
+  if (contBtn) contBtn.textContent = "Update & Continue";
 
   // Collapse all by default on edit
   expandedSections.clear();
@@ -431,9 +433,13 @@ addSectionBtn?.addEventListener('click', addSection);
 
 
 const saveCourseBtn = document.getElementById('saveCourseBtn');
+const saveAndContinueBtn = document.getElementById('saveAndContinueBtn');
 
-saveCourseBtn?.addEventListener('click', async () => {
-  console.log("Save clicked!");
+async function handleCourseSave(shouldClose = true) {
+  const activeBtn = shouldClose ? saveCourseBtn : saveAndContinueBtn;
+  const originalText = activeBtn.textContent;
+
+  console.log("Save clicked! shouldClose:", shouldClose);
 
   if (!currentUser) {
     console.warn("Save aborted: No currentUser");
@@ -452,8 +458,8 @@ saveCourseBtn?.addEventListener('click', async () => {
     return;
   }
 
-  saveCourseBtn.disabled = true;
-  saveCourseBtn.textContent = "Saving...";
+  activeBtn.disabled = true;
+  activeBtn.textContent = "Saving...";
 
   try {
     // 1. Check if Updating or Creating
@@ -579,7 +585,6 @@ saveCourseBtn?.addEventListener('click', async () => {
     }
 
     // B. Delete Removed Sections
-    // Fetch all sections for this course to find what was removed
     const { data: existingSections } = await supabase1
       .from('sections')
       .select('id')
@@ -592,29 +597,54 @@ saveCourseBtn?.addEventListener('click', async () => {
 
       if (secToDelete.length > 0) {
         console.log("Deleting orphaned sections:", secToDelete);
-        // Note: Supabase/Postgres usually cascades delete to lessons, 
-        // but explicit delete is safer if cascade isn't set.
         await supabase1.from('lessons').delete().in('section_id', secToDelete);
         await supabase1.from('sections').delete().in('id', secToDelete);
       }
     }
 
     console.log("Save successful!");
-    alert("Course saved successfully!");
-    closeCourseCreator();
 
-    // Reset form
-    currentCourseData = { title: "", description: "", sections: [] };
-    document.getElementById('courseTitle').value = "";
-    document.getElementById('courseDesc').value = "";
-    saveCourseBtn.textContent = "Save Course"; // Reset button text
+    if (shouldClose) {
+      alert("Course saved successfully!");
+      closeCourseCreator();
+      // Reset form
+      currentCourseData = { title: "", description: "", sections: [] };
+      document.getElementById('courseTitle').value = "";
+      document.getElementById('courseDesc').value = "";
+      saveCourseBtn.textContent = "Save Course";
+    } else {
+      // Show flashing "Saved!" message for 3 seconds
+      const statusSpan = document.getElementById('courseSaveStatus');
+      if (statusSpan) {
+        statusSpan.style.opacity = "1";
+        setTimeout(() => {
+          statusSpan.style.opacity = "0";
+        }, 3000);
+      }
+
+      // Update button labels to "Update" since it's no longer a brand new course
+      if (saveCourseBtn) saveCourseBtn.textContent = "Update Course";
+      if (saveAndContinueBtn) saveAndContinueBtn.textContent = "Update & Continue";
+
+      setTimeout(() => {
+        // Restore button text after "Saving..."
+        activeBtn.textContent = shouldClose ? "Update Course" : "Update & Continue";
+      }, 1500);
+      // We do NOT reset currentCourseData or title/desc
+    }
+
     if (window.fetchCourses) window.fetchCourses(); // Refresh list
 
   } catch (err) {
     console.error("Error saving course (catch block):", err);
     alert(`Failed to save course: ${err.message}`);
   } finally {
-    saveCourseBtn.disabled = false;
-    saveCourseBtn.textContent = "Save Course";
+    activeBtn.disabled = false;
+    if (shouldClose) {
+      activeBtn.textContent = originalText;
+    }
   }
-});
+}
+
+saveCourseBtn?.addEventListener('click', () => handleCourseSave(true));
+saveAndContinueBtn?.addEventListener('click', () => handleCourseSave(false));

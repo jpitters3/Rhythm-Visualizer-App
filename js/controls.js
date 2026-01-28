@@ -138,7 +138,7 @@ metroBtn.addEventListener('click', () => {
 function updateNotationUI() {
   const btn = document.getElementById('labelNotationBtn');
   if (!btn) return;
-  btn.textContent = (window.labelNotation === 'musical') ? '1 & 2' : '1 2 3';
+  btn.textContent = (window.labelNotation === 'musical') ? '1 2 3' : '1 & 2';
   btn.title = (window.labelNotation === 'musical') ? 'Switch to Numeric Notation' : 'Switch to Musical Notation';
 }
 updateNotationUI();
