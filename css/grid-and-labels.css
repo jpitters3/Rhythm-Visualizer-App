@@ -124,6 +124,13 @@
   cursor: pointer;
 }
 
+/* Larger sub-dots for 6/8 or fewer beats per measure */
+.fewer-beats .sub-dot {
+  width: 50px;
+  height: 50px;
+  font-size: 28px;
+}
+
 /* Define the mobile-only layout (Max 4 beats per row) */
 @media (max-width: 768px) {
 
