@@ -354,7 +354,15 @@ function loadLesson(lessonId) {
     }
 
     const descEl = document.getElementById('lessonDescription');
-    if (descEl) descEl.textContent = lesson.description || '';
+    if (descEl) {
+      descEl.value = lesson.description || '';
+      // Toggle readonly based on admin status
+      if (typeof isAdminUser === 'function' && isAdminUser(currentUser)) {
+        descEl.removeAttribute('readonly');
+      } else {
+        descEl.setAttribute('readonly', 'true');
+      }
+    }
 
     const lessonContentEl = document.getElementsByClassName('lesson-content')[0];
     if (lessonContentEl) lessonContentEl.style.display = 'block';
@@ -628,6 +636,8 @@ window.updateLessonFromGrid = async function (lessonId) {
 
   try {
     const pattern_json = serializePattern();
+    const descEl = document.getElementById('lessonDescription');
+    const newDescription = descEl ? descEl.value : (lesson.description || '');
 
     // 1. Save to User Pattern Library
     if (typeof dbSavePattern === 'function') {
@@ -640,12 +650,13 @@ window.updateLessonFromGrid = async function (lessonId) {
       console.warn("dbSavePattern not found, skipping library save");
     }
 
-    // 2. Update Lesson in Supabase
+    // 2. Update Lesson in Supabase (Pattern + Description)
     const { error } = await supabase1
       .from('lessons')
       .update({
         pattern_json: pattern_json,
-        pattern_name: trimmedName
+        pattern_name: trimmedName,
+        description: newDescription
       })
       .eq('id', lessonId);
 
@@ -654,6 +665,7 @@ window.updateLessonFromGrid = async function (lessonId) {
     // 3. Update local state
     lesson.pattern_json = pattern_json;
     lesson.pattern_name = trimmedName;
+    lesson.description = newDescription;
 
     // Visual Feedback
     const uBtn = document.getElementById('updateLessonBtn');
