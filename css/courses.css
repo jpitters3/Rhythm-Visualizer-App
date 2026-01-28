@@ -226,6 +226,20 @@ body.dark .browse-big-btn:hover {
   box-shadow: 0 15px 35px rgba(99, 102, 241, 0.5);
 }
 
+.clickable-nav-title {
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.clickable-nav-title:hover {
+  color: #6366f1;
+  text-decoration: underline;
+}
+
+body.dark .clickable-nav-title:hover {
+  color: #a5b4fc;
+}
+
 /* ==============================
    COURSE LIST ITEMS
    ============================== */

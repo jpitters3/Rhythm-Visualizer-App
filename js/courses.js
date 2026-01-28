@@ -288,7 +288,18 @@ function loadLesson(lessonId) {
     // Also update the separate section header if it exists (for layout flexibility)
     const secTitleEl = document.getElementById('activeSectionTitle');
     const courseTitle = section ? section.courseTitle : 'Unknown Course';
-    if (secTitleEl) secTitleEl.textContent = `${courseTitle} • ${sectionTitle}`;
+    const courseId = section ? section.courseId : null;
+
+    if (secTitleEl) {
+      secTitleEl.innerHTML = `<span class="clickable-nav-title" title="Open course sidebar">${courseTitle} • ${sectionTitle}</span>`;
+      const navSpan = secTitleEl.querySelector('.clickable-nav-title');
+      if (navSpan && courseId) {
+        navSpan.onclick = () => {
+          if (typeof setActiveCourse === 'function') setActiveCourse(courseId);
+          openSidebar();
+        };
+      }
+    }
 
     const titleEl = document.getElementById('activeLessonTitle');
     if (titleEl) {
@@ -487,8 +498,19 @@ function editCourse(courseId) {
 
 function closeSidebar() {
   const sb = document.getElementById('courseSidebar');
-  sb.classList.remove('open');
-  sb.setAttribute('aria-hidden', 'true');
+  if (sb) {
+    sb.classList.remove('open');
+    sb.setAttribute('aria-hidden', 'true');
+  }
+}
+
+function openSidebar() {
+  const sb = document.getElementById('courseSidebar');
+  if (sb && !sb.classList.contains('open')) {
+    sb.classList.add('open');
+    sb.removeAttribute('aria-hidden');
+    if (!window.allCourses || window.allCourses.length === 0) fetchCourses();
+  }
 }
 
 function extractYouTubeId(url) {
