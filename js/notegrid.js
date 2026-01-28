@@ -14,6 +14,8 @@ fingerMap.set("rh-thumb", 3);
 // 'R' = Right, 'L' = Left, null/'' = Default/Auto
 window.innerHands = [];
 
+window.labelNotation = localStorage.getItem('labelNotation') || 'musical';
+
 window.toggleSticking = function (index) {
   const current = window.innerHands[index];
   let next = null;
@@ -68,6 +70,10 @@ function labelForStep(i) {
 
   const base = (mode === '16') ? 16 : 8;
   const stride = base / den;
+
+  if (window.labelNotation === 'numeric') {
+    return String(i + 1);
+  }
 
   const beatNumber = Math.floor(i / stride) + 1;
   const sub = i % stride;
