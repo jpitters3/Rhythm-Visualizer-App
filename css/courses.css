@@ -590,6 +590,7 @@ body.dark button#closeLessonBtn:hover {
   white-space: pre-wrap;
   width: 100%;
   min-height: 120px;
+  height: auto;
   border: 1px solid transparent;
   outline: none;
   resize: vertical;

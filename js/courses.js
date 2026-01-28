@@ -366,12 +366,12 @@ function loadLesson(lessonId) {
 
     const descEl = document.getElementById('lessonDescription');
     if (descEl) {
-      descEl.value = lesson.description || '';
+      descEl.textContent = lesson.description || '';
       // Toggle readonly based on admin status
       if (typeof isAdminUser === 'function' && isAdminUser(currentUser)) {
-        descEl.removeAttribute('readonly');
+        descEl.setAttribute('contenteditable', 'true');
       } else {
-        descEl.setAttribute('readonly', 'true');
+        descEl.setAttribute('contenteditable', 'false');
       }
     }
 
@@ -659,7 +659,7 @@ window.updateLessonFromGrid = async function (lessonId) {
   try {
     const pattern_json = serializePattern();
     const descEl = document.getElementById('lessonDescription');
-    const newDescription = descEl ? descEl.value : (lesson.description || '');
+    const newDescription = descEl ? descEl.textContent : (lesson.description || '');
 
     // 1. Save to User Pattern Library
     if (typeof dbSavePattern === 'function') {
