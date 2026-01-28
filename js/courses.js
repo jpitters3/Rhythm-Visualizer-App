@@ -4,6 +4,7 @@ let activeCourseId = null;
 window.allCourses = [];
 window.allSections = [];
 window.allLessons = [];
+window.currentLesson = null;
 
 async function fetchCourses() {
   if (!currentUser) return; // Wait for auth
@@ -252,6 +253,7 @@ function loadLesson(lessonId) {
       alert(`DEBUG ERROR: Lesson not found! ID: ${lessonId}. Total lessons loaded: ${window.allLessons.length}`);
       return;
     }
+    window.currentLesson = lesson;
 
     // alert(`DEBUG: Found lesson: ${lesson.title}`);
 
@@ -328,6 +330,27 @@ function loadLesson(lessonId) {
           updateBtnState();
         }
       };
+
+      // == ADMIN ONLY: Update Lesson from Grid Button ==
+      if (typeof isAdminUser === 'function' && isAdminUser(currentUser)) {
+        let uBtn = document.getElementById('updateLessonBtn');
+        if (!uBtn) {
+          uBtn = document.createElement('button');
+          uBtn.id = 'updateLessonBtn';
+          uBtn.className = 'practice-btn'; // Use same styling
+          uBtn.style.marginLeft = "8px";
+          uBtn.style.color = "#8b5cf6"; // Purplish tint
+          uBtn.style.borderColor = "rgba(139, 92, 246, 0.3)";
+          header.appendChild(uBtn);
+        }
+        uBtn.innerHTML = '✏️ Update Lesson';
+        uBtn.onclick = (e) => {
+          e.stopPropagation();
+          window.updateLessonFromGrid(lesson.id);
+        };
+      } else {
+        document.getElementById('updateLessonBtn')?.remove();
+      }
     }
 
     const descEl = document.getElementById('lessonDescription');
@@ -583,3 +606,69 @@ function triggerCourseCompletionCelebration(courseTitle) {
 }
 
 window.toggleLessonCompletion = toggleLessonCompletion;
+
+window.updateLessonFromGrid = async function (lessonId) {
+  const lesson = window.allLessons.find(l => l.id === lessonId);
+  if (!lesson) {
+    alert("Lesson not found.");
+    return;
+  }
+
+  if (!confirm(`Are you sure you want to update the pattern for "${lesson.title}" with the current grid?`)) {
+    return;
+  }
+
+  const newName = prompt("Pattern name (saves to library and lesson):", lesson.pattern_name || lesson.title);
+  if (newName === null) return; // Cancelled
+  const trimmedName = newName.trim();
+  if (!trimmedName) {
+    alert("Name cannot be empty.");
+    return;
+  }
+
+  try {
+    const pattern_json = serializePattern();
+
+    // 1. Save to User Pattern Library
+    if (typeof dbSavePattern === 'function') {
+      await dbSavePattern(trimmedName, pattern_json);
+      // 1b. Refresh main pattern dropdown
+      if (typeof refreshPatternSelect === 'function') {
+        await refreshPatternSelect(trimmedName);
+      }
+    } else {
+      console.warn("dbSavePattern not found, skipping library save");
+    }
+
+    // 2. Update Lesson in Supabase
+    const { error } = await supabase1
+      .from('lessons')
+      .update({
+        pattern_json: pattern_json,
+        pattern_name: trimmedName
+      })
+      .eq('id', lessonId);
+
+    if (error) throw error;
+
+    // 3. Update local state
+    lesson.pattern_json = pattern_json;
+    lesson.pattern_name = trimmedName;
+
+    // Visual Feedback
+    const uBtn = document.getElementById('updateLessonBtn');
+    if (uBtn) {
+      const originalText = uBtn.innerHTML;
+      uBtn.innerHTML = '✅ Updated!';
+      setTimeout(() => uBtn.innerHTML = originalText, 2000);
+    }
+
+    // sync lastSavedState to avoid "unsaved changes" warnings
+    window.lastSavedState = JSON.stringify(pattern_json);
+
+    console.log(`Lesson ${lessonId} and Pattern "${trimmedName}" updated successfully.`);
+  } catch (err) {
+    console.error("Failed to update lesson/pattern:", err);
+    alert("Error updating: " + err.message);
+  }
+};

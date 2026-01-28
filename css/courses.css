@@ -426,10 +426,12 @@ body.dark .lesson-link.active-lesson::after {
   align-items: center;
   margin-bottom: 20px;
   cursor: pointer;
+  gap: 8px;
 }
 
 .lesson-header h2 {
   margin: 0;
+  margin-right: auto;
 }
 
 .practice-btn {
