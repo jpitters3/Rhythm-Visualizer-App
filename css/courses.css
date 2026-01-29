@@ -669,6 +669,35 @@ body.dark .chord-fav-btn {
   /* Strong shadow for contrast */
 }
 
+/* Course Form Buttons */
+.small-capture-btn,
+.small-upload-btn {
+  background: none;
+  border: 1px solid var(--panel-border);
+  border-radius: 4px;
+  cursor: pointer;
+  padding: 2px 6px;
+  font-size: 14px;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  color: var(--text-secondary);
+}
+
+.small-capture-btn:hover,
+.small-upload-btn:hover {
+  background: var(--btn-secondary-hover);
+  color: var(--text);
+  border-color: var(--text-secondary);
+}
+
+.updated-flash {
+  background: rgba(46, 204, 113, 0.2) !important;
+  transition: background 0.5s;
+}
+
+
 @media (max-width: 600px) {
   #nextLessonBtn .desktop-text {
     display: none;

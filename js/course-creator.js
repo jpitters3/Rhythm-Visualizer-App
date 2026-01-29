@@ -333,7 +333,8 @@ function renderCourseStructure() {
                 <textarea placeholder="Description" onchange="currentCourseData.sections[${sIdx}].lessons[${lIdx}].description = this.value">${lesson.description}</textarea>
                 <div class="input-with-icon">
                     <span>📺</span>
-                    <input type="text" value="${lesson.video_url}" placeholder="YouTube URL" onchange="currentCourseData.sections[${sIdx}].lessons[${lIdx}].video_url = this.value">
+                    <input type="text" value="${lesson.video_url}" placeholder="YouTube URL or Uploaded Video" onchange="currentCourseData.sections[${sIdx}].lessons[${lIdx}].video_url = this.value">
+                    <button class="small-upload-btn" onclick="triggerLessonVideoUpload(${sIdx}, ${lIdx})" title="Upload Video File">📤</button>
                 </div>
                 
                 <div class="lesson-meta-box">
@@ -354,6 +355,76 @@ function renderCourseStructure() {
 
     container.appendChild(sectionEl);
   });
+}
+
+async function triggerLessonVideoUpload(sIdx, lIdx) {
+  if (!currentUser) return alert("Please sign in to upload videos.");
+  if (typeof isAdminUser === 'function' && !isAdminUser(currentUser)) {
+    return alert("Only admins can upload videos.");
+  }
+
+  // Using existing mediaInput if possible, or create a temporary one
+  let fileInput = document.getElementById('lessonVideoInput');
+  if (!fileInput) {
+    fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.id = 'lessonVideoInput';
+    fileInput.style.display = 'none';
+    fileInput.accept = 'video/*';
+    document.body.appendChild(fileInput);
+  }
+
+  fileInput.onchange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // Size limit check (e.g. 50MB)
+    if (file.size > 50 * 1024 * 1024) {
+      alert("Video file is too large. Max 50MB.");
+      return;
+    }
+
+    const btn = e.target.senderBtn; // We'll need to pass the button reference or find it
+    const originalText = "📤";
+    // For now, let's just alert progress or update the input value
+    const input = document.querySelector(`.section-builder:nth-child(${sIdx + 1}) .lesson-builder:nth-child(${lIdx + 1}) .input-with-icon input`);
+
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${currentUser.id}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+
+      console.log("Uploading video...", fileName);
+      if (input) input.value = "Uploading...";
+
+      const { data, error } = await supabase1.storage
+        .from('lesson-videos')
+        .upload(fileName, file);
+
+      if (error) throw error;
+
+      const { data: publicData } = supabase1.storage.from('lesson-videos').getPublicUrl(fileName);
+      const publicUrl = publicData.publicUrl;
+
+      // Update state
+      currentCourseData.sections[sIdx].lessons[lIdx].video_url = publicUrl;
+
+      // Update UI
+      if (input) {
+        input.value = publicUrl;
+        input.classList.add('updated-flash');
+        setTimeout(() => input.classList.remove('updated-flash'), 1000);
+      }
+
+      console.log("Upload successful:", publicUrl);
+
+    } catch (err) {
+      console.error("Upload failed:", err);
+      alert("Upload failed: " + err.message);
+      if (input) input.value = currentCourseData.sections[sIdx].lessons[lIdx].video_url || "";
+    }
+  };
+
+  fileInput.click();
 }
 
 function removeSection(sIdx) {

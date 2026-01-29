@@ -454,7 +454,12 @@ function loadLesson(lessonId) {
     if (videoCont) {
       if (lesson.video_url) {
         const videoId = extractYouTubeId(lesson.video_url);
-        videoCont.innerHTML = `<iframe src="https://www.youtube.com/embed/${videoId}" frameborder="0" allowfullscreen></iframe>`;
+        if (videoId) {
+          videoCont.innerHTML = `<iframe src="https://www.youtube.com/embed/${videoId}" frameborder="0" allowfullscreen></iframe>`;
+        } else {
+          // Direct URL (Supabase storage or other)
+          videoCont.innerHTML = `<video src="${lesson.video_url}" controls playsinline style="width: 100%; border-radius: 8px;"></video>`;
+        }
         videoCont.style.display = 'block';
       } else {
         videoCont.style.display = 'none';
