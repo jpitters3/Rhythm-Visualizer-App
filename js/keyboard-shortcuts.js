@@ -135,7 +135,7 @@ document.addEventListener('keydown', (e) => {
     return;
   }
 
-  if (/^[0-9]$/.test(k)) {
+  if (/^[0-9?]$/.test(k)) {
     writeToSelected(k, { advance: !noAdvance });
     return;
   }

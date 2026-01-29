@@ -442,7 +442,7 @@ function setInnerLabel(i, value) {
     const inner = cell.querySelector('.inner');
     if (inner) inner.textContent = value;
 
-    cell.classList.remove('label-d', 'label-t', 'label-s', 'label-n', 'has-label');
+    cell.classList.remove('label-d', 'label-t', 'label-s', 'label-n', 'label-q', 'has-label');
     const v = String(value || '');
 
     // ghost = no label set
@@ -454,6 +454,7 @@ function setInnerLabel(i, value) {
     if (v === 'D') cell.classList.add('label-d');
     else if (v === 'T') cell.classList.add('label-t');
     else if (v === 'S') cell.classList.add('label-s');
+    else if (v === '?') cell.classList.add('label-q');
     else cell.classList.add('label-n'); // Default to number style
 
     cell.classList.remove('multi-mode');

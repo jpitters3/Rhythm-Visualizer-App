@@ -38,6 +38,16 @@ async function loadCurrentProfile() {
           if (typeof window.renderAllMeasures === 'function') window.renderAllMeasures();
         }
       }
+
+      // Sync Grid Label Notation Preference
+      if (currentProfile.grid_label_notation) {
+        window.labelNotation = currentProfile.grid_label_notation;
+        localStorage.setItem('labelNotation', window.labelNotation);
+
+        // Trigger UI update if functions are available
+        if (typeof window.updateNotationUI === 'function') window.updateNotationUI();
+        if (typeof window.renderAllMeasures === 'function') window.renderAllMeasures();
+      }
     } else {
       // Profile doesn't exist yet (maybe trigger failed or old user)
       // We can try to create one lazily
@@ -64,6 +74,22 @@ async function updateUserLabelPreference(newPref) {
       .eq('user_id', currentUser.id);
   } catch (e) {
     console.warn('Failed to save label preference:', e);
+  }
+}
+
+// Save Grid Label Notation preference to DB
+async function updateUserGridLabelNotation(newNotation) {
+  if (!currentUser) return;
+  // fast local update
+  if (currentProfile) currentProfile.grid_label_notation = newNotation;
+
+  try {
+    await supabase1
+      .from('profiles')
+      .update({ grid_label_notation: newNotation, updated_at: new Date() })
+      .eq('user_id', currentUser.id);
+  } catch (e) {
+    console.warn('Failed to save grid label notation preference:', e);
   }
 }
 

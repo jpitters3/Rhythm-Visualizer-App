@@ -148,6 +148,11 @@ document.getElementById('labelNotationBtn')?.addEventListener('click', () => {
   localStorage.setItem('labelNotation', window.labelNotation);
   updateNotationUI();
   renderAllMeasures();
+
+  // Persist to profile if signed in
+  if (typeof updateUserGridLabelNotation === 'function') {
+    updateUserGridLabelNotation(window.labelNotation);
+  }
 });
 
 clearBtn.addEventListener('click', () => {
