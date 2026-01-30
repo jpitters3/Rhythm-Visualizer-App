@@ -77,6 +77,15 @@ document.addEventListener('keydown', (e) => {
     return;
   }
 
+  // Presentation Mode shortcut
+  if (e.key.toLowerCase() === 'p') {
+    const on = !document.body.classList.contains('present');
+    if (typeof setPresentation === 'function') {
+      setPresentation(on);
+    }
+    return;
+  }
+
   // Enter: Groove modal 'Go!'
   if (grooveModal?.classList?.contains('open') && e.key === 'Enter') {
     e.preventDefault();

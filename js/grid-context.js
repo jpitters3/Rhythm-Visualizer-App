@@ -8,8 +8,8 @@ class GridContext {
     this.containerId = containerId;
 
     // State
-    this.innerLabels = [];
-    this.innerHands = [];
+    this.innerLabels = Array(8).fill(''); // Start with one measure
+    this.innerHands = Array(8).fill(null);
     this.step = 0;
     this.playing = false;
     this.bpm = 90;
@@ -67,8 +67,10 @@ class GridContext {
   }
 
   reset() {
-    this.innerLabels = Array(measures * STEPS).fill('');
-    this.innerHands = Array(measures * STEPS).fill(null);
+    const s = this.stepsPerMeasure;
+    const m = this.measures;
+    this.innerLabels = Array(m * s).fill('');
+    this.innerHands = Array(m * s).fill(null);
     this.step = 0;
     this.playing = false;
   }
