@@ -144,7 +144,7 @@ function safeInit() {
       let selected = (typeof patternSelect !== 'undefined') ? patternSelect.value : '';
 
       // If not signed in and there are no saved patterns, do nothing
-      if (currentUser && selected) {
+      if (selected) {
         // Fallback: If dropdown is empty, try to get last used directly
         if (!selected && typeof LAST_USED_KEY !== 'undefined') {
           const last = localStorage.getItem(LAST_USED_KEY);
@@ -162,6 +162,11 @@ function safeInit() {
       if (typeof window.syncVirtualHandpanControls === 'function') {
         window.syncVirtualHandpanControls();
       }
+
+      // Snapshot AFTER loading pattern to avoid 'unsaved changes' alert on clean load
+      if (typeof serializePattern === 'function') {
+        window.lastSavedState = JSON.stringify(serializePattern());
+      }
     })();
 
     updatePatternButtons();
@@ -169,10 +174,7 @@ function safeInit() {
 
     if (DEBUG) runSelfTests();
 
-    // Initial Snapshot
-    if (typeof serializePattern === 'function') {
-      window.lastSavedState = JSON.stringify(serializePattern());
-    }
+    // Initial Snapshot handled inside the async block above
   } catch (err) {
     showFatalError(err);
   }

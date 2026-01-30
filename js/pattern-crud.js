@@ -8,8 +8,14 @@ window.hasUnsavedChanges = function () {
 };
 
 async function isAuthed() {
-  const { data, error } = await supabase1.auth.getUser();
-  return !!(data?.user);
+  if (typeof supabase1 === 'undefined' || !supabase1.auth) return false;
+  try {
+    const { data, error } = await supabase1.auth.getUser();
+    return !!(data?.user);
+  } catch (e) {
+    console.warn('Auth check failed:', e);
+    return false;
+  }
 }
 
 async function dbListPatternNames() {
@@ -107,37 +113,27 @@ async function refreshPatternSelect(selectedName = '') {
   try {
     patternSelect.innerHTML = '';
 
-    // CLOUD MODE
-    if (await isAuthed()) {
-      const names = (await dbListPatternNames()).sort((a, b) => a.localeCompare(b));
-      if (names.length === 0) {
-        const opt = document.createElement('option');
-        opt.value = '';
-        opt.textContent = '(no saved patterns)';
-        patternSelect.appendChild(opt);
-        updatePatternButtons();
-        return;
+    let names = [];
+    let loadLocal = true;
+
+    // Try cloud first if supabase exists
+    if (typeof supabase1 !== 'undefined') {
+      try {
+        const authed = await withTimeout(isAuthed(), 1000, 'auth-check');
+        if (authed) {
+          const cloudNames = await withTimeout(dbListPatternNames(), 2000, 'list-patterns');
+          names = (cloudNames || []).sort((a, b) => a.localeCompare(b));
+          loadLocal = false;
+        }
+      } catch (e) {
+        console.warn('Cloud pattern list failed or timed out, falling back to local:', e);
       }
-
-      for (const name of names) {
-        const opt = document.createElement('option');
-        opt.value = name;
-        opt.textContent = name;
-        patternSelect.appendChild(opt);
-      }
-
-      const lastUsed = localStorage.getItem(LAST_USED_KEY) || '';
-      if (selectedName && names.includes(selectedName)) patternSelect.value = selectedName;
-      else if (lastUsed && names.includes(lastUsed)) patternSelect.value = lastUsed;
-      else patternSelect.value = names[0];
-
-      updatePatternButtons();
-      return;
     }
 
-    // LOCAL MODE (logged out)
-    const saved = getSavedPatterns();
-    const names = Object.keys(saved).sort((a, b) => a.localeCompare(b));
+    if (loadLocal) {
+      const saved = getSavedPatterns();
+      names = Object.keys(saved).sort((a, b) => a.localeCompare(b));
+    }
 
     if (names.length === 0) {
       const opt = document.createElement('option');
@@ -156,34 +152,51 @@ async function refreshPatternSelect(selectedName = '') {
     }
 
     const lastUsed = localStorage.getItem(LAST_USED_KEY) || '';
-    if (selectedName && saved[selectedName]) patternSelect.value = selectedName;
-    else if (lastUsed && saved[lastUsed]) patternSelect.value = lastUsed;
+    if (selectedName && names.includes(selectedName)) patternSelect.value = selectedName;
+    else if (lastUsed && names.includes(lastUsed)) patternSelect.value = lastUsed;
     else patternSelect.value = names[0];
 
     updatePatternButtons();
   } catch (err) {
-    console.error(err);
-    alert(`Could not load patterns: ${err?.message || err}`);
+    console.error('refreshPatternSelect error:', err);
   }
 }
 
 
+
 function serializePattern(ctx = window.gridA) {
-  return {
-    version: VERSION,
+  const state = {
+    version: (typeof VERSION !== 'undefined' ? VERSION : 'v1.0'),
     mode: ctx.mode,
     bpm: Number(ctx.bpm),
     timeSignature: (typeof getTimeSignature === 'function' ? getTimeSignature() : '4/4'),
     handSplit: document.body.classList.contains('handSplit'),
     steps: ctx.stepsPerMeasure,
     measures: ctx.measures,
-    labels: ctx.innerLabels.slice(),
+    labels: ctx.innerLabels ? ctx.innerLabels.slice() : [],
     hands: ctx.innerHands ? ctx.innerHands.slice() : [],
   };
+
+  // If serializing Grid A, check if Dual Mode is active to include Grid B
+  if (ctx === window.gridA) {
+    const isDual = document.getElementById('dualModeBtn')?.classList.contains('active');
+    if (isDual && window.gridB) {
+      state.gridB = {
+        mode: window.gridB.mode,
+        bpm: Number(window.gridB.bpm),
+        measures: window.gridB.measures,
+        labels: window.gridB.innerLabels ? window.gridB.innerLabels.slice() : [],
+        hands: window.gridB.innerHands ? window.gridB.innerHands.slice() : [],
+      };
+    }
+  }
+
+  return state;
 }
 
 function applyPattern(state, ctx = window.gridA) {
   if (!state || !state.mode || !Array.isArray(state.labels)) {
+    console.error('Invalid pattern state:', state);
     alert('That pattern JSON does not look valid.');
     return;
   }
@@ -193,8 +206,10 @@ function applyPattern(state, ctx = window.gridA) {
 
   setMode(state.mode === '16' ? '16' : '8', ctx);
 
-  if (typeof setTimeSignature === 'function') {
-    setTimeSignature(state.timeSignature || '4/4');
+  // Only set global time signature if provided and if applying to Grid A
+  // (Pattern sub-objects for Grid B don't have their own time signature)
+  if (ctx === window.gridA && state.timeSignature && typeof setTimeSignature === 'function') {
+    setTimeSignature(state.timeSignature);
   }
 
   if (typeof state.handSplit === 'boolean') {
@@ -207,7 +222,7 @@ function applyPattern(state, ctx = window.gridA) {
   }
 
   if (typeof state.bpm === 'number' && !Number.isNaN(state.bpm)) {
-    ctx.bpm = Math.max(40, Math.min(200, Math.round(state.bpm)));
+    ctx.bpm = Math.max(40, Math.min(220, Math.round(state.bpm)));
     if (ctx.bpmInput) ctx.bpmInput.value = String(ctx.bpm);
     const bVal = document.getElementById(`bpmVal-${ctx.id}`);
     if (bVal) bVal.textContent = String(ctx.bpm);
@@ -225,7 +240,20 @@ function applyPattern(state, ctx = window.gridA) {
   clearSelection(ctx);
 
   if (wasPlaying) start(ctx);
-  window.lastSavedState = JSON.stringify(state);
+
+  // Dual Grid Handling
+  if (ctx === window.gridA) {
+    if (state.gridB) {
+      if (window.setDualGrid) window.setDualGrid(true);
+      applyPattern(state.gridB, window.gridB);
+    } else {
+      // If loading a single-grid pattern, hide grid B
+      // But only if we are currently looking at Grid A
+      if (window.setDualGrid) window.setDualGrid(false);
+    }
+    // Only save the top-level state as lastSavedState
+    window.lastSavedState = JSON.stringify(state);
+  }
 }
 
 function ensureHasSelection() {

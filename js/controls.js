@@ -97,13 +97,15 @@ setupGridControls(window.gridA);
 setupGridControls(window.gridB);
 
 // Dual Mode Toggle
-document.getElementById('dualModeBtn')?.addEventListener('click', () => {
-  const visible = document.getElementById('measures-B').style.display !== 'none';
-  const next = !visible;
+function setDualGrid(next) {
+  const mB = document.getElementById('measures-B');
+  const cB = document.getElementById('controls-B');
+  const btn = document.getElementById('dualModeBtn');
+  if (!mB || !cB || !btn) return;
 
-  document.getElementById('measures-B').style.display = next ? 'block' : 'none';
-  document.getElementById('controls-B').style.display = next ? 'flex' : 'none';
-  document.getElementById('dualModeBtn').classList.toggle('active', next);
+  mB.style.display = next ? 'block' : 'none';
+  cB.style.display = next ? 'flex' : 'none';
+  btn.classList.toggle('active', next);
 
   if (next) {
     // Initialize Grid B if it's empty
@@ -114,6 +116,13 @@ document.getElementById('dualModeBtn')?.addEventListener('click', () => {
     }
     renderAllMeasures(window.gridB);
   }
+}
+
+window.setDualGrid = setDualGrid;
+
+document.getElementById('dualModeBtn')?.addEventListener('click', () => {
+  const visible = document.getElementById('measures-B').style.display !== 'none';
+  setDualGrid(!visible);
 });
 
 // If the tab is hidden, stop both
@@ -257,7 +266,7 @@ async function saveCurrentPatternAs(name) {
     saved[trimmed] = serializePattern();
     localStorage.setItem(LAST_USED_KEY, trimmed);
     setSavedPatterns(saved);
-    refreshPatternSelect(trimmed);
+    await refreshPatternSelect(trimmed);
     return true;
   } catch (err) {
     console.error(err);
@@ -291,7 +300,7 @@ async function loadPatternByName(pattern) {
       return;
     }
 
-    let name = getSelectedPatternName();
+    let name = pattern || getSelectedPatternName();
     if (!name) {
       const lastUsed = localStorage.getItem(LAST_USED_KEY) || '';
       name = (lastUsed && saved[lastUsed]) ? lastUsed : names.sort((a, b) => a.localeCompare(b))[0];

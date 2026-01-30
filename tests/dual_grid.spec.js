@@ -31,7 +31,7 @@ test.describe('Dual Grid Functionality', () => {
     await expect(controlsB).not.toBeVisible();
   });
 
-  test('Independent Playback States', async ({ page }) => {
+  test('Synchronized Playback States', async ({ page }) => {
     await page.click('#dualModeBtn');
 
     const playBtnA = page.locator('#mainTransport-A .t-play-btn');
@@ -40,17 +40,12 @@ test.describe('Dual Grid Functionality', () => {
     // Start A
     await playBtnA.click();
     await expect(playBtnA).toHaveClass(/active/);
-    await expect(playBtnB).not.toHaveClass(/active/);
-
-    // Start B
-    await playBtnB.click();
-    await expect(playBtnA).toHaveClass(/active/);
     await expect(playBtnB).toHaveClass(/active/);
 
     // Stop A
     await playBtnA.click();
     await expect(playBtnA).not.toHaveClass(/active/);
-    await expect(playBtnB).toHaveClass(/active/);
+    await expect(playBtnB).not.toHaveClass(/active/);
   });
 
   test('Independent BPM Control', async ({ page }) => {
