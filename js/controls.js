@@ -441,124 +441,60 @@ importBtn.addEventListener('click', async () => {
 // MOVED TO init.js to prevent race condition
 
 // === VIRTUAL PLAYBACK CONTROLS (Moved from handpanmap.js) ===
-(function initVirtualControls() {
-  const vControls = document.getElementById('virtualHandpanPlaybackControls');
+// Initialize Transport Controls for all containers
+function setupAllTransports() {
+  const containers = document.querySelectorAll('.transport-container');
+  const template = document.getElementById('transport-template');
+  if (!template) return;
 
-  // Elements (Closured)
-  const vMetroBtn = document.getElementById('virtualHandpanMetroBtn');
-  const vBpmInput = document.getElementById('virtualHandpanBpmInput');
-  const vBpmVal = document.getElementById('virtualHandpanBpmVal');
-  const vPlayBtn = document.getElementById('virtualHandpanPlayBtn');
+  containers.forEach(container => {
+    // Clear existing content
+    container.innerHTML = '';
 
-  // Lesson Player Play Button
-  const vLessonPlayBtn = document.getElementById('vLessonPlayBtn');
+    // Clone template
+    const clone = template.content.cloneNode(true);
+    container.appendChild(clone);
 
-  // We don't return early if vControls is missing, because vLessonPlayBtn might exist independently
-  // but we can check if individual elements exist before adding listeners.
+    // Determine GridContext
+    const gridId = container.dataset.grid || 'A';
+    const ctx = (gridId === 'B') ? window.gridB : window.gridA;
 
-  const getReal = (id) => document.getElementById(id);
+    // Initialize Modular UI
+    new TransportUI(ctx, container);
+  });
+}
 
-  // LISTENERS (Proxy -> Real)
-  if (vMetroBtn) {
-    vMetroBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const real = getReal('metroBtn');
-      if (real) real.click();
-      syncVirtualControls();
-    });
-  }
+// EXPOSE GLOBAL (for init.js or presentation-mode.js)
+window.initModularTransports = setupAllTransports;
 
-  if (vPlayBtn) {
-    vPlayBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const real = getReal('playBtn');
-      if (real) real.click();
-      syncVirtualControls();
-    });
-  }
+// Sync function (Legacy compatibility or triggered broadcast)
+window.syncVirtualHandpanControls = function () {
+  // Everything is now handled by TransportRegistry.updateAll via listeners
+  // but we can force a full refresh if needed.
+  TransportRegistry.updateAll(window.gridA);
+  TransportRegistry.updateAll(window.gridB);
+};
 
-  if (vLessonPlayBtn) {
-    vLessonPlayBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const real = getReal('playBtn');
-      if (real) real.click();
-      syncVirtualControls();
-    });
-  }
-
-  if (vBpmInput) {
-    vBpmInput.addEventListener('input', (e) => {
-      e.stopPropagation();
-      const real = getReal('bpmInput');
-      if (real) {
-        real.value = e.target.value;
-        real.dispatchEvent(new Event('input'));
-      }
-      if (vBpmVal) vBpmVal.textContent = e.target.value;
-    });
-  }
-
-  // SYNC FUNCTION (Real -> Proxy)
-  function syncVirtualControls() {
-    const realBpmInput = getReal('bpmInput');
-    const realPlayBtn = getReal('playBtn');
-    const realMetroBtn = getReal('metroBtn');
-
-    // BPM
-    if (realBpmInput && vBpmInput) {
-      if (vBpmInput.value !== realBpmInput.value) {
-        vBpmInput.value = realBpmInput.value;
-        if (vBpmVal) vBpmVal.textContent = realBpmInput.value;
-      }
+// HOOK UPDATE LOOP AND INIT
+function installHook() {
+  const existingHook = window.updatePresentationView;
+  window.updatePresentationView = function (step, ctx) {
+    if (existingHook) existingHook(step, ctx);
+    // TransportRegistry handles UI updates during playback via start() -> tick() 
+    // but we can ensure sync here too.
+    if (ctx) {
+      TransportRegistry.updateAll(ctx);
+    } else {
+      TransportRegistry.updateAll(window.gridA);
     }
+  };
 
-    // Play State
-    if (vPlayBtn) {
-      const isPlaying = window.gridA.playing;
-      vPlayBtn.textContent = isPlaying ? '⏹' : '►';
-      vPlayBtn.classList.toggle('active', isPlaying);
-      vPlayBtn.classList.toggle('playing', isPlaying);
-    }
+  // Run once immediately
+  setupAllTransports();
+}
 
-    if (vLessonPlayBtn) {
-      const isPlaying = window.gridA.playing;
-      if (isPlaying) {
-        vLessonPlayBtn.textContent = '⏹';
-        vLessonPlayBtn.classList.add('active');
-      } else {
-        vLessonPlayBtn.textContent = '►';
-        vLessonPlayBtn.classList.remove('active');
-      }
-    }
-
-    // Metronome
-    if (vMetroBtn) {
-      const isOn = window.gridA.metronomeOn;
-      vMetroBtn.classList.toggle('active', isOn);
-      vMetroBtn.style.opacity = isOn ? '1' : '0.5';
-    }
-  }
-
-  // EXPOSE GLOBAL (for init.js)
-  window.syncVirtualHandpanControls = syncVirtualControls;
-
-  // HOOK UPDATE LOOP AND INIT
-  function installHook() {
-    // Wait a tick to ensure presentation-mode.js has run if it loaded after us? 
-    // DOMContentLoaded covers script load order usually, but safer to check.
-    const existingHook = window.updatePresentationView;
-    window.updatePresentationView = function (step) {
-      if (existingHook) existingHook(step);
-      syncVirtualControls();
-    };
-
-    // Run once immediately
-    syncVirtualControls();
-  }
-
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', installHook);
-  } else {
-    installHook();
-  }
-})();
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', installHook);
+} else {
+  installHook();
+}

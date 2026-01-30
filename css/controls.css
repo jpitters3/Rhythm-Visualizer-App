@@ -200,3 +200,40 @@ input[type=range] {
   margin: 0 4px;
   transform: translateY(-1px);
 }
+
+/* Transport Modular Styles */
+.transport-group {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+  justify-content: center;
+}
+
+.bpm-control {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  background: var(--panel);
+  padding: 4px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--panel-border);
+  height: 50px;
+  box-sizing: border-box;
+}
+
+.bpm-control label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.t-bpm-val {
+  min-width: 30px;
+  text-align: center;
+  font-weight: 700;
+}

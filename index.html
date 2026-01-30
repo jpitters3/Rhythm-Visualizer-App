@@ -35,6 +35,27 @@
 </head>
 
 <body>
+  <template id="transport-template">
+    <div class="transport-group">
+      <button class="t-play-btn" title="Play/Stop">►</button>
+      <div class="bpm-control">
+        <label>BPM
+          <input class="t-bpm-input" type="range" min="40" max="220" value="120" />
+        </label>
+        <span class="t-bpm-val">120</span>
+      </div>
+      <button class="t-metro-btn" title="Metronome">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 18v-8" />
+          <path d="M7 21h10" />
+          <path d="M6 21l5-16 5 16" />
+          <path d="M12 18a2 2 0 1 0 0 4 2 2 0 0 0 0-4Z" />
+        </svg>
+      </button>
+      <button class="t-mute-btn" title="Toggle Mute">🔊</button>
+    </div>
+  </template>
 
   <div class="container">
     <div class="grid-container top-row">
@@ -171,14 +192,9 @@
           </select>
         </div>
       </div>
-      <button id="playBtn-A" class="instance-play-btn">►</button>
-      <div class="bpm-control">
-        <label>BPM
-          <input id="bpmInput-A" class="instance-bpm-input" type="range" min="40" max="200" value="90" />
-        </label>
-        <span id="bpmVal-A">90</span>
+      <div id="mainTransport-A" class="transport-container" data-grid="A">
+        <!-- Will be populated by TransportUI -->
       </div>
-      <button id="muteBtn-A" class="mute-btn" title="Mute Grid A">🔊</button>
       <button id="clearBtn-A">Clear</button>
       <div class="control-sep"></div>
       <button id="undoBtn" title="Undo (Cmd+Z)" style="display:none;" disabled>↩️</button>
@@ -244,8 +260,8 @@
             <button id="prevLessonBtn" class="primary-btn"
               style="white-space:nowrap; background-color: #f9e17f; justify-content:center;">&larr;</button>
           </div>
-          <div class="lesson-controls" style="display:flex; align-items:center; gap:12px; justify-content:center;">
-            <button id="vLessonPlayBtn" class="play-btn">►</button>
+          <div id="lessonTransport" class="transport-container" data-grid="A">
+            <!-- Will be populated by TransportUI -->
           </div>
         </div>
       </div>
@@ -260,14 +276,9 @@
         <!-- Secondary Grid (Only shows in Dual Mode) -->
         <div id="controls-B" class="controls secondary-controls" style="display:none;">
           <div class="instance-label">Grid B</div>
-          <button id="playBtn-B" class="instance-play-btn">►</button>
-          <div class="bpm-control">
-            <label>BPM
-              <input id="bpmInput-B" class="instance-bpm-input" type="range" min="40" max="200" value="90" />
-            </label>
-            <span id="bpmVal-B">90</span>
+          <div id="mainTransport-B" class="transport-container" data-grid="B">
+            <!-- Will be populated by TransportUI -->
           </div>
-          <button id="muteBtn-B" class="mute-btn" title="Mute Grid B">🔊</button>
           <button id="clearBtn-B">Clear</button>
         </div>
         <div id="measures-B" class="measures secondary-measures" style="display:none;"
@@ -391,28 +402,8 @@
 
 
         <!-- PLAYBACK MENU -->
-        <div id="virtualHandpanPlaybackControls" class="present-controls">
-          <!-- Metronome Proxy -->
-          <button id="virtualHandpanMetroBtn" title="Metronome">
-            <svg xmlns="http://www.w3.org/2000/svg" width="25" height="25" viewBox="0 0 24 24" fill="none"
-              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M12 18v-8" />
-              <path d="M7 21h10" />
-              <path d="M6 21l5-16 5 16" />
-              <path d="M12 18a2 2 0 1 0 0 4 2 2 0 0 0 0-4Z" />
-            </svg>
-          </button>
-
-          <!-- BPM Proxy -->
-          <div class="control-group bpm-group">
-            <label>BPM
-              <input id="virtualHandpanBpmInput" type="range" min="40" max="200" value="90">
-            </label>
-            <span id="virtualHandpanBpmVal">90</span>
-          </div>
-
-          <!-- Play/Stop Proxy -->
-          <button id="virtualHandpanPlayBtn" class="play-btn">►</button>
+        <div id="virtualHandpanPlaybackControls" class="transport-container" data-grid="A">
+          <!-- Will be populated by TransportUI -->
         </div>
         <!-- PLAYBACK MENU -->
 
@@ -424,28 +415,8 @@
 
 
     <!-- PRESENTATION MODE PLAYBACK MENU -->
-    <div id="presentationControls" class="present-controls" style="display:none;">
-      <!-- Metronome Proxy -->
-      <button id="presentMetroBtn" title="Metronome">
-        <svg xmlns="http://www.w3.org/2000/svg" width="25" height="25" viewBox="0 0 24 24" fill="none"
-          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M12 18v-8" />
-          <path d="M7 21h10" />
-          <path d="M6 21l5-16 5 16" />
-          <path d="M12 18a2 2 0 1 0 0 4 2 2 0 0 0 0-4Z" />
-        </svg>
-      </button>
-
-      <!-- BPM Proxy -->
-      <div class="control-group bpm-group">
-        <label>BPM
-          <input id="presentBpmInput" type="range" min="40" max="200" value="90">
-        </label>
-        <span id="presentBpmVal">90</span>
-      </div>
-
-      <!-- Play/Stop Proxy -->
-      <button id="presentPlayBtn" class="play-btn">►</button>
+    <div id="presentationControls" class="transport-container" data-grid="A">
+      <!-- Will be populated by TransportUI -->
     </div>
     <!-- END PRESENTATION MODE PLAYBACK MENU -->
 
@@ -945,15 +916,6 @@
 
     // ===== ELEMENTS =====
     const measuresEl = document.getElementById('measures');
-    const playBtnA = document.getElementById('playBtn-A');
-    const bpmInputA = document.getElementById('bpmInput-A');
-    const bpmValA = document.getElementById('bpmVal-A');
-    const clearBtnA = document.getElementById('clearBtn-A');
-    const playBtnB = document.getElementById('playBtn-B');
-    const bpmInputB = document.getElementById('bpmInput-B');
-    const bpmValB = document.getElementById('bpmVal-B');
-    const clearBtnB = document.getElementById('clearBtn-B');
-    const metroBtn = document.getElementById('metroBtn');
     const themeBtn = document.getElementById('themeBtn');
     const handBtn = document.getElementById('handBtn');
     const presentBtn = document.getElementById('presentBtn');
@@ -1035,6 +997,7 @@
   </script>
 
   <script src="./js/grid-context.js"></script>
+  <script src="./js/transport-ui.js"></script>
   <script src="./js/range-selection.js?v=4"></script>
   <script src="./js/measure-actions.js?v=4"></script>
   <script src="./js/notegrid.js?v=4"></script>

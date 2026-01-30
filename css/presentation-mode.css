@@ -34,9 +34,10 @@ body.present .left {
 body.present h2,
 body.present .pattern-row,
 body.present .controls,
+body.present #controls-B,
 body.present .legend,
 body.present .footer {
-  display: none;
+  display: none !important;
 }
 
 body.present .labels {
@@ -320,12 +321,18 @@ body.present div.present-controls {
   transform: translateX(-50%);
 }
 
-#presentationControls {
-  display: none;
+body.present #presentationControls {
+  display: flex !important;
+  /* Force show when in present mode */
+  position: fixed;
+  bottom: 3vh;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1000;
 }
 
-body.present div.present-controls div.bpm-group {
-  transform: translateY(25%);
+body.present #presentationControls .bpm-control {
+  transform: translateY(0);
   margin: 0px 5px;
 }
 
@@ -333,11 +340,8 @@ body.present div.handpan-tabs {
   display: none !important;
 }
 
-body.present div#virtualHandpanPlaybackControls {
-  display: none !important;
-}
-
-body.present div#ghostNoteSection {
+/* Hide ANY transport container in presentation mode EXCEPT the explicit presentationControls */
+body.present .transport-container:not(#presentationControls) {
   display: none !important;
 }
 

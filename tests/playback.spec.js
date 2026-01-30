@@ -9,7 +9,7 @@ test.describe('Playback & Controls', () => {
   });
 
   test('Play Start/Stop', async ({ page }) => {
-    const playBtn = page.locator('#playBtn-A');
+    const playBtn = page.locator('#mainTransport-A .t-play-btn');
 
     // 1. Initial State: Stopped
     await expect(playBtn).not.toHaveClass(/active/);
@@ -40,8 +40,8 @@ test.describe('Playback & Controls', () => {
   });
 
   test('BPM Adjustment', async ({ page }) => {
-    const bpmInput = page.locator('#bpmInput-A');
-    const bpmVal = page.locator('#bpmVal-A');
+    const bpmInput = page.locator('#mainTransport-A .t-bpm-input');
+    const bpmVal = page.locator('#mainTransport-A .t-bpm-val');
 
     // 1. Change BPM via Input
     await bpmInput.fill('120');
@@ -55,7 +55,7 @@ test.describe('Playback & Controls', () => {
   });
 
   test('Metronome Toggle', async ({ page }) => {
-    const metroBtn = page.locator('#metroBtn');
+    const metroBtn = page.locator('#mainTransport-A .t-metro-btn');
 
     // 1. Toggle On
     await metroBtn.click();
@@ -72,13 +72,13 @@ test.describe('Playback & Controls', () => {
   test('Looping: Playback cycles correctly', async ({ page }) => {
     // Setup: 1 measure.
     // Set BPM slower to ensure Playwright catches the class change
-    await page.fill('#bpmInput-A', '60');
+    await page.fill('#mainTransport-A .t-bpm-input', '60');
 
     // Start Playback
-    await page.click('#playBtn-A');
+    await page.click('#mainTransport-A .t-play-btn');
 
     // Verify playback started (button text change from ► to ⏹ or class active)
-    await expect(page.locator('#playBtn-A')).toHaveClass(/active/);
+    await expect(page.locator('#mainTransport-A .t-play-btn')).toHaveClass(/active/);
 
     // Spy on the step update hook
     await page.evaluate(() => {
@@ -124,7 +124,7 @@ test.describe('Playback & Controls', () => {
 
     // Trigger audio unlock/load
     // Clicking play usually unlocks audio context and loads samples
-    await page.click('#playBtn-A');
+    await page.click('#mainTransport-A .t-play-btn');
 
     // Wait a bit for loading
     await page.waitForTimeout(2000);

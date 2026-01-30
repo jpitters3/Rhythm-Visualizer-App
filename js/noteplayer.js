@@ -400,7 +400,7 @@ function tick(ctx = window.activeGrid) {
     window.transcriptionIndex = ctx.step;
     // Update Presentation View if active
     if (typeof updatePresentationView === 'function') {
-      updatePresentationView(ctx.step);
+      updatePresentationView(ctx.step, ctx);
     }
   }
 

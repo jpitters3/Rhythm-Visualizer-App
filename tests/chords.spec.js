@@ -61,12 +61,12 @@ test.describe('Chords & Chords', () => {
     // sub-dots updated visual text
 
     // 4. Set BPM to 40 for stability (ensure we catch 'active' class)
-    const bpmInput = page.locator('#bpmInput-A');
+    const bpmInput = page.locator('#mainTransport-A .t-bpm-input');
     await bpmInput.fill('40');
 
     // 5. Start Playback
-    await page.click('#playBtn-A');
-    await expect(page.locator('#playBtn-A')).toHaveClass(/active/);
+    await page.click('#mainTransport-A .t-play-btn');
+    await expect(page.locator('#mainTransport-A .t-play-btn')).toHaveClass(/active/);
 
     // 5. Verify Handpan Map Visualization
     // When playback hits step 0, both Note '1' and Note '3' should light up.

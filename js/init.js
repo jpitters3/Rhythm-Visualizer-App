@@ -1,8 +1,7 @@
 // ===== INIT =====
 function updateMetroUI() {
-  if (!metroBtn) return;
   const ctx = window.activeGrid || window.gridA;
-  metroBtn.classList.toggle('active', !!ctx.metronomeOn);
+  if (window.TransportRegistry) TransportRegistry.updateAll(ctx);
 }
 
 function restorePrefs() {
@@ -19,10 +18,6 @@ function restorePrefs() {
   if (window.gridA) window.gridA.metronomeOn = metronomeOn;
 
   updateMetroUI();
-
-  if (typeof bpmValA !== 'undefined' && typeof bpmInputA !== 'undefined') {
-    bpmValA.textContent = bpmInputA.value;
-  }
 }
 
 function runSelfTests() {
@@ -36,7 +31,7 @@ function runSelfTests() {
     console.assert(c.classList.contains('hand-l') || c.classList.contains('hand-r'), 'Cell has hand-l/hand-r');
   });
 
-  console.assert(!!metroBtn, 'Metronome button exists');
+  console.assert(document.querySelector('.transport-container'), 'Transport container exists');
   console.assert(typeof metroClick === 'function', 'metroClick is a function');
 
   console.assert(!!presentBtn && !!exitPresent, 'Presentation buttons exist');

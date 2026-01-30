@@ -34,8 +34,8 @@ test.describe('Dual Grid Functionality', () => {
   test('Independent Playback States', async ({ page }) => {
     await page.click('#dualModeBtn');
 
-    const playBtnA = page.locator('#playBtn-A');
-    const playBtnB = page.locator('#playBtn-B');
+    const playBtnA = page.locator('#mainTransport-A .t-play-btn');
+    const playBtnB = page.locator('#mainTransport-B .t-play-btn');
 
     // Start A
     await playBtnA.click();
@@ -56,10 +56,10 @@ test.describe('Dual Grid Functionality', () => {
   test('Independent BPM Control', async ({ page }) => {
     await page.click('#dualModeBtn');
 
-    const bpmInputA = page.locator('#bpmInput-A');
-    const bpmValA = page.locator('#bpmVal-A');
-    const bpmInputB = page.locator('#bpmInput-B');
-    const bpmValB = page.locator('#bpmVal-B');
+    const bpmInputA = page.locator('#mainTransport-A .t-bpm-input');
+    const bpmValA = page.locator('#mainTransport-A .t-bpm-val');
+    const bpmInputB = page.locator('#mainTransport-B .t-bpm-input');
+    const bpmValB = page.locator('#mainTransport-B .t-bpm-val');
 
     // Change A to 120
     await bpmInputA.fill('120');
