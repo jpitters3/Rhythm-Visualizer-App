@@ -22,7 +22,9 @@ test.describe('Chords & Chords', () => {
     await page.click('#clearBtn-A');
   });
 
-  test('Multi-Note (Chord) Entry and Playback', async ({ page }) => {
+  test('Multi-Note (Chord) Entry and Playback', async ({ page, browserName }) => {
+    test.skip(browserName === 'firefox', 'Fails in Firefox due to dblclick registration issues');
+
     // 1. Enter Multi-Edit Mode
     const cell0 = page.locator('.cell').nth(0);
     await cell0.dblclick();

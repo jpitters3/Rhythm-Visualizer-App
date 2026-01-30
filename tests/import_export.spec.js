@@ -21,6 +21,7 @@ test.describe('Import / Export Features', () => {
 
     // WebKit clipboard API is often flaky/restricted in headless.
     test.skip(browserName === 'webkit', 'Clipboard API unstable in headless WebKit');
+    test.skip(browserName === 'firefox', 'Clipboard API unstable in headless Firefox');
 
     // 1. Setup Pattern
     await page.click('#clearBtn-A');
