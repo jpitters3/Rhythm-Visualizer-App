@@ -643,9 +643,12 @@ function start(ctx = window.activeGrid, isSync = true) {
 
   // A -> B Sync
   if (isSync && ctx === window.gridA && window.gridB) {
-    stop(window.gridB, false);
-    start(window.gridB, false);
-    if (window.TransportRegistry) window.TransportRegistry.updateAll(window.gridB);
+    const isDual = document.getElementById('dualModeBtn')?.classList.contains('active');
+    if (isDual) {
+      stop(window.gridB, false);
+      start(window.gridB, false);
+      if (window.TransportRegistry) window.TransportRegistry.updateAll(window.gridB);
+    }
   }
 }
 

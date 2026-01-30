@@ -115,6 +115,10 @@ function setDualGrid(next) {
       window.gridB.innerHands = Array(window.gridA.measures * s).fill(null);
     }
     renderAllMeasures(window.gridB);
+  } else {
+    // Stop Grid B if we are disabling dual mode
+    if (typeof stop === 'function') stop(window.gridB, false);
+    if (window.TransportRegistry) window.TransportRegistry.updateAll(window.gridB);
   }
 }
 
