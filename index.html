@@ -12,6 +12,7 @@
   <link rel="stylesheet" href="./css/grid-and-labels.css">
   <link rel="stylesheet" href="./css/hand-icons.css">
   <link rel="stylesheet" href="./css/legend.css">
+  <link rel="stylesheet" href="./css/dual-grid.css">
   <link rel="stylesheet" href="./css/groove-modal.css">
   <link rel="stylesheet" href="./css/song-library.css"> <!-- New CSS -->
   <link rel="stylesheet" href="./css/presentation-mode.css">
@@ -135,6 +136,7 @@
       <button id="handBtn" style="display: none;" class="active" title="Toggle left/right hand coloring">Left/Right:
         Off</button>
       <button id="stickingBtn" title="Edit Sticking Mode: Click cells to toggle Hand (R/L)">🤚</button>
+      <button id="dualModeBtn" title="Toggle Dual Grid Mode">👥</button>
       <button id="flipHandsBtn" style="display:none;"
         title="Flip Remaining: Inverts hands from current selection onwards">🔁</button>
       <div class="control-group">
@@ -169,12 +171,15 @@
           </select>
         </div>
       </div>
-      <button id="playBtn">►</button>
-      <label>BPM
-        <input id="bpmInput" type="range" min="40" max="200" value="90" />
-      </label>
-      <span id="bpmVal">90</span>
-      <button id="clearBtn">Clear</button>
+      <button id="playBtn-A" class="instance-play-btn">►</button>
+      <div class="bpm-control">
+        <label>BPM
+          <input id="bpmInput-A" class="instance-bpm-input" type="range" min="40" max="200" value="90" />
+        </label>
+        <span id="bpmVal-A">90</span>
+      </div>
+      <button id="muteBtn-A" class="mute-btn" title="Mute Grid A">🔊</button>
+      <button id="clearBtn-A">Clear</button>
       <div class="control-sep"></div>
       <button id="undoBtn" title="Undo (Cmd+Z)" style="display:none;" disabled>↩️</button>
       <button id="redoBtn" title="Redo (Cmd+Shift+Z)" style="display:none;" disabled>↪️</button>
@@ -251,6 +256,22 @@
 
       <div class="left">
         <div id="measures" class="measures" aria-label="Rhythm grid"></div>
+
+        <!-- Secondary Grid (Only shows in Dual Mode) -->
+        <div id="controls-B" class="controls secondary-controls" style="display:none;">
+          <div class="instance-label">Grid B</div>
+          <button id="playBtn-B" class="instance-play-btn">►</button>
+          <div class="bpm-control">
+            <label>BPM
+              <input id="bpmInput-B" class="instance-bpm-input" type="range" min="40" max="200" value="90" />
+            </label>
+            <span id="bpmVal-B">90</span>
+          </div>
+          <button id="muteBtn-B" class="mute-btn" title="Mute Grid B">🔊</button>
+          <button id="clearBtn-B">Clear</button>
+        </div>
+        <div id="measures-B" class="measures secondary-measures" style="display:none;"
+          aria-label="Secondary rhythm grid"></div>
 
         <!-- Measure Actions -->
         <div class="measure-tools" id="measureTools">
@@ -924,13 +945,15 @@
 
     // ===== ELEMENTS =====
     const measuresEl = document.getElementById('measures');
-    const playBtn = document.getElementById('playBtn');
+    const playBtnA = document.getElementById('playBtn-A');
+    const bpmInputA = document.getElementById('bpmInput-A');
+    const bpmValA = document.getElementById('bpmVal-A');
+    const clearBtnA = document.getElementById('clearBtn-A');
+    const playBtnB = document.getElementById('playBtn-B');
+    const bpmInputB = document.getElementById('bpmInput-B');
+    const bpmValB = document.getElementById('bpmVal-B');
+    const clearBtnB = document.getElementById('clearBtn-B');
     const metroBtn = document.getElementById('metroBtn');
-    const hpBtn = document.getElementById('hpBtn');
-    const gridBtn = document.getElementById('gridBtn');
-    const bpmInput = document.getElementById('bpmInput');
-    const bpmVal = document.getElementById('bpmVal');
-    const clearBtn = document.getElementById('clearBtn');
     const themeBtn = document.getElementById('themeBtn');
     const handBtn = document.getElementById('handBtn');
     const presentBtn = document.getElementById('presentBtn');
@@ -1012,6 +1035,7 @@
 
   </script>
 
+  <script src="./js/grid-context.js"></script>
   <script src="./js/range-selection.js?v=4"></script>
   <script src="./js/measure-actions.js?v=4"></script>
   <script src="./js/notegrid.js?v=4"></script>

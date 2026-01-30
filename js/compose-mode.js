@@ -21,55 +21,55 @@ composeBtn?.addEventListener('click', () => {
   updateComposeUI();
 });
 
-function totalSteps() {
-  return measures * STEPS;
+function totalSteps(ctx = window.activeGrid) {
+  return ctx.innerLabels.length;
 }
 
-function clampIndex(i) {
-  const n = totalSteps();
+function clampIndex(i, ctx = window.activeGrid) {
+  const n = totalSteps(ctx);
   if (n <= 0) return 0;
   return (i % n + n) % n; // wrap
 }
 
-function advanceSelection(delta = 1) {
-  if (selectedIndex === null) return;
+function advanceSelection(delta = 1, ctx = window.activeGrid) {
+  if (ctx.caretIndex === null) return;
 
-  const next = clampIndex(selectedIndex + delta);
-  applySelection(next);
-  setCaret(next);
-  clearRange();
+  const next = clampIndex(ctx.caretIndex + delta, ctx);
+  if (typeof applySelection === 'function') applySelection(next, ctx);
+  setCaret(next, ctx);
+  if (typeof clearRange === 'function') clearRange(ctx);
 
   // Nice UX: keep selection visible when you have many measures
-  let cell = cells()[next - STEPS]; // Scroll to one measure before the next cell
-  cell = cell ? cell : cells()[next]; // If we're on the first measure, scroll to the next cell
+  const s = (typeof getStepCountPerMeasure === 'function') ? getStepCountPerMeasure(ctx) : 16;
+  const gridCells = cells(ctx);
+  let cell = gridCells[next - s]; // Scroll to one measure before the next cell
+  cell = cell ? cell : gridCells[next];
   cell?.scrollIntoView({ block: 'start', behavior: 'smooth' });
 }
 
-function writeToSelected(label, { advance = true } = {}) {
+function writeToSelected(label, { advance = true } = {}, ctx = window.activeGrid) {
   if (window.HistoryManager) window.HistoryManager.pushState();
-  if (selectedIndex === null) return;
+  if (ctx.caretIndex === null) return;
 
-  setInnerLabel(selectedIndex, label);
+  if (typeof setInnerLabel === 'function') setInnerLabel(ctx.caretIndex, label, ctx);
 
   // If clearing a note (especially if it was multi-mode), force render to restore classes
   if (!label && typeof renderAllMeasures === 'function') {
-    renderAllMeasures();
+    renderAllMeasures(ctx);
   }
 
   // Compose advance unless Alt is held
-  if (composeOn && advance) advanceSelection(1);
+  if (composeOn && advance) advanceSelection(1, ctx);
 }
 
 function labelFromHandpanDot(dotNote) {
-  // dotNote will be 'D', '1'...'8', (and later 'T','S')
-
   return dotNote;
 }
 
-function scrollToPatternGrid(composeOn) {
+function scrollToPatternGrid(composeOn, ctx = window.activeGrid) {
   if (composeOn) {
-    const i = selectedIndex ? selectedIndex : 0;
-    let cell = cells()[i];
+    const i = ctx.caretIndex ? ctx.caretIndex : 0;
+    let cell = cells(ctx)[i];
     cell?.scrollIntoView({ block: 'start', behavior: 'smooth' });
   }
 }

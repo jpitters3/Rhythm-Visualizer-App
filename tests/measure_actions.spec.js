@@ -15,28 +15,34 @@ test.describe('Measure Actions', () => {
         await page.click('#mobileMenuBtn');
       }
     }
-    await page.click('#clearBtn');
+    await page.click('#clearBtn-A');
   });
 
   /* 
    * 1. Measure Actions 
    */
   test('Measure Actions: Add and Delete', async ({ page }) => {
-    // Initial state: 1 measure (1 * STEPS cells)
-    const getCellCount = async () => await page.locator('.cell').count();
+    // Initial state
+    const getCellCount = async () => await page.locator('#measures .cell').count();
+
+    // Wait for initial render
+    await page.waitForSelector('#measures .cell');
     const initialCells = await getCellCount();
     expect(initialCells).toBeGreaterThan(0);
 
     // 1. ADD MEASURE
     await page.click('#addMeasureBtn');
 
-    // Verify count doubled (assuming 2 measures)
-    const addedCells = await getCellCount();
-    expect(addedCells).toBe(initialCells * 2);
+    // Wait for the new measure to appear
+    const stepsPerMeasure = await page.evaluate(() => getStepCountPerMeasure(window.gridA));
+    const expectedCount = initialCells + stepsPerMeasure;
+    await expect(page.locator('#measures .cell')).toHaveCount(expectedCount);
 
     // 2. DELETE MEASURE
-    // Click the last cell
-    await page.locator('.cell').last().click();
+    // Ensure the element is visible and click it
+    const lastCell = page.locator('#measures .cell').last();
+    await lastCell.scrollIntoViewIfNeeded();
+    await lastCell.click();
 
     // Stub confirm to return true automatically
     await page.evaluate(() => window.confirm = () => true);
@@ -44,8 +50,7 @@ test.describe('Measure Actions', () => {
     await page.click('#delMeasureBtn');
 
     // Verify count returned to initial
-    const finalCells = await getCellCount();
-    expect(finalCells).toBe(initialCells);
+    await expect(page.locator('#measures .cell')).toHaveCount(initialCells);
   });
 
 });

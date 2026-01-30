@@ -168,59 +168,63 @@ async function refreshPatternSelect(selectedName = '') {
 }
 
 
-function serializePattern() {
+function serializePattern(ctx = window.gridA) {
   return {
     version: VERSION,
-    mode,
-    bpm: Number(bpmInput.value),
+    mode: ctx.mode,
+    bpm: Number(ctx.bpm),
     timeSignature: (typeof getTimeSignature === 'function' ? getTimeSignature() : '4/4'),
     handSplit: document.body.classList.contains('handSplit'),
-    steps: STEPS,
-    measures: measures,
-    labels: innerLabels.slice(),
-    hands: window.innerHands ? window.innerHands.slice() : [],
+    steps: ctx.stepsPerMeasure,
+    measures: ctx.measures,
+    labels: ctx.innerLabels.slice(),
+    hands: ctx.innerHands ? ctx.innerHands.slice() : [],
   };
 }
 
-function applyPattern(state) {
+function applyPattern(state, ctx = window.gridA) {
   if (!state || !state.mode || !Array.isArray(state.labels)) {
     alert('That pattern JSON does not look valid.');
     return;
   }
 
-  const wasPlaying = playing;
-  if (wasPlaying) stop();
+  const wasPlaying = ctx.playing;
+  if (wasPlaying) stop(ctx);
 
-  setMode(state.mode === '16' ? '16' : '8');
+  setMode(state.mode === '16' ? '16' : '8', ctx);
 
   if (typeof setTimeSignature === 'function') {
     setTimeSignature(state.timeSignature || '4/4');
   }
 
-  measures = Number.isFinite(state.measures) ? Math.max(1, Math.floor(state.measures)) : 1;
-
   if (typeof state.handSplit === 'boolean') {
     document.body.classList.toggle('handSplit', state.handSplit);
     localStorage.setItem('handSplit', state.handSplit ? 'on' : 'off');
-    handBtn.classList.add('active');
-    handBtn.textContent = state.handSplit ? 'Left/Right: On' : 'Left/Right: Off';
+    if (typeof handBtn !== 'undefined' && handBtn) {
+      handBtn.classList.add('active');
+      handBtn.textContent = state.handSplit ? 'Left/Right: On' : 'Left/Right: Off';
+    }
   }
 
   if (typeof state.bpm === 'number' && !Number.isNaN(state.bpm)) {
-    bpmInput.value = String(Math.max(40, Math.min(200, Math.round(state.bpm))));
-    bpmVal.textContent = bpmInput.value;
+    ctx.bpm = Math.max(40, Math.min(200, Math.round(state.bpm)));
+    if (ctx.bpmInput) ctx.bpmInput.value = String(ctx.bpm);
+    const bVal = document.getElementById(`bpmVal-${ctx.id}`);
+    if (bVal) bVal.textContent = String(ctx.bpm);
   }
 
-  const totalSteps = measures * STEPS;
-  const all = cells();
-
   // Apply labels across all steps
-  innerLabels = state.labels;
-  window.innerHands = Array.isArray(state.hands) ? state.hands : Array(innerLabels.length).fill(null);
-  renderAllMeasures();
+  ctx.innerLabels = state.labels;
+  ctx.innerHands = Array.isArray(state.hands) ? state.hands : Array(ctx.innerLabels.length).fill(null);
 
-  clearSelection();
-  if (wasPlaying) start();
+  if (ctx.id === 'A') {
+    window.innerLabels = ctx.innerLabels;
+  }
+
+  renderAllMeasures(ctx);
+  clearSelection(ctx);
+
+  if (wasPlaying) start(ctx);
   window.lastSavedState = JSON.stringify(state);
 }
 

@@ -1,50 +1,48 @@
-function allCells() {
-  return Array.from(document.querySelectorAll('.cell'));
+function allCells(ctx = window.activeGrid) {
+  return Array.from(ctx.cells);
 }
 
-function clampIndex(i) {
-  const max = allCells().length - 1;
+function clampIndex(i, ctx = window.activeGrid) {
+  const max = allCells(ctx).length - 1;
   return Math.max(0, Math.min(max, i));
 }
 
-function hasRange() {
-  return rangeStart !== null && rangeEnd !== null;
+function hasRange(ctx = window.activeGrid) {
+  return ctx.rangeStart !== null && ctx.rangeEnd !== null;
 }
 
-function getRange() {
-  if (!hasRange()) return null;
-  const a = Math.min(rangeStart, rangeEnd);
-  const b = Math.max(rangeStart, rangeEnd);
+function getRange(ctx = window.activeGrid) {
+  if (!hasRange(ctx)) return null;
+  const a = Math.min(ctx.rangeStart, ctx.rangeEnd);
+  const b = Math.max(ctx.rangeStart, ctx.rangeEnd);
   return { start: a, end: b, length: (b - a + 1) };
 }
 
-function clearRange() {
-  rangeStart = null;
-  rangeEnd = null;
-  anchorIndex = null;
-  selecting = false;
-  updateRangeUI();
+function clearRange(ctx = window.activeGrid) {
+  ctx.rangeStart = null;
+  ctx.rangeEnd = null;
+  ctx.anchorIndex = null;
+  ctx.selecting = false;
+  updateRangeUI(ctx);
 }
 
-function setCaret(i) {
-  caretIndex = i;
-  // If you already use selectedIndex, keep them in sync:
-  if (typeof selectedIndex !== 'undefined') selectedIndex = i;
-  // Your existing caret ring:
-  if (typeof applySelection === 'function') applySelection(i);
+function setCaret(i, ctx = window.activeGrid) {
+  ctx.caretIndex = i;
+  if (ctx.id === 'A' && typeof selectedIndex !== 'undefined') window.selectedIndex = i;
+  if (typeof applySelection === 'function') applySelection(i, ctx);
 }
 
-function setRange(a, b) {
-  rangeStart = a;
-  rangeEnd = b;
-  updateRangeUI();
+function setRange(a, b, ctx = window.activeGrid) {
+  ctx.rangeStart = a;
+  ctx.rangeEnd = b;
+  updateRangeUI(ctx);
 }
 
-function updateRangeUI() {
-  const cells = allCells();
-  cells.forEach(c => c.classList.remove('range', 'range-start', 'range-end')); //
+function updateRangeUI(ctx = window.activeGrid) {
+  const cells = allCells(ctx);
+  cells.forEach(c => c.classList.remove('range', 'range-start', 'range-end'));
 
-  const r = getRange();
+  const r = getRange(ctx);
   if (r) {
     for (let i = r.start; i <= r.end; i++) {
       const cell = cells[i];
@@ -55,45 +53,44 @@ function updateRangeUI() {
     }
   }
 
-  // Update action bar
+  // Update action bar (global for now, but linked to activeGrid)
   const count = r ? r.length : 0;
-  if (selBar) {
+  if (selBar && ctx === window.activeGrid) {
     const showBar = (count > 1);
     selBar.style.display = showBar ? 'flex' : 'none';
     document.body.classList.toggle('has-selection', showBar);
+    if (selBarText) selBarText.textContent = `${count} selected`;
+    if (selPasteBtn) selPasteBtn.disabled = !beatClipboard;
   }
-  if (selBarText) selBarText.textContent = `${count} selected`;
-  if (selPasteBtn) selPasteBtn.disabled = !beatClipboard;
 }
 
 // ===== MOBILE LONG-PRESS RANGE SELECTION =====
 let longPressTimer = null;
-let longPressFired = false;
+window.longPressFired = false;
 
-function indexFromCellEl(cellEl) {
-  const cells = allCells();
-  return cells.indexOf(cellEl);
+function indexFromCellEl(cellEl, ctx = window.activeGrid) {
+  return parseInt(cellEl.dataset.index);
 }
 
 function startLongPress(cellEl) {
   clearTimeout(longPressTimer);
-  longPressFired = false;
+  window.longPressFired = false;
 
-  const idx = indexFromCellEl(cellEl);
-  if (idx < 0) return;
+  const ctx = window.gridA.container.contains(cellEl) ? window.gridA : window.gridB;
+  const idx = indexFromCellEl(cellEl, ctx);
+  if (isNaN(idx)) return;
 
   longPressTimer = setTimeout(() => {
-    longPressFired = true;
-    selecting = true;
+    window.longPressFired = true;
+    ctx.selecting = true;
 
-    // Add Haptic Feedback
     if ('vibrate' in navigator) {
-      navigator.vibrate(50); // Short 50ms pulse
+      navigator.vibrate(50);
     }
 
-    anchorIndex = idx;
-    setCaret(idx);
-    setRange(idx, idx);
+    ctx.anchorIndex = idx;
+    setCaret(idx, ctx);
+    setRange(idx, idx, ctx);
   }, 450);
 }
 
@@ -102,23 +99,18 @@ function cancelLongPress() {
   longPressTimer = null;
 }
 
-function updateDragSelectionOver(cellEl) {
-  if (!selecting || !anchorIndex && anchorIndex !== 0) return;
-  const idx = indexFromCellEl(cellEl);
-  if (idx < 0) return;
-  setCaret(idx);
-  setRange(anchorIndex, idx);
+function updateDragSelectionOver(cellEl, ctx = window.activeGrid) {
+  if (!ctx.selecting || (ctx.anchorIndex === null)) return;
+  const idx = indexFromCellEl(cellEl, ctx);
+  if (isNaN(idx)) return;
+  setCaret(idx, ctx);
+  setRange(ctx.anchorIndex, idx, ctx);
 }
 
 // Click outside to clear range
 window.addEventListener('click', (e) => {
-  // Check if we have an active selection
-  if (typeof hasRange === 'function' && !hasRange()) return;
-
-  // If click is inside a cell or the selection bar, ignore
+  if (typeof hasRange === 'function' && !hasRange(window.activeGrid)) return;
   if (e.target.closest('.cell')) return;
   if (e.target.closest('.sel-bar')) return;
-
-  // Otherwise, clear selection
-  if (typeof clearRange === 'function') clearRange();
+  if (typeof clearRange === 'function') clearRange(window.activeGrid);
 });

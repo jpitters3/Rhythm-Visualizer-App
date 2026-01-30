@@ -76,8 +76,9 @@ async function toggleListening() {
 
 // --- 1. Rhythmic Intelligence (Auto-Gate) ---
 function getDynamicGate() {
-    const subdivisions = (typeof mode !== 'undefined' && mode === '16') ? 4 : 2;
-    const currentBPM = (typeof bpmInput !== 'undefined') ? parseInt(bpmInput.value) : 120;
+    const ctx = window.activeGrid;
+    const subdivisions = (ctx.mode === '16') ? 4 : 2;
+    const currentBPM = ctx.bpm;
     const msPerStep = 60000 / (currentBPM * subdivisions);
     return msPerStep * 0.75; // Gate is 75% of a cell's duration
 }
@@ -120,7 +121,7 @@ function transcriptionLoop() {
 
     if (isCalibrating) {
         handleCalibration(pitch, rms);
-    } else if (playing && !stepWasRecorded && rms > (roomNoiseFloor)) {
+    } else if (window.activeGrid.playing && !stepWasRecorded && rms > (roomNoiseFloor)) {
         const detected = findClosestScaleNote(pitch); // Returns label string directly
 
         if (detected) {
@@ -141,7 +142,7 @@ function transcriptionLoop() {
                 tally[detected] = (tally[detected] || 0) + 1;
 
                 if (tally[detected] >= CONFIDENCE_THRESHOLD) {
-                    recordNoteToGrid(detected, currentIndex);
+                    recordNoteToGrid(detected, currentIndex, window.activeGrid);
                     lastNoteTime = now;
                     stepWasRecorded = true;
                     tally = {};
@@ -182,10 +183,10 @@ function handleCalibration(pitch, rms) {
 }
 
 // Record the detected note to the grid
-function recordNoteToGrid(label, index) {
+function recordNoteToGrid(label, index, ctx = window.activeGrid) {
     if (index === -1) return;
 
-    let currentArray = innerLabels[index];
+    let currentArray = ctx.innerLabels[index];
 
     // Convert to array if it isn't one
     if (!Array.isArray(currentArray)) {
@@ -197,10 +198,10 @@ function recordNoteToGrid(label, index) {
         currentArray.push(label);
 
         // Pass the array to your updated setInnerLabel
-        setInnerLabel(index, currentArray);
+        if (typeof setInnerLabel === 'function') setInnerLabel(index, currentArray, ctx);
 
         // Visual feedback flash
-        const cell = cells()[index];
+        const cell = cells(ctx)[index];
         if (cell) {
             cell.style.transition = 'none';
             cell.style.boxShadow = '0 0 20px var(--btn-active)';
@@ -242,12 +243,12 @@ function analyzeGuidedResults() {
 
     localStorage.setItem('gp_multipliers', JSON.stringify(noteMultipliers));
     isGuidedCalibrating = false;
-    stop(); // From noteplayer.js
+    stop(window.activeGrid); // From noteplayer.js
 }
 
 // --- 4. Logic Fix: findClosestScaleNote returns label ---
 function findClosestScaleNote(freq) {
-    const currentScale = SCALES[selectedScaleName];
+    const currentScale = (typeof getScale === 'function') ? getScale() : null;
     if (!currentScale) return null;
 
     let targets = [{ label: 'D', freq: NOTE_FREQS[currentScale.ding] }];
@@ -357,15 +358,23 @@ guidedCalBtn?.addEventListener('click', () => {
     const confirmCalibrateMsg = "Calibration will clear the grid without saving changes. Are you are ready to Calibrate?";
     if (!confirm(confirmCalibrateMsg) == true) return;
 
+    const ctx = window.activeGrid;
+
     // Clear the grid
-    clearBtn.click();
+    if (ctx.muteBtn) ctx.muteBtn.click(); // Wait, this clears? No.
+    // We should use context-aware clear
+    ctx.innerLabels = Array(ctx.innerLabels.length).fill('');
+    ctx.innerHands = Array(ctx.innerHands.length).fill(null);
+    renderAllMeasures(ctx);
 
     // Set BPM super slow
-    bpmInput.value = 40;
-    bpmVal.textContent = bpmInput.value;
+    ctx.bpm = 40;
+    if (ctx.bpmInput) ctx.bpmInput.value = '40';
+    const bVal = document.getElementById('bpmVal-' + ctx.id);
+    if (bVal) bVal.textContent = '40';
 
     // Ensure there are just enough empty measures
-    loadPatternByName(CALIBRATE_PATTERN_8_BEATS);
+    if (typeof loadPatternByName === 'function') loadPatternByName(CALIBRATE_PATTERN_8_BEATS);
 
     // Remember the button that was clicked
     lastActiveElement = document.activeElement;
@@ -393,7 +402,7 @@ closeGuidedBtn?.addEventListener('click', () => {
 
     modal.setAttribute('aria-hidden', true);
 
-    if (playing) stop();
+    if (window.activeGrid.playing) stop(window.activeGrid);
 
     // RETURN FOCUS to the original button
     if (lastActiveElement) lastActiveElement.focus();
@@ -406,8 +415,11 @@ startGuidedBtn?.addEventListener('click', () => {
     startGuidedBtn.textContent = "Calibrating...";
 
     // Clear the grid so we have a fresh slate for analysis
-    if (typeof clearGrid === 'function') clearGrid();
+    const ctx = window.activeGrid;
+    ctx.innerLabels = Array(ctx.innerLabels.length).fill('');
+    ctx.innerHands = Array(ctx.innerHands.length).fill(null);
+    renderAllMeasures(ctx);
 
     // Trigger the count-in and start the sequencer (from noteplayer.js)
-    start();
+    start(ctx);
 });

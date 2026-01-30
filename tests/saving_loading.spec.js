@@ -70,7 +70,7 @@ test.describe('Pattern Management', () => {
     page.once('dialog', dialog => {
       dialog.accept();
     });
-    await page.click('#clearBtn');
+    await page.click('#clearBtn-A');
     await expect(cell0.locator('.inner')).toBeEmpty();
 
     // 4. Load Pattern

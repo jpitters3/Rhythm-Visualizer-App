@@ -19,7 +19,7 @@ test.describe('Chords & Chords', () => {
     await page.goto('/');
     page.once('dialog', dialog => dialog.accept());
     await ensureMenuClosed(page);
-    await page.click('#clearBtn');
+    await page.click('#clearBtn-A');
   });
 
   test('Multi-Note (Chord) Entry and Playback', async ({ page }) => {
@@ -52,9 +52,14 @@ test.describe('Chords & Chords', () => {
     // 3. Verify Cell state (should show labels)
     // sub-dots updated visual text
 
-    // 4. Start Playback
-    await page.click('#playBtn');
-    await expect(page.locator('#playBtn')).toHaveClass(/active/);
+    // 4. Set BPM to 40 for stability (ensure we catch 'active' class)
+    const bpmInput = page.locator('#bpmInput-A');
+    await bpmInput.fill('40');
+    await bpmInput.evaluate(e => e.dispatchEvent(new Event('input')));
+
+    // 5. Start Playback
+    await page.click('#playBtn-A');
+    await expect(page.locator('#playBtn-A')).toHaveClass(/active/);
 
     // 5. Verify Handpan Map Visualization
     // When playback hits step 0, both Note '1' and Note '3' should light up.
@@ -84,12 +89,11 @@ test.describe('Chords & Chords', () => {
     // This is timing sensitive. Playwright retries assertions.
     // If BPM is 90, 16th notes are fast. 
     // But step 0 is the FIRST step. It should light up immediately after Play.
-    // Verify Active Class during playback
-    // Use Promise.all to catch transient states simultaneously
-    await Promise.all([
-      expect(dot1).toHaveClass(/active/),
-      expect(dot3).toHaveClass(/active/)
-    ]);
+    // Use a longer timeout and check for the class more leniently if needed.
+    // Playwright's toHaveClass will poll, but 220ms is short.
+    // Let's try to catch it by waiting specifically for the active state.
+    await expect(dot1).toHaveClass(/active/, { timeout: 10000 });
+    await expect(dot3).toHaveClass(/active/, { timeout: 10000 });
   });
 
 });

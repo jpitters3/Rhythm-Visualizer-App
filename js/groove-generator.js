@@ -5,7 +5,7 @@
 // HELPER FUNTIONS
 
 // GROOVE MODAL FUNCTIONS //
- function openGrooveModal() {
+function openGrooveModal() {
   grooveModal.classList.add('open');
   grooveModal.setAttribute('aria-hidden', 'false');
   updateGroovePickerLimits();
@@ -25,14 +25,14 @@ function randInt(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
-function clearAllBeatsAndLabels() {
-  innerLabels.fill('');
-  cells().forEach((c) => {
+function clearAllBeatsAndLabels(ctx = window.activeGrid) {
+  ctx.innerLabels.fill('');
+  cells(ctx).forEach((c) => {
     c.classList.remove('label-d', 'label-t', 'label-s', 'label-n', 'selected', 'play');
     const inner = c.querySelector('.inner');
     if (inner) inner.textContent = '';
   });
-  selectedIndex = null;
+  ctx.caretIndex = null;
 }
 
 function neighbors(i, steps) {
@@ -53,7 +53,8 @@ function pickPositions({ pool, count, used, strength }) {
   for (const i of candidates) {
     if (picks.length >= count) break;
 
-    const hasAdj = neighbors(i, STEPS).some(j => used.has(j) || picks.includes(j));
+    const s = getStepCountPerMeasure();
+    const hasAdj = neighbors(i, s).some(j => used.has(j) || picks.includes(j));
 
     if (strength === 'strict' && hasAdj) continue;
     if (strength === 'soft' && hasAdj && Math.random() < 0.7) continue;
@@ -102,19 +103,21 @@ function applyGroove({ D, T, S, placement = 'none', completelyRandom = false, en
     }
   }
 
-  clearAllBeatsAndLabels();
+  const ctx = window.activeGrid;
+  clearAllBeatsAndLabels(ctx);
 
-  const all = cells();
+  const all = cells(ctx);
   if (!all.length) return;
 
   // force beat 1
-  setInnerLabel(0, 'D');
+  setInnerLabel(0, 'D', ctx);
 
   let dLeft = Math.max(0, D - 1);
   let tLeft = Math.max(0, T);
   let sLeft = Math.max(0, S);
 
-  const pool = Array.from({ length: STEPS }, (_, i) => i).slice(1);
+  const s = getStepCountPerMeasure(ctx);
+  const pool = Array.from({ length: s }, (_, i) => i).slice(1);
   const used = new Set([0]);
 
   if (completelyRandom) {
@@ -130,10 +133,10 @@ function applyGroove({ D, T, S, placement = 'none', completelyRandom = false, en
 
     for (let i = 0; i < picks.length; i++) {
       const idx = picks[i];
-      setInnerLabel(idx, labelsArr[i] || '');
+      setInnerLabel(idx, labelsArr[i] || '', ctx);
     }
 
-    clearSelection();
+    clearSelection(ctx);
     return;
   }
 
@@ -144,16 +147,16 @@ function applyGroove({ D, T, S, placement = 'none', completelyRandom = false, en
   const sPos = pickPositions({ pool, count: sLeft, used, strength });
 
   for (const idx of dPos) {
-    setInnerLabel(idx, 'D');
+    setInnerLabel(idx, 'D', ctx);
   }
   for (const idx of tPos) {
-    setInnerLabel(idx, 'T');
+    setInnerLabel(idx, 'T', ctx);
   }
   for (const idx of sPos) {
-    setInnerLabel(idx, 'S');
+    setInnerLabel(idx, 'S', ctx);
   }
 
-  clearSelection();
+  clearSelection(ctx);
 }
 
 function closeGrooveModal() {
@@ -220,14 +223,14 @@ function pickUniqueIndices(n, fromN) {
   return idx.slice(0, n);
 }
 
-function clearAllBeatsAndLabels() {
-  innerLabels.fill('');
-  cells().forEach((c, i) => {
+function clearAllBeatsAndLabels(ctx = window.activeGrid) {
+  ctx.innerLabels.fill('');
+  cells(ctx).forEach((c, i) => {
     c.classList.remove('on', 'label-d', 'label-t', 'label-s', 'label-n', 'has-label', 'selected', 'play');
     const inner = c.querySelector('.inner');
     if (inner) inner.textContent = '';
   });
-  selectedIndex = null;
+  ctx.caretIndex = null;
 }
 
 // ===== GROOVE MODAL ===== //
@@ -279,25 +282,26 @@ function pickWithRules({ pool, n, slots, used, avoidAdjacency = true }) {
   return picks;
 }
 
-function generateGroove(dCount, tCount, sCount) {
-  const slots = Math.min(8, STEPS);
-  clearAllBeatsAndLabels();
+function generateGroove(dCount, tCount, sCount, ctx = window.activeGrid) {
+  const s = getStepCountPerMeasure(ctx);
+  const slots = Math.min(8, s);
+  clearAllBeatsAndLabels(ctx);
 
-  const allCells = cells();
+  const allCells = cells(ctx);
   const used = new Set();
 
   // Step pools (8-step groove rules)
   const downbeats = [];
   const upbeats = [];
   for (let i = 0; i < slots; i++) {
-    const isDown = (mode === '8') ? (i % 2 === 0) : ((i % 4) === 0);
+    const isDown = (ctx.mode === '8') ? (i % 2 === 0) : ((i % 4) === 0);
     (isDown ? downbeats : upbeats).push(i);
   }
 
   // 1) Force "1" to be a Ding (step 0)
   const root = 0;
   allCells[root]?.classList.add('on');
-  setInnerLabel(root, 'D');
+  setInnerLabel(root, 'D', ctx);
   used.add(root);
 
   // We already placed 1 Ding at step 0
@@ -333,20 +337,20 @@ function generateGroove(dCount, tCount, sCount) {
 
   // Apply Dings
   for (const i of dIdx) {
-    setInnerLabel(i, 'D');
+    setInnerLabel(i, 'D', ctx);
   }
 
   // Apply Taks
   for (const i of tIdx) {
-    setInnerLabel(i, 'T');
+    setInnerLabel(i, 'T', ctx);
   }
 
   // Apply Slaps
   for (const i of sIdx) {
-    setInnerLabel(i, 'S');
+    setInnerLabel(i, 'S', ctx);
   }
 
-  clearSelection();
+  clearSelection(ctx);
 }
 
 // ===== GROOVE MODAL EVENTS =====

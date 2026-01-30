@@ -20,7 +20,7 @@ test.describe('Grid Mechanics', () => {
     // Helper to clear grid
     page.once('dialog', dialog => dialog.accept());
     await ensureMenuClosed(page);
-    await page.click('#clearBtn');
+    await page.click('#clearBtn-A');
   });
 
   test('Range Selection', async ({ page }) => {

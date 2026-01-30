@@ -42,27 +42,92 @@ window.addEventListener('click', (e) => {
   }
 });
 
-playBtn.addEventListener('click', () => {
-  // Make click idempotent and resilient to rapid taps
-  if (playing) stop();
-  else start();
+function setupGridControls(ctx) {
+  const pBtn = ctx.playBtn;
+  const bInput = ctx.bpmInput;
+  const bVal = document.getElementById(`bpmVal-${ctx.id}`);
+  const mBtn = ctx.muteBtn;
+
+  if (pBtn) {
+    pBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      window.activeGrid = ctx;
+      if (ctx.playing) stop(ctx);
+      else start(ctx);
+    });
+  }
+
+  if (bInput) {
+    bInput.addEventListener('mousedown', () => {
+      window.activeGrid = ctx;
+      if (window.HistoryManager) window.HistoryManager.pushState();
+    });
+    bInput.addEventListener('input', () => {
+      ctx.bpm = parseInt(bInput.value);
+      if (bVal) bVal.textContent = bInput.value;
+      if (ctx.playing) {
+        stop(ctx);
+        start(ctx);
+      }
+    });
+  }
+
+  document.getElementById(`clearBtn-${ctx.id}`)?.addEventListener('click', () => {
+    window.activeGrid = ctx;
+    if (window.HistoryManager) window.HistoryManager.pushState();
+    const s = getStepCountPerMeasure(ctx);
+    ctx.innerLabels = Array(ctx.measures * s).fill('');
+    ctx.innerHands = Array(ctx.measures * s).fill(null);
+    if (ctx.id === 'A') window.innerLabels = ctx.innerLabels;
+    renderAllMeasures(ctx);
+    ctx.step = 0;
+  });
+
+  if (mBtn) {
+    mBtn.addEventListener('click', () => {
+      window.activeGrid = ctx;
+      ctx.isMuted = !ctx.isMuted;
+      mBtn.classList.toggle('muted', ctx.isMuted);
+      mBtn.textContent = ctx.isMuted ? '🔇' : '🔊';
+    });
+  }
+}
+
+setupGridControls(window.gridA);
+setupGridControls(window.gridB);
+
+// Dual Mode Toggle
+document.getElementById('dualModeBtn')?.addEventListener('click', () => {
+  const visible = document.getElementById('measures-B').style.display !== 'none';
+  const next = !visible;
+
+  document.getElementById('measures-B').style.display = next ? 'block' : 'none';
+  document.getElementById('controls-B').style.display = next ? 'flex' : 'none';
+  document.getElementById('dualModeBtn').classList.toggle('active', next);
+
+  if (next) {
+    // Initialize Grid B if it's empty
+    if (window.gridB.innerLabels.length === 0) {
+      const s = (typeof getStepCountPerMeasure === 'function') ? getStepCountPerMeasure() : 16;
+      window.gridB.innerLabels = Array(window.gridA.measures * s).fill('');
+      window.gridB.innerHands = Array(window.gridA.measures * s).fill(null);
+    }
+    renderAllMeasures(window.gridB);
+  }
 });
 
-// If the tab is hidden, stop playback to avoid runaway timers in the background
+// If the tab is hidden, stop both
 document.addEventListener('visibilitychange', () => {
-  if (document.hidden && playing) stop();
+  if (document.hidden) {
+    if (window.gridA.playing) stop(window.gridA);
+    if (window.gridB.playing) stop(window.gridB);
+  }
 });
 
-bpmInput.addEventListener('mousedown', () => {
-  if (window.HistoryManager) window.HistoryManager.pushState();
+gridBtn.addEventListener('click', () => {
+  const ctx = window.activeGrid;
+  setMode(ctx.mode === '8' ? '16' : '8', ctx);
 });
-
-bpmInput.addEventListener('input', () => {
-  bpmVal.textContent = bpmInput.value;
-  restartIfPlaying();
-});
-
-gridBtn.addEventListener('click', () => setMode(mode === '8' ? '16' : '8'));
 
 handBtn.addEventListener('click', () => {
   const on = !document.body.classList.contains('handSplit');
@@ -129,10 +194,11 @@ exitPresent.addEventListener('click', () => setPresentation(false));
 
 
 metroBtn.addEventListener('click', () => {
-  metronomeOn = !metronomeOn;
-  localStorage.setItem(METRO_KEY, metronomeOn ? 'on' : 'off');
-  updateMetroUI();
-  if (metronomeOn) ensureAudio();
+  const ctx = window.activeGrid;
+  ctx.metronomeOn = !ctx.metronomeOn;
+  localStorage.setItem(METRO_KEY + '-' + ctx.id, ctx.metronomeOn ? 'on' : 'off');
+  updateMetroUI(); // This might need updating too if it depends on global
+  if (ctx.metronomeOn) ensureAudio();
 });
 
 function updateNotationUI() {
@@ -147,7 +213,8 @@ document.getElementById('labelNotationBtn')?.addEventListener('click', () => {
   window.labelNotation = (window.labelNotation === 'musical') ? 'numeric' : 'musical';
   localStorage.setItem('labelNotation', window.labelNotation);
   updateNotationUI();
-  renderAllMeasures();
+  renderAllMeasures(window.gridA);
+  renderAllMeasures(window.gridB);
 
   // Persist to profile if signed in
   if (typeof updateUserGridLabelNotation === 'function') {
@@ -155,23 +222,8 @@ document.getElementById('labelNotationBtn')?.addEventListener('click', () => {
   }
 });
 
-clearBtn.addEventListener('click', () => {
-  if (window.HistoryManager) window.HistoryManager.pushState();
-  innerLabels = Array(measures * STEPS).fill('');
-  window.innerHands = Array(measures * STEPS).fill(null);
-
-  cells().forEach((c) => {
-    c.classList.remove('label-d', 'label-t', 'label-s', 'label-n', 'has-label', 'selected', 'play');
-    const inner = c.querySelector('.inner');
-    if (inner) inner.textContent = '';
-  });
-  selectedIndex = null;
-  step = 0;
-
-  if (typeof serializePattern === 'function') {
-    window.lastSavedState = JSON.stringify(serializePattern());
-  }
-});
+// Remove old clearBtn listener as it's now handled in setupGridControls
+// clearBtn.addEventListener('click', ...) 
 
 saveBtn.addEventListener('click', async () => {
   const defaultName = `Pattern ${new Date().toLocaleString()}`;

@@ -8,7 +8,7 @@ test.describe('Playback & Controls', () => {
   });
 
   test('Play Start/Stop', async ({ page }) => {
-    const playBtn = page.locator('#playBtn');
+    const playBtn = page.locator('#playBtn-A');
 
     // 1. Initial State: Stopped
     await expect(playBtn).not.toHaveClass(/active/);
@@ -39,8 +39,8 @@ test.describe('Playback & Controls', () => {
   });
 
   test('BPM Adjustment', async ({ page }) => {
-    const bpmInput = page.locator('#bpmInput');
-    const bpmVal = page.locator('#bpmVal');
+    const bpmInput = page.locator('#bpmInput-A');
+    const bpmVal = page.locator('#bpmVal-A');
 
     // 1. Change BPM via Input
     await bpmInput.fill('120');
@@ -74,17 +74,17 @@ test.describe('Playback & Controls', () => {
   test('Looping: Playback cycles correctly', async ({ page }) => {
     // Setup: 1 measure.
     // Set BPM slower to ensure Playwright catches the class change
-    await page.fill('#bpmInput', '60');
+    await page.fill('#bpmInput-A', '60');
     await page.evaluate(() => {
-      const bpm = document.getElementById('bpmInput');
+      const bpm = document.getElementById('bpmInput-A');
       if (bpm) { bpm.value = '60'; bpm.dispatchEvent(new Event('input')); }
     });
 
     // Start Playback
-    await page.click('#playBtn');
+    await page.click('#playBtn-A');
 
     // Verify playback started (button text change from ► to ⏹ or class active)
-    await expect(page.locator('#playBtn')).toHaveClass(/active/);
+    await expect(page.locator('#playBtn-A')).toHaveClass(/active/);
 
     // Spy on the step update hook
     await page.evaluate(() => {
@@ -130,7 +130,7 @@ test.describe('Playback & Controls', () => {
 
     // Trigger audio unlock/load
     // Clicking play usually unlocks audio context and loads samples
-    await page.click('#playBtn');
+    await page.click('#playBtn-A');
 
     // Wait a bit for loading
     await page.waitForTimeout(2000);

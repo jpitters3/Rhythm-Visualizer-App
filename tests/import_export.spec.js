@@ -23,7 +23,7 @@ test.describe('Import / Export Features', () => {
     test.skip(browserName === 'webkit', 'Clipboard API unstable in headless WebKit');
 
     // 1. Setup Pattern
-    await page.click('#clearBtn');
+    await page.click('#clearBtn-A');
     const cell0 = page.locator('.cell').nth(0);
     await cell0.click();
     await page.keyboard.press('1'); // Set first cell to "1"
@@ -102,7 +102,7 @@ test.describe('Import / Export Features', () => {
     }
 
     // 3. CLEAR GRID
-    await page.click('#clearBtn');
+    await page.click('#clearBtn-A');
     await expect(cell0.locator('.inner')).toBeEmpty();
 
     // 4. IMPORT

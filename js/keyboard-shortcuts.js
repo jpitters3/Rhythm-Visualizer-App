@@ -69,10 +69,11 @@ document.addEventListener('keydown', (e) => {
 
   // Metronome shortcut
   if (e.key.toLowerCase() === 'm') {
-    metronomeOn = !metronomeOn;
-    localStorage.setItem(METRO_KEY, metronomeOn ? 'on' : 'off');
-    updateMetroUI();
-    if (metronomeOn) ensureAudio();
+    const ctx = window.activeGrid;
+    ctx.metronomeOn = !ctx.metronomeOn;
+    localStorage.setItem(METRO_KEY + '-' + ctx.id, ctx.metronomeOn ? 'on' : 'off');
+    updateMetroUI(); // This might need ctx if UI is separate, but for now we'll assume it updates A
+    if (ctx.metronomeOn) ensureAudio();
     return;
   }
 
@@ -86,27 +87,28 @@ document.addEventListener('keydown', (e) => {
   // Cmd/Ctrl+C / V for selection
   const isMac = navigator.platform.toLowerCase().includes('mac');
   const mod = isMac ? e.metaKey : e.ctrlKey;
+  const ctx = window.activeGrid;
 
   if (mod && e.key.toLowerCase() === 'c') {
-    const r = getRange();
+    const r = getRange(ctx);
     if (r && r.length >= 1) {
       e.preventDefault();
-      copySelection();
+      copySelection(ctx);
     }
   }
 
   if (mod && e.key.toLowerCase() === 'v') {
     if (beatClipboard) {
       e.preventDefault();
-      pasteSelection();
+      pasteSelection(ctx);
     }
   }
 
   // Esc cancels range selection
   if (e.key === 'Escape') {
-    const r = getRange();
+    const r = getRange(ctx);
     if (r && r.length > 1) {
-      clearRange();
+      clearRange(ctx);
       return;
     }
   }
@@ -114,15 +116,15 @@ document.addEventListener('keydown', (e) => {
   // Enter: Play / Stop
   if (e.code === 'Space') {
     e.preventDefault();
-    if (playing) stop();
-    else start();
+    if (ctx.playing) stop(ctx);
+    else start(ctx);
     return;
   }
 
   // From this point onwards in this function,
   // assign the beat to a ding, tak, slap, or note
   // based on the key that was pressed
-  if (selectedIndex === null) return;
+  if (ctx.caretIndex === null) return;
 
   const noAdvance = e.altKey; // Alt = write without advancing
 
@@ -131,23 +133,23 @@ document.addEventListener('keydown', (e) => {
   const map = { d: 'D', t: 'T', s: 'S' };
 
   if (map[lower]) {
-    writeToSelected(map[lower], { advance: !noAdvance });
+    writeToSelected(map[lower], { advance: !noAdvance }, ctx);
     return;
   }
 
   if (/^[0-9?]$/.test(k)) {
-    writeToSelected(k, { advance: !noAdvance });
+    writeToSelected(k, { advance: !noAdvance }, ctx);
     return;
   }
 
   // Delete single cell or selection
   if (k === 'Backspace' || k === 'Delete' || k === 'g' || e.code === 'Space') {
     e.preventDefault();
-    const r = getRange();
+    const r = getRange(ctx);
     if (r && r.length > 1) {
-      deleteSelection();
+      deleteSelection(ctx);
     } else {
-      writeToSelected('', { advance: !noAdvance });
+      writeToSelected('', { advance: !noAdvance }, ctx);
     }
   }
 });
@@ -166,7 +168,7 @@ document.addEventListener('click', (ev) => {
   // Also don't clear if interacting with key UI elements
   if (ev.target.closest('#aiFab') || ev.target.closest('#aiChatContainer')) shouldClear = false;
 
-  if (shouldClear) clearSelection();
+  if (shouldClear) clearRange(window.activeGrid);
 });
 
 document.addEventListener('click', () => {

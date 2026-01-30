@@ -1,7 +1,8 @@
 // ===== INIT =====
 function updateMetroUI() {
   if (!metroBtn) return;
-  metroBtn.classList.toggle('active', metronomeOn);
+  const ctx = window.activeGrid || window.gridA;
+  metroBtn.classList.toggle('active', !!ctx.metronomeOn);
 }
 
 function restorePrefs() {
@@ -15,9 +16,13 @@ function restorePrefs() {
   handBtn.textContent = handOn ? 'Left/Right: On' : 'Left/Right: Off';
 
   metronomeOn = (localStorage.getItem(METRO_KEY) === 'on');
+  if (window.gridA) window.gridA.metronomeOn = metronomeOn;
+
   updateMetroUI();
 
-  bpmVal.textContent = bpmInput.value;
+  if (typeof bpmValA !== 'undefined' && typeof bpmInputA !== 'undefined') {
+    bpmValA.textContent = bpmInputA.value;
+  }
 }
 
 function runSelfTests() {

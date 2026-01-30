@@ -477,7 +477,7 @@ function highlightHandpan(note, stepIndex, forceHand = null) {
   clearTimeout(hpPulseTimers.get(key));
   hpPulseTimers.set(key, setTimeout(() => {
     el.classList.remove('active', 'hp-down', 'hp-up');
-  }, Math.min(220, intervalMs() * 0.9)));
+  }, Math.min(500, intervalMs() * 0.9)));
 }
 
 /* Calibration */

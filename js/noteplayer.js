@@ -161,9 +161,10 @@ function unlockAudio() {
 // ===== HANDPAN SAMPLE BUFFERS =====
 const samples = {};
 
-function intervalMs() {
-  const perBeat = (mode === '8') ? 2 : 4;
-  return (60 / Number(bpmInput.value)) * 1000 / perBeat;
+function intervalMs(ctx = window.activeGrid) {
+  const bpm = ctx.bpm;
+  const base = (ctx.mode === '16') ? 16 : 8;
+  return (60000 / bpm) / (base / 4);
 }
 
 function ensureAudio() {
@@ -233,7 +234,7 @@ function metroClick(kind, delay = 0) {
   osc.stop(t + 0.04);
 }
 
-function isDownbeatStep(stepIndex) {
+function isDownbeatStep(stepIndex, mode) {
   if (mode === '8') return stepIndex % 2 === 0;     // 1,2,3,4
   return stepIndex % 4 === 0;                       // 1,2,3,4 on 16ths
 }
@@ -264,38 +265,16 @@ function hideCountdown() {
   if (overlay) overlay.style.display = 'none';
 }
 
-function tick() {
-  const all = cells();
-  if (!all.length) return;
+function tick(ctx = window.activeGrid) {
+  if (!ctx.playing || ctx.isMuted) return;
 
-  // CALIBRATION COUNTDOWN LOGIC //
-
-  if (countdownRemaining > 0) {
-    // Show the CURRENT number (4, 3, 2, 1)
-    showCountdown(countdownRemaining);
-
-    // Play metronome click (Low pitch for count-in)
-    if (metronomeOn) metroClick(getMetroClickKind('beat'), AUDIO_DELAY);
-
-    // Decrement for the NEXT tick
-    countdownRemaining--;
-
-    // If we just finished 1, the next tick will be the actual start
-    return;
-  }
-
-  if (document.getElementById('countdownOverlay').style.display !== 'none') {
-    hideCountdown();
-  }
-
-  // PLAY & HIGHLIGHT SUB-DOTS or SINGLE-NOTE //
-
-  const currentData = innerLabels[step];
-
-  // Virtual Hand Collections
+  const all = ctx.cells;
+  const currentData = ctx.innerLabels[ctx.step];
+  const currentHandsData = ctx.innerHands[ctx.step];
   const stepNotes = [];
   const stepHands = [];
-  const currentHandsData = window.innerHands ? window.innerHands[step] : null;
+
+  const AUDIO_DELAY = 0.05;
 
   // Helper for Sticking Logic
   function resolveHand(stepIdx, handData, subIdx = 0, isChord = false) {
@@ -319,28 +298,50 @@ function tick() {
     }
 
     // 3. Default Time-Based Logic (for single notes)
-    return isDownbeatStep(stepIdx) ? 'R' : 'L';
+    return isDownbeatStep(stepIdx, ctx.mode) ? 'R' : 'L';
   }
+
+  // CALIBRATION COUNTDOWN LOGIC //
+
+  if (countdownRemaining > 0) {
+    // Show the CURRENT number (4, 3, 2, 1)
+    showCountdown(countdownRemaining);
+
+    // Play metronome click (Low pitch for count-in)
+    if (ctx.metronomeOn) metroClick(getMetroClickKind('beat', ctx), AUDIO_DELAY);
+
+    // Decrement for the NEXT tick
+    countdownRemaining--;
+
+    // If we just finished 1, the next tick will be the actual start
+    return;
+  }
+
+  if (document.getElementById('countdownOverlay').style.display !== 'none') {
+    hideCountdown();
+  }
+
+  // PLAY & HIGHLIGHT SUB-DOTS or SINGLE-NOTE //
 
   // Play and Highlight Multiple Notes
   if (Array.isArray(currentData)) {
     currentData.forEach((label, subIdx) => {
       if (label) {
         // Resolve hand first
-        const hand = resolveHand(step, currentHandsData, subIdx, true);
+        const hand = resolveHand(ctx.step, currentHandsData, subIdx, true);
 
-        playNoteByLabel(label, step, AUDIO_DELAY);
-        highlightHandpan(label, step, hand); // Pass resolved hand
+        playNoteByLabel(label, ctx.step, AUDIO_DELAY);
+        highlightHandpan(label, ctx.step, hand); // Pass resolved hand
         stepNotes.push(label);
         stepHands.push(hand);
       }
     });
   } else if (currentData) {
     // Resolve hand first
-    const hand = resolveHand(step, currentHandsData, 0, false);
+    const hand = resolveHand(ctx.step, currentHandsData, 0, false);
 
-    playNoteByLabel(currentData, step, AUDIO_DELAY);
-    highlightHandpan(currentData, step, hand); // Pass resolved hand
+    playNoteByLabel(currentData, ctx.step, AUDIO_DELAY);
+    highlightHandpan(currentData, ctx.step, hand); // Pass resolved hand
     stepNotes.push(currentData);
     stepHands.push(hand);
   }
@@ -352,14 +353,14 @@ function tick() {
   if (window.virtualHands && window.virtualHands.enabled) {
     // Limit lookahead to ~2 beats (8 sub-steps) to prevent moving too early
     const maxLookahead = 8;
-    const totalSteps = cells().length;
+    const totalSteps = all.length;
 
     for (let i = 1; i <= maxLookahead; i++) {
       if (nextL && nextR) break;
 
-      const futureStep = (step + i) % totalSteps;
-      const futureData = innerLabels[futureStep];
-      const futureHands = window.innerHands ? window.innerHands[futureStep] : null;
+      const futureStep = (ctx.step + i) % totalSteps;
+      const futureData = ctx.innerLabels[futureStep];
+      const futureHands = ctx.innerHands[futureStep];
 
       if (!futureData) continue;
 
@@ -384,33 +385,32 @@ function tick() {
   all.forEach(c => c.classList.remove('play'));
 
   // Add style to current steps
-  const cell = all[step];
+  const cell = all[ctx.step];
   if (cell !== undefined) cell.classList.add('play');
 
   // Metronome click
-  if (metronomeOn) {
-    metroClick(getMetroClickKind(), AUDIO_DELAY);
+  if (ctx.metronomeOn) {
+    metroClick(getMetroClickKind(ctx), AUDIO_DELAY);
   }
 
   // Since transcription happens after tick(), 
   // we need to use the index before we increment 'step'
-  transcriptionIndex = step;
-
-  // Update Presentation View if active
-  if (typeof updatePresentationView === 'function') {
-    updatePresentationView(step);
+  if (ctx.id === 'A') {
+    window.transcriptionIndex = ctx.step;
+    // Update Presentation View if active
+    if (typeof updatePresentationView === 'function') {
+      updatePresentationView(ctx.step);
+    }
   }
 
-  const totalSteps = measures * STEPS;
-  step = (step + 1) % totalSteps;
+  ctx.step = (ctx.step + 1) % all.length;
 }
 
-function getMetroClickKind() {
-  const beatStride = (mode === '8') ? 2 : 4;
-  const isQuarter = (step % beatStride === 0);
-  const isDownbeat = (step === 0);
-  kind = isDownbeat ? 'downbeat' : (isQuarter ? 'beat' : 'sub');
-  return kind;
+function getMetroClickKind(ctx = window.activeGrid) {
+  const beatStride = (ctx.mode === '8') ? 2 : 4;
+  const isQuarter = (ctx.step % beatStride === 0);
+  const isDownbeat = (ctx.step === 0);
+  return isDownbeat ? 'downbeat' : (isQuarter ? 'beat' : 'sub');
 }
 
 function playNoteByLabel(label, step, delay = 0) {
@@ -457,34 +457,45 @@ function setTimeSignature(ts) {
   if (tsNumInput && tsNumInput.value != n) tsNumInput.value = n;
   if (tsDenInput && tsDenInput.value != d) tsDenInput.value = d;
 
-  STEPS = calculateSteps(timeSignature, mode);
+  // Update global STEPS for backward compatibility (matches Grid A)
+  window.STEPS = calculateSteps(timeSignature, window.gridA.mode);
 
-  renderAllMeasures();
-  restartIfPlaying();
-}
+  // Update both grids
+  renderAllMeasures(window.gridA);
+  renderAllMeasures(window.gridB);
 
-// Initialize
-if (timeSignature) setTimeSignature(timeSignature);
-
-function setMode(nextMode) {
-  measures = 1;
-
-  if (nextMode === mode) return;
-  const wasPlaying = playing;
-  if (wasPlaying) stop();
-
-  mode = nextMode;
-  STEPS = calculateSteps(timeSignature, mode);
-  gridBtn.textContent = (mode === '8') ? '8ths' : '16ths';
-
-  renderAllMeasures();
-
-  if (wasPlaying) start();
+  restartIfPlaying(window.gridA);
+  restartIfPlaying(window.gridB);
 }
 
 // Expose for other modules
 window.setTimeSignature = setTimeSignature;
 window.getTimeSignature = () => timeSignature;
+
+// Initialize
+if (timeSignature) setTimeSignature(timeSignature);
+
+function setMode(nextMode, ctx = window.activeGrid) {
+  if (nextMode === ctx.mode) return;
+  const wasPlaying = ctx.playing;
+  if (wasPlaying) stop(ctx);
+
+  ctx.mode = nextMode;
+
+  // Sync global mode and STEPS if Grid A is updated (for backward compatibility)
+  if (ctx.id === 'A') {
+    window.mode = nextMode;
+    window.STEPS = calculateSteps(timeSignature, nextMode);
+    if (typeof gridBtn !== 'undefined' && gridBtn) {
+      gridBtn.textContent = (nextMode === '8') ? '8ths' : '16ths';
+    }
+  }
+
+  renderAllMeasures(ctx);
+
+  if (wasPlaying) start(ctx);
+}
+
 
 // ==== PLAY HANDPAN SOUNDS ====
 function playSample(key) {
@@ -602,14 +613,10 @@ function playNoteSample(n, delay = 0) {
 
 
 
-function start() {
-  // Unlock audio
+function start(ctx = window.activeGrid) {
   unlockAudio();
+  if (ctx.playing || ctx.timers.length) return;
 
-  // Guard: never allow multiple intervals to stack (can freeze the tab)
-  if (playing || timers.length) return;
-
-  // If Listen Mode is ON, initiate countdown
   if (typeof isListening !== 'undefined' && isListening) {
     countdownRemaining = COUNTDOWN_LENGTH;
   } else {
@@ -618,36 +625,38 @@ function start() {
 
   ensureAudio();
 
-  // Play from cursor if selected
-  if (typeof caretIndex !== 'undefined' && caretIndex !== null && caretIndex >= 0) {
-    step = caretIndex;
+  if (ctx.caretIndex !== null && ctx.caretIndex >= 0) {
+    ctx.step = ctx.caretIndex;
   }
 
-  const id = setInterval(tick, intervalMs());
-  timers.push(id);
+  tick(ctx);
+  const id = setInterval(() => tick(ctx), intervalMs(ctx));
+  ctx.timers.push(id);
 
-  playing = true;
-  playBtn.textContent = '⏹';
-  playBtn.classList.add('active');
+  ctx.playing = true;
+  if (ctx.playBtn) {
+    ctx.playBtn.textContent = '⏹';
+    ctx.playBtn.classList.add('active');
+  }
 }
 
-function stop() {
-  // Clear ALL timers (in case stacking ever happened)
-  for (const id of timers) clearInterval(id);
-  timers = [];
+function stop(ctx = window.activeGrid) {
+  for (const id of ctx.timers) clearInterval(id);
+  ctx.timers = [];
 
-  playing = false;
-  step = 0;
-  playBtn.textContent = '►';
-  playBtn.classList.remove('active');
-  cells().forEach(c => c.classList.remove('play'));
+  ctx.playing = false;
+  ctx.step = 0;
+  if (ctx.playBtn) {
+    ctx.playBtn.textContent = '►';
+    ctx.playBtn.classList.remove('active');
+  }
+  ctx.cells.forEach(c => c.classList.remove('play'));
   if (window.syncVirtualHandpanControls) window.syncVirtualHandpanControls();
 }
 
-function restartIfPlaying() {
-  if (playing) {
-    // Stop clears all timers; start guard prevents stacking
-    stop();
-    start();
+function restartIfPlaying(ctx = window.activeGrid) {
+  if (ctx.playing) {
+    stop(ctx);
+    start(ctx);
   }
 }
