@@ -614,7 +614,7 @@ function playNoteSample(n, delay = 0) {
 
 
 
-function start(ctx = window.activeGrid) {
+function start(ctx = window.activeGrid, isSync = true) {
   unlockAudio();
   if (ctx.playing || ctx.timers.length) return;
 
@@ -638,10 +638,18 @@ function start(ctx = window.activeGrid) {
   if (ctx.playBtn) {
     ctx.playBtn.textContent = '⏹';
     ctx.playBtn.classList.add('active');
+    ctx.playBtn.classList.add('playing');
+  }
+
+  // A -> B Sync
+  if (isSync && ctx === window.gridA && window.gridB) {
+    stop(window.gridB, false);
+    start(window.gridB, false);
+    if (window.TransportRegistry) window.TransportRegistry.updateAll(window.gridB);
   }
 }
 
-function stop(ctx = window.activeGrid) {
+function stop(ctx = window.activeGrid, isSync = true) {
   for (const id of ctx.timers) clearInterval(id);
   ctx.timers = [];
 
@@ -650,14 +658,21 @@ function stop(ctx = window.activeGrid) {
   if (ctx.playBtn) {
     ctx.playBtn.textContent = '►';
     ctx.playBtn.classList.remove('active');
+    ctx.playBtn.classList.remove('playing');
   }
   ctx.cells.forEach(c => c.classList.remove('play'));
   if (window.syncVirtualHandpanControls) window.syncVirtualHandpanControls();
+
+  // A -> B Sync
+  if (isSync && ctx === window.gridA && window.gridB) {
+    stop(window.gridB, false);
+    if (window.TransportRegistry) window.TransportRegistry.updateAll(window.gridB);
+  }
 }
 
 function restartIfPlaying(ctx = window.activeGrid) {
   if (ctx.playing) {
-    stop(ctx);
-    start(ctx);
+    stop(ctx, true); // keep sync when restarting A
+    start(ctx, true);
   }
 }
