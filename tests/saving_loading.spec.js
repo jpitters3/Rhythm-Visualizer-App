@@ -5,6 +5,7 @@ test.describe('Pattern Management', () => {
 
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
+    await page.waitForSelector('.measure-row');
   });
 
   // Helper for mobile menu
@@ -57,6 +58,7 @@ test.describe('Pattern Management', () => {
 
     await ensureMenuOpen(page); // OPEN MENU IF NEEDED
     await page.click('#fileDropdownBtn');
+    await page.waitForSelector('.dropdown-content.show');
     await page.click('#saveBtn');
 
     // Wait for save logic (it might verify via alert or UI update)
@@ -84,6 +86,7 @@ test.describe('Pattern Management', () => {
 
     await ensureMenuOpen(page); // OPEN MENU IF NEEDED
     await page.click('#fileDropdownBtn');
+    await page.waitForSelector('.dropdown-content.show');
     await page.click('#loadBtn');
 
     // 5. Verify Restoration
@@ -98,6 +101,7 @@ test.describe('Pattern Management', () => {
 
     await ensureMenuOpen(page); // OPEN MENU IF NEEDED
     await page.click('#fileDropdownBtn');
+    await page.waitForSelector('.dropdown-content.show');
     await page.click('#saveBtn');
 
     // 2. Click Delete
@@ -109,9 +113,9 @@ test.describe('Pattern Management', () => {
 
     await ensureMenuOpen(page); // OPEN MENU IF NEEDED
     await page.click('#fileDropdownBtn');
+    await page.waitForSelector('.dropdown-content.show');
     await page.click('#deleteBtn');
 
-    // 3. Verify Removal
     // 3. Verify Removal
     // The select should no longer have this option (retry until update happens)
     await expect(page.locator('#patternSelect')).not.toContainText(uniqueName);

@@ -5,6 +5,7 @@ test.describe('Measure Actions', () => {
 
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
+    await page.waitForSelector('.measure-row');
 
     // Clear any previous state
     page.once('dialog', dialog => dialog.accept());

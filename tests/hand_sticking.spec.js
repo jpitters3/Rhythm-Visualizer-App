@@ -5,6 +5,7 @@ test.describe('Hand Sticking Mechanics', () => {
 
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
+    await page.waitForSelector('.measure-row');
     await page.click('#clearBtn-A');
   });
 

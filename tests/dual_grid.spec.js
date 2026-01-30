@@ -5,6 +5,8 @@ test.describe('Dual Grid Functionality', () => {
 
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
+    // Wait for deferred initialization (safeInit) to finish rendering the grid
+    await page.waitForSelector('.measure-row');
   });
 
   test('Toggle Dual Mode visibility', async ({ page }) => {
@@ -61,13 +63,11 @@ test.describe('Dual Grid Functionality', () => {
 
     // Change A to 120
     await bpmInputA.fill('120');
-    await bpmInputA.evaluate(e => e.dispatchEvent(new Event('input')));
     await expect(bpmValA).toHaveText('120');
     await expect(bpmValB).toHaveText('90'); // B should remain at default
 
     // Change B to 150
     await bpmInputB.fill('150');
-    await bpmInputB.evaluate(e => e.dispatchEvent(new Event('input')));
     await expect(bpmValA).toHaveText('120');
     await expect(bpmValB).toHaveText('150');
   });

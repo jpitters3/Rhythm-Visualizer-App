@@ -5,6 +5,7 @@ test.describe('Undo/Redo Features', () => {
 
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
+    await page.waitForSelector('.measure-row');
   });
 
   test('Undo/Redo Note Entry', async ({ page }) => {

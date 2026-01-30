@@ -5,6 +5,7 @@ test.describe('Import / Export Features', () => {
 
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
+    await page.waitForSelector('.measure-row');
   });
 
   /*

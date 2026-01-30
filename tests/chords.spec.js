@@ -3,6 +3,13 @@ const { test, expect } = require('@playwright/test');
 
 test.describe('Chords & Chords', () => {
 
+  // test.skip(({ browserName }) => browserName === 'firefox', 'Firefox fails in beforeEach hook');
+
+  test.beforeEach(async ({ page }) => {
+    await page.goto('/');
+    await page.waitForSelector('.measure-row');
+  });
+
   // Helper for mobile menu
   async function ensureMenuClosed(page) {
     if (await page.locator('#mobileMenuBtn').isVisible()) {
@@ -23,7 +30,6 @@ test.describe('Chords & Chords', () => {
   });
 
   test('Multi-Note (Chord) Entry and Playback', async ({ page, browserName }) => {
-    test.skip(browserName === 'firefox', 'Fails in Firefox due to dblclick registration issues');
 
     // 1. Enter Multi-Edit Mode
     const cell0 = page.locator('.cell').nth(0);
@@ -57,7 +63,6 @@ test.describe('Chords & Chords', () => {
     // 4. Set BPM to 40 for stability (ensure we catch 'active' class)
     const bpmInput = page.locator('#bpmInput-A');
     await bpmInput.fill('40');
-    await bpmInput.evaluate(e => e.dispatchEvent(new Event('input')));
 
     // 5. Start Playback
     await page.click('#playBtn-A');

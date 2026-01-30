@@ -5,6 +5,7 @@ test.describe('Playback & Controls', () => {
 
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
+    await page.waitForSelector('.measure-row');
   });
 
   test('Play Start/Stop', async ({ page }) => {
@@ -44,9 +45,6 @@ test.describe('Playback & Controls', () => {
 
     // 1. Change BPM via Input
     await bpmInput.fill('120');
-    // Trigger change event if needed
-    await bpmInput.evaluate(e => e.dispatchEvent(new Event('input')));
-
     // 2. Verify Display
     await expect(bpmVal).toHaveText('120');
 
@@ -75,10 +73,6 @@ test.describe('Playback & Controls', () => {
     // Setup: 1 measure.
     // Set BPM slower to ensure Playwright catches the class change
     await page.fill('#bpmInput-A', '60');
-    await page.evaluate(() => {
-      const bpm = document.getElementById('bpmInput-A');
-      if (bpm) { bpm.value = '60'; bpm.dispatchEvent(new Event('input')); }
-    });
 
     // Start Playback
     await page.click('#playBtn-A');
