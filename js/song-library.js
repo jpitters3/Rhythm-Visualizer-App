@@ -83,7 +83,7 @@ function renderLibrary() {
     if (pattern.labels) {
       pattern.labels.forEach(cell => {
         if (!cell) return;
-        if (Array.isArray(cell)) {
+        if (window.checkCellIsMultiMode(cell)) {
           cell.forEach(n => notesInSong.add(n));
         } else {
           notesInSong.add(cell);

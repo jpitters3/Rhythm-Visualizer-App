@@ -201,7 +201,7 @@ function renderAllMeasures(ctx = window.activeGrid) {
       const g = (m * s) + i;
       const lbl = ctx.innerLabels[g] || '';
 
-      const isMultiCell = Array.isArray(lbl);
+      const isMultiCell = window.checkCellIsMultiMode(lbl);
 
       if (!isMultiCell) {
         // Set single-note cell labels
@@ -281,7 +281,7 @@ function snapshotBeat(i, ctx = window.activeGrid) {
   // Adjust if your state storage differs:
   let label = Array.isArray(ctx.innerLabels) ? (ctx.innerLabels[i] || '') : '';
   // Deep copy if it is a multi-cell array, so we don't store a reference
-  if (Array.isArray(label)) {
+  if (window.checkCellIsMultiMode(label)) {
     label = [...label];
   }
   return { label };
@@ -291,7 +291,7 @@ function applyBeat(i, beat, ctx = window.activeGrid) {
   // Adjust if your state storage differs:
   let val = beat.label || '';
   // Deep copy on paste/apply so multiple pastes don't share references
-  if (Array.isArray(val)) {
+  if (window.checkCellIsMultiMode(val)) {
     val = [...val];
   }
 
@@ -334,7 +334,7 @@ function pasteSelection(ctx = window.activeGrid) {
     let val = beatClipboard.steps[k].label;
 
     // DEEP COPY to prevent shared references
-    if (Array.isArray(val)) {
+    if (window.checkCellIsMultiMode(val)) {
       val = [...val];
     }
 
@@ -404,7 +404,7 @@ function setInnerLabel(i, value, ctx = window.activeGrid) {
 
   } else {
     // Set sub notes
-    if (!Array.isArray(ctx.innerLabels[i])) {
+    if (!window.checkCellIsMultiMode(ctx.innerLabels[i])) {
       ctx.innerLabels[i] = [ctx.innerLabels[i] || '', '', '', ''];
     }
 
@@ -469,7 +469,7 @@ function attachCellListeners(cell, ctx = window.activeGrid) {
     });
 
     const lbl = ctx.innerLabels[i] || [];
-    if (!Array.isArray(lbl) || lbl.filter(l => l !== '').length <= 1) {
+    if (!window.checkCellIsMultiMode(lbl) || lbl.filter(l => l !== '').length <= 1) {
       cell.classList.remove('multi-mode');
     }
 
@@ -545,9 +545,14 @@ function attachCellListeners(cell, ctx = window.activeGrid) {
 
     // Only move caret/selection if NOT a multi-note cell
     // (Prevents visual clutter/accidental overwrite on chords)
-    const isMulti = cell.classList.contains('multi-mode');
+    const lbl = ctx.innerLabels[i];
+    const isMulti = window.checkCellIsMultiMode(lbl);
     if (!isMulti) setCaret(i, ctx);
   });
+}
+
+window.checkCellIsMultiMode = function (label) {
+  return Array.isArray(label);
 }
 
 // ==== CHORD INJECTION LOGIC ====
@@ -555,9 +560,9 @@ function attachCellListeners(cell, ctx = window.activeGrid) {
 window.assignChordToSelectedCell = function (labels, ctx = window.activeGrid) {
   // Find selected cell
   const gridCells = cells(ctx);
-  let selectedIndex = ctx.caretIndex ?? -1;
+  let selIdx = ctx.caretIndex ?? -1;
 
-  if (selectedIndex === -1) return false;
+  if (selIdx === -1) return false;
 
   if (window.HistoryManager) window.HistoryManager.pushState();
 
@@ -638,7 +643,7 @@ window.assignChordToSelectedCell = function (labels, ctx = window.activeGrid) {
 
   // Apply to Grid
   // This enters "Multi-Mode" for the cell
-  ctx.innerLabels[selectedIndex] = slots;
+  ctx.innerLabels[selIdx] = slots;
 
   // Trigger DOM Update
   renderAllMeasures(ctx);

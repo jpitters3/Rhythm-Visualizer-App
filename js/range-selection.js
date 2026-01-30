@@ -28,7 +28,6 @@ function clearRange(ctx = window.activeGrid) {
 
 function setCaret(i, ctx = window.activeGrid) {
   ctx.caretIndex = i;
-  if (ctx.id === 'A' && typeof selectedIndex !== 'undefined') window.selectedIndex = i;
   if (typeof applySelection === 'function') applySelection(i, ctx);
 }
 

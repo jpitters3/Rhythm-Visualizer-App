@@ -29,12 +29,12 @@ Mark items as:
 - [x] **Load Pattern**: Retrieve from list (`saving_loading.spec.js`)
 - [x] **Delete Pattern**: Remove from persistent storage (`saving_loading.spec.js`)
 - [x] **Data Loss Prevention**: "Unsaved Changes" warnings (`undo_redo.spec.js`)
-- [x] **Export / Import**: JSON file handling (Verified cross-browser with clipboard prefs)
+- [x] **Export / Import**: JSON file handling (`import_export.spec.js`)
 - [ ] **Share Pattern**: Copy link / URL generation
 
 ## Visualization (Handpan Map)
 - [x] **Note Highlight**: Dots light up during playback (`chords.spec.js`)
-- [ ] **Hand Sticking**: "R" / "L" indicators visual feedback
+- [x] **Hand Sticking**: "R" / "L" indicators visual feedback (`hand_sticking.spec.js`)
 - [x] **Sample Loading**: Audio assets load correctly (Fixed `noteplayer.js` default scale)
 
 ## Cloud & Community
@@ -45,14 +45,16 @@ Mark items as:
 
 ## Education & Courses
 - [x] **Course Library**: View list of courses (`courses.spec.js`)
-- [x] **Lesson View**: Step-through lessons (Verified via Course Creator tests)
+- [x] **Lesson View**: Step-through lessons (`courses.spec.js`)
+- [x] **Course Creator/Editor**: Create and update courses (`courses.spec.js`)
 - [ ] **Progress**: "Mark Complete" persistence
 - [ ] **Daily Practice**: Playlist management
 
 ## Advanced Tools
+- [x] **Dual Grid Mode**: Independent BPM and visibility toggles (`dual_grid.spec.js`)
 - [ ] **Transcription**: Audio-to-Grid (Microphone)
 - [ ] **Calibration**: Guided latency/sensitivity setup
-- [ ] **Presentation Mode**: Full-screen view (`presentation-mode.js`)
+- [x] **Presentation Mode**: Full-screen view (`playback.spec.js`)
 - [ ] **AI Assistant**: Chat interface / Groove generation
 
 ## Layout & Responsive
@@ -61,4 +63,4 @@ Mark items as:
 
 ---
 
-**Last Updated**: 2026-01-24
+**Last Updated**: 2026-01-30

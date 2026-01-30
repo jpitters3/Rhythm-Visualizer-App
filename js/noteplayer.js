@@ -325,7 +325,7 @@ function tick(ctx = window.activeGrid) {
   // PLAY & HIGHLIGHT SUB-DOTS or SINGLE-NOTE //
 
   // Play and Highlight Multiple Notes
-  if (Array.isArray(currentData)) {
+  if (window.checkCellIsMultiMode(currentData)) {
     currentData.forEach((label, subIdx) => {
       if (label) {
         // Resolve hand first
@@ -366,7 +366,7 @@ function tick(ctx = window.activeGrid) {
       if (!futureData) continue;
 
       const labels = Array.isArray(futureData) ? futureData : [futureData];
-      const isChord = Array.isArray(futureData);
+      const isChord = window.checkCellIsMultiMode(futureData);
 
       labels.forEach((lbl, sIdx) => {
         if (!lbl) return;

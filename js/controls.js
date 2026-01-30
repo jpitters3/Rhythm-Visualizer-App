@@ -513,29 +513,27 @@ importBtn.addEventListener('click', async () => {
     }
 
     // Play State
-    if (realPlayBtn) {
-      const isPlaying = realPlayBtn.classList.contains('active');
+    if (vPlayBtn) {
+      const isPlaying = window.gridA.playing;
+      vPlayBtn.textContent = isPlaying ? '⏹' : '►';
+      vPlayBtn.classList.toggle('active', isPlaying);
+      vPlayBtn.classList.toggle('playing', isPlaying);
+    }
 
-      if (vPlayBtn) {
-        vPlayBtn.textContent = realPlayBtn.textContent;
-        vPlayBtn.classList.toggle('active', isPlaying);
-        vPlayBtn.classList.toggle('playing', isPlaying);
-      }
-
-      if (vLessonPlayBtn) {
-        if (isPlaying) {
-          vLessonPlayBtn.textContent = '⏹';
-          vLessonPlayBtn.classList.add('active');
-        } else {
-          vLessonPlayBtn.textContent = '►';
-          vLessonPlayBtn.classList.remove('active');
-        }
+    if (vLessonPlayBtn) {
+      const isPlaying = window.gridA.playing;
+      if (isPlaying) {
+        vLessonPlayBtn.textContent = '⏹';
+        vLessonPlayBtn.classList.add('active');
+      } else {
+        vLessonPlayBtn.textContent = '►';
+        vLessonPlayBtn.classList.remove('active');
       }
     }
 
     // Metronome
-    if (realMetroBtn && vMetroBtn) {
-      const isOn = realMetroBtn.classList.contains('active') || (typeof metronomeOn !== 'undefined' && metronomeOn);
+    if (vMetroBtn) {
+      const isOn = window.gridA.metronomeOn;
       vMetroBtn.classList.toggle('active', isOn);
       vMetroBtn.style.opacity = isOn ? '1' : '0.5';
     }

@@ -532,7 +532,8 @@ handpanOverlay?.addEventListener('click', (e) => {
     highlightHandpan(note, step);
 
     // If a beat is selected, write to it (Compose auto-advance applies)
-    if (selectedIndex !== null) {
+    const selIdx = window.activeGrid.caretIndex;
+    if (selIdx !== null) {
       // Alt click means "don’t advance"
       const noAdvance = e.altKey; // Alt = write without advancing
       writeToSelected(note, { advance: !noAdvance });
@@ -959,7 +960,7 @@ if (savedLabelPref) {
 }
 
 ghostBtn.addEventListener('click', (e) => {
-  const idx = (caretIndex !== null) ? caretIndex : (typeof selectedIndex !== 'undefined' ? selectedIndex : null);
+  const idx = window.activeGrid.caretIndex;
   if (idx === null) return;
 
   setBeatToGhost(idx);
