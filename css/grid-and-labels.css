@@ -241,7 +241,7 @@
   letter-spacing: 0.5px;
   opacity: 0.95;
   pointer-events: none;
-  color: var(--text);
+  color: white;
 }
 
 @media (max-width: 768px) {

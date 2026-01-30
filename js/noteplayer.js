@@ -235,8 +235,9 @@ function metroClick(kind, delay = 0) {
 }
 
 function isDownbeatStep(stepIndex, mode) {
-  if (mode === '8') return stepIndex % 2 === 0;     // 1,2,3,4
-  return stepIndex % 4 === 0;                       // 1,2,3,4 on 16ths
+  // Grid uses a simple index % 2 check for colors (R-L-R-L)
+  // regardless of 8th/16th note mode.
+  return stepIndex % 2 === 0;
 }
 
 // Helpers for the Countdown UI

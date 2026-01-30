@@ -3,22 +3,24 @@ let activeSubIndex = null; // Still global for UI selection state, or move to ac
 // Let's keep UI selection state in the context to support independent selections.
 
 window.toggleSticking = function (index, ctx = window.activeGrid) {
-  const current = ctx.innerHands[index];
-  let next = null;
+  // 1. Get current effective hand (could be manual or auto)
+  const currentEffective = window.getEffectiveHand(index, ctx);
 
-  if (!current) {
-    // If no manual hand, check what the auto hand is
-    const auto = window.getEffectiveHand(index, ctx);
-    // If auto is R, next manual should be L
-    // If auto is L, next manual should be R
-    next = (auto === 'R' ? 'L' : 'R');
-  } else if (current === 'R') {
-    next = 'L';
-  } else if (current === 'L') {
-    next = null; // Rotate back to auto
+  // 2. Temporarily clear manual so we see what 'Natural' is
+  const savedManual = ctx.innerHands[index];
+  ctx.innerHands[index] = null;
+  const natural = window.getEffectiveHand(index, ctx);
+
+  // 3. Determine the 'Alternative' (flip of current)
+  const alternative = (currentEffective === 'R' ? 'L' : 'R');
+
+  // 4. Decision: If the alternative is the natural state, we don't need a manual override
+  if (alternative === natural) {
+    ctx.innerHands[index] = null;
+  } else {
+    ctx.innerHands[index] = alternative;
   }
 
-  ctx.innerHands[index] = next;
   renderAllMeasures(ctx);
 };
 
