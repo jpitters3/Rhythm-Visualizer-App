@@ -1,5 +1,3 @@
-
-
 const cells = (ctx = window.activeGrid) => ctx.cells;
 let activeSubIndex = null; // Still global for UI selection state, or move to activeGrid? 
 // Let's keep UI selection state in the context to support independent selections.
@@ -7,9 +5,18 @@ let activeSubIndex = null; // Still global for UI selection state, or move to ac
 window.toggleSticking = function (index, ctx = window.activeGrid) {
   const current = ctx.innerHands[index];
   let next = null;
-  if (!current) next = 'R';
-  else if (current === 'R') next = 'L';
-  else next = null; // Back to auto
+
+  if (!current) {
+    // If no manual hand, check what the auto hand is
+    const auto = window.getEffectiveHand(index, ctx);
+    // If auto is R, next manual should be L
+    // If auto is L, next manual should be R
+    next = (auto === 'R' ? 'L' : 'R');
+  } else if (current === 'R') {
+    next = 'L';
+  } else if (current === 'L') {
+    next = null; // Rotate back to auto
+  }
 
   ctx.innerHands[index] = next;
   renderAllMeasures(ctx);
@@ -521,6 +528,23 @@ function attachCellListeners(cell, ctx = window.activeGrid) {
 
   cell.addEventListener('pointercancel', () => {
     if (typeof cancelLongPress === 'function') cancelLongPress();
+  });
+
+  // Right-click hand sticking
+  cell.addEventListener('contextmenu', (ev) => {
+    ev.preventDefault();
+    ev.stopPropagation();
+
+    const i = parseInt(cell.dataset.index);
+    if (isNaN(i)) return;
+
+    if (window.HistoryManager) window.HistoryManager.pushState();
+    window.toggleSticking(i, ctx);
+
+    // Only move caret/selection if NOT a multi-note cell
+    // (Prevents visual clutter/accidental overwrite on chords)
+    const isMulti = cell.classList.contains('multi-mode');
+    if (!isMulti) setCaret(i, ctx);
   });
 }
 

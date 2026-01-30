@@ -164,11 +164,15 @@ if (flipHandsBtn) {
     const r = (typeof getRange === 'function') ? getRange() : null;
 
     if (r && window.invertRange) {
+      if (window.HistoryManager) window.HistoryManager.pushState();
       window.invertRange(r.start, r.end);
     } else {
       // 2. Fallback to Flip Following from Caret
       const start = (typeof caretIndex !== 'undefined' && caretIndex !== null) ? caretIndex : 0;
-      if (window.invertFollowing) window.invertFollowing(start);
+      if (window.invertFollowing) {
+        if (window.HistoryManager) window.HistoryManager.pushState();
+        window.invertFollowing(start);
+      }
     }
 
     if (navigator.vibrate) navigator.vibrate([50, 50, 50]);

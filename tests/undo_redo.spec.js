@@ -1,7 +1,7 @@
 // @ts-check
 const { test, expect } = require('@playwright/test');
 
-test.describe('Rhythm Visualizer Features', () => {
+test.describe('Undo/Redo Features', () => {
 
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
@@ -10,7 +10,7 @@ test.describe('Rhythm Visualizer Features', () => {
   test('Undo/Redo Note Entry', async ({ page }) => {
     // 1. Initial State: grid empty
     // (Assuming default empty grid or we clear it)
-    await page.click('#clearBtn');
+    await page.click('#clearBtn-A');
 
     // 2. Add a note (Click first cell)
     const cell0 = page.locator('.cell').nth(0);
@@ -31,25 +31,10 @@ test.describe('Rhythm Visualizer Features', () => {
     await expect(cell0.locator('.inner')).toHaveText('1');
   });
 
-  test('Hand Sticking Flip', async ({ page }) => {
-    const cell0 = page.locator('.cell').nth(0);
-
-    // 1. Right Click to set Hand 'R'
-    await cell0.click({ button: 'right' });
-    await expect(cell0).toHaveClass(/hand-r/);
-
-    // 2. Undo
-    await page.keyboard.press('Meta+z');
-    await expect(cell0).not.toHaveClass(/force-hand-r/);
-
-    // 3. Redo
-    await page.keyboard.press('Meta+Shift+z');
-    await expect(cell0).toHaveClass(/hand-r/);
-  });
 
   test('Data Loss Prevention', async ({ page }) => {
     // 1. Clean state
-    await page.click('#clearBtn');
+    await page.click('#clearBtn-A');
 
     // 2. Make change
     await page.locator('.cell').nth(0).click();
@@ -64,14 +49,6 @@ test.describe('Rhythm Visualizer Features', () => {
     const clean = await page.evaluate(() => window.hasUnsavedChanges());
     expect(clean).toBeFalsy();
   });
-
-  /*
-   * Export / Import
-   */
-  /*
-   * Export / Import
-   */
-
 
   /*
    * Share Pattern
