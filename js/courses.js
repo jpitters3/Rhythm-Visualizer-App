@@ -59,8 +59,13 @@ async function fetchCourses() {
     });
 
     window.allCourses = myCourses;
-    window.allSections = myCourses.flatMap(c => c.sections.map(s => ({ ...s, courseTitle: c.title, courseId: c.id })));
-    window.allLessons = myCourses.flatMap(c => c.sections.flatMap(s => s.lessons));
+    window.allSections = myCourses.flatMap(c => {
+      const isOwner = c.owner_id === currentUser?.id;
+      return c.sections
+        .filter(s => s.is_published || isAdmin || isOwner)
+        .map(s => ({ ...s, courseTitle: c.title, courseId: c.id }));
+    });
+    window.allLessons = window.allSections.flatMap(s => s.lessons);
 
     renderCourseSidebar(myCourses);
 
@@ -400,8 +405,12 @@ function loadLesson(lessonId) {
       let prevLesson = null;
 
       if (course) {
-        // Flatten lessons for THIS course only
+        // Flatten lessons for THIS course only (respecting section draft rules)
+        const isAdmin = typeof isAdminUser === 'function' ? isAdminUser(currentUser) : false;
+        const isOwner = course.owner_id === currentUser?.id;
+
         const courseLessons = course.sections
+          .filter(s => s.is_published || isAdmin || isOwner)
           .sort((a, b) => a.order_index - b.order_index)
           .flatMap(s => s.lessons.sort((l1, l2) => l1.order_index - l2.order_index));
 
