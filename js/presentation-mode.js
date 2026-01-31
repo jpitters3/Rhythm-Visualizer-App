@@ -47,7 +47,9 @@ function updatePresentationView(currentStep, ctx = window.gridA) {
   if (!isPresenting) return;
 
   // Calculate current measure index
-  const stepsPerMeasure = (ctx && ctx.mode === '8') ? 8 : 16;
+  const stepsPerMeasure = (typeof getStepCountPerMeasure === 'function')
+    ? getStepCountPerMeasure(ctx)
+    : ((ctx && ctx.mode === '8') ? 8 : 16);
   const lookahead = Math.floor(stepsPerMeasure / 8);
   const totalMeasureCount = ctx ? ctx.measures : 1;
   const totalSteps = totalMeasureCount * stepsPerMeasure;
@@ -86,10 +88,10 @@ function updatePresentationView(currentStep, ctx = window.gridA) {
   // User didn't strictly request looping visual, but it's nice.
   // For now, simple linear view.
 
-  updateStaticHeader(stepsPerMeasure);
+  updateStaticHeader(stepsPerMeasure, ctx);
 }
 
-function updateStaticHeader(cols) {
+function updateStaticHeader(cols, ctx = window.gridA) {
   const container = document.getElementById('static-measure-labels');
   if (!container) return;
 
@@ -103,7 +105,7 @@ function updateStaticHeader(cols) {
   for (let i = 0; i < cols; i++) {
     const el = document.createElement('div');
     if (typeof labelForStep === 'function') {
-      el.textContent = labelForStep(i);
+      el.textContent = labelForStep(i, ctx);
     } else {
       // Fallback if notegrid.js not loaded? (Unlikely)
       el.textContent = (i % 2 === 0) ? (Math.floor(i / 4) + 1) : '';
