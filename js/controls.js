@@ -482,10 +482,7 @@ window.initModularTransports = setupAllTransports;
 
 // Sync function (Legacy compatibility or triggered broadcast)
 window.syncVirtualHandpanControls = function () {
-  // Everything is now handled by TransportRegistry.updateAll via listeners
-  // but we can force a full refresh if needed.
   TransportRegistry.updateAll(window.gridA);
-  TransportRegistry.updateAll(window.gridB);
 };
 
 // HOOK UPDATE LOOP AND INIT

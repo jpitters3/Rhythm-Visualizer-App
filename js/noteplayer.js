@@ -323,6 +323,8 @@ function tick(ctx = window.activeGrid) {
   }
 
   // PLAY & HIGHLIGHT SUB-DOTS or SINGLE-NOTE //
+  // Only highlight handpan for Grid A
+  const shouldHighlight = (ctx.id === 'A');
 
   // Play and Highlight Multiple Notes
   if (window.checkCellIsMultiMode(currentData)) {
@@ -332,7 +334,9 @@ function tick(ctx = window.activeGrid) {
         const hand = resolveHand(ctx.step, currentHandsData, subIdx, true);
 
         playNoteByLabel(label, ctx.step, AUDIO_DELAY);
-        highlightHandpan(label, ctx.step, hand); // Pass resolved hand
+        if (shouldHighlight) {
+          highlightHandpan(label, ctx.step, hand); // Pass resolved hand
+        }
         stepNotes.push(label);
         stepHands.push(hand);
       }
@@ -342,7 +346,9 @@ function tick(ctx = window.activeGrid) {
     const hand = resolveHand(ctx.step, currentHandsData, 0, false);
 
     playNoteByLabel(currentData, ctx.step, AUDIO_DELAY);
-    highlightHandpan(currentData, ctx.step, hand); // Pass resolved hand
+    if (shouldHighlight) {
+      highlightHandpan(currentData, ctx.step, hand); // Pass resolved hand
+    }
     stepNotes.push(currentData);
     stepHands.push(hand);
   }
@@ -351,7 +357,7 @@ function tick(ctx = window.activeGrid) {
   let nextL = null;
   let nextR = null;
 
-  if (window.virtualHands && window.virtualHands.enabled) {
+  if (window.virtualHands && window.virtualHands.enabled && ctx.id === 'A') {
     // Limit lookahead to ~2 beats (8 sub-steps) to prevent moving too early
     const maxLookahead = 8;
     const totalSteps = all.length;
@@ -377,8 +383,8 @@ function tick(ctx = window.activeGrid) {
     }
   }
 
-  // Update Visual Hands
-  if (window.virtualHands) {
+  // Update Visual Hands (Only for Grid A)
+  if (window.virtualHands && ctx.id === 'A') {
     virtualHands.update(stepNotes, stepHands, nextL, nextR);
   }
 
@@ -664,7 +670,9 @@ function stop(ctx = window.activeGrid, isSync = true) {
     ctx.playBtn.classList.remove('playing');
   }
   ctx.cells.forEach(c => c.classList.remove('play'));
-  if (window.syncVirtualHandpanControls) window.syncVirtualHandpanControls();
+  if (ctx.id === 'A' && window.syncVirtualHandpanControls) {
+    window.syncVirtualHandpanControls();
+  }
 
   // A -> B Sync
   if (isSync && ctx === window.gridA && window.gridB) {

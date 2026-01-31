@@ -40,6 +40,9 @@ async function setPresentation(on) {
 
 
 function updatePresentationView(currentStep, ctx = window.gridA) {
+  // Only sync presentation view with Grid A
+  if (ctx.id !== 'A') return;
+
   const isPresenting = document.body.classList.contains('present');
   if (!isPresenting) return;
 
