@@ -49,5 +49,5 @@
 /* Ensure grids are scrollable if they overlap */
 .measures {
   max-width: 100%;
-  overflow-x: auto;
+  overflow-x: visible;
 }
