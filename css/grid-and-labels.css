@@ -131,6 +131,13 @@
   font-size: 28px;
 }
 
+/* Smaller sub-dots for 12 beats (triplets) */
+.twelve-beats .sub-dot {
+  width: 22px;
+  height: 22px;
+  font-size: 14px;
+}
+
 /* Define the mobile-only layout (Max 4 beats per row) */
 @media (max-width: 768px) {
 

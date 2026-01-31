@@ -133,6 +133,8 @@ function renderAllMeasures(ctx = window.activeGrid) {
   for (let m = 0; m < measureCount; m++) {
     const row = document.createElement('div');
     row.className = 'measure-row';
+    if (s === 12) row.classList.add('twelve-beats');
+    if (s <= 6) row.classList.add('fewer-beats');
 
     const header = document.createElement('div');
     header.className = 'measure-header';
