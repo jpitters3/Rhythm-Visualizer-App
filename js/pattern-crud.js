@@ -223,9 +223,9 @@ function applyPattern(state, ctx = window.gridA) {
 
   if (typeof state.bpm === 'number' && !Number.isNaN(state.bpm)) {
     ctx.bpm = Math.max(40, Math.min(220, Math.round(state.bpm)));
-    if (ctx.bpmInput) ctx.bpmInput.value = String(ctx.bpm);
-    const bVal = document.getElementById(`bpmVal-${ctx.id}`);
-    if (bVal) bVal.textContent = String(ctx.bpm);
+    if (window.TransportRegistry) {
+      window.TransportRegistry.updateAll(ctx);
+    }
   }
 
   // Apply labels across all steps
