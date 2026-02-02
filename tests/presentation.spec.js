@@ -3,7 +3,7 @@ const { test, expect } = require('@playwright/test');
 test.describe('Presentation Mode', () => {
   test.beforeEach(async ({ page }) => {
     // Navigate
-    await page.goto('http://localhost:8000');
+    await page.goto('/');
     await page.evaluate(() => localStorage.clear());
     await page.reload();
 
@@ -109,12 +109,6 @@ test.describe('Presentation Mode', () => {
 
   test('should synchronize BPM between main UI and presentation mode',
     async ({ page, browserName }) => {
-
-      // Skip in firefox; 
-      // Re-enter present and check sync
-      // 130 |     await page.keyboard.press('p');
-      // 131 |     await expect(presentBpmInput).toBeVisible();
-      test.skip(browserName === 'firefox', 'BPM sync fails in Firefox');
 
       const mainBpmInput = page.locator('#mainTransport-A .t-bpm-input');
 

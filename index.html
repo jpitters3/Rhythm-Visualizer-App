@@ -663,6 +663,19 @@
       </div>
     </div>
   </div>
+
+  <!-- Custom Confirmation Modal -->
+  <div id="confirmModal" class="modal-overlay" aria-hidden="true" style="z-index: 2000;">
+    <div class="modal" style="width: min(400px, 90%); text-align: center;">
+      <h3 class="modal-title" id="confirmTitle">Confirm Action</h3>
+      <div class="modal-subtitle" id="confirmMessage" style="font-size: 15px; margin: 15px 0 25px;">Are you sure?</div>
+      <div class="modal-actions" style="justify-content: center; gap: 15px;">
+        <button id="confirmCancelBtn" class="secondary-btn">Cancel</button>
+        <button id="confirmOkBtn" class="primary-btn"
+          style="background: #e74c3c; border-color: #c0392b; color: white;">Delete</button>
+      </div>
+    </div>
+  </div>
   <div id="micVisualizer" class="mic-meter" style="display:none;">
     <div id="micLevel" class="mic-level-bar"></div>
   </div>
@@ -995,45 +1008,12 @@
     let measures = 1;
 
   </script>
-
-  <script src="./js/grid-context.js"></script>
-  <script src="./js/transport-ui.js"></script>
-  <script src="./js/range-selection.js?v=4"></script>
-  <script src="./js/measure-actions.js?v=4"></script>
-  <script src="./js/notegrid.js?v=4"></script>
-  <script src="./js/noteplayer.js"></script>
-  <script src="./js/handpanmap.js?v=4"></script>
-  <script src="./js/virtual-hands.js"></script>
-  <script src="./js/compose-mode.js?v=4"></script>
-  <script src="./js/transcription.js?v=4"></script>
-  <script src="./js/groove-generator.js?v=4"></script>
-  <script src="./js/presentation-mode.js?v=5"></script>
-  <script src="./js/pattern-crud.js?v=5"></script>
-  <script src="./js/controls.js?v=5"></script>
-  <script src="./js/share-patterns.js?v=4"></script>
-  <script src="./js/keyboard-shortcuts.js?v=4"></script>
-  <script src="./js/profile.js?v=4"></script>
-  <script src="./js/auth.js?v=4"></script>
-  <script src="./js/course-creator.js?v=4"></script>
-  <script src="./js/courses.js?v=5"></script>
-  <script src="./js/history.js?v=1"></script>
-  <script src="./js/chord-analyzer.js"></script>
-  <script src="./js/chord-ui.js"></script>
-  <script src="./js/init.js?v=4"></script><!-- keep near bottom -->
-  <script src="./js/ai-assistant.js?v=5"></script>
-  <script src="./js/feed.js?v=6"></script>
-  <script src="./js/community-posts.js?v=1"></script>
-  <script src="./js/course-marketplace.js?v=2"></script>
-  <script src="./js/calibration.js?v=1"></script>
-  <script src="./js/practice.js?v=1"></script>
-  <script src="./js/mobile-menu.js"></script>
-  <script src="./js/pattern-of-the-week.js?v=1"></script>
-
-
-  <!-- MIDI & Song Library -->
+  <!-- External Dependencies (Supabase, MIDI Parser) -->
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/midi-parser-js@4.0.4/src/main.min.js"></script>
-  <script src="./js/midi-importer.js"></script>
-  <script src="./js/song-library.js"></script>
+
+  <!-- Vite Entry Point -->
+  <script type="module" src="/main.js"></script>
 
   <!-- POTW MODAL -->
   <div id="potwModal" class="modal-overlay" aria-hidden="true" style="display: none;">

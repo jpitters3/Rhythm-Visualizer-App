@@ -2,7 +2,7 @@ const { test, expect } = require('@playwright/test');
 
 test.describe('Virtual Handpan Synchronization', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('http://localhost:8000');
+    await page.goto('/');
     await page.waitForSelector('.cell');
   });
 

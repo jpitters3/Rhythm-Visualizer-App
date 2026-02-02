@@ -30,12 +30,14 @@ document.addEventListener('keydown', (e) => {
     }
 
     // Groove Modal
-    if (grooveModal.classList.contains('open')) {
+    const grooveModal = document.getElementById('grooveModal');
+    if (grooveModal && grooveModal.classList.contains('open')) {
       closeGrooveModal();
       return;
     }
 
     // Course Creator Modal
+    const courseModal = document.getElementById('courseModal');
     if (courseModal?.classList.contains('open')) {
       // Logic from course-creator.js
       if (typeof closeCourseCreator === 'function') closeCourseCreator();
@@ -71,9 +73,9 @@ document.addEventListener('keydown', (e) => {
   if (e.key.toLowerCase() === 'm') {
     const ctx = window.activeGrid;
     ctx.metronomeOn = !ctx.metronomeOn;
-    localStorage.setItem(METRO_KEY + '-' + ctx.id, ctx.metronomeOn ? 'on' : 'off');
+    localStorage.setItem('groovepan_metro' + '-' + ctx.id, ctx.metronomeOn ? 'on' : 'off');
     updateMetroUI(); // This might need ctx if UI is separate, but for now we'll assume it updates A
-    if (ctx.metronomeOn) ensureAudio();
+    if (ctx.metronomeOn) window.ensureAudio();
     return;
   }
 
@@ -87,9 +89,10 @@ document.addEventListener('keydown', (e) => {
   }
 
   // Enter: Groove modal 'Go!'
-  if (grooveModal?.classList?.contains('open') && e.key === 'Enter') {
+  const grooveModalEl = document.getElementById('grooveModal');
+  if (grooveModalEl?.classList?.contains('open') && e.key === 'Enter') {
     e.preventDefault();
-    grooveGo?.click();
+    document.getElementById('grooveGo')?.click();
     return;
   }
 
@@ -107,7 +110,7 @@ document.addEventListener('keydown', (e) => {
   }
 
   if (mod && e.key.toLowerCase() === 'v') {
-    if (beatClipboard) {
+    if (window.beatClipboard) {
       e.preventDefault();
       pasteSelection(ctx);
     }
@@ -125,8 +128,8 @@ document.addEventListener('keydown', (e) => {
   // Enter: Play / Stop
   if (e.code === 'Space') {
     e.preventDefault();
-    if (ctx.playing) stop(ctx);
-    else start(ctx);
+    if (ctx.playing) window.stop(ctx);
+    else window.start(ctx);
     return;
   }
 
@@ -165,14 +168,15 @@ document.addEventListener('keydown', (e) => {
 
 document.addEventListener('click', (ev) => {
   // Unlock audio if anything is clicked
-  unlockAudio();
+  if (typeof window.unlockAudio === 'function') window.unlockAudio();
+  else if (typeof window.ensureAudio === 'function') window.ensureAudio();
 
   // Clear selection when clicking / tapping anywhere except 
   // on the beat cells, or on the handpan notes while Compose mode is ON
   let shouldClear = true;
 
   if (ev.target.closest('.cell')) shouldClear = false;
-  if (composeOn && ev.target.closest('.hp-dot')) shouldClear = false;
+  if (typeof window.getComposeOn === 'function' && window.getComposeOn() && ev.target.closest('.hp-dot')) shouldClear = false;
 
   // Also don't clear if interacting with key UI elements
   if (ev.target.closest('#aiFab') || ev.target.closest('#aiChatContainer')) shouldClear = false;
@@ -181,8 +185,9 @@ document.addEventListener('click', (ev) => {
 });
 
 document.addEventListener('click', () => {
-  if (audioCtx && audioCtx.state === 'suspended') {
-    audioCtx.resume();
+  const ac = (typeof window.getAudioCtx === 'function') ? window.getAudioCtx() : null;
+  if (ac && ac.state === 'suspended') {
+    ac.resume();
   }
 }, { once: true }
 );

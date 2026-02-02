@@ -171,9 +171,9 @@ function applyCustomHandpan(handpanData) {
     });
   }
 
-  selectedScaleName = `custom:${handpanData.id}`;
+  window.selectedScaleName = `custom:${handpanData.id}`;
 
-  preloadScaleSamples();
+  if (window.preloadScaleSamples) window.preloadScaleSamples();
 
   // Update UI Selectors
   // Set Scale Select to this custom one
@@ -445,6 +445,9 @@ function buildHandpanOverlay() {
     overlayNumberPitchNotes(); else removeNoteLabels();
 }
 
+window.buildHandpanOverlay = buildHandpanOverlay;
+window.highlightHandpan = highlightHandpan;
+
 buildHandpanOverlay();
 
 let hpPulseTimers = new Map();
@@ -528,8 +531,8 @@ handpanOverlay?.addEventListener('click', (e) => {
     // If a beat is selected, write to it.
 
     // Play note sound on click / tap
-    playNoteByLabel(note, step);
-    highlightHandpan(note, step);
+    window.playNoteByLabel(note, null);
+    highlightHandpan(note, null);
 
     // If a beat is selected, write to it (Compose auto-advance applies)
     const selIdx = window.activeGrid.caretIndex;
@@ -695,8 +698,8 @@ document.addEventListener('keydown', (e) => {
 });
 
 async function saveHandpanPositions() {
-  if (!selectedScaleName.startsWith('custom:')) return;
-  const hpId = selectedScaleName.split(':')[1];
+  if (!window.selectedScaleName.startsWith('custom:')) return;
+  const hpId = window.selectedScaleName.split(':')[1];
 
   const customHp = customHandpansCache.find(hp => hp.id === hpId);
   if (!customHp) return;
@@ -758,16 +761,16 @@ function stringifyHandpanMap(map) {
 let lastStandardModel = 'Bronze';
 
 scaleSelect.addEventListener('change', async () => {
-  selectedScaleName = scaleSelect.value;
+  window.selectedScaleName = scaleSelect.value;
 
   // Persist Scale Selection
-  if (window.saveScaleLocal) window.saveScaleLocal(selectedScaleName);
+  if (window.saveScaleLocal) window.saveScaleLocal(window.selectedScaleName);
   if (typeof window.isAuthed === 'function' && (await window.isAuthed()) && window.saveScaleRemote) {
-    window.saveScaleRemote(selectedScaleName);
+    window.saveScaleRemote(window.selectedScaleName);
   }
 
-  if (selectedScaleName.startsWith('custom:')) {
-    const id = selectedScaleName.split(':')[1];
+  if (window.selectedScaleName.startsWith('custom:')) {
+    const id = window.selectedScaleName.split(':')[1];
     const customHp = customHandpansCache.find(hp => hp.id === id);
     if (customHp) {
       applyCustomHandpan(customHp);
@@ -780,8 +783,8 @@ scaleSelect.addEventListener('change', async () => {
     return;
   }
 
-  scaleStatus.textContent = `Scale: ${selectedScaleName}`;
-  saveScaleLocal(selectedScaleName);
+  scaleStatus.textContent = `Scale: ${window.selectedScaleName}`;
+  saveScaleLocal(window.selectedScaleName);
 
   // Restore visual map if we were previously on a custom scale
   let currentModel = handpanSelect.value;
@@ -895,8 +898,8 @@ function overlayNumberPitchNotes() {
       text = note; // Default to key (e.g. "1", "2" or "A3")
     } else if (overlayPitches) {
       // Unified: Look up pitch for the label
-      if (typeof noteForLabel === 'function') {
-        const pitch = noteForLabel(note);
+      if (typeof window.noteForLabel === 'function') {
+        const pitch = window.noteForLabel(note);
         // Clean up pitch string? e.g. "Cs4" -> "C#4"?
         // Also handle if pitch is file path? (Unified map stores "A3", "C#4")
         text = pitch ? pitch.replace('s', '#') : '';
@@ -909,7 +912,7 @@ function overlayNumberPitchNotes() {
 
     // Never show label for Ding
     // Check key ('D'), full label ('Ding'), or if it matches current scale ding pitch
-    const scale = typeof getScale === 'function' ? getScale() : null;
+    const scale = typeof window.getScale === 'function' ? window.getScale() : null;
     const dingPitch = scale ? scale.ding : 'D3'; // Default to D3
 
     // Check note key (e.g. 'D') or resolved pitch text (e.g. 'D3_ding')
@@ -966,7 +969,7 @@ ghostBtn.addEventListener('click', (e) => {
   setBeatToGhost(idx);
 
   // If your "compose/tracking" is enabled, advance:
-  if (composeOn) { // rename to your actual flag
+  if (window.getComposeOn && window.getComposeOn()) { // rename to your actual flag
     const next = clampIndex(idx + 1);
     setCaret(next);
   }

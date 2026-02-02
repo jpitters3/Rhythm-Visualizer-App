@@ -1,7 +1,7 @@
 // ==== EVENTS FOR BUTTONS / CONTROLS ====
 
 patternSelect.addEventListener('change', updatePatternButtons);
-vLessonPlayBtn = document.getElementById('vLessonPlayBtn');
+// vLessonPlayBtn = document.getElementById('vLessonPlayBtn');
 
 const getReal = (id) => document.getElementById(id);
 
@@ -213,7 +213,7 @@ exitPresent.addEventListener('click', () => setPresentation(false));
 metroBtn.addEventListener('click', () => {
   const ctx = window.activeGrid;
   ctx.metronomeOn = !ctx.metronomeOn;
-  localStorage.setItem(METRO_KEY + '-' + ctx.id, ctx.metronomeOn ? 'on' : 'off');
+  localStorage.setItem('groovepan_metro' + '-' + ctx.id, ctx.metronomeOn ? 'on' : 'off');
   updateMetroUI(); // This might need updating too if it depends on global
   if (ctx.metronomeOn) ensureAudio();
 });
@@ -329,6 +329,9 @@ async function loadPatternByName(pattern) {
   }
 }
 
+window.saveCurrentPatternAs = saveCurrentPatternAs;
+window.loadPatternByName = loadPatternByName;
+
 loadBtn.addEventListener('click', async () => {
   const selected = getSelectedPatternName();
   loadPatternByName(selected);
@@ -375,33 +378,91 @@ renameBtn.addEventListener('click', async () => {
 });
 
 
-deleteBtn.addEventListener('click', async () => {
-  if (!ensureHasSelection()) return;
+// Custom Confirmation Modal Logic
+const confirmModal = document.getElementById('confirmModal');
+const confirmTitle = document.getElementById('confirmTitle');
+const confirmMessage = document.getElementById('confirmMessage');
+const confirmOkBtn = document.getElementById('confirmOkBtn');
+const confirmCancelBtn = document.getElementById('confirmCancelBtn');
+let confirmCallback = null;
 
-  const name = getSelectedPatternName();
-  const ok = confirm(`Delete "${name}"? This cannot be undone.`);
-  if (!ok) return;
-
-  try {
-    if (await isAuthed()) {
-      await dbDeletePattern(name);
-      if (localStorage.getItem(LAST_USED_KEY) === name) localStorage.removeItem(LAST_USED_KEY);
-      await refreshPatternSelect();
-      return;
-    }
-
-    // local
-    const saved = getSavedPatterns();
-    if (!saved[name]) return;
-
-    delete saved[name];
-    setSavedPatterns(saved);
-    if (localStorage.getItem(LAST_USED_KEY) === name) localStorage.removeItem(LAST_USED_KEY);
-    await refreshPatternSelect();
-  } catch (err) {
-    console.error(err);
-    alert(`Delete failed: ${err?.message || err}`);
+function showConfirm(title, message, onConfirm) {
+  if (!confirmModal) {
+    // Fallback if modal missing (shouldn't happen)
+    if (confirm(message)) onConfirm();
+    return;
   }
+  confirmTitle.textContent = title;
+  confirmMessage.textContent = message;
+  confirmCallback = onConfirm;
+
+  confirmModal.classList.add('open');
+  confirmModal.setAttribute('aria-hidden', 'false');
+  confirmOkBtn.focus();
+}
+
+function closeConfirmModal() {
+  if (confirmModal) {
+    confirmModal.classList.remove('open');
+    confirmModal.setAttribute('aria-hidden', 'true');
+  }
+  confirmCallback = null;
+}
+
+confirmCancelBtn?.addEventListener('click', closeConfirmModal);
+confirmOkBtn?.addEventListener('click', () => {
+  if (confirmCallback) confirmCallback();
+  closeConfirmModal();
+});
+// Close on outside click
+confirmModal?.addEventListener('click', (e) => {
+  if (e.target === confirmModal) closeConfirmModal();
+});
+
+
+deleteBtn.addEventListener('click', (e) => {
+  if (e) {
+    e.preventDefault();
+    e.stopPropagation();
+  }
+
+  // Close the dropdown immediately
+  const menu = document.getElementById('fileDropdownMenu');
+  if (menu) menu.classList.remove('show');
+
+  // Small delay to let dropdown close visually before modal pops (cleaner UX)
+  setTimeout(() => {
+    if (!ensureHasSelection()) return;
+
+    const name = getSelectedPatternName();
+
+    showConfirm(
+      'Delete Pattern',
+      `Are you sure you want to delete "${name}"? This cannot be undone.`,
+      async () => {
+        try {
+          if (await isAuthed()) {
+            await dbDeletePattern(name);
+            if (localStorage.getItem(LAST_USED_KEY) === name) localStorage.removeItem(LAST_USED_KEY);
+            await refreshPatternSelect();
+            return;
+          }
+
+          // local
+          const saved = getSavedPatterns();
+          if (!saved[name]) return;
+
+          delete saved[name];
+          setSavedPatterns(saved);
+          if (localStorage.getItem(LAST_USED_KEY) === name) localStorage.removeItem(LAST_USED_KEY);
+          await refreshPatternSelect();
+        } catch (err) {
+          console.error(err);
+          alert(`Delete failed: ${err?.message || err}`);
+        }
+      }
+    );
+  }, 50);
 });
 
 

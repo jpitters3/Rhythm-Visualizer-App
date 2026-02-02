@@ -287,7 +287,7 @@ function renderCourseStructure() {
       
       <div class="lessons-container ${isExpanded ? 'active' : ''}" id="section-${sIdx}-lessons" style="${!section.is_published ? 'opacity: 0.8;' : ''}"></div>
       
-      ${isExpanded ? `<button class="add-lesson-btn" onclick="addLessonToSection(${sIdx})">+ Add Lesson</button>` : ''}
+      ${isExpanded ? `<button class="add-lesson-btn" onclick="window.addLessonToSection(${sIdx})">+ Add Lesson</button>` : ''}
     `;
 
     const lessonsContainer = sectionEl.querySelector('.lessons-container');
@@ -484,6 +484,8 @@ function closeCourseCreator() {
   courseModal.classList.remove('open');
   courseModal.setAttribute('aria-hidden', 'true');
 }
+
+window.closeCourseCreator = closeCourseCreator;
 
 // Listeners
 openCourseBtn?.addEventListener('click', openCourseCreator);
@@ -719,3 +721,50 @@ async function handleCourseSave(shouldClose = true) {
 
 saveCourseBtn?.addEventListener('click', () => handleCourseSave(true));
 saveAndContinueBtn?.addEventListener('click', () => handleCourseSave(false));
+
+
+window.toggleSection = toggleSection;
+window.toggleLesson = toggleLesson;
+window.removeSection = removeSection;
+window.handleRemoveClick = handleRemoveClick;
+window.courseDragStart = courseDragStart;
+window.courseDragOver = courseDragOver;
+window.courseDragEnd = courseDragEnd;
+window.courseDrop = courseDrop;
+window.addSection = addSection;
+window.addLessonToSection = addLessonToSection;
+window.handleCourseSave = handleCourseSave;
+window.renderCourseStructure = renderCourseStructure;
+window.openCourseCreator = openCourseCreator;
+window.closeCourseCreator = closeCourseCreator;
+window.handlePatternSelect = handlePatternSelect;
+window.triggerLessonVideoUpload = triggerLessonVideoUpload;
+window.capturePatternForLesson = capturePatternForLesson;
+
+// Expose currentCourseData via getter/setter because it's a reassignable 'let'
+Object.defineProperty(window, 'currentCourseData', {
+  get: () => currentCourseData,
+  set: (val) => { currentCourseData = val; }
+});
+window.openCourseCreator = openCourseCreator;
+window.closeCourseCreator = closeCourseCreator;
+// window.loadCourseForEditing = loadCourseForEditing;
+// window.fetchCourses = fetchCourses;
+// window.toggleSectionPublish = toggleSectionPublish;
+// window.toggleLessonPublish = toggleLessonPublish;
+// window.updateLessonPattern = updateLessonPattern;
+// window.updateLessonTitle = updateLessonTitle;
+// window.updateLessonDescription = updateLessonDescription;
+// window.updateLessonVideoUrl = updateLessonVideoUrl;
+// window.updateLessonPatternName = updateLessonPatternName;
+// window.updateLessonPatternJson = updateLessonPatternJson;
+// window.updateSectionTitle = updateSectionTitle;
+// window.updateSectionDescription = updateSectionDescription;
+// window.updateSectionVideoUrl = updateSectionVideoUrl;
+// window.updateSectionPatternName = updateSectionPatternName;
+// window.updateSectionPatternJson = updateSectionPatternJson;
+// window.updateCourseTitle = updateCourseTitle;
+// window.updateCourseDescription = updateCourseDescription;
+// window.updateCoursePublish = updateCoursePublish;
+// window.updateCourseId = updateCourseId;
+// window.updateCourseOrderIndex = updateCourseOrderIndex;

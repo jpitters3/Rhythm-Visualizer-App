@@ -64,6 +64,22 @@ function closeAuthModal() {
   authModal.setAttribute('aria-hidden', 'true');
 }
 
+window.closeAuthModal = closeAuthModal;
+window.openAuthModal = openAuthModal;
+window.isAdminUser = isAdminUser;
+window.updateAdminUI = updateAdminUI;
+
+// Expose currentUser getter or variable
+// Since it's a let, we can't export the variable reference directly to window effectively if it changes, 
+// unless we update window.currentUser every time it changes.
+// Better to expose a getter or ensure we update window.currentUser.
+// For now, let's expose the initial null and rely on updateAuthUI to keep it sync if needed, 
+// OR assume other modules read window.currentUser.
+Object.defineProperty(window, 'currentUser', {
+  get: () => currentUser,
+  set: (val) => { currentUser = val; }
+});
+
 // Dropdown
 const accountDropdownMenu = document.getElementById('accountDropdownMenu');
 const authLogoutDropdown = document.getElementById('authLogoutDropdown');
@@ -198,11 +214,11 @@ async function initScale() {
   if (!name) name = loadScaleLocal();
   if (!name || !SCALES[name]) name = Object.keys(SCALES)[0];
 
-  selectedScaleName = name;
+  window.selectedScaleName = name;
   scaleSelect.value = name;
   scaleStatus.textContent = `Scale: ${name}`;
 
-  await preloadScaleSamples();
+  await window.preloadScaleSamples();
 }
 
 initScale();

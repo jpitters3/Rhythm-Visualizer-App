@@ -3,8 +3,6 @@ const { test, expect } = require('@playwright/test');
 
 test.describe('Chords & Chords', () => {
 
-  // test.skip(({ browserName }) => browserName === 'firefox', 'Firefox fails in beforeEach hook');
-
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
     await page.waitForSelector('.measure-row');

@@ -73,3 +73,29 @@ function scrollToPatternGrid(composeOn, ctx = window.activeGrid) {
     cell?.scrollIntoView({ block: 'start', behavior: 'smooth' });
   }
 }
+
+window.writeToSelected = writeToSelected;
+window.updateComposeUI = updateComposeUI;
+// Expose for other modules
+window.getComposeOn = () => composeOn;
+window.setComposeOn = (val) => {
+  composeOn = val;
+  localStorage.setItem(COMPOSE_KEY, val ? 'on' : 'off');
+  updateComposeUI();
+};
+
+window.writeToSelected = writeToSelected;
+window.advanceSelection = advanceSelection;
+window.setCaret = setCaret;
+window.applySelection = applySelection;
+window.clearRange = clearRange;
+window.cells = cells;
+window.getStepCountPerMeasure = getStepCountPerMeasure;
+window.renderAllMeasures = renderAllMeasures;
+window.totalSteps = totalSteps;
+window.clampIndex = clampIndex;
+window.scrollToPatternGrid = scrollToPatternGrid;
+window.labelFromHandpanDot = labelFromHandpanDot;
+window.composeOn = composeOn;
+window.COMPOSE_KEY = COMPOSE_KEY;
+window.updateComposeUI = updateComposeUI;

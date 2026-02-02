@@ -113,3 +113,12 @@ window.addEventListener('click', (e) => {
   if (e.target.closest('.sel-bar')) return;
   if (typeof clearRange === 'function') clearRange(window.activeGrid);
 });
+
+window.setCaret = setCaret;
+window.setRange = setRange;
+window.clearRange = clearRange;
+window.getRange = getRange;
+window.hasRange = hasRange;
+window.startLongPress = startLongPress;
+window.cancelLongPress = cancelLongPress;
+window.updateDragSelectionOver = updateDragSelectionOver;

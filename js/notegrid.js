@@ -120,6 +120,11 @@ function applySelection(i, ctx = window.activeGrid) {
   cells(ctx).forEach((c, idx) => c.classList.toggle('selected', idx === i));
 }
 
+window.labelForStep = labelForStep;
+window.clearGridDom = clearGridDom;
+window.clearSelection = clearSelection;
+window.applySelection = applySelection;
+
 function renderAllMeasures(ctx = window.activeGrid) {
   const measuresEl = ctx.container;
   if (!measuresEl) return;
@@ -277,6 +282,8 @@ function renderAllMeasures(ctx = window.activeGrid) {
   if (ctx.id === 'A') window.measures = measureCount;
 }
 
+window.renderAllMeasures = renderAllMeasures;
+
 // ===== SELECTION ACTIONS ===== //
 
 function snapshotBeat(i, ctx = window.activeGrid) {
@@ -315,25 +322,26 @@ function copySelection(ctx = window.activeGrid) {
     steps.push(snapshotBeat(i, ctx));
   }
 
-  beatClipboard = { type: 'beats', steps: steps };
-  if (selPasteBtn) selPasteBtn.disabled = false;
+  window.beatClipboard = { type: 'beats', steps: steps };
+  const btn = document.getElementById('selPasteBtn');
+  if (btn) btn.disabled = false;
 }
 
 function pasteSelection(ctx = window.activeGrid) {
-  if (!beatClipboard || beatClipboard.type !== 'beats') return;
+  if (!window.beatClipboard || window.beatClipboard.type !== 'beats') return;
   if (window.HistoryManager) window.HistoryManager.pushState();
 
   const startAt = (ctx.caretIndex !== null) ? ctx.caretIndex : ((typeof getRange === 'function') ? getRange(ctx)?.start ?? 0 : 0);
   const gridCells = cells(ctx);
   const max = gridCells.length - 1;
 
-  for (let k = 0; k < beatClipboard.steps.length; k++) {
+  for (let k = 0; k < window.beatClipboard.steps.length; k++) {
     const idx = startAt + k;
     if (idx > max) break;
 
     // Direct Model Update (like assignChordToSelectedCell)
     // beatClipboard.steps[k] is { label: ... } from snapshotBeat
-    let val = beatClipboard.steps[k].label;
+    let val = window.beatClipboard.steps[k].label;
 
     // DEEP COPY to prevent shared references
     if (window.checkCellIsMultiMode(val)) {
@@ -347,7 +355,7 @@ function pasteSelection(ctx = window.activeGrid) {
   renderAllMeasures(ctx);
 
   // Keep caret at end of paste
-  const endIdx = Math.min(max, startAt + beatClipboard.steps.length - 1);
+  const endIdx = Math.min(max, startAt + window.beatClipboard.steps.length - 1);
   if (typeof setCaret === 'function') setCaret(endIdx, ctx);
   if (typeof setRange === 'function') setRange(startAt, endIdx, ctx);
 }
@@ -368,10 +376,12 @@ function deleteSelection(ctx = window.activeGrid) {
 
 // EVENT LISTENERS //
 
-selCopyBtn?.addEventListener('click', () => copySelection());
-selPasteBtn?.addEventListener('click', () => pasteSelection());
-selDeleteBtn?.addEventListener('click', () => deleteSelection());
-selCancelBtn?.addEventListener('click', () => {
+// EVENT LISTENERS //
+
+document.getElementById('selCopyBtn')?.addEventListener('click', () => copySelection());
+document.getElementById('selPasteBtn')?.addEventListener('click', () => pasteSelection());
+document.getElementById('selDeleteBtn')?.addEventListener('click', () => deleteSelection());
+document.getElementById('selCancelBtn')?.addEventListener('click', () => {
   clearRange();
   // Also clear caret ring if you want:
   // clearSelection?.();
@@ -449,7 +459,7 @@ function attachCellListeners(cell, ctx = window.activeGrid) {
       return;
     }
 
-    if (subDot && isEditMulti) {
+    if (subDot && window.isEditMulti) {
       cell.classList.add('multi-mode');
       const allSubs = Array.from(cell.querySelectorAll('.sub-dot'));
       activeSubIndex = allSubs.indexOf(subDot);
@@ -654,3 +664,11 @@ window.assignChordToSelectedCell = function (labels, ctx = window.activeGrid) {
 };
 
 
+
+
+window.copySelection = copySelection;
+window.pasteSelection = pasteSelection;
+window.deleteSelection = deleteSelection;
+window.beatClipboard = null;
+window.cells = cells;
+window.setInnerLabel = setInnerLabel;

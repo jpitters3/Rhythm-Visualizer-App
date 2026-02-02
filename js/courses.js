@@ -720,3 +720,9 @@ window.updateLessonFromGrid = async function (lessonId) {
     alert("Error updating: " + err.message);
   }
 };
+
+window.closeSidebar = closeSidebar;
+window.openSidebar = openSidebar;
+window.setActiveCourse = setActiveCourse;
+window.editCourse = editCourse;
+window.loadLesson = loadLesson;

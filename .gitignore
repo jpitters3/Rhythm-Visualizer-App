@@ -3,3 +3,9 @@ node_modules/
 .vscode/
 playwright-report/
 test-results/
+
+# Vite
+dist/
+.env
+.env.local
+*.local

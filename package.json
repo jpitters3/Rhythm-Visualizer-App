@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "Rhythm Visualizer with Automated Tests",
   "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
     "test": "npx playwright test",
     "test:ui": "npx playwright test --ui",
     "test:report": "npx playwright show-report"
@@ -11,6 +14,7 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "@playwright/test": "^1.57.0"
+    "@playwright/test": "^1.57.0",
+    "vite": "^7.3.1"
   }
 }

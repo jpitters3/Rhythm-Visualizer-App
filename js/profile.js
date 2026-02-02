@@ -178,6 +178,9 @@ function closeProfileEditor() {
   profileModal.setAttribute('aria-hidden', 'true');
 }
 
+window.closeProfileEditor = closeProfileEditor;
+window.openProfileEditor = openProfileEditor;
+
 function updateProfileUI() {
   // Update the 'Account' button text to be the username if we have it, else email char
   const btn = document.getElementById('accountBtn');
@@ -263,3 +266,7 @@ saveProfileBtn?.addEventListener('click', async () => {
   alert(`Profile updated!`);
   closeProfileEditor();
 });
+
+window.loadCurrentProfile = loadCurrentProfile;
+window.getProfileById = getProfileById;
+

@@ -123,8 +123,6 @@ test.describe('Course Creator', () => {
 
   test('Create a new course with multiple sections and lessons', async ({ page, browserName }) => {
 
-    test.skip(browserName === 'firefox', 'Can not find the add-lesson button in Firefox');
-
     // 1. Open Course Creator
     // Open Account Dropdown first
     await page.click('#accountBtn');

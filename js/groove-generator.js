@@ -164,6 +164,8 @@ function closeGrooveModal() {
   grooveModal.setAttribute('aria-hidden', 'true');
 }
 
+window.closeGrooveModal = closeGrooveModal;
+
 function parseCount(inputEl) {
   const v = String(inputEl.value || '').trim();
   if (v === '') return null; // Auto
@@ -209,38 +211,15 @@ function updateGrooveHint() {
   grooveHint.textContent = `Total accents: ${dd + tt + ss} / 8`;
 }
 
-function shuffle(arr) {
-  for (let i = arr.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [arr[i], arr[j]] = [arr[j], arr[i]];
-  }
-  return arr;
-}
-
 function pickUniqueIndices(n, fromN) {
   const idx = Array.from({ length: fromN }, (_, i) => i);
   shuffle(idx);
   return idx.slice(0, n);
 }
 
-function clearAllBeatsAndLabels(ctx = window.activeGrid) {
-  ctx.innerLabels.fill('');
-  cells(ctx).forEach((c, i) => {
-    c.classList.remove('on', 'label-d', 'label-t', 'label-s', 'label-n', 'has-label', 'selected', 'play');
-    const inner = c.querySelector('.inner');
-    if (inner) inner.textContent = '';
-  });
-  ctx.caretIndex = null;
-}
 
 // ===== GROOVE MODAL ===== //
 
-function neighbors(i, slots) {
-  const out = [];
-  if (i - 1 >= 0) out.push(i - 1);
-  if (i + 1 < slots) out.push(i + 1);
-  return out;
-}
 
 function pickWithRules({ pool, n, slots, used, avoidAdjacency = true }) {
   const picks = [];

@@ -264,3 +264,18 @@ function ensureHasSelection() {
   }
   return true;
 }
+
+window.isAuthed = isAuthed;
+window.dbListPatternNames = dbListPatternNames;
+window.dbLoadPatternByName = dbLoadPatternByName;
+window.dbSavePattern = dbSavePattern;
+window.dbDeletePattern = dbDeletePattern;
+window.dbRenamePattern = dbRenamePattern;
+window.getSavedPatterns = getSavedPatterns;
+window.setSavedPatterns = setSavedPatterns;
+window.getSelectedPatternName = getSelectedPatternName;
+window.updatePatternButtons = updatePatternButtons;
+window.refreshPatternSelect = refreshPatternSelect;
+window.serializePattern = serializePattern;
+window.applyPattern = applyPattern;
+window.ensureHasSelection = ensureHasSelection;

@@ -32,8 +32,8 @@ class GridContext {
   }
 
   get stepsPerMeasure() {
-    return (typeof calculateSteps === 'function')
-      ? calculateSteps(window.getTimeSignature(), this.mode)
+    return (typeof window.calculateSteps === 'function')
+      ? window.calculateSteps(window.getTimeSignature(), this.mode)
       : (this.mode === '16' ? 16 : 8);
   }
 
@@ -75,6 +75,8 @@ class GridContext {
     this.playing = false;
   }
 }
+
+window.GridContext = GridContext;
 
 // Global instances
 window.gridA = new GridContext('A', 'measures');

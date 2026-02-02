@@ -1,5 +1,13 @@
+window.getStepCountPerMeasure = getStepCountPerMeasure;
+window.appendEmptyMeasure = appendEmptyMeasure;
+window.deleteMeasure = deleteMeasure;
+window.duplicateSelection = duplicateSelection;
+window.deleteMeasuresRange = deleteMeasuresRange;
+window.getActiveMeasureIndex = getActiveMeasureIndex;
+window.measureRange = measureRange;
+
 function getStepCountPerMeasure(ctx = window.activeGrid) {
-  return calculateSteps(window.getTimeSignature(), ctx.mode);
+  return window.calculateSteps(window.getTimeSignature(), ctx.mode);
 }
 
 function getAllCellsFlat(ctx = window.activeGrid) {

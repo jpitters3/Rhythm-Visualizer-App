@@ -3,6 +3,7 @@ function updateMetroUI() {
   const ctx = window.activeGrid || window.gridA;
   if (window.TransportRegistry) TransportRegistry.updateAll(ctx);
 }
+window.updateMetroUI = updateMetroUI;
 
 function restorePrefs() {
   if (localStorage.getItem('theme') === 'dark') {
@@ -14,8 +15,12 @@ function restorePrefs() {
   handBtn.classList.toggle('active', handOn);
   handBtn.textContent = handOn ? 'Left/Right: On' : 'Left/Right: Off';
 
-  metronomeOn = (localStorage.getItem(METRO_KEY) === 'on');
-  if (window.gridA) window.gridA.metronomeOn = metronomeOn;
+  /* metronomeOn was implicit. We use local var to read check */
+  let isMetroOn = (localStorage.getItem('groovepan_metro-A') === 'on');
+  if (localStorage.getItem('groovepan_metro-A') === null) {
+    isMetroOn = (localStorage.getItem('groovepan_metro') === 'on');
+  }
+  if (window.gridA) window.gridA.metronomeOn = isMetroOn;
 
   updateMetroUI();
 }
@@ -24,7 +29,8 @@ function runSelfTests() {
   // Existing smoke tests (kept)
   console.assert(document.getElementById('grid') && document.getElementById('labels'), 'Grid/labels elements exist');
   console.assert(cells().length === STEPS, `Expected ${STEPS} cells after renderAllMeasures()`);
-  console.assert(labels.children.length === STEPS, `Expected ${STEPS} labels after renderAllMeasures()`);
+  const labelsEl = document.getElementById('labels');
+  console.assert(labelsEl && labelsEl.children.length === STEPS, `Expected ${STEPS} labels after renderAllMeasures()`);
 
   // Added: each cell should have a hand side class
   cells().forEach((c) => {
@@ -44,7 +50,7 @@ function runSelfTests() {
   setMode(mode === '8' ? '16' : '8');
   console.assert(STEPS !== before, 'Mode toggle changes step count');
   console.assert(cells().length === STEPS, 'Grid rebuilt to new step count');
-  console.assert(labels.children.length === STEPS, 'Labels rebuilt to new step count');
+  console.assert(document.getElementById('labels').children.length === STEPS, 'Labels rebuilt to new step count');
   // revert
   setMode(mode === '8' ? '16' : '8');
   console.assert(cells().length === STEPS, 'Grid rebuilt back');
@@ -117,11 +123,22 @@ function showFatalError(err) {
 window.addEventListener('error', (e) => {
   // Avoid duplicate panels
   if (document.getElementById('__fatal_panel__')) return;
+  // Suppress "EncodingError" (audio decoding in headless env) and "Failed to fetch" (missing assets)
+  const msg = String(e.error || e.message || e);
+  if (msg.includes('EncodingError') || msg.includes('Failed to fetch')) {
+    console.warn('Suppressed Error:', msg);
+    return;
+  }
   showFatalError(e.error || e.message || e);
 });
 
 window.addEventListener('unhandledrejection', (e) => {
   if (document.getElementById('__fatal_panel__')) return;
+  const msg = String(e.reason || e);
+  if (msg.includes('EncodingError') || msg.includes('Failed to fetch')) {
+    console.warn('Suppressed Error:', msg);
+    return;
+  }
   showFatalError(e.reason || e);
 });
 

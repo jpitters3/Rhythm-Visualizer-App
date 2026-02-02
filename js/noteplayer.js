@@ -29,7 +29,7 @@ const SOUND_SLAP = 'Slap';
 
 const SCALE_KEY_LOCAL = 'groovepan_scale';            // for non-logged-in users
 const SCALE_KEY_REMOTE = 'handpan_scale';             // for logged-in users in Supabase profile
-let selectedScaleName = null;
+window.selectedScaleName = null;
 
 // UNIFIED SCALE STATE
 let currentScale = {
@@ -187,7 +187,9 @@ async function preloadScaleSamples() {
   for (const n of notes) {
     let note = noteToFile(n); // includes .wav extension
     try { await loadSample(n, `./assets/audio/${note}`); }
-    catch (e) { console.log(`Error loading sample [${note}]: ${e}`); }
+    catch (e) {
+      // console.log(`Error loading sample [${note}]: ${e}`); 
+    }
   }
 }
 
@@ -426,7 +428,7 @@ function playNoteByLabel(label, step, delay = 0) {
 
 }
 
-let timeSignature = localStorage.getItem('defaultTimeSignature') || '4/4';
+
 
 const tsNumInput = document.getElementById('tsNum');
 const tsDenInput = document.getElementById('tsDen');
@@ -443,29 +445,21 @@ function updateTimeSignatureFromInputs() {
 tsNumInput?.addEventListener('change', updateTimeSignatureFromInputs);
 tsDenInput?.addEventListener('change', updateTimeSignatureFromInputs);
 
-function calculateSteps(ts, currentMode) {
-  const parts = ts.split('/');
-  const num = parseInt(parts[0]);
-  const den = parseInt(parts[1]);
 
-  const base = (currentMode === '16') ? 16 : 8;
-  const mult = base / den;
-  return num * mult;
-}
 
 function setTimeSignature(ts) {
   if (!ts) return;
   if (!ts.includes('/')) return;
 
-  timeSignature = ts;
-  localStorage.setItem('defaultTimeSignature', ts);
+  // Update global state
+  if (window.setTimeSignatureState) window.setTimeSignatureState(ts);
 
   const [n, d] = ts.split('/');
   if (tsNumInput && tsNumInput.value != n) tsNumInput.value = n;
   if (tsDenInput && tsDenInput.value != d) tsDenInput.value = d;
 
   // Update global STEPS for backward compatibility (matches Grid A)
-  window.STEPS = calculateSteps(timeSignature, window.gridA.mode);
+  window.STEPS = window.calculateSteps(ts, window.gridA.mode);
 
   // Update both grids
   renderAllMeasures(window.gridA);
@@ -477,10 +471,11 @@ function setTimeSignature(ts) {
 
 // Expose for other modules
 window.setTimeSignature = setTimeSignature;
-window.getTimeSignature = () => timeSignature;
+// Expose for other modules
+window.setTimeSignature = setTimeSignature;
 
 // Initialize
-if (timeSignature) setTimeSignature(timeSignature);
+if (window.getTimeSignature()) setTimeSignature(window.getTimeSignature());
 
 function setMode(nextMode, ctx = window.activeGrid) {
   if (nextMode === ctx.mode) return;
@@ -492,7 +487,7 @@ function setMode(nextMode, ctx = window.activeGrid) {
   // Sync global mode and STEPS if Grid A is updated (for backward compatibility)
   if (ctx.id === 'A') {
     window.mode = nextMode;
-    window.STEPS = calculateSteps(timeSignature, nextMode);
+    window.STEPS = window.calculateSteps(window.getTimeSignature(), nextMode);
     if (typeof gridBtn !== 'undefined' && gridBtn) {
       gridBtn.textContent = (nextMode === '8') ? '8ths' : '16ths';
     }
@@ -687,3 +682,24 @@ function restartIfPlaying(ctx = window.activeGrid) {
     start(ctx, true);
   }
 }
+
+// Expose Player Controls
+window.start = start;
+window.stop = stop;
+window.restartIfPlaying = restartIfPlaying;
+window.playHandpanSoundForLabel = playHandpanSoundForLabel;
+window.playNoteSample = playNoteSample;
+
+window.ensureAudio = ensureAudio;
+window.unlockAudio = unlockAudio;
+window.preloadScaleSamples = preloadScaleSamples;
+window.getAudioCtx = () => audioCtx;
+window.playNoteByLabel = playNoteByLabel;
+window.noteForLabel = noteForLabel;
+window.isDownbeatStep = isDownbeatStep;
+window.intervalMs = intervalMs;
+window.setMode = setMode;
+window.playSlap = playSlap;
+window.playTone = playTone;
+window.playSample = playSample;
+window.tick = tick;

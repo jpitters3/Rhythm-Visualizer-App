@@ -106,15 +106,12 @@ test.describe('Pattern Management', () => {
 
     // 2. Click Delete
     // Handle Confirm
-    page.once('dialog', dialog => {
-      expect(dialog.message()).toContain('Delete');
-      dialog.accept();
-    });
 
     await ensureMenuOpen(page); // OPEN MENU IF NEEDED
     await page.click('#fileDropdownBtn');
     await page.waitForSelector('.dropdown-content.show');
     await page.click('#deleteBtn');
+    await page.click('#confirmOkBtn');
 
     // 3. Verify Removal
     // The select should no longer have this option (retry until update happens)

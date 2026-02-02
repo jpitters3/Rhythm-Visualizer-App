@@ -160,6 +160,8 @@ async function loadSharedFromURL() {
   return true;
 }
 
+window.loadSharedFromURL = loadSharedFromURL;
+
 // Banner //
 
 let viewingShared = false;
