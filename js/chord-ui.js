@@ -2,6 +2,7 @@
  * Chord Library UI
  * Handles the display and interaction of the analyzed chords.
  */
+import { SCALES } from './noteplayer.js';
 
 const ChordUI = (function () {
 
@@ -82,10 +83,10 @@ const ChordUI = (function () {
 
     // 2. Fallback: Check SCALES global if we know the name
     const scaleSelect = document.getElementById('scaleSelect');
-    if (scaleSelect && window.SCALES) {
+    if (scaleSelect && SCALES) {
       const name = scaleSelect.value;
-      if (name && window.SCALES[name]) {
-        const s = window.SCALES[name];
+      if (name && SCALES[name]) {
+        const s = SCALES[name];
         const notes = [];
         if (s.ding) notes.push(s.ding);
         if (s.map) Object.values(s.map).forEach(n => notes.push(n));

@@ -1,50 +1,54 @@
-window.getStepCountPerMeasure = getStepCountPerMeasure;
-window.appendEmptyMeasure = appendEmptyMeasure;
-window.deleteMeasure = deleteMeasure;
-window.duplicateSelection = duplicateSelection;
-window.deleteMeasuresRange = deleteMeasuresRange;
-window.getActiveMeasureIndex = getActiveMeasureIndex;
-window.measureRange = measureRange;
+import { activeGrid } from './grid-context.js';
+import { calculateSteps, getTimeSignature } from './rhythm-core.js';
+import { renderAllMeasures } from './notegrid.js';
+import { setCaret, setRange, clearRange, getRange } from './range-selection.js';
 
-function getStepCountPerMeasure(ctx = window.activeGrid) {
-  return window.calculateSteps(window.getTimeSignature(), ctx.mode);
+export function getStepCountPerMeasure(ctx) {
+  const c = ctx || activeGrid;
+  return calculateSteps(getTimeSignature(), c.mode);
 }
 
-function getAllCellsFlat(ctx = window.activeGrid) {
-  return Array.from(ctx.cells);
+function getAllCellsFlat(ctx) {
+  return Array.from((ctx || activeGrid).cells);
 }
 
-function getMeasureCount(ctx = window.activeGrid) {
-  return ctx.measures;
+export function getMeasureCount(ctx) {
+  return (ctx || activeGrid).measures;
 }
 
-function getActiveMeasureIndex(ctx = window.activeGrid) {
-  const s = getStepCountPerMeasure(ctx);
-  const idx = ctx.caretIndex ?? 0;
+export function getActiveMeasureIndex(ctx) {
+  const c = ctx || activeGrid;
+  const s = getStepCountPerMeasure(c);
+  const idx = c.caretIndex ?? 0;
   return Math.floor(idx / s);
 }
 
-function measureRange(mIndex, ctx = window.activeGrid) {
-  const s = getStepCountPerMeasure(ctx);
+export function measureRange(mIndex, ctx) {
+  const c = ctx || activeGrid;
+  const s = getStepCountPerMeasure(c);
   const start = mIndex * s;
   const end = start + s - 1;
+  // return { start, end, length: s }; 
+  // Wait, the original code returned this.
   return { start, end, length: s };
 }
 
 // ===== Add measure ===== //
 
-function appendEmptyMeasure(ctx = window.activeGrid) {
-  const s = getStepCountPerMeasure(ctx);
-  if (Array.isArray(ctx.innerLabels)) ctx.innerLabels.push(...Array(s).fill(''));
-  if (Array.isArray(ctx.innerHands)) ctx.innerHands.push(...Array(s).fill(null));
-  renderAllMeasures(ctx);
+export function appendEmptyMeasure(ctx) {
+  const c = ctx || activeGrid;
+  const s = getStepCountPerMeasure(c);
+  if (Array.isArray(c.innerLabels)) c.innerLabels.push(...Array(s).fill(''));
+  if (Array.isArray(c.innerHands)) c.innerHands.push(...Array(s).fill(null));
+  renderAllMeasures(c);
 }
 
 // ===== Delete measure =====
 
-function deleteMeasure(mIndex, ctx = window.activeGrid) {
-  const s = getStepCountPerMeasure(ctx);
-  const totalMeasures = ctx.measures;
+export function deleteMeasure(mIndex, ctx) {
+  const c = ctx || activeGrid;
+  const s = getStepCountPerMeasure(c);
+  const totalMeasures = c.measures;
 
   if (totalMeasures <= 1) {
     alert('You must have at least 1 measure.');
@@ -54,24 +58,25 @@ function deleteMeasure(mIndex, ctx = window.activeGrid) {
   const ok = confirm(`Delete measure ${mIndex + 1}?`);
   if (!ok) return;
 
-  const { start } = measureRange(mIndex, ctx);
-  if (Array.isArray(ctx.innerLabels)) ctx.innerLabels.splice(start, s);
-  if (Array.isArray(ctx.innerHands)) ctx.innerHands.splice(start, s);
+  const { start } = measureRange(mIndex, c);
+  if (Array.isArray(c.innerLabels)) c.innerLabels.splice(start, s);
+  if (Array.isArray(c.innerHands)) c.innerHands.splice(start, s);
 
-  renderAllMeasures(ctx);
+  renderAllMeasures(c);
 
-  const newMeasureCount = ctx.measures;
+  const newMeasureCount = c.measures;
   const nextM = Math.min(mIndex, newMeasureCount - 1);
-  const nextStart = measureRange(nextM, ctx).start;
-  setCaret(nextStart, ctx);
-  setRange(nextStart, nextStart, ctx);
-  if (typeof clearRange === 'function') clearRange(ctx);
+  const nextStart = measureRange(nextM, c).start;
+  setCaret(nextStart, c);
+  setRange(nextStart, nextStart, c);
+  clearRange(c);
 }
 
 // ===== Duplicate Selection =====
 
-function duplicateSelection(ctx = window.activeGrid) {
-  const r = (typeof getRange === 'function') ? getRange(ctx) : null;
+export function duplicateSelection(ctx) {
+  const c = ctx || activeGrid;
+  const r = getRange(c);
   if (!r) {
     alert('Please select a range of notes to duplicate.');
     return;
@@ -79,64 +84,65 @@ function duplicateSelection(ctx = window.activeGrid) {
 
   if (window.HistoryManager) window.HistoryManager.pushState();
 
-  const s = getStepCountPerMeasure(ctx);
+  const s = getStepCountPerMeasure(c);
   const totalSelectedSteps = r.length;
   const measuresNeeded = Math.ceil(totalSelectedSteps / s);
 
   // Append new measures to fit duplication
   for (let i = 0; i < measuresNeeded; i++) {
-    appendEmptyMeasure(ctx);
+    appendEmptyMeasure(c);
   }
 
-  const oldTotalSteps = ctx.innerLabels.length - (measuresNeeded * s);
-  const copyFrom = ctx.innerLabels.slice(r.start, r.end + 1);
-  const copyHands = ctx.innerHands.slice(r.start, r.end + 1);
+  const oldTotalSteps = c.innerLabels.length - (measuresNeeded * s);
+  const copyFrom = c.innerLabels.slice(r.start, r.end + 1);
+  const copyHands = c.innerHands.slice(r.start, r.end + 1);
 
   for (let k = 0; k < copyFrom.length; k++) {
-    ctx.innerLabels[oldTotalSteps + k] = copyFrom[k];
-    ctx.innerHands[oldTotalSteps + k] = copyHands[k];
+    c.innerLabels[oldTotalSteps + k] = copyFrom[k];
+    c.innerHands[oldTotalSteps + k] = copyHands[k];
   }
 
-  renderAllMeasures(ctx);
+  renderAllMeasures(c);
   const startIdx = oldTotalSteps;
   const endIdx = oldTotalSteps + copyFrom.length - 1;
-  setCaret(endIdx, ctx);
-  setRange(startIdx, endIdx, ctx);
+  setCaret(endIdx, c);
+  setRange(startIdx, endIdx, c);
 }
 
 // ===== Delete Multi-Measure Range =====
 
-function deleteMeasuresRange(startM, endM, ctx = window.activeGrid) {
-  const s = getStepCountPerMeasure(ctx);
+export function deleteMeasuresRange(startM, endM, ctx) {
+  const c = ctx || activeGrid;
+  const s = getStepCountPerMeasure(c);
   const countToDelete = (endM - startM + 1);
 
   if (!confirm(`Delete ${countToDelete} selected measure(s)?`)) return;
 
-  if (Array.isArray(ctx.innerLabels)) {
-    ctx.innerLabels.splice(startM * s, countToDelete * s);
-    ctx.innerHands.splice(startM * s, countToDelete * s);
+  if (Array.isArray(c.innerLabels)) {
+    c.innerLabels.splice(startM * s, countToDelete * s);
+    c.innerHands.splice(startM * s, countToDelete * s);
 
     // If we deleted everything, add one empty measure back
-    if (ctx.innerLabels.length === 0) {
-      ctx.innerLabels.push(...Array(s).fill(''));
-      ctx.innerHands.push(...Array(s).fill(null));
+    if (c.innerLabels.length === 0) {
+      c.innerLabels.push(...Array(s).fill(''));
+      c.innerHands.push(...Array(s).fill(null));
     }
   }
 
-  renderAllMeasures(ctx);
+  renderAllMeasures(c);
 
   // UI Cleanup
-  if (typeof clearRange === 'function') clearRange(ctx);
-  const totalMeasures = ctx.measures;
+  clearRange(c);
+  const totalMeasures = c.measures;
   const nextM = Math.min(startM, totalMeasures - 1);
   const nextStart = nextM * s;
-  if (typeof setCaret === 'function') setCaret(nextStart, ctx);
+  setCaret(nextStart, c);
 }
 
 // ===== UI EVENT LISTENERS ===== //
 
 document.getElementById('addMeasureBtn')?.addEventListener('click', () => {
-  const ctx = window.activeGrid;
+  const ctx = activeGrid;
   appendEmptyMeasure(ctx);
   const m = ctx.measures - 1;
   const { start } = measureRange(m, ctx);
@@ -144,8 +150,8 @@ document.getElementById('addMeasureBtn')?.addEventListener('click', () => {
 });
 
 document.getElementById('delMeasureBtn')?.addEventListener('click', () => {
-  const ctx = window.activeGrid;
-  const range = (typeof getRange === 'function') ? getRange(ctx) : null;
+  const ctx = activeGrid;
+  const range = getRange(ctx);
   if (range && range.length > 1) {
     const s = getStepCountPerMeasure(ctx);
     const startM = Math.floor(range.start / s);
@@ -157,5 +163,14 @@ document.getElementById('delMeasureBtn')?.addEventListener('click', () => {
 });
 
 document.getElementById('selDuplicateBtn')?.addEventListener('click', () => {
-  duplicateSelection(window.activeGrid);
+  duplicateSelection(activeGrid);
 });
+
+// ==== WINDOW EXPOSE ====
+window.getStepCountPerMeasure = getStepCountPerMeasure;
+window.appendEmptyMeasure = appendEmptyMeasure;
+window.deleteMeasure = deleteMeasure;
+window.duplicateSelection = duplicateSelection;
+window.deleteMeasuresRange = deleteMeasuresRange;
+window.getActiveMeasureIndex = getActiveMeasureIndex;
+window.measureRange = measureRange;

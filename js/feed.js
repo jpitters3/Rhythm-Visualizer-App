@@ -1,4 +1,23 @@
+import { escapeHtml } from './utils.js';
+import { currentUser } from './auth.js';
+import { supabase } from './supabase-client.js';
+
 // Community Feed Logic
+
+export function loadPatternFromFeed(json, name) {
+  if (confirm(`Load pattern "${name}"? Unsaved changes will be lost.`)) {
+    // Assuming applyPattern is global or imported. It seems global from notegrid/controls?
+    // Checking controls.js later. For now, rely on window.applyPattern if it exists, or import it.
+    // applyPattern was likely a global function.
+    if (window.applyPattern) {
+      window.applyPattern(json);
+    } else {
+      console.error("applyPattern not found");
+    }
+    document.title = `GroovePan — ${name}`;
+  }
+}
+
 const feedModal = document.getElementById('feedModal');
 const closeFeedBtn = document.getElementById('closeFeedBtn');
 const feedGrid = document.getElementById('feedGrid');
@@ -77,7 +96,7 @@ function openFeedModal() {
 async function fetchFeed(filter) {
   feedGrid.innerHTML = '<div class="loading-spinner">Loading rhythms...</div>';
 
-  let query = supabase1
+  let query = supabase
     .from('shared_patterns')
     .select(`
             id, 
@@ -192,36 +211,6 @@ function renderPatternsFeed(patterns) {
   });
 }
 
-async function deleteSharedPattern(id, cardElement) {
-  if (!confirm('Are you sure you want to unshare this pattern? It will be removed from the community feed.')) return;
-
-  const { error } = await supabase1
-    .from('shared_patterns')
-    .delete()
-    .eq('id', id)
-    .eq('user_id', currentUser.id); // Extra safety check
-
-  if (error) {
-    console.error('Error deleting pattern:', error);
-    alert('Failed to delete pattern: ' + error.message);
-    return;
-  }
-
-  // Remove from UI
-  cardElement.remove();
-
-  // Check if empty
-  if (feedGrid.children.length === 0) {
-    feedGrid.innerHTML = '<div class="empty-state">No patterns found in this category.</div>';
-  }
-}
-
-function loadPatternFromFeed(json, name) {
-  if (confirm(`Load pattern "${name}"? Unsaved changes will be lost.`)) {
-    applyPattern(json);
-    document.title = `GroovePan — ${name}`;
-  }
-}
 
 async function toggleLike(e, patternId, btn) {
   if (!currentUser) {
@@ -244,7 +233,7 @@ async function toggleLike(e, patternId, btn) {
 
   // Perform Request
   // First try to LIKE
-  const { error: insertError } = await supabase1
+  const { error: insertError } = await supabase
     .from('pattern_likes')
     .insert([{ user_id: currentUser.id, pattern_id: patternId }]);
 
@@ -253,7 +242,7 @@ async function toggleLike(e, patternId, btn) {
   } else {
     // Failed: Likely duplicate key -> ALREADY LIKED -> UNLIKE
     if (insertError.code === '23505') { // Unique violation
-      const { error: deleteError } = await supabase1
+      const { error: deleteError } = await supabase
         .from('pattern_likes')
         .delete()
         .eq('user_id', currentUser.id)
@@ -273,13 +262,28 @@ async function toggleLike(e, patternId, btn) {
     }
   }
 }
+async function deleteSharedPattern(id, cardElement) {
+  if (!confirm('Are you sure you want to unshare this pattern? It will be removed from the community feed.')) return;
 
-function escapeHtml(text) {
-  if (!text) return '';
-  return text
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
+  const { error } = await supabase
+    .from('shared_patterns')
+    .delete()
+    .eq('id', id)
+    .eq('user_id', currentUser.id); // Extra safety check
+
+  if (error) {
+    console.error('Error deleting pattern:', error);
+    alert('Failed to delete pattern: ' + error.message);
+    return;
+  }
+
+  // Remove from UI
+  cardElement.remove();
+
+  // Check if empty
+  if (feedGrid.children.length === 0) {
+    feedGrid.innerHTML = '<div class="empty-state">No patterns found in this category.</div>';
+  }
 }
+
+

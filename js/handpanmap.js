@@ -1,4 +1,5 @@
 /* Includes scale selector */
+import { SCALES, setCurrentScale } from './noteplayer.js';
 
 /* Mapped to nine-note-handpan-numbered.png */
 const HANDPAN_MAP_SKETCH = {
@@ -810,8 +811,8 @@ scaleSelect.addEventListener('change', async () => {
   }
 
   // Update Current Scale for Standard Scales
-  if (window.setCurrentScale && window.SCALES) {
-    window.setCurrentScale(window.SCALES[selectedScaleName]);
+  if (setCurrentScale && SCALES) {
+    setCurrentScale(SCALES[selectedScaleName]);
   }
 
   await preloadScaleSamples();

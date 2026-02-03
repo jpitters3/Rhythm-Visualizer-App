@@ -20,7 +20,7 @@ async function exitFullscreenIfPossible() {
   }
 }
 
-async function setPresentation(on) {
+export async function setPresentation(on) {
   document.body.classList.toggle('present', on);
   localStorage.setItem(PRESENT_KEY, on ? 'on' : 'off');
   presentBtn.classList.toggle('active', on);

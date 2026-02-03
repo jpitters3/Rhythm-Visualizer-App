@@ -1,9 +1,15 @@
 /* ==== Audio and musical functionality including scales ==== */
+import { activeGrid, gridA, gridB } from './grid-context.js';
 
+import { calculateSteps, setTimeSignatureState } from './rhythm-core.js';
+import { renderAllMeasures } from './notegrid.js';
+import { supabase } from './supabase-client.js';
+// We assume supabase1 is available globally for now (from legacy index.html script)
+// import { currentUser } from './auth.js'; // auth.js is not yet an ESM exporting currentUser
 
 /* Scale Selector */
 
-const SCALES = {
+export const SCALES = {
   "D Kurd": {
     ding: "D3",
     map: { "1": "A3", "2": "Bb3", "3": "C4", "4": "D4", "5": "E4", "6": "F4", "7": "G4", "8": "A4" }
@@ -22,14 +28,12 @@ const SCALES = {
   }
 };
 
-window.SCALES = SCALES;
-
 const SOUND_TAK = 'Tak';
 const SOUND_SLAP = 'Slap';
 
 const SCALE_KEY_LOCAL = 'groovepan_scale';            // for non-logged-in users
 const SCALE_KEY_REMOTE = 'handpan_scale';             // for logged-in users in Supabase profile
-window.selectedScaleName = null;
+// window.selectedScaleName = null; // Use exported state
 
 // UNIFIED SCALE STATE
 let currentScale = {
@@ -54,18 +58,19 @@ function buildScaleSelect() {
   }
 }
 
+// Call init logic if element exists (can be moved to init function)
 buildScaleSelect();
 
-function setCurrentScale(scaleObj) {
+export function setCurrentScale(scaleObj) {
   if (!scaleObj) return;
   currentScale = scaleObj;
 }
 
-function getScale() {
+export function getScale() {
   return currentScale;
 }
 
-function noteForLabel(label) {
+export function noteForLabel(label) {
   // 1. Common Sounds
   if (label === 'T') return SOUND_TAK;
   if (label === 'S') return SOUND_SLAP;
@@ -95,56 +100,50 @@ function noteToFile(note) {
   return note.replace('#', 's') + '.wav';
 }
 
-// Expose
-window.setCurrentScale = setCurrentScale;
-window.getScale = getScale;
-
 /* ==== Save and load scales locally and in db ==== */
 
-function saveScaleLocal(name) {
+export function saveScaleLocal(name) {
   localStorage.setItem(SCALE_KEY_LOCAL, name);
 }
-function loadScaleLocal() {
+export function loadScaleLocal() {
   return localStorage.getItem(SCALE_KEY_LOCAL);
 }
 
-async function saveScaleRemote(name) {
-  if (!currentUser) return;
-  await supabase1.from('profiles').upsert(
-    { user_id: currentUser.id, handpan_scale: name },
+export async function saveScaleRemote(name) {
+  if (typeof window.currentUser === 'undefined' || !window.currentUser) return;
+  if (!supabase) return;
+
+  await supabase.from('profiles').upsert(
+    { user_id: window.currentUser.id, handpan_scale: name },
     { onConflict: 'user_id' }
   );
 }
 
-async function loadScaleRemote() {
-  if (!currentUser) return null;
-  const { data, error } = await supabase1
+export async function loadScaleRemote() {
+  if (typeof window.currentUser === 'undefined' || !window.currentUser) return null;
+  if (!supabase) return null;
+
+  const { data, error } = await supabase
     .from('profiles')
     .select('handpan_scale')
-    .eq('user_id', currentUser.id)
+    .eq('user_id', window.currentUser.id)
     .maybeSingle();
   if (error) return null;
   return data?.handpan_scale || null;
 }
 
-// Expose persistence
-window.saveScaleLocal = saveScaleLocal;
-window.loadScaleLocal = loadScaleLocal;
-window.saveScaleRemote = saveScaleRemote;
-window.loadScaleRemote = loadScaleRemote;
-
 
 /* Player Functionality */
 
-let step = 0;
-let transcriptionIndex = 0;
+// let step = 0; // Moved to GridContext
+// let transcriptionIndex = 0;
 
 // Use an array of timers to prevent accidental stacking (double-clicks, race conditions)
-let timers = [];
-let playing = false;
+// let timers = []; // Moved to GridContext
+// let playing = false;
 
 // Metronome
-let metronomeOn = false;
+// let metronomeOn = false;
 let audioCtx = null;
 
 let audioUnlocked = false;
@@ -152,7 +151,7 @@ let samplesPreloaded = false;
 
 const AUDIO_DELAY = 0.3; // 300ms delay to sync audio with visual pulse expansion
 
-function unlockAudio() {
+export function unlockAudio() {
   audioUnlocked = true;
   ensureAudio();
   preloadAudioSamples();
@@ -161,13 +160,14 @@ function unlockAudio() {
 // ===== HANDPAN SAMPLE BUFFERS =====
 const samples = {};
 
-function intervalMs(ctx = window.activeGrid) {
-  const bpm = ctx.bpm;
-  const base = (ctx.mode === '16') ? 16 : 8;
+export function intervalMs(ctx) {
+  const c = ctx || activeGrid;
+  const bpm = c.bpm;
+  const base = (c.mode === '16') ? 16 : 8;
   return (60000 / bpm) / (base / 4);
 }
 
-function ensureAudio() {
+export function ensureAudio() {
   // Don’t create/resume AudioContext until a real user gesture has happened
   if (!audioUnlocked) return;
 
@@ -181,7 +181,7 @@ function ensureAudio() {
 }
 
 // Preload note samples once audio is unlocked
-async function preloadScaleSamples() {
+export async function preloadScaleSamples() {
   const s = getScale();
   const notes = new Set([(s.ding || 'D3') + '_ding', ...Object.values(s.map)]);
   for (const n of notes) {
@@ -236,7 +236,7 @@ function metroClick(kind, delay = 0) {
   osc.stop(t + 0.04);
 }
 
-function isDownbeatStep(stepIndex, mode) {
+export function isDownbeatStep(stepIndex, mode) {
   // Grid uses a simple index % 2 check for colors (R-L-R-L)
   // regardless of 8th/16th note mode.
   return stepIndex % 2 === 0;
@@ -268,12 +268,13 @@ function hideCountdown() {
   if (overlay) overlay.style.display = 'none';
 }
 
-function tick(ctx = window.activeGrid) {
-  if (!ctx.playing || ctx.isMuted) return;
+export function tick(ctx) {
+  const c = ctx || activeGrid;
+  if (!c.playing || c.isMuted) return;
 
-  const all = ctx.cells;
-  const currentData = ctx.innerLabels[ctx.step];
-  const currentHandsData = ctx.innerHands[ctx.step];
+  const all = c.cells;
+  const currentData = c.innerLabels[c.step];
+  const currentHandsData = c.innerHands[c.step];
   const stepNotes = [];
   const stepHands = [];
 
@@ -301,7 +302,7 @@ function tick(ctx = window.activeGrid) {
     }
 
     // 3. Default Time-Based Logic (for single notes)
-    return isDownbeatStep(stepIdx, ctx.mode) ? 'R' : 'L';
+    return isDownbeatStep(stepIdx, c.mode) ? 'R' : 'L';
   }
 
   // CALIBRATION COUNTDOWN LOGIC //
@@ -311,7 +312,7 @@ function tick(ctx = window.activeGrid) {
     showCountdown(countdownRemaining);
 
     // Play metronome click (Low pitch for count-in)
-    if (ctx.metronomeOn) metroClick(getMetroClickKind('beat', ctx), AUDIO_DELAY);
+    if (c.metronomeOn) metroClick(getMetroClickKind('beat', c), AUDIO_DELAY);
 
     // Decrement for the NEXT tick
     countdownRemaining--;
@@ -326,18 +327,22 @@ function tick(ctx = window.activeGrid) {
 
   // PLAY & HIGHLIGHT SUB-DOTS or SINGLE-NOTE //
   // Only highlight handpan for Grid A
-  const shouldHighlight = (ctx.id === 'A');
+  const shouldHighlight = (c.id === 'A');
 
   // Play and Highlight Multiple Notes
-  if (window.checkCellIsMultiMode(currentData)) {
+  if (window.checkCellIsMultiMode && window.checkCellIsMultiMode(currentData)) {
     currentData.forEach((label, subIdx) => {
       if (label) {
         // Resolve hand first
-        const hand = resolveHand(ctx.step, currentHandsData, subIdx, true);
+        const hand = resolveHand(c.step, currentHandsData, subIdx, true);
 
-        playNoteByLabel(label, ctx.step, AUDIO_DELAY);
+        playNoteByLabel(label, c.step, AUDIO_DELAY);
         if (shouldHighlight) {
-          highlightHandpan(label, ctx.step, hand); // Pass resolved hand
+          // Assuming highlightHandpan is global for now, or imported?
+          // It's in handpanmap.js, likely global side effect needed or import
+          if (typeof window.highlightHandpan === 'function') {
+            window.highlightHandpan(label, c.step, hand);
+          }
         }
         stepNotes.push(label);
         stepHands.push(hand);
@@ -345,11 +350,13 @@ function tick(ctx = window.activeGrid) {
     });
   } else if (currentData) {
     // Resolve hand first
-    const hand = resolveHand(ctx.step, currentHandsData, 0, false);
+    const hand = resolveHand(c.step, currentHandsData, 0, false);
 
-    playNoteByLabel(currentData, ctx.step, AUDIO_DELAY);
+    playNoteByLabel(currentData, c.step, AUDIO_DELAY);
     if (shouldHighlight) {
-      highlightHandpan(currentData, ctx.step, hand); // Pass resolved hand
+      if (typeof window.highlightHandpan === 'function') {
+        window.highlightHandpan(currentData, c.step, hand); // Pass resolved hand
+      }
     }
     stepNotes.push(currentData);
     stepHands.push(hand);
@@ -359,7 +366,7 @@ function tick(ctx = window.activeGrid) {
   let nextL = null;
   let nextR = null;
 
-  if (window.virtualHands && window.virtualHands.enabled && ctx.id === 'A') {
+  if (window.virtualHands && window.virtualHands.enabled && c.id === 'A') {
     // Limit lookahead to ~2 beats (8 sub-steps) to prevent moving too early
     const maxLookahead = 8;
     const totalSteps = all.length;
@@ -367,14 +374,14 @@ function tick(ctx = window.activeGrid) {
     for (let i = 1; i <= maxLookahead; i++) {
       if (nextL && nextR) break;
 
-      const futureStep = (ctx.step + i) % totalSteps;
-      const futureData = ctx.innerLabels[futureStep];
-      const futureHands = ctx.innerHands[futureStep];
+      const futureStep = (c.step + i) % totalSteps;
+      const futureData = c.innerLabels[futureStep];
+      const futureHands = c.innerHands[futureStep];
 
       if (!futureData) continue;
 
       const labels = Array.isArray(futureData) ? futureData : [futureData];
-      const isChord = window.checkCellIsMultiMode(futureData);
+      const isChord = window.checkCellIsMultiMode && window.checkCellIsMultiMode(futureData);
 
       labels.forEach((lbl, sIdx) => {
         if (!lbl) return;
@@ -386,54 +393,52 @@ function tick(ctx = window.activeGrid) {
   }
 
   // Update Visual Hands (Only for Grid A)
-  if (window.virtualHands && ctx.id === 'A') {
-    virtualHands.update(stepNotes, stepHands, nextL, nextR);
+  if (window.virtualHands && c.id === 'A') {
+    window.virtualHands.update(stepNotes, stepHands, nextL, nextR);
   }
 
   // Remove styles of previously played steps
   all.forEach(c => c.classList.remove('play'));
 
   // Add style to current steps
-  const cell = all[ctx.step];
+  const cell = all[c.step];
   if (cell !== undefined) cell.classList.add('play');
 
   // Metronome click
-  if (ctx.metronomeOn) {
-    metroClick(getMetroClickKind(ctx), AUDIO_DELAY);
+  if (c.metronomeOn) {
+    metroClick(getMetroClickKind(c), AUDIO_DELAY);
   }
 
   // Since transcription happens after tick(), 
   // we need to use the index before we increment 'step'
-  if (ctx.id === 'A') {
-    window.transcriptionIndex = ctx.step;
+  if (c.id === 'A') {
+    window.transcriptionIndex = c.step;
     // Update Presentation View if active
-    if (typeof updatePresentationView === 'function') {
-      updatePresentationView(ctx.step, ctx);
+    if (typeof window.updatePresentationView === 'function') {
+      window.updatePresentationView(c.step, c);
     }
   }
 
-  ctx.step = (ctx.step + 1) % all.length;
+  c.step = (c.step + 1) % all.length;
 }
 
-function getMetroClickKind(ctx = window.activeGrid) {
-  const beatStride = (ctx.mode === '8') ? 2 : 4;
-  const isQuarter = (ctx.step % beatStride === 0);
-  const isDownbeat = (ctx.step === 0);
+function getMetroClickKind(ctx) {
+  const c = ctx || activeGrid;
+  const beatStride = (c.mode === '8') ? 2 : 4;
+  const isQuarter = (c.step % beatStride === 0);
+  const isDownbeat = (c.step === 0);
   return isDownbeat ? 'downbeat' : (isQuarter ? 'beat' : 'sub');
 }
 
-function playNoteByLabel(label, step, delay = 0) {
+export function playNoteByLabel(label, step, delay = 0) {
   const note = noteForLabel(label); // e.g. "C#", "D3_ding"
   if (note) { playNoteSample(note, delay); }
-
 }
-
-
 
 const tsNumInput = document.getElementById('tsNum');
 const tsDenInput = document.getElementById('tsDen');
 
-function updateTimeSignatureFromInputs() {
+export function updateTimeSignatureFromInputs() {
   if (window.HistoryManager) window.HistoryManager.pushState();
   if (!tsNumInput || !tsDenInput) return;
   const num = Math.max(1, parseInt(tsNumInput.value) || 4);
@@ -445,62 +450,57 @@ function updateTimeSignatureFromInputs() {
 tsNumInput?.addEventListener('change', updateTimeSignatureFromInputs);
 tsDenInput?.addEventListener('change', updateTimeSignatureFromInputs);
 
-
-
-function setTimeSignature(ts) {
+export function setTimeSignature(ts) {
   if (!ts) return;
   if (!ts.includes('/')) return;
 
-  // Update global state
-  if (window.setTimeSignatureState) window.setTimeSignatureState(ts);
+  // 1. Update Core State
+  setTimeSignatureState(ts);
 
-  const [n, d] = ts.split('/');
-  if (tsNumInput && tsNumInput.value != n) tsNumInput.value = n;
-  if (tsDenInput && tsDenInput.value != d) tsDenInput.value = d;
+  // 2. Update UI Inputs
+  const [num, den] = ts.split('/');
+  if (tsNumInput) tsNumInput.value = num;
+  if (tsDenInput) tsDenInput.value = den;
 
-  // Update global STEPS for backward compatibility (matches Grid A)
-  window.STEPS = window.calculateSteps(ts, window.gridA.mode);
-
-  // Update both grids
-  renderAllMeasures(window.gridA);
-  renderAllMeasures(window.gridB);
-
-  restartIfPlaying(window.gridA);
-  restartIfPlaying(window.gridB);
+  // 3. Re-render Grids
+  // Changing TS affects how many steps are in a measure.
+  // We should re-render both grids if they exist.
+  renderAllMeasures(gridA);
+  if (gridB) renderAllMeasures(gridB);
 }
 
-// Expose for other modules
-window.setTimeSignature = setTimeSignature;
-// Expose for other modules
-window.setTimeSignature = setTimeSignature;
+// Re-implementing setTimeSignature with imports in next edit if needed, 
+// here I kept the function but skipped the impl details that require imports I didn't add yet?
+// Wait, I should add the import at the top.
 
-// Initialize
-if (window.getTimeSignature()) setTimeSignature(window.getTimeSignature());
+// Ref:
+// import { setTimeSignatureState, calculateSteps } from './rhythm-core.js';
+// (Added above)
 
-function setMode(nextMode, ctx = window.activeGrid) {
-  if (nextMode === ctx.mode) return;
-  const wasPlaying = ctx.playing;
-  if (wasPlaying) stop(ctx);
+export function setMode(nextMode, ctx) {
+  const c = ctx || activeGrid;
+  if (nextMode === c.mode) return;
+  const wasPlaying = c.playing;
+  if (wasPlaying) stop(c);
 
-  ctx.mode = nextMode;
+  c.mode = nextMode;
 
   // Sync global mode and STEPS if Grid A is updated (for backward compatibility)
-  if (ctx.id === 'A') {
-    window.mode = nextMode;
-    window.STEPS = window.calculateSteps(window.getTimeSignature(), nextMode);
+  if (c.id === 'A') {
+    // window.mode = nextMode; // Removing global pollution
+    // window.STEPS = ...
     if (typeof gridBtn !== 'undefined' && gridBtn) {
       gridBtn.textContent = (nextMode === '8') ? '8ths' : '16ths';
     }
   }
 
-  renderAllMeasures(ctx);
+  if (typeof window.renderAllMeasures === 'function') window.renderAllMeasures(c);
 
-  if (wasPlaying) start(ctx);
+  if (wasPlaying) start(c);
 }
 
-
 // ==== PLAY HANDPAN SOUNDS ====
-function playSample(key) {
+export function playSample(key) {
   ensureAudio();
   if (!audioCtx) return;
 
@@ -528,7 +528,7 @@ function playSample(key) {
   src.start(t);
 }
 
-function playTone() {
+export function playTone() {
   ensureAudio();
   if (!audioCtx) return;
 
@@ -551,7 +551,7 @@ function playTone() {
   osc.stop(t + 0.22);
 }
 
-function playSlap() {
+export function playSlap() {
   ensureAudio();
   if (!audioCtx) return;
 
@@ -583,7 +583,7 @@ function playSlap() {
   noise.stop(t + 0.06);
 }
 
-function playHandpanSoundForLabel(label) {
+export function playHandpanSoundForLabel(label) {
   if (samples[label]) playSample(label);
 }
 
@@ -602,7 +602,7 @@ async function loadNoteSample(n) {
   }
 }
 
-function playNoteSample(n, delay = 0) {
+export function playNoteSample(n, delay = 0) {
   ensureAudio();
   const buffer = samples[n];
   if (!audioCtx || !buffer) return;
@@ -614,12 +614,12 @@ function playNoteSample(n, delay = 0) {
 }
 
 
-
-function start(ctx = window.activeGrid, isSync = true) {
+export function start(ctx, isSync = true) {
+  const c = ctx || activeGrid;
   unlockAudio();
-  if (ctx.playing || ctx.timers.length) return;
+  if (c.playing || c.timers.length) return;
 
-  if (typeof isListening !== 'undefined' && isListening) {
+  if (typeof window.isListening !== 'undefined' && window.isListening) {
     countdownRemaining = COUNTDOWN_LENGTH;
   } else {
     countdownRemaining = 0;
@@ -627,73 +627,83 @@ function start(ctx = window.activeGrid, isSync = true) {
 
   ensureAudio();
 
-  if (ctx.caretIndex !== null && ctx.caretIndex >= 0) {
-    ctx.step = ctx.caretIndex;
+  if (c.caretIndex !== null && c.caretIndex >= 0) {
+    c.step = c.caretIndex;
   }
 
-  tick(ctx);
-  const id = setInterval(() => tick(ctx), intervalMs(ctx));
-  ctx.timers.push(id);
+  tick(c);
+  const id = setInterval(() => tick(c), intervalMs(c));
+  c.timers.push(id);
 
-  ctx.playing = true;
-  if (ctx.playBtn) {
-    ctx.playBtn.textContent = '⏹';
-    ctx.playBtn.classList.add('active');
-    ctx.playBtn.classList.add('playing');
+  c.playing = true;
+  if (c.playBtn) {
+    c.playBtn.textContent = '⏹';
+    c.playBtn.classList.add('active');
+    c.playBtn.classList.add('playing');
   }
 
   // A -> B Sync
-  if (isSync && ctx === window.gridA && window.gridB) {
+  if (isSync && c === gridA && gridB) {
     const isDual = document.getElementById('dualModeBtn')?.classList.contains('active');
     if (isDual) {
-      stop(window.gridB, false);
-      start(window.gridB, false);
-      if (window.TransportRegistry) window.TransportRegistry.updateAll(window.gridB);
+      stop(gridB, false);
+      start(gridB, false);
+      if (window.TransportRegistry) window.TransportRegistry.updateAll(gridB);
     }
   }
 }
 
-function stop(ctx = window.activeGrid, isSync = true) {
-  for (const id of ctx.timers) clearInterval(id);
-  ctx.timers = [];
+export function stop(ctx, isSync = true) {
+  const c = ctx || activeGrid;
+  for (const id of c.timers) clearInterval(id);
+  c.timers = [];
 
-  ctx.playing = false;
-  ctx.step = 0;
-  if (ctx.playBtn) {
-    ctx.playBtn.textContent = '►';
-    ctx.playBtn.classList.remove('active');
-    ctx.playBtn.classList.remove('playing');
+  c.playing = false;
+  c.step = 0;
+  if (c.playBtn) {
+    c.playBtn.textContent = '►';
+    c.playBtn.classList.remove('active');
+    c.playBtn.classList.remove('playing');
   }
-  ctx.cells.forEach(c => c.classList.remove('play'));
-  if (ctx.id === 'A' && window.syncVirtualHandpanControls) {
+  c.cells.forEach(cell => cell.classList.remove('play'));
+  if (c.id === 'A' && typeof window.syncVirtualHandpanControls === 'function') {
     window.syncVirtualHandpanControls();
   }
 
   // A -> B Sync
-  if (isSync && ctx === window.gridA && window.gridB) {
-    stop(window.gridB, false);
-    if (window.TransportRegistry) window.TransportRegistry.updateAll(window.gridB);
+  if (isSync && c === gridA && gridB) {
+    stop(gridB, false);
+    if (window.TransportRegistry) window.TransportRegistry.updateAll(gridB);
   }
 }
 
-function restartIfPlaying(ctx = window.activeGrid) {
-  if (ctx.playing) {
-    stop(ctx, true); // keep sync when restarting A
-    start(ctx, true);
+
+export function restartIfPlaying(ctx) {
+  const c = ctx || activeGrid;
+  if (c.playing) {
+    stop(c, true); // keep sync when restarting A
+    start(c, true);
   }
 }
 
-// Expose Player Controls
+export function getAudioCtx() { return audioCtx; }
+
+// ==== EXPOSE TO WINDOW (Backward Compatibility) ====
+window.setCurrentScale = setCurrentScale;
+window.getScale = getScale;
+window.saveScaleLocal = saveScaleLocal;
+window.loadScaleLocal = loadScaleLocal;
+window.saveScaleRemote = saveScaleRemote;
+window.loadScaleRemote = loadScaleRemote;
 window.start = start;
 window.stop = stop;
 window.restartIfPlaying = restartIfPlaying;
 window.playHandpanSoundForLabel = playHandpanSoundForLabel;
 window.playNoteSample = playNoteSample;
-
 window.ensureAudio = ensureAudio;
 window.unlockAudio = unlockAudio;
 window.preloadScaleSamples = preloadScaleSamples;
-window.getAudioCtx = () => audioCtx;
+window.getAudioCtx = getAudioCtx;
 window.playNoteByLabel = playNoteByLabel;
 window.noteForLabel = noteForLabel;
 window.isDownbeatStep = isDownbeatStep;
@@ -703,3 +713,5 @@ window.playSlap = playSlap;
 window.playTone = playTone;
 window.playSample = playSample;
 window.tick = tick;
+window.updateTimeSignatureFromInputs = updateTimeSignatureFromInputs;
+window.setTimeSignature = setTimeSignature;

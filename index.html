@@ -74,6 +74,29 @@
 
       <!-- WRAPPER for collapsible items -->
       <div id="headerMenu" class="header-menu-items">
+
+        <!-- Account Moved to TOP for Mobile Priority -->
+        <div class="pattern-row grid-child account">
+          <div class="dropdown account-dropdown">
+            <button id="accountBtn" title="Account">Account</button>
+            <div id="accountDropdownMenu" class="dropdown-content right-aligned">
+              <button id="authBtn" style="display:none; font-weight:bold; color:var(--primary);">Sign In /
+                Register</button>
+              <button id="openProfileBtn">👤 Edit Profile</button>
+              <button id="openAccountAuthBtn">⚙️ Account Settings</button>
+              <div class="dropdown-divider"></div>
+              <button id="toggleSidebarBtn">📚 Courses</button>
+              <button id="openCourseModalBtn" class="admin-only" style="display: none;">➕ Create Course</button>
+              <button id="openPotwModalBtn" class="admin-only" style="display: none;">🛠️ POTW Dashboard</button>
+              <button id="togglePracticeBtn">📋 Practice Plan</button>
+              <div class="dropdown-divider"></div>
+              <button id="myScalesBtn" style="display:none;">🛸 My Scales</button>
+              <button id="authLogoutDropdown">🚪 Sign out</button>
+            </div>
+          </div>
+          <span id="accountStatus" style="opacity:.75;font-size:13px;"></span>
+        </div>
+
         <!-- Pattern select, save, load, etc. -->
         <div class="pattern-row grid-child pattern-select">
           <h3>Select pattern:</h3>
@@ -100,25 +123,6 @@
 
           <button id="shareBtn" title="Create a share link (public)">Share</button>
           <button id="communityBtn" class="primary-btn" title="Browse Community Rhythms">Community</button>
-        </div>
-
-        <div class="pattern-row grid-child account">
-          <div class="dropdown account-dropdown">
-            <button id="accountBtn" title="Account">Account</button>
-            <div id="accountDropdownMenu" class="dropdown-content right-aligned">
-              <button id="openProfileBtn">👤 Edit Profile</button>
-              <button id="openAccountAuthBtn">⚙️ Account Settings</button>
-              <div class="dropdown-divider"></div>
-              <button id="toggleSidebarBtn">📚 Courses</button>
-              <button id="openCourseModalBtn" class="admin-only" style="display: none;">➕ Create Course</button>
-              <button id="openPotwModalBtn" class="admin-only" style="display: none;">🛠️ POTW Dashboard</button>
-              <button id="togglePracticeBtn">📋 Practice Plan</button>
-              <div class="dropdown-divider"></div>
-              <button id="myScalesBtn" style="display:none;">🛸 My Scales</button>
-              <button id="authLogoutDropdown">🚪 Sign out</button>
-            </div>
-          </div>
-          <span id="accountStatus" style="opacity:.75;font-size:13px;"></span>
         </div>
       </div> <!-- End Wrapper -->
     </div>
@@ -867,7 +871,7 @@
     </div>
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
   <!-- Error Modal -->
   <div id="errorModal" class="modal" aria-hidden="true" style="display:none;">
     <div class="error-modal-content">
@@ -891,27 +895,6 @@
 
 
   <script>
-
-    const SUPABASE_URL = "https://ycdlqkaymkgpbpgtqubs.supabase.co";
-    const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_ibxUdXTNfhXKhE5sh0wezA_1kigLLAZ";
-
-    window.supabase1 = window.supabase1 || window.supabase.createClient(
-      SUPABASE_URL,
-      SUPABASE_PUBLISHABLE_KEY,
-      {
-        auth: {
-          persistSession: true,
-          autoRefreshToken: true,
-          detectSessionInUrl: true,
-          storage: window.localStorage,
-        },
-      }
-    );
-
-    const supabase1 = window.supabase1;
-
-    let currentUser = null;
-
     // ===== CONFIG =====
     const VERSION = 'v1.17.4 — Cleaner Hand Silhouette + Fix Right Position';
 
@@ -998,18 +981,10 @@
     const copyMeasureBtn = document.getElementById('copyMeasureBtn');
     const pasteMeasureBtn = document.getElementById('pasteMeasureBtn');
 
-    const ADMIN_EMAILS = new Set([
-      "jpitters3@gmail.com",
-    ]);
-    window.ADMIN_EMAILS = ADMIN_EMAILS;
 
-    // ===== STATE =====
-    let innerLabels = [];
-    let measures = 1;
 
   </script>
-  <!-- External Dependencies (Supabase, MIDI Parser) -->
-  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  <!-- External Dependencies (MIDI Parser) -->
   <script src="https://cdn.jsdelivr.net/npm/midi-parser-js@4.0.4/src/main.min.js"></script>
 
   <!-- Vite Entry Point -->

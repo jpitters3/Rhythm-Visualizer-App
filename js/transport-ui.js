@@ -2,7 +2,9 @@
  * TransportUI manages a set of transport controls (Play, Metronome, BPM).
  * It binds a GridContext to a DOM container and keeps them in sync.
  */
-class TransportUI {
+import { start, stop } from './noteplayer.js';
+
+export class TransportUI {
   constructor(ctx, container) {
     this.ctx = ctx;
     this.container = container;
@@ -22,9 +24,9 @@ class TransportUI {
       this.playBtn.onclick = (e) => {
         e.stopPropagation();
         if (this.ctx.playing) {
-          if (typeof stop === 'function') stop(this.ctx);
+          stop(this.ctx);
         } else {
-          if (typeof start === 'function') start(this.ctx);
+          start(this.ctx);
         }
         TransportRegistry.updateAll(this.ctx);
       };
@@ -98,7 +100,7 @@ class TransportUI {
 /**
  * TransportRegistry tracks all TransportUI instances and allows broadcasting updates.
  */
-window.TransportRegistry = {
+export const TransportRegistry = {
   instances: [],
   register(instance) {
     this.instances.push(instance);
@@ -110,4 +112,14 @@ window.TransportRegistry = {
   }
 };
 
+
+window.TransportRegistry = TransportRegistry;
 window.TransportUI = TransportUI;
+
+// Legacy global found in init.js assertion
+window.metroClick = function (ctx) {
+  const c = ctx || (window.activeGrid || window.gridA);
+  if (!c) return;
+  c.metronomeOn = !c.metronomeOn;
+  TransportRegistry.updateAll(c);
+};

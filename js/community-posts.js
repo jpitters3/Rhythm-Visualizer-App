@@ -1,3 +1,7 @@
+import { escapeHtml } from './utils.js';
+import { loadPatternFromFeed } from './feed.js';
+import { currentUser } from './auth.js';
+
 /**
  * Community Posts (Discussion)
  * Handles Posts, Comments, Likes, and Media Attachments

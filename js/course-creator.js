@@ -1,3 +1,6 @@
+import { currentUser, isAdminUser } from './auth.js';
+import { dbListPatternNames, dbLoadPatternByName, getSavedPatterns, serializePattern } from './pattern-crud.js';
+
 // ===== STATE =====
 let currentCourseData = {
   title: "",
@@ -748,23 +751,3 @@ Object.defineProperty(window, 'currentCourseData', {
 });
 window.openCourseCreator = openCourseCreator;
 window.closeCourseCreator = closeCourseCreator;
-// window.loadCourseForEditing = loadCourseForEditing;
-// window.fetchCourses = fetchCourses;
-// window.toggleSectionPublish = toggleSectionPublish;
-// window.toggleLessonPublish = toggleLessonPublish;
-// window.updateLessonPattern = updateLessonPattern;
-// window.updateLessonTitle = updateLessonTitle;
-// window.updateLessonDescription = updateLessonDescription;
-// window.updateLessonVideoUrl = updateLessonVideoUrl;
-// window.updateLessonPatternName = updateLessonPatternName;
-// window.updateLessonPatternJson = updateLessonPatternJson;
-// window.updateSectionTitle = updateSectionTitle;
-// window.updateSectionDescription = updateSectionDescription;
-// window.updateSectionVideoUrl = updateSectionVideoUrl;
-// window.updateSectionPatternName = updateSectionPatternName;
-// window.updateSectionPatternJson = updateSectionPatternJson;
-// window.updateCourseTitle = updateCourseTitle;
-// window.updateCourseDescription = updateCourseDescription;
-// window.updateCoursePublish = updateCoursePublish;
-// window.updateCourseId = updateCourseId;
-// window.updateCourseOrderIndex = updateCourseOrderIndex;

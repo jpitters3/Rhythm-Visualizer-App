@@ -70,28 +70,37 @@ test.describe('Dual Grid Functionality', () => {
   test('Focus Management (activeGrid)', async ({ page }) => {
     await page.click('#dualModeBtn');
 
-    // Click inside Grid B
-    // We need to click a cell in measures-B
+    // Click inside Grid B to focus it
     await page.locator('#measures-B .cell').first().click();
 
-    // Verify window.activeGrid is gridB
-    const activeGridId = await page.evaluate(() => window.activeGrid.id);
-    expect(activeGridId).toBe('B');
+    // Verify Focus by Action: Typing '1' should affect Grid B, not A
+    await page.keyboard.press('1');
 
-    // Click inside Grid A
+    // Grid B cell should have '1' (or corresponding label)
+    const cellB = page.locator('#measures-B .cell').first().locator('.inner');
+    await expect(cellB).toHaveText('1');
+
+    // Grid A active cell should NOT change (it's empty by default)
+    const cellA = page.locator('#measures .cell').first().locator('.inner');
+    await expect(cellA).toHaveText('');
+
+    // Click inside Grid A to focus it
     await page.locator('#measures .cell').first().click();
-    const activeGridIdA = await page.evaluate(() => window.activeGrid.id);
-    expect(activeGridIdA).toBe('A');
+
+    // Typing '2' should affect Grid A
+    await page.keyboard.press('2');
+    await expect(cellA).toHaveText('2');
+
+    // Grid B should remain '1'
+    await expect(cellB).toHaveText('1');
   });
 
   test('Independent Clear Logic', async ({ page }) => {
     await page.click('#dualModeBtn');
 
-    // Add something to Grid A
-    await page.evaluate(() => {
-      window.gridA.innerLabels[0] = 'D';
-      window.renderAllMeasures(window.gridA);
-    });
+    // Add something to Grid A via UI
+    await page.locator('#measures .cell').first().click();
+    await page.keyboard.press('d'); // Ding
     await expect(page.locator('#measures .cell').first()).toHaveClass(/has-label/);
 
     // Clear Grid B

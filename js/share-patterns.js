@@ -1,3 +1,6 @@
+import { supabase } from './supabase-client.js';
+import { currentUser } from './auth.js';
+
 const shareBtn = document.getElementById('shareBtn');
 
 function genShareId(len = 10) {
@@ -38,7 +41,7 @@ async function upsertSharedPattern() {
 
   // Try update existing share for same user+name (via unique index)
   // If it doesn't exist, create a new one with a new share_id.
-  const { data: existing, error: exErr } = await supabase1
+  const { data: existing, error: exErr } = await supabase
     .from('shared_patterns')
     .select('share_id, is_public')
     .eq('user_id', currentUser.id)
@@ -54,7 +57,7 @@ async function upsertSharedPattern() {
   // Preserve existing public status if available, otherwise default to false
   const is_public_val = existing?.is_public ?? false;
 
-  const { error } = await supabase1
+  const { error } = await supabase
     .from('shared_patterns')
     // We explicitly set is_public. If it was already true, it stays true.
     // If it was undefined (new), it becomes false.
@@ -86,7 +89,7 @@ shareBtn?.addEventListener('click', async () => {
 
     // Ask if they want to publish to community
     if (confirm('Link copied! Would you also like to publish this pattern to the Community Feed?')) {
-      const { error } = await supabase1
+      const { error } = await supabase
         .from('shared_patterns')
         .update({ is_public: true })
         .eq('share_id', share_id);
@@ -106,7 +109,7 @@ shareBtn?.addEventListener('click', async () => {
   }
 });
 
-async function loadSharedFromURL() {
+export async function loadSharedFromURL() {
   const sp = new URLSearchParams(location.search);
   const share = sp.get('share');
 
@@ -118,7 +121,7 @@ async function loadSharedFromURL() {
   }
 
   // Public read
-  const { data, error } = await supabase1
+  const { data, error } = await supabase
     .from('shared_patterns')
     .select('pattern_json, name, user_id')  // Renamed from owner_id
     // Public read or Private Link

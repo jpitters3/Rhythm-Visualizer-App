@@ -1,3 +1,5 @@
+import { currentUser } from './auth.js';
+
 // ===== USER PROFILES =====
 // Handles fetching, updating, and caching user profiles
 

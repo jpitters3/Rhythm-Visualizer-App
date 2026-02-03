@@ -2,7 +2,10 @@
  * GridContext manages the state for an independent rhythm grid.
  * This allows multiple grids to coexist without global variable collisions.
  */
-class GridContext {
+import { calculateSteps, getTimeSignature } from './rhythm-core.js';
+import { setGridA, setGridB, setActiveGrid } from './state.js';
+
+export class GridContext {
   constructor(id, containerId) {
     this.id = id;
     this.containerId = containerId;
@@ -32,9 +35,7 @@ class GridContext {
   }
 
   get stepsPerMeasure() {
-    return (typeof window.calculateSteps === 'function')
-      ? window.calculateSteps(window.getTimeSignature(), this.mode)
-      : (this.mode === '16' ? 16 : 8);
+    return calculateSteps(getTimeSignature(), this.mode);
   }
 
   get measures() {
@@ -76,11 +77,28 @@ class GridContext {
   }
 }
 
-window.GridContext = GridContext;
-
-// Global instances
-window.gridA = new GridContext('A', 'measures');
-window.gridB = new GridContext('B', 'measures-B');
+// Global instances (exported)
+export const gridA = new GridContext('A', 'measures');
+export const gridB = new GridContext('B', 'measures-B');
 
 // Current active grid for keyboard shortcuts and general focus
-window.activeGrid = window.gridA;
+export let activeGrid = gridA; // Default to A
+
+export function setActiveGridGlobal(grid) {
+  activeGrid = grid;
+  setActiveGrid(grid); // Update state.js too
+}
+
+// Sync with central state
+setGridA(gridA);
+setGridB(gridB);
+setActiveGrid(activeGrid);
+
+// Legacy: Exposed for backward compatibility with non-ESM scripts (init.js, controls.js)
+window.gridA = gridA;
+window.gridB = gridB;
+window.activeGrid = activeGrid;
+window.GridContext = GridContext; // Also might be used? Maybe not, but safer.
+window.setActiveGridGlobal = setActiveGridGlobal;
+
+

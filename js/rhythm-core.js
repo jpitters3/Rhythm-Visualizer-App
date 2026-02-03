@@ -7,9 +7,9 @@
 
 // Global State
 let timeSignature = localStorage.getItem('defaultTimeSignature') || '4/4';
-let STEPS = 32; // Default, will be recalculated
+export let STEPS = 32; // Default, will be recalculated
 
-function calculateSteps(ts, currentMode) {
+export function calculateSteps(ts, currentMode) {
   const parts = ts.split('/');
   const num = parseInt(parts[0]);
   const den = parseInt(parts[1]);
@@ -19,11 +19,11 @@ function calculateSteps(ts, currentMode) {
   return num * mult;
 }
 
-function getTimeSignature() {
+export function getTimeSignature() {
   return timeSignature;
 }
 
-function setTimeSignatureState(ts) {
+export function setTimeSignatureState(ts) {
   if (!ts) return;
   if (!ts.includes('/')) return;
 
@@ -31,11 +31,16 @@ function setTimeSignatureState(ts) {
   localStorage.setItem('defaultTimeSignature', ts);
 }
 
-// Expose immediately
+// Initialize global STEPS (assuming default mode '8')
+STEPS = calculateSteps(timeSignature, '8');
+
+// Legacy Expose
+window.STEPS = STEPS;
 window.calculateSteps = calculateSteps;
 window.getTimeSignature = getTimeSignature;
 window.setTimeSignatureState = setTimeSignatureState;
 
-// Initialize global STEPS (assuming default mode '8' if not yet defined, 
-// though Grid A might not exist yet. This is just a safe default.)
-window.STEPS = calculateSteps(timeSignature, '8'); 
+// Define 'mode' getter for backward compatibility (init.js uses it)
+// But 'mode' depends on activeGrid which is in grid-context.js / state.js
+// We can't easily access activeGrid here without circular dependency if we import it.
+// Instead, let's update init.js to use activeGrid.mode.

@@ -7,7 +7,7 @@ window.hasUnsavedChanges = function () {
   return current !== window.lastSavedState;
 };
 
-async function isAuthed() {
+export async function isAuthed() {
   if (typeof supabase1 === 'undefined' || !supabase1.auth) return false;
   try {
     const { data, error } = await supabase1.auth.getUser();
@@ -18,7 +18,7 @@ async function isAuthed() {
   }
 }
 
-async function dbListPatternNames() {
+export async function dbListPatternNames() {
   const { data, error } = await supabase1
     .from('patterns')
     .select('name')
@@ -28,7 +28,7 @@ async function dbListPatternNames() {
   return (data || []).map(r => r.name);
 }
 
-async function dbLoadPatternByName(name) {
+export async function dbLoadPatternByName(name) {
   const { data, error } = await supabase1
     .from('patterns')
     .select('data')
@@ -40,7 +40,7 @@ async function dbLoadPatternByName(name) {
   return data?.data || null;
 }
 
-async function dbSavePattern(name, stateObj) {
+export async function dbSavePattern(name, stateObj) {
   const row = {
     name,
     data: stateObj,
@@ -64,7 +64,7 @@ function withTimeout(promise, ms = 3000, label = 'timeout') {
 }
 
 
-async function dbDeletePattern(name) {
+export async function dbDeletePattern(name) {
   const { error } = await supabase1
     .from('patterns')
     .delete()
@@ -73,7 +73,7 @@ async function dbDeletePattern(name) {
   if (error) throw error;
 }
 
-async function dbRenamePattern(oldName, newName) {
+export async function dbRenamePattern(oldName, newName) {
   // rename = update name (unique per user enforced)
   const { error } = await supabase1
     .from('patterns')
@@ -85,7 +85,7 @@ async function dbRenamePattern(oldName, newName) {
 
 
 // ===== SAVE / LOAD =====
-function getSavedPatterns() {
+export function getSavedPatterns() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     return raw ? JSON.parse(raw) : {};
@@ -94,22 +94,22 @@ function getSavedPatterns() {
   }
 }
 
-function setSavedPatterns(obj) {
+export function setSavedPatterns(obj) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(obj));
 }
 
-function getSelectedPatternName() {
+export function getSelectedPatternName() {
   return patternSelect.value || '';
 }
 
-function updatePatternButtons() {
+export function updatePatternButtons() {
   const hasSelection = !!patternSelect.value;
   loadBtn.disabled = false;
   renameBtn.disabled = !hasSelection;
   deleteBtn.disabled = !hasSelection;
 }
 
-async function refreshPatternSelect(selectedName = '') {
+export async function refreshPatternSelect(selectedName = '') {
   try {
     patternSelect.innerHTML = '';
 
@@ -164,7 +164,7 @@ async function refreshPatternSelect(selectedName = '') {
 
 
 
-function serializePattern(ctx = window.gridA) {
+export function serializePattern(ctx = window.gridA) {
   const state = {
     version: (typeof VERSION !== 'undefined' ? VERSION : 'v1.0'),
     mode: ctx.mode,
@@ -194,7 +194,7 @@ function serializePattern(ctx = window.gridA) {
   return state;
 }
 
-function applyPattern(state, ctx = window.gridA) {
+export function applyPattern(state, ctx = window.gridA) {
   if (!state || !state.mode || !Array.isArray(state.labels)) {
     console.error('Invalid pattern state:', state);
     alert('That pattern JSON does not look valid.');
@@ -256,7 +256,7 @@ function applyPattern(state, ctx = window.gridA) {
   }
 }
 
-function ensureHasSelection() {
+export function ensureHasSelection() {
   const name = getSelectedPatternName();
   if (!name) {
     alert('Select a saved pattern first.');

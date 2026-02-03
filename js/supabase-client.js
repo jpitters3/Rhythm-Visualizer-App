@@ -1,0 +1,17 @@
+
+import { createClient } from '@supabase/supabase-js';
+
+const SUPABASE_URL = "https://ycdlqkaymkgpbpgtqubs.supabase.co";
+const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_ibxUdXTNfhXKhE5sh0wezA_1kigLLAZ";
+
+export const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true,
+    storage: window.localStorage,
+  },
+});
+
+// Backward compatibility for legacy scripts and debugging
+window.supabase1 = supabase;

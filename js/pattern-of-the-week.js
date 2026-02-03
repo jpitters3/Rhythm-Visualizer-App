@@ -1,3 +1,6 @@
+import { supabase } from './supabase-client.js';
+import { currentUser } from './auth.js';
+
 /* POTW Dashboard Logic */
 (function () {
   // State
@@ -111,10 +114,10 @@
   }
 
   async function fetchPotwPatterns() {
-    if (!window.supabase1 || !window.currentUser) return;
+    if (!supabase || !currentUser) return;
 
     try {
-      const { data, error } = await supabase1
+      const { data, error } = await supabase
         .from('patterns')
         .select('id, name')
         .eq('user_id', currentUser.id)
@@ -149,7 +152,7 @@
     historyEl.innerHTML = 'Loading...';
 
     try {
-      const { data, error } = await supabase1
+      const { data, error } = await supabase
         .from('weekly_patterns')
         .select(`
                  id, launch_date, difficulty, description, pattern_id,
@@ -260,7 +263,7 @@
     if (!confirm("Are you sure you want to unschedule this pattern?")) return;
 
     try {
-      const { error } = await supabase1
+      const { error } = await supabase
         .from('weekly_patterns')
         .delete()
         .eq('id', id);
@@ -300,14 +303,14 @@
 
       if (editingId) {
         // UPDATE
-        const res = await supabase1
+        const res = await supabase
           .from('weekly_patterns')
           .update(payload)
           .eq('id', editingId);
         error = res.error;
       } else {
         // INSERT
-        const res = await supabase1
+        const res = await supabase
           .from('weekly_patterns')
           .insert(payload);
         error = res.error;

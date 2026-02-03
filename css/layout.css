@@ -41,6 +41,17 @@ div.grid-container.top-row {
   gap: 20px;
 }
 
+/* Force Pattern Select to Left (1) and Account to Right (2) on Desktop */
+@media (min-width: 901px) {
+  .grid-child.pattern-select {
+    order: 1;
+  }
+
+  .grid-child.account {
+    order: 2;
+  }
+}
+
 /* Mobile Responsive */
 @media (max-width: 900px) {
 

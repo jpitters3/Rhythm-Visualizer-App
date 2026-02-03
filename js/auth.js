@@ -1,16 +1,29 @@
+import { ADMIN_EMAILS } from './config.js';
+import { SCALES, getScale, setCurrentScale, loadScaleRemote, loadScaleLocal } from './noteplayer.js';
+
+import { supabase } from './supabase-client.js';
+
+// We rely on the imported supabase client.
+// const supabase1 = window.supabase1; // Legacy removed
+const supabase1 = supabase; // Alias for minimal diff below, or just replace all usages.
+// Let's replace 'supabase1' with 'supabase' in the file to be clean.
+
+
+// Global currentUser
+export let currentUser = null;
+
 // Admin functionality
-function isAdminUser(user) {
+export function isAdminUser(user) {
   const email = user?.email?.toLowerCase?.() || "";
   return ADMIN_EMAILS.has(email);
 }
 
-function updateAdminUI() {
+export function updateAdminUI() {
   const show = isAdminUser(currentUser);
 
   // Toggle all admin-only elements
   document.querySelectorAll('.admin-only').forEach(el => {
     // Force specific display type for buttons if needed, or just let CSS/default handle it
-    // Some buttons need 'block', others 'inline'. "" lets CSS take over.
     el.style.display = show ? "" : "none";
   });
 
@@ -20,8 +33,20 @@ function updateAdminUI() {
   }
 }
 
+// Elements (Globals previously, now local resolution if possible, or assume global ID access)
+const authModal = document.getElementById('authModal');
+const authEmail = document.getElementById('authEmail');
+const authPass = document.getElementById('authPass');
+const authHint = document.getElementById('authHint');
+const accountStatus = document.getElementById('accountStatus');
+const accountBtn = document.getElementById('accountBtn');
+const authLogin = document.getElementById('authLogin');
+const authRegister = document.getElementById('authRegister');
+const authLogout = document.getElementById('authLogout');
+
 // Auth modal
-function openAuthModal() {
+export function openAuthModal() {
+  if (!authModal) return;
   authModal.classList.add('open');
   authModal.setAttribute('aria-hidden', 'false');
 
@@ -32,7 +57,6 @@ function openAuthModal() {
       authPass.value = '';
       authPass.placeholder = 'New Password';
     }
-    // Do NOT focus
   } else {
     // Clear if signed out
     if (authEmail) authEmail.value = '';
@@ -45,10 +69,9 @@ function openAuthModal() {
 
   // Refresh user state in background to catch email updates/verifications
   (async () => {
-    const { data } = await supabase1.auth.getUser();
+    if (!supabase1) return;
+    const { data } = await supabase.auth.getUser();
     if (data?.user) {
-      // Create a new reference to trigger updates if needed, though mutation is simpler here
-      // Checking for differences could be done, but blind update is safe/fast enough
       const oldEmail = currentUser?.email;
       currentUser = data.user;
 
@@ -59,32 +82,18 @@ function openAuthModal() {
     }
   })();
 }
-function closeAuthModal() {
+
+export function closeAuthModal() {
+  if (!authModal) return;
   authModal.classList.remove('open');
   authModal.setAttribute('aria-hidden', 'true');
 }
-
-window.closeAuthModal = closeAuthModal;
-window.openAuthModal = openAuthModal;
-window.isAdminUser = isAdminUser;
-window.updateAdminUI = updateAdminUI;
-
-// Expose currentUser getter or variable
-// Since it's a let, we can't export the variable reference directly to window effectively if it changes, 
-// unless we update window.currentUser every time it changes.
-// Better to expose a getter or ensure we update window.currentUser.
-// For now, let's expose the initial null and rely on updateAuthUI to keep it sync if needed, 
-// OR assume other modules read window.currentUser.
-Object.defineProperty(window, 'currentUser', {
-  get: () => currentUser,
-  set: (val) => { currentUser = val; }
-});
 
 // Dropdown
 const accountDropdownMenu = document.getElementById('accountDropdownMenu');
 const authLogoutDropdown = document.getElementById('authLogoutDropdown');
 
-function updateAccountUI() {
+export function updateAccountUI() {
   if (!accountStatus) return;
   if (currentUser) {
     if (accountStatus) accountStatus.textContent = ''; // Clear "Not signed in"
@@ -92,15 +101,14 @@ function updateAccountUI() {
     if (accountBtn) accountBtn.textContent = currentUser.email.charAt(0).toUpperCase();
 
     // Signed In Mode
-    if (authLogout) authLogout.style.display = 'none'; // OLD logic? Wait, index.html has authLogoutDropdown button
-    // Let's rely on IDs found in index.html (authBtn, profileBtn, myScalesBtn, signOutBtn)
+    if (authLogout) authLogout.style.display = 'none';
 
     // Auth Modal buttons
     if (authLogin) authLogin.style.display = 'none';
     if (authRegister) authRegister.style.display = 'none';
 
     // Dropdown Links
-    const profileBtn = document.getElementById('profileBtn');
+    const profileBtn = document.getElementById('openProfileBtn');
     if (profileBtn) profileBtn.style.display = 'block';
 
     const myScalesBtn = document.getElementById('myScalesBtn');
@@ -113,14 +121,26 @@ function updateAccountUI() {
     if (authBtnLink) authBtnLink.style.display = 'none'; // Hide "Sign In" link
 
     // Default state: Hidden password update
-    document.getElementById('authUpdatePassword').style.display = 'none';
-    document.getElementById('authUpdateEmail').style.display = 'none'; // Hidden default
-    document.getElementById('authForgotPassword').style.display = 'none';
+    const upPass = document.getElementById('authUpdatePassword');
+    if (upPass) upPass.style.display = 'none';
+    const upEmail = document.getElementById('authUpdateEmail');
+    if (upEmail) upEmail.style.display = 'none';
+    const forgot = document.getElementById('authForgotPassword');
+    if (forgot) forgot.style.display = 'none';
 
-    document.getElementById('authPasswordRow').style.display = 'none'; // Lock row initially
-    document.getElementById('authPasswordConfirmRow').style.display = 'none';
-    document.getElementById('authCurrentPassRow').style.display = 'none'; // Hidden default
-    document.getElementById('authTogglePasswordBtn').style.display = ''; // Show "Change Password" link
+    // Ensure "Account Settings" is visible when logged in
+    const accSetBtn = document.getElementById('openAccountAuthBtn');
+    if (accSetBtn) accSetBtn.style.display = 'block';
+
+
+    const pr = document.getElementById('authPasswordRow');
+    if (pr) pr.style.display = 'none';
+    const pcr = document.getElementById('authPasswordConfirmRow');
+    if (pcr) pcr.style.display = 'none';
+    const cpr = document.getElementById('authCurrentPassRow');
+    if (cpr) cpr.style.display = 'none';
+    const tpb = document.getElementById('authTogglePasswordBtn');
+    if (tpb) tpb.style.display = '';
 
     // Update hint only if it's the default or signed-out message
     const hint = document.getElementById('authHint');
@@ -137,8 +157,7 @@ function updateAccountUI() {
     if (accountDropdownMenu) accountDropdownMenu.classList.remove('show');
 
     // Signed Out Mode
-    // Dropdown Links
-    const profileBtn = document.getElementById('profileBtn');
+    const profileBtn = document.getElementById('openProfileBtn');
     if (profileBtn) profileBtn.style.display = 'none';
 
     const myScalesBtn = document.getElementById('myScalesBtn');
@@ -147,21 +166,44 @@ function updateAccountUI() {
     const signOutBtn = document.getElementById('signOutBtn') || document.getElementById('authLogoutDropdown');
     if (signOutBtn) signOutBtn.style.display = 'none';
 
+    // Hide Account Settings when logged out (redundant with Sign In)
+    const accSetBtn = document.getElementById('openAccountAuthBtn');
+    if (accSetBtn) accSetBtn.style.display = 'none';
+
+    // Hide Courses/Practice/etc on mobile potentially? 
+    // User requested "should not be showing Edit Profile, Account Settings, Courses, Practice Plans" on mobile.
+    // Simplifying logic: we just rely on hiding items.
+    const coursesBtn = document.getElementById('toggleSidebarBtn');
+    // if (coursesBtn) coursesBtn.style.display = 'none'; // Maybe not hide everywhere if user wants to see free courses? 
+    // User said "On mobile... we should not be showing". 
+    // Let's assume hiding them when logged out is cleaner for now.
+
     const authBtnLink = document.getElementById('authBtn');
-    if (authBtnLink) authBtnLink.style.display = 'block';
+    if (authBtnLink) {
+      authBtnLink.style.display = 'block';
+      // Hook up event listener if not already there?
+      // Best to add it in the event listener section below
+    }
 
     if (authLogout) authLogout.style.display = 'none';
     if (authLogin) authLogin.style.display = '';
     if (authRegister) authRegister.style.display = '';
 
-    document.getElementById('authUpdatePassword').style.display = 'none';
-    document.getElementById('authUpdateEmail').style.display = 'none';
-    document.getElementById('authForgotPassword').style.display = '';
+    const upPass = document.getElementById('authUpdatePassword');
+    if (upPass) upPass.style.display = 'none';
+    const upEmail = document.getElementById('authUpdateEmail');
+    if (upEmail) upEmail.style.display = 'none';
+    const forgot = document.getElementById('authForgotPassword');
+    if (forgot) forgot.style.display = '';
 
-    document.getElementById('authPasswordRow').style.display = ''; // Show row
-    document.getElementById('authCurrentPassRow').style.display = 'none';
-    document.getElementById('authPasswordConfirmRow').style.display = 'none'; // Hide confirm on login
-    document.getElementById('authTogglePasswordBtn').style.display = 'none'; // Hide link
+    const pr = document.getElementById('authPasswordRow');
+    if (pr) pr.style.display = '';
+    const cpr = document.getElementById('authCurrentPassRow');
+    if (cpr) cpr.style.display = 'none';
+    const pcr = document.getElementById('authPasswordConfirmRow');
+    if (pcr) pcr.style.display = 'none';
+    const tpb = document.getElementById('authTogglePasswordBtn');
+    if (tpb) tpb.style.display = 'none';
 
     // Reset inputs
     if (authPass) authPass.placeholder = '••••••••';
@@ -172,15 +214,25 @@ function updateAccountUI() {
   }
 }
 
+// ... (SKIP TO LISTENERS) ... until initScale() call
+// We need to add listener for authBtn
+setTimeout(() => {
+  document.getElementById('authBtn')?.addEventListener('click', () => {
+    accountDropdownMenu?.classList.remove('show');
+    openAuthModal();
+  });
+}, 0);
+
 let authInitDone = false;
 
-async function initAuthSession() {
+export async function initAuthSession() {
   if (authInitDone) return;
   authInitDone = true;
 
+  if (!supabase) return;
+
   // Subscribe ONCE
-  // Subscribe ONCE
-  supabase1.auth.onAuthStateChange(async (event, session) => {
+  supabase.auth.onAuthStateChange(async (event, session) => {
     // Ensure accurate global state
     currentUser = session?.user ?? null;
     window.currentUser = currentUser; // Explicit global
@@ -188,23 +240,24 @@ async function initAuthSession() {
     updateAccountUI();
     updateAdminUI();
 
-    // IMPORTANT: never await Supabase calls inside this callback directly to avoid blocking
-    // We utilize a small timeout to allow internal Supabase client headers to update
+    // IMPORTANT: never await Supabase calls inside this callback directly to avoid blocking.
     setTimeout(async () => {
       try {
-        // safe to do async work here
-        if (typeof refreshPatternSelect === 'function') await refreshPatternSelect();
-        if (typeof loadCurrentProfile === 'function') await loadCurrentProfile();
-        if (typeof loadAllUserHandpans === 'function') await loadAllUserHandpans();
+        if (typeof window.refreshPatternSelect === 'function') await window.refreshPatternSelect();
+        if (typeof window.loadCurrentProfile === 'function') await window.loadCurrentProfile();
+        // loadAllUserHandpans might be in handpanmap.js (legacy) or imported.
+        // If it's on window, call it.
+        if (typeof window.loadAllUserHandpans === 'function') await window.loadAllUserHandpans();
 
         window.dispatchEvent(new Event('handpan-loaded'));
       } catch (e) {
         console.warn('Post-auth refresh failed:', e);
       }
-    }, 500); // 500ms delay to ensure token propagation
+    }, 500);
   });
 }
 
+// Auto-run if imported
 initAuthSession();
 
 async function initScale() {
@@ -215,17 +268,17 @@ async function initScale() {
   if (!name || !SCALES[name]) name = Object.keys(SCALES)[0];
 
   window.selectedScaleName = name;
-  scaleSelect.value = name;
-  scaleStatus.textContent = `Scale: ${name}`;
+  const scaleSelect = document.getElementById('scaleSelect');
+  const scaleStatus = document.getElementById('scaleStatus');
+  if (scaleSelect) scaleSelect.value = name;
+  if (scaleStatus) scaleStatus.textContent = `Scale: ${name}`;
 
-  await window.preloadScaleSamples();
+  if (window.preloadScaleSamples) await window.preloadScaleSamples();
 }
 
 initScale();
 
-// Auth modal
-// accountBtn?.addEventListener('click', openAuthModal); // REMOVED standard listener
-
+// === EVENT LISTENERS ===
 const authCancel = document.getElementById('authCancel');
 
 // New Logic: Click Account -> If Signed In (Toggle Dropdown) ELSE (Open Modal)
@@ -273,8 +326,8 @@ authModal?.addEventListener('click', (e) => {
 // Logout Cleanup
 function performLogoutCleanup() {
   // 1. Close Sidebar
-  if (typeof closeSidebar === 'function') {
-    closeSidebar();
+  if (typeof window.closeSidebar === 'function') {
+    window.closeSidebar();
   } else {
     // Fallback if function not global
     const sb = document.getElementById('courseSidebar');
@@ -288,7 +341,6 @@ function performLogoutCleanup() {
   const modals = document.querySelectorAll('.modal-overlay');
   modals.forEach(modal => {
     if (modal.id !== 'authModal') {
-      // Handle various hiding mechanisms used in the app
       modal.classList.remove('open');
       modal.setAttribute('aria-hidden', 'true');
       if (modal.style.display === 'block' || modal.style.display === 'flex') {
@@ -296,12 +348,10 @@ function performLogoutCleanup() {
       }
     }
   });
-
-  // Specific check for any other floating panels if needed
 }
 
 authLogoutDropdown?.addEventListener('click', async () => {
-  await supabase1.auth.signOut();
+  await supabase.auth.signOut();
   window.location.reload();
 });
 
@@ -327,7 +377,7 @@ authUpdatePassword?.addEventListener('click', async () => {
   }
 
   authHint.textContent = 'Updating password...';
-  const { error } = await supabase1.auth.updateUser({ password: newPassword });
+  const { error } = await supabase.auth.updateUser({ password: newPassword });
 
   if (error) {
     authHint.textContent = `Error: ${error.message}`;
@@ -343,7 +393,7 @@ authRegister?.addEventListener('click', async () => {
   const email = authEmail.value.trim();
   const password = authPass.value;
   authHint.textContent = 'Registering...';
-  const { data, error } = await supabase1.auth.signUp({ email, password });
+  const { data, error } = await supabase.auth.signUp({ email, password });
   if (error) { authHint.textContent = error.message; return; }
   authHint.textContent = 'Registered! Please check your email for confirmation, then sign in.';
   authEmail.value = '';
@@ -355,14 +405,14 @@ authLogin?.addEventListener('click', async () => {
   const email = authEmail.value.trim();
   const password = authPass.value;
   authHint.textContent = 'Signing in...';
-  const { data, error } = await supabase1.auth.signInWithPassword({ email, password });
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) { authHint.textContent = error.message; return; }
   currentUser = data.user;
   authHint.textContent = 'Signed in!';
   updateAccountUI();
   updateAdminUI();
   closeAuthModal();
-  await refreshPatternSelect();
+  if (typeof window.refreshPatternSelect === 'function') await window.refreshPatternSelect();
   initScale();
 });
 
@@ -376,7 +426,7 @@ document.getElementById('authForgotPassword')?.addEventListener('click', async (
   }
 
   authHint.textContent = 'Sending reset link...';
-  const { error } = await supabase1.auth.resetPasswordForEmail(email, {
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
     redirectTo: window.location.origin, // Sends them back here
   });
 
@@ -389,13 +439,19 @@ document.getElementById('authForgotPassword')?.addEventListener('click', async (
 
 // Toggle Password Update UI
 document.getElementById('authTogglePasswordBtn')?.addEventListener('click', () => {
-  document.getElementById('authPasswordRow').style.display = '';
-  document.getElementById('authPasswordConfirmRow').style.display = ''; // Show confirm
-  document.getElementById('authUpdatePassword').style.display = '';
+  const upPass = document.getElementById('authUpdatePassword');
+  if (upPass) upPass.style.display = '';
+  const pcr = document.getElementById('authPasswordConfirmRow');
+  if (pcr) pcr.style.display = '';
+  const pr = document.getElementById('authPasswordRow');
+  if (pr) pr.style.display = '';
+
   document.getElementById('authTogglePasswordBtn').style.display = 'none';
-  // Hide Email update UI to avoid confusion
-  document.getElementById('authCurrentPassRow').style.display = 'none';
-  document.getElementById('authUpdateEmail').style.display = 'none';
+  // Hide Email update UI
+  const cpr = document.getElementById('authCurrentPassRow');
+  if (cpr) cpr.style.display = 'none';
+  const upEmail = document.getElementById('authUpdateEmail');
+  if (upEmail) upEmail.style.display = 'none';
   authPass.focus();
 });
 
@@ -407,20 +463,29 @@ authEmail?.addEventListener('input', () => {
 
   if (val !== current) {
     // Show Email Update UI
-    document.getElementById('authCurrentPassRow').style.display = '';
-    document.getElementById('authUpdateEmail').style.display = '';
+    const cpr = document.getElementById('authCurrentPassRow');
+    if (cpr) cpr.style.display = '';
+    const upEmail = document.getElementById('authUpdateEmail');
+    if (upEmail) upEmail.style.display = '';
 
-    // Hide Password Update UI to avoid confusion
-    document.getElementById('authPasswordRow').style.display = 'none';
-    document.getElementById('authPasswordConfirmRow').style.display = 'none';
-    document.getElementById('authUpdatePassword').style.display = 'none';
-    document.getElementById('authTogglePasswordBtn').style.display = 'none'; // Hide toggle
+    // Hide Password Update UI
+    const pr = document.getElementById('authPasswordRow');
+    if (pr) pr.style.display = 'none';
+    const pcr = document.getElementById('authPasswordConfirmRow');
+    if (pcr) pcr.style.display = 'none';
+    const upPass = document.getElementById('authUpdatePassword');
+    if (upPass) upPass.style.display = 'none';
+    const tpb = document.getElementById('authTogglePasswordBtn');
+    if (tpb) tpb.style.display = 'none';
   } else {
     // Revert
-    document.getElementById('authCurrentPassRow').style.display = 'none';
-    document.getElementById('authUpdateEmail').style.display = 'none';
+    const cpr = document.getElementById('authCurrentPassRow');
+    if (cpr) cpr.style.display = 'none';
+    const upEmail = document.getElementById('authUpdateEmail');
+    if (upEmail) upEmail.style.display = 'none';
     // Show password toggle again
-    document.getElementById('authTogglePasswordBtn').style.display = '';
+    const tpb = document.getElementById('authTogglePasswordBtn');
+    if (tpb) tpb.style.display = '';
   }
 });
 
@@ -441,7 +506,7 @@ authUpdateEmail?.addEventListener('click', async () => {
   authHint.textContent = 'Verifying...';
 
   // Re-auth
-  const { error: loginErr } = await supabase1.auth.signInWithPassword({
+  const { error: loginErr } = await supabase.auth.signInWithPassword({
     email: currentUser.email,
     password: password
   });
@@ -452,8 +517,7 @@ authUpdateEmail?.addEventListener('click', async () => {
   }
 
   authHint.textContent = 'Updating email...';
-  // "emailRedirectTo" ensures the user lands back here after clicking the link
-  const { error } = await supabase1.auth.updateUser(
+  const { error } = await supabase.auth.updateUser(
     { email: newEmail },
     { emailRedirectTo: window.location.href }
   );
@@ -461,15 +525,32 @@ authUpdateEmail?.addEventListener('click', async () => {
   if (error) {
     authHint.textContent = `Error: ${error.message}`;
   } else {
-    // Crucial: Warn user about double verification if applicable
     authHint.textContent = 'Please check BOTH your old and new email inboxes. You must click both verification links to complete the change.';
     authCurrentPass.value = '';
-    // Do not close modal automatically
   }
 });
 
 // Keep existing logout for safety if it exists elsewhere
 authLogout?.addEventListener('click', async () => {
-  await supabase1.auth.signOut();
+  await supabase.auth.signOut();
   window.location.reload();
 });
+
+
+// EXPOSE TO WINDOW for legacy compatibility
+window.closeAuthModal = closeAuthModal;
+window.openAuthModal = openAuthModal;
+window.isAdminUser = isAdminUser;
+window.updateAdminUI = updateAdminUI;
+window.updateAccountUI = updateAccountUI;
+
+// Define currentUser getter/setter on window
+Object.defineProperty(window, 'currentUser', {
+  get: () => currentUser,
+  set: (val) => {
+    currentUser = val;
+    updateAccountUI();
+    updateAdminUI();
+  }
+});
+

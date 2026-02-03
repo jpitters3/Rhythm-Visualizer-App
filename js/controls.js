@@ -1,4 +1,30 @@
 // ==== EVENTS FOR BUTTONS / CONTROLS ====
+import { gridA, gridB, activeGrid } from './grid-context.js';
+import { start, stop, ensureAudio, setMode } from './noteplayer.js';
+import { renderAllMeasures } from './notegrid.js';
+import { TransportRegistry, TransportUI } from './transport-ui.js';
+import {
+  isAuthed, dbSavePattern, dbDeletePattern, dbRenamePattern, dbLoadPatternByName,
+  serializePattern, applyPattern, getSavedPatterns, setSavedPatterns,
+  getSelectedPatternName, refreshPatternSelect, updatePatternButtons, ensureHasSelection
+} from './pattern-crud.js';
+import { setPresentation } from './presentation-mode.js';
+import { getRange } from './range-selection.js';
+
+const patternSelect = document.getElementById('patternSelect');
+const gridBtn = document.getElementById('gridBtn');
+const handBtn = document.getElementById('handBtn');
+const themeBtn = document.getElementById('themeBtn');
+const presentBtn = document.getElementById('presentBtn');
+const exitPresent = document.getElementById('exitPresent');
+const metroBtn = document.getElementById('metroBtn');
+const micBtn = document.getElementById('micBtn');
+const saveBtn = document.getElementById('saveBtn');
+const loadBtn = document.getElementById('loadBtn');
+const renameBtn = document.getElementById('renameBtn');
+const deleteBtn = document.getElementById('deleteBtn');
+const exportBtn = document.getElementById('exportBtn');
+const importBtn = document.getElementById('importBtn');
 
 patternSelect.addEventListener('change', updatePatternButtons);
 // vLessonPlayBtn = document.getElementById('vLessonPlayBtn');
@@ -93,8 +119,8 @@ function setupGridControls(ctx) {
   }
 }
 
-setupGridControls(window.gridA);
-setupGridControls(window.gridB);
+setupGridControls(gridA);
+setupGridControls(gridB);
 
 // Dual Mode Toggle
 function setDualGrid(next) {
@@ -109,16 +135,16 @@ function setDualGrid(next) {
 
   if (next) {
     // Initialize Grid B if it's empty
-    if (window.gridB.innerLabels.length === 0) {
-      const s = (typeof getStepCountPerMeasure === 'function') ? getStepCountPerMeasure() : 16;
-      window.gridB.innerLabels = Array(window.gridA.measures * s).fill('');
-      window.gridB.innerHands = Array(window.gridA.measures * s).fill(null);
+    if (gridB.innerLabels.length === 0) {
+      const s = gridA.stepsPerMeasure;
+      gridB.innerLabels = Array(gridA.measures * s).fill('');
+      gridB.innerHands = Array(gridA.measures * s).fill(null);
     }
-    renderAllMeasures(window.gridB);
+    renderAllMeasures(gridB);
   } else {
     // Stop Grid B if we are disabling dual mode
-    if (typeof stop === 'function') stop(window.gridB, false);
-    if (window.TransportRegistry) window.TransportRegistry.updateAll(window.gridB);
+    if (typeof stop === 'function') stop(gridB, false);
+    if (TransportRegistry) TransportRegistry.updateAll(gridB);
   }
 }
 
@@ -132,13 +158,13 @@ document.getElementById('dualModeBtn')?.addEventListener('click', () => {
 // If the tab is hidden, stop both
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) {
-    if (window.gridA.playing) stop(window.gridA);
-    if (window.gridB.playing) stop(window.gridB);
+    if (gridA.playing) stop(gridA);
+    if (gridB.playing) stop(gridB);
   }
 });
 
 gridBtn.addEventListener('click', () => {
-  const ctx = window.activeGrid;
+  const ctx = activeGrid;
   setMode(ctx.mode === '8' ? '16' : '8', ctx);
 });
 
@@ -199,8 +225,8 @@ themeBtn.addEventListener('click', () => {
 
 presentBtn.addEventListener('click', () => {
   const on = !document.body.classList.contains('present');
-  if (window.setPresentation) {
-    window.setPresentation(on);
+  if (setPresentation) {
+    setPresentation(on);
   } else {
     console.error('setPresentation not loaded');
   }
@@ -211,10 +237,11 @@ exitPresent.addEventListener('click', () => setPresentation(false));
 
 
 metroBtn.addEventListener('click', () => {
-  const ctx = window.activeGrid;
+  const ctx = activeGrid;
   ctx.metronomeOn = !ctx.metronomeOn;
   localStorage.setItem('groovepan_metro' + '-' + ctx.id, ctx.metronomeOn ? 'on' : 'off');
-  updateMetroUI(); // This might need updating too if it depends on global
+  // updateMetroUI(); // Replaced by direct call
+  if (TransportRegistry) TransportRegistry.updateAll(ctx);
   if (ctx.metronomeOn) ensureAudio();
 });
 
@@ -230,8 +257,9 @@ document.getElementById('labelNotationBtn')?.addEventListener('click', () => {
   window.labelNotation = (window.labelNotation === 'musical') ? 'numeric' : 'musical';
   localStorage.setItem('labelNotation', window.labelNotation);
   updateNotationUI();
-  renderAllMeasures(window.gridA);
-  renderAllMeasures(window.gridB);
+  updateNotationUI();
+  renderAllMeasures(gridA);
+  renderAllMeasures(gridB);
 
   // Persist to profile if signed in
   if (typeof updateUserGridLabelNotation === 'function') {
@@ -251,7 +279,7 @@ saveBtn.addEventListener('click', async () => {
   saveCurrentPatternAs(name);
 });
 
-async function saveCurrentPatternAs(name) {
+export async function saveCurrentPatternAs(name) {
   if (!name) return false;
 
   const trimmed = String(name || '').trim();
@@ -278,7 +306,7 @@ async function saveCurrentPatternAs(name) {
   }
 }
 
-async function loadPatternByName(pattern) {
+export async function loadPatternByName(pattern) {
   try {
     // CLOUD MODE
     if (await isAuthed()) {
@@ -329,8 +357,8 @@ async function loadPatternByName(pattern) {
   }
 }
 
-window.saveCurrentPatternAs = saveCurrentPatternAs;
-window.loadPatternByName = loadPatternByName;
+// window.saveCurrentPatternAs = saveCurrentPatternAs;
+// window.loadPatternByName = loadPatternByName;
 
 loadBtn.addEventListener('click', async () => {
   const selected = getSelectedPatternName();
@@ -531,7 +559,7 @@ function setupAllTransports() {
 
     // Determine GridContext
     const gridId = container.dataset.grid || 'A';
-    const ctx = (gridId === 'B') ? window.gridB : window.gridA;
+    const ctx = (gridId === 'B') ? gridB : gridA;
 
     // Initialize Modular UI
     new TransportUI(ctx, container);
@@ -543,7 +571,7 @@ window.initModularTransports = setupAllTransports;
 
 // Sync function (Legacy compatibility or triggered broadcast)
 window.syncVirtualHandpanControls = function () {
-  TransportRegistry.updateAll(window.gridA);
+  TransportRegistry.updateAll(gridA);
 };
 
 // HOOK UPDATE LOOP AND INIT
@@ -556,7 +584,7 @@ function installHook() {
     if (ctx) {
       TransportRegistry.updateAll(ctx);
     } else {
-      TransportRegistry.updateAll(window.gridA);
+      TransportRegistry.updateAll(gridA);
     }
   };
 

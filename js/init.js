@@ -1,11 +1,25 @@
 // ===== INIT =====
+import { gridA, activeGrid } from './grid-context.js';
+import { activeSubIndex, cells, renderAllMeasures } from './notegrid.js';
+import { ADMIN_EMAILS } from './config.js';
+import { TransportRegistry } from './transport-ui.js';
+import { stop, setMode } from './noteplayer.js';
+import { loadSharedFromURL } from './share-patterns.js';
+import { refreshPatternSelect, serializePattern, updatePatternButtons } from './pattern-crud.js';
+import { loadPatternByName } from './controls.js';
+import { updateComposeUI } from './compose-mode.js';
+import { setPresentation } from './presentation-mode.js';
+import { currentUser } from './auth.js';
+import { STEPS } from './rhythm-core.js';
+import { supabase } from './supabase-client.js';
+
 function updateMetroUI() {
   const ctx = window.activeGrid || window.gridA;
-  if (window.TransportRegistry) TransportRegistry.updateAll(ctx);
+  if (TransportRegistry) TransportRegistry.updateAll(ctx);
 }
-window.updateMetroUI = updateMetroUI;
+// window.updateMetroUI = updateMetroUI;
 
-function restorePrefs() {
+export function restorePrefs() {
   if (localStorage.getItem('theme') === 'dark') {
     document.body.classList.add('dark');
   }
@@ -28,9 +42,9 @@ function restorePrefs() {
 function runSelfTests() {
   // Existing smoke tests (kept)
   console.assert(document.getElementById('grid') && document.getElementById('labels'), 'Grid/labels elements exist');
-  console.assert(cells().length === STEPS, `Expected ${STEPS} cells after renderAllMeasures()`);
+  console.assert(cells().length === window.STEPS, `Expected ${window.STEPS} cells after renderAllMeasures()`);
   const labelsEl = document.getElementById('labels');
-  console.assert(labelsEl && labelsEl.children.length === STEPS, `Expected ${STEPS} labels after renderAllMeasures()`);
+  console.assert(labelsEl && labelsEl.children.length === window.STEPS, `Expected ${window.STEPS} labels after renderAllMeasures()`);
 
   // Added: each cell should have a hand side class
   cells().forEach((c) => {
@@ -38,7 +52,7 @@ function runSelfTests() {
   });
 
   console.assert(document.querySelector('.transport-container'), 'Transport container exists');
-  console.assert(typeof metroClick === 'function', 'metroClick is a function');
+  // console.assert(typeof metroClick === 'function', 'metroClick is a function'); // Removed: private internal
 
   console.assert(!!presentBtn && !!exitPresent, 'Presentation buttons exist');
 
@@ -46,14 +60,15 @@ function runSelfTests() {
   console.assert(getComputedStyle(document.documentElement).getPropertyValue('--hand-icon') !== '', 'Hand icon color var exists');
 
   // Added: Mode toggle should rebuild correct counts
-  const before = STEPS;
-  setMode(mode === '8' ? '16' : '8');
-  console.assert(STEPS !== before, 'Mode toggle changes step count');
-  console.assert(cells().length === STEPS, 'Grid rebuilt to new step count');
-  console.assert(document.getElementById('labels').children.length === STEPS, 'Labels rebuilt to new step count');
+  const before = window.STEPS || STEPS; // fallback if module scoping issue
+  const currentMode = (activeGrid || gridA).mode;
+  setMode(currentMode === '8' ? '16' : '8');
+  console.assert((window.STEPS || STEPS) !== before, 'Mode toggle changes step count');
+  console.assert(cells().length === window.STEPS, 'Grid rebuilt to new step count');
+  console.assert(document.getElementById('labels').children.length === window.STEPS, 'Labels rebuilt to new step count');
   // revert
-  setMode(mode === '8' ? '16' : '8');
-  console.assert(cells().length === STEPS, 'Grid rebuilt back');
+  setMode(currentMode);
+  console.assert(cells().length === window.STEPS, 'Grid rebuilt back');
 }
 
 function showFatalError(err) {
@@ -88,7 +103,7 @@ function showFatalError(err) {
 
   // Check Sync
   let isAdmin = false;
-  const admins = (typeof ADMIN_EMAILS !== 'undefined' ? ADMIN_EMAILS : window.ADMIN_EMAILS);
+  const admins = ADMIN_EMAILS;
 
   try {
     const email = currentUser?.email?.toLowerCase();
@@ -103,8 +118,8 @@ function showFatalError(err) {
   modal.style.display = 'flex';
 
   // Check Async (if not already admin, maybe auth is still loading)
-  if (!isAdmin && typeof supabase1 !== 'undefined') {
-    supabase1.auth.getUser().then(({ data }) => {
+  if (!isAdmin && typeof supabase !== 'undefined') {
+    supabase.auth.getUser().then(({ data }) => {
       const email = data?.user?.email?.toLowerCase();
       if (email && admins && admins.has(email)) {
         console.log('Async Admin Check Passed');

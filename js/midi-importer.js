@@ -2,6 +2,9 @@
 // js/midi-importer.js
 // Handles reading MIDI files, parsing them, quantizing to grid, and uploading to DB (Admin only)
 
+import { supabase } from './supabase-client.js';
+import { currentUser } from './auth.js';
+
 const midiFileInput = document.getElementById('midiFileInput');
 const importMidiBtn = document.getElementById('importMidiBtn');
 
@@ -31,6 +34,7 @@ function handleMidiFileSelect(e) {
       // dataUrl is like "data:audio/midi;base64,TVRoD..."
       const base64 = dataUrl.split(',')[1];
 
+      // MidiParser is loaded via CDN script (global)
       if (typeof MidiParser === 'undefined') {
         throw new Error("MidiParser library not loaded.");
       }
@@ -166,6 +170,8 @@ async function processMidiData(midi, filename) {
 }
 
 async function uploadSongToDB(name, patternData) {
+  // Use imported currentUser and supabase
+
   if (!currentUser) {
     alert("You must be logged in to upload songs.");
     return;
@@ -193,7 +199,7 @@ async function uploadSongToDB(name, patternData) {
   importMidiBtn.textContent = "Uploading...";
   importMidiBtn.disabled = true;
 
-  const { data, error } = await supabase1
+  const { data, error } = await supabase
     .from('songs')
     .insert([
       {
@@ -214,6 +220,6 @@ async function uploadSongToDB(name, patternData) {
   } else {
     alert("Song uploaded successfully!");
     // Refresh library if open?
-    if (typeof fetchSongs === 'function') fetchSongs();
+    if (typeof window.fetchSongs === 'function') window.fetchSongs();
   }
 }
