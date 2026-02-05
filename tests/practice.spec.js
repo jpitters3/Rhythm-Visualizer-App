@@ -66,10 +66,6 @@ test.describe('Practice Plan', () => {
   });
 
   test('Add and Remove Lesson from Practice Plan', async ({ page }, testInfo) => {
-    // Skip Mobile Chrome for now as it has issues finding the remove button
-    if (testInfo.project.name === 'Mobile Chrome') {
-      test.skip();
-    }
     // --- SETUP: Create a temporary course and lesson ---
 
     // 1. Open Course Creator via Account Dropdown (Admin only, user is admin by default test env)

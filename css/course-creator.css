@@ -2,7 +2,7 @@
 .course-modal {
   width: min(800px, 95vw);
   max-height: 90vh;
-  overflow-y: auto;
+  overflow: hidden;
   border-radius: 20px;
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
   /* Glassmorphism */
@@ -14,6 +14,9 @@
   color: var(--text);
   padding: 0;
   border: 1px solid rgba(255, 255, 255, 0.4);
+
+  display: flex;
+  flex-direction: column;
 }
 
 body.dark .course-modal {
@@ -29,6 +32,7 @@ body.dark .course-modal {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-shrink: 0;
 }
 
 body.dark .modal-header {
@@ -61,6 +65,8 @@ body.dark .modal-header {
 
 .course-form {
   padding: 32px;
+  overflow-y: auto;
+  flex: 1;
 }
 
 /* Inputs */
@@ -299,6 +305,7 @@ body.dark .section-header button {
 
 /* Footer layout */
 .modal-footer {
+  flex-shrink: 0;
   padding: 20px 32px 32px;
   display: flex;
   align-items: center;
