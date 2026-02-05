@@ -1,9 +1,6 @@
-/**
- * HISTORY MANAGER
- * Handles Undo/Redo functionality by taking snapshots of the pattern state.
- */
+import { serializePattern, applyPattern } from './pattern-crud.js';
 
-const HistoryManager = {
+export const HistoryManager = {
   undoStack: [],
   redoStack: [],
   maxHistory: 50,
@@ -35,11 +32,6 @@ const HistoryManager = {
 
     const currentState = serializePattern();
 
-    // Avoid duplicates (optional, but good for messy inputs)
-    // Simple JSON string comparison is fast enough for this data size
-    // const last = this.undoStack[this.undoStack.length - 1];
-    // if (last && JSON.stringify(last) === JSON.stringify(currentState)) return;
-
     this.undoStack.push(currentState);
 
     // Limit stack size
@@ -51,7 +43,6 @@ const HistoryManager = {
     this.redoStack = [];
 
     this.updateUI();
-    // console.log('History Pushed. Stack:', this.undoStack.length);
   },
 
   undo() {
@@ -70,7 +61,6 @@ const HistoryManager = {
     }
 
     this.updateUI();
-    // console.log('Undo. Stack:', this.undoStack.length);
   },
 
   redo() {
@@ -89,7 +79,6 @@ const HistoryManager = {
     }
 
     this.updateUI();
-    // console.log('Redo. Stack:', this.undoStack.length);
   },
 
   updateUI() {
@@ -107,6 +96,3 @@ if (document.readyState === 'loading') {
 } else {
   HistoryManager.init();
 }
-
-// Export global for easy access
-window.HistoryManager = HistoryManager;

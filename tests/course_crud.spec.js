@@ -7,8 +7,15 @@ const SUPABASE_URL = process.env.VITE_SUPABASE_URL || "";
 const SUPABASE_KEY = process.env.VITE_SUPABASE_ANON_KEY || "";
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
+const { createTestUser, deleteTestUser } = require('./utils/auth-helper');
+
 test.describe('Course CRUD (Clean)', () => {
+  let testUser;
+
   test.beforeEach(async ({ page }) => {
+    // 0. Create unique test user
+    testUser = await createTestUser();
+
     // 1. Navigate
     await page.goto('/');
 
@@ -25,30 +32,23 @@ test.describe('Course CRUD (Clean)', () => {
     await expect(loginBtn).toBeVisible();
 
     const btnText = await loginBtn.innerText();
-    // Desktop: "Sign In / Register". Mobile: "Sign In / Register" (from authBtn text).
-    // If signed in, Desktop: "J". Mobile: "Sign Out" or user doesn't see authBtn?
-    // Wait, authBtn is hidden if signed in.
-
-    // So if (visible && text ok) click it.
 
     if (btnText.includes('Sign In') || btnText.includes('Register')) {
       await loginBtn.click();
       await expect(page.locator('#authModal')).toHaveClass(/open/);
 
-      const email = process.env.TEST_EMAIL;
-      const password = process.env.TEST_PASSWORD;
+      const email = testUser.email;
+      const password = testUser.password;
 
       if (!email || !password) {
-        throw new Error('TEST_EMAIL and TEST_PASSWORD must be set in .env');
+        throw new Error('Failed to create test user credentials');
       }
 
       await page.fill('#authEmail', email);
-      await page.click('#authLogin'); // Click "Sign in" tab if needed, but it's usually active?
-      // Actually markup shows tabs: Sign in button is #authLogin inside .modal-actions
-      // Wait, #authLogin might be the BUTTON to submit?
-      // Let's check auth.js/index.html selection.
-      // #authLogin in index.html line 549 is the Submit button "Sign in".
-      // But inputs are #authEmail, #authPass.
+
+      // Ensure we are on login tab if needed (default is usually register if fresh? or login?)
+      // Actually, if we just created the user via admin API, we need to Log In.
+      // The modal defaults to "Sign In" usually.
 
       await page.fill('#authPass', password);
       await page.click('#authLogin');
@@ -57,11 +57,14 @@ test.describe('Course CRUD (Clean)', () => {
       await expect(page.locator('#authHint')).toContainText('Signed in!');
       await expect(page.locator('#authModal')).not.toHaveClass(/open/);
 
-      // Verify login button changed state (or disppearred if authBtn)
-      // If authBtn, it becomes hidden. If accountBtn, it shows Initials.
-      // We can just verify currentUser via evaluate if we want to be safe, 
-      // or verify "Sign In" is no longer visible.
+      // Verify login button changed state
       await expect(page.locator('text=Sign In / Register')).not.toBeVisible();
+    }
+  });
+
+  test.afterEach(async () => {
+    if (testUser) {
+      await deleteTestUser(testUser.user.id);
     }
   });
 
@@ -133,8 +136,8 @@ test.describe('Course CRUD (Clean)', () => {
 
   test('Update an existing Course', async ({ page }) => {
     // 1. Seed a course via API
-    const email = process.env.TEST_EMAIL;
-    const password = process.env.TEST_PASSWORD;
+    const email = testUser.email;
+    const password = testUser.password;
 
     // Sign in via API to get user ID
     const { data: { user }, error: authError } = await supabase.auth.signInWithPassword({
@@ -246,7 +249,10 @@ async function openCoursesSidebar(page) {
       const accountBtn = page.locator('#accountBtn');
       if (await accountBtn.isVisible()) {
         await accountBtn.click();
-        await toggleBtn.click();
+
+        // await page.pause();
+
+        await toggleBtn.click({ force: true });
       } else {
         await ensureMenuOpen(page); // Ensures #authBtn is visible, but we need #toggleSidebarBtn
         // On mobile, toggleSidebarBtn is in #accountDropdownMenu (inside #headerMenu)

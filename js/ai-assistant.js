@@ -432,7 +432,10 @@ Output ONLY valid JSON. No markdown formatting.
   }
 }
 
+export let aiAssistant;
+
 // Initialize
 window.addEventListener('DOMContentLoaded', () => {
-  window.aiAssistant = new AiAssistant();
+  aiAssistant = new AiAssistant();
+  window.aiAssistant = aiAssistant;
 });

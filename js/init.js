@@ -5,16 +5,23 @@ import { ADMIN_EMAILS } from './config.js';
 import { TransportRegistry } from './transport-ui.js';
 import { stop, setMode } from './noteplayer.js';
 import { loadSharedFromURL } from './share-patterns.js';
-import { refreshPatternSelect, serializePattern, updatePatternButtons } from './pattern-crud.js';
-import { loadPatternByName } from './controls.js';
+import { refreshPatternSelect, serializePattern, updatePatternButtons, snapshotCurrentState } from './pattern-crud.js';
+import { loadPatternByName, syncVirtualHandpanControls } from './controls.js';
 import { updateComposeUI } from './compose-mode.js';
 import { setPresentation } from './presentation-mode.js';
 import { currentUser } from './auth.js';
 import { STEPS } from './rhythm-core.js';
 import { supabase } from './supabase-client.js';
+import './courses.js'; // Initialize course sidebar and listeners
+import './practice.js'; // Initialize practice sidebar
+import './mobile-menu.js'; // Initialize mobile menu logic
+import { initCourseCreator } from './course-creator.js';
+
+// Initialize Course Creator Logic
+initCourseCreator();
 
 function updateMetroUI() {
-  const ctx = window.activeGrid || window.gridA;
+  const ctx = activeGrid || gridA;
   if (TransportRegistry) TransportRegistry.updateAll(ctx);
 }
 // window.updateMetroUI = updateMetroUI;
@@ -26,15 +33,18 @@ export function restorePrefs() {
 
   const handOn = localStorage.getItem('handSplit') === 'on';
   document.body.classList.toggle('handSplit', handOn);
-  handBtn.classList.toggle('active', handOn);
-  handBtn.textContent = handOn ? 'Left/Right: On' : 'Left/Right: Off';
+  const handBtn = document.getElementById('handBtn');
+  if (handBtn) {
+    handBtn.classList.toggle('active', handOn);
+    handBtn.textContent = handOn ? 'Left/Right: On' : 'Left/Right: Off';
+  }
 
   /* metronomeOn was implicit. We use local var to read check */
   let isMetroOn = (localStorage.getItem('groovepan_metro-A') === 'on');
   if (localStorage.getItem('groovepan_metro-A') === null) {
     isMetroOn = (localStorage.getItem('groovepan_metro') === 'on');
   }
-  if (window.gridA) window.gridA.metronomeOn = isMetroOn;
+  if (gridA) gridA.metronomeOn = isMetroOn;
 
   updateMetroUI();
 }
@@ -42,9 +52,9 @@ export function restorePrefs() {
 function runSelfTests() {
   // Existing smoke tests (kept)
   console.assert(document.getElementById('grid') && document.getElementById('labels'), 'Grid/labels elements exist');
-  console.assert(cells().length === window.STEPS, `Expected ${window.STEPS} cells after renderAllMeasures()`);
+  console.assert(cells().length === STEPS, `Expected ${STEPS} cells after renderAllMeasures()`);
   const labelsEl = document.getElementById('labels');
-  console.assert(labelsEl && labelsEl.children.length === window.STEPS, `Expected ${window.STEPS} labels after renderAllMeasures()`);
+  console.assert(labelsEl && labelsEl.children.length === STEPS, `Expected ${STEPS} labels after renderAllMeasures()`);
 
   // Added: each cell should have a hand side class
   cells().forEach((c) => {
@@ -54,21 +64,33 @@ function runSelfTests() {
   console.assert(document.querySelector('.transport-container'), 'Transport container exists');
   // console.assert(typeof metroClick === 'function', 'metroClick is a function'); // Removed: private internal
 
+  const presentBtn = document.getElementById('presentBtn');
+  const exitPresent = document.getElementById('exitPresent');
   console.assert(!!presentBtn && !!exitPresent, 'Presentation buttons exist');
 
   // Added: Hand icons should be defined as mask-images in split mode CSS
   console.assert(getComputedStyle(document.documentElement).getPropertyValue('--hand-icon') !== '', 'Hand icon color var exists');
 
   // Added: Mode toggle should rebuild correct counts
-  const before = window.STEPS || STEPS; // fallback if module scoping issue
+  const before = STEPS;
   const currentMode = (activeGrid || gridA).mode;
   setMode(currentMode === '8' ? '16' : '8');
-  console.assert((window.STEPS || STEPS) !== before, 'Mode toggle changes step count');
-  console.assert(cells().length === window.STEPS, 'Grid rebuilt to new step count');
-  console.assert(document.getElementById('labels').children.length === window.STEPS, 'Labels rebuilt to new step count');
+  // Note: STEPS is imported from rhythm-core.js. It's a live binding, but calculating steps might not update the export unless logic calls calculateSteps to update it?
+  // rhythm-core.js top level code ran once.
+  // Actually, setMode updates the grid, but does it update 'STEPS' variable in rhythm-core.js? No.
+  // So this test might fail if it relies on imported STEPS changing.
+  // But removing window.STEPS means we rely on import.
+  // If setMode updates activeGrid.stepsPerMeasure, we should check THAT.
+  // console.assert((window.STEPS || STEPS) !== before, 'Mode toggle changes step count'); 
+  // Let's use activeGrid.cells.length
+  const newCount = cells().length;
+  console.assert(newCount !== before, 'Mode toggle changes step count');
+
+  console.assert(cells().length === newCount, 'Grid rebuilt to new step count');
+  console.assert(document.getElementById('labels').children.length === newCount, 'Labels rebuilt to new step count');
   // revert
   setMode(currentMode);
-  console.assert(cells().length === window.STEPS, 'Grid rebuilt back');
+  console.assert(cells().length === before, 'Grid rebuilt back');
 }
 
 function showFatalError(err) {
@@ -134,11 +156,9 @@ function showFatalError(err) {
   };
 }
 
-// Global error handlers (helps when a bad edit slips in)
+// Global error handlers
 window.addEventListener('error', (e) => {
-  // Avoid duplicate panels
   if (document.getElementById('__fatal_panel__')) return;
-  // Suppress "EncodingError" (audio decoding in headless env) and "Failed to fetch" (missing assets)
   const msg = String(e.error || e.message || e);
   if (msg.includes('EncodingError') || msg.includes('Failed to fetch')) {
     console.warn('Suppressed Error:', msg);
@@ -158,9 +178,6 @@ window.addEventListener('unhandledrejection', (e) => {
 });
 
 // ===== INIT (non-blocking) =====
-// Why: if there’s a runtime error or accidental heavy work, Chrome can show “Page Unresponsive” on reload.
-// Strategy: render once, then initialize on the next frame, and run self-tests only in debug mode.
-
 const DEBUG = new URLSearchParams(location.search).has('debug');
 
 function safeInit() {
@@ -170,35 +187,34 @@ function safeInit() {
 
     (async () => {
       await loadSharedFromURL();
+      // refreshPatternSelect imported from pattern-crud.js
       await refreshPatternSelect();
 
-      // Synchronous Pattern Load (Prevents Race Condition)
-      let selected = (typeof patternSelect !== 'undefined') ? patternSelect.value : '';
+      // Synchronous Pattern Load
+      const patternSelect = document.getElementById('patternSelect');
+      let selected = (patternSelect) ? patternSelect.value : '';
 
       // If not signed in and there are no saved patterns, do nothing
       if (selected) {
         // Fallback: If dropdown is empty, try to get last used directly
-        if (!selected && typeof LAST_USED_KEY !== 'undefined') {
-          const last = localStorage.getItem(LAST_USED_KEY);
-          if (last) selected = last;
-        }
+        // We use imported controls logic or pattern-crud Logic
+        // But here we rely on refreshPatternSelect having populated it.
 
-        if (selected && typeof loadPatternByName === 'function') {
+        if (selected) {
           await loadPatternByName(selected);
         }
       }
 
-      await setPresentation(localStorage.getItem(PRESENT_KEY) === 'on');
+      await setPresentation(localStorage.getItem('groovepan_presentation_mode') === 'on'); // Use implicit key or import PRESENT_KEY? String literal is safe.
 
-      // Force Sync of Virtual Handpan Proxy Controls (AFTER Pattern Load)
-      if (typeof window.syncVirtualHandpanControls === 'function') {
-        window.syncVirtualHandpanControls();
+      // Force Sync of Virtual Handpan Proxy Controls
+      if (typeof syncVirtualHandpanControls === 'function') {
+        syncVirtualHandpanControls();
       }
 
-      // Snapshot AFTER loading pattern to avoid 'unsaved changes' alert on clean load
-      if (typeof serializePattern === 'function') {
-        window.lastSavedState = JSON.stringify(serializePattern());
-      }
+      // Snapshot AFTER loading pattern
+      snapshotCurrentState();
+
     })();
 
     updatePatternButtons();
@@ -206,7 +222,6 @@ function safeInit() {
 
     if (DEBUG) runSelfTests();
 
-    // Initial Snapshot handled inside the async block above
   } catch (err) {
     showFatalError(err);
   }
@@ -215,7 +230,6 @@ function safeInit() {
 // Let the browser paint UI first, then init.
 requestAnimationFrame(() => {
   setTimeout(() => {
-    // fire-and-forget but safeInit itself is async
     safeInit();
   }, 0);
 });

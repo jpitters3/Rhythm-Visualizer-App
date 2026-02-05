@@ -1,6 +1,7 @@
 import { escapeHtml } from './utils.js';
 import { currentUser } from './auth.js';
 import { supabase } from './supabase-client.js';
+import { addToPractice } from './practice.js';
 
 // Community Feed Logic
 
@@ -192,11 +193,9 @@ function renderPatternsFeed(patterns) {
 
     const pracBtn = card.querySelector('.add-practice-btn');
     pracBtn?.addEventListener('click', (e) => {
-      if (window.addToPractice) {
-        window.addToPractice('pattern', p.id, p.name);
-        pracBtn.textContent = '✅ Added';
-        setTimeout(() => pracBtn.textContent = '➕ Add to Plan', 2000);
-      }
+      addToPractice('pattern', p.id, p.name);
+      pracBtn.textContent = '✅ Added';
+      setTimeout(() => pracBtn.textContent = '➕ Add to Plan', 2000);
     });
 
     const likeBtn = card.querySelector('.like-btn');

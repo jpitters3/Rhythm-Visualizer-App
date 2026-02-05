@@ -1,11 +1,8 @@
 /* ==== Audio and musical functionality including scales ==== */
 import { activeGrid, gridA, gridB } from './grid-context.js';
-
 import { calculateSteps, setTimeSignatureState } from './rhythm-core.js';
-import { renderAllMeasures } from './notegrid.js';
+import { renderAllMeasures, checkCellIsMultiMode } from './notegrid.js';
 import { supabase } from './supabase-client.js';
-// We assume supabase1 is available globally for now (from legacy index.html script)
-// import { currentUser } from './auth.js'; // auth.js is not yet an ESM exporting currentUser
 
 /* Scale Selector */
 
@@ -33,7 +30,17 @@ const SOUND_SLAP = 'Slap';
 
 const SCALE_KEY_LOCAL = 'groovepan_scale';            // for non-logged-in users
 const SCALE_KEY_REMOTE = 'handpan_scale';             // for logged-in users in Supabase profile
-// window.selectedScaleName = null; // Use exported state
+
+// State Management
+let selectedScaleName = null;
+let highlighterFn = null;
+let tickObservers = [];
+
+export function getSelectedScaleName() { return selectedScaleName; }
+export function setSelectedScaleName(n) { selectedScaleName = n; }
+export function registerHighlighter(fn) { highlighterFn = fn; }
+export function addTickObserver(fn) { tickObservers.push(fn); }
+
 
 // UNIFIED SCALE STATE
 let currentScale = {
@@ -82,10 +89,6 @@ export function noteForLabel(label) {
   if (currentScale.map[label]) return currentScale.map[label];
 
   // 3. Absolute Pitch Fallback (for MIDI songs)
-  // If label looks like "C#4", "Bb3" etc. return it as the note name.
-  // Regex: [A-G] followed by optional [#s] (we use 's' internally but label might be #), then digit
-  // Our system expects "Cs4" for file loading, but here we return the 'Note Name' which noteToFile converts.
-  // Actually, noteToFile handles 'C#4' -> 'Cs4.wav'. So we just need to pass it through.
   if (label.match(/^[A-G][#b]?[0-9]$/)) {
     return label;
   }
@@ -95,7 +98,6 @@ export function noteForLabel(label) {
 
 function noteToFile(note) {
   // "C#3" -> "Cs3.wav", "F#3" -> "Fs3.wav", "Bb3" -> "Bb3.wav"
-  // TODO Map flats/sharps here
   if (!note) return '';
   return note.replace('#', 's') + '.wav';
 }
@@ -135,21 +137,12 @@ export async function loadScaleRemote() {
 
 /* Player Functionality */
 
-// let step = 0; // Moved to GridContext
-// let transcriptionIndex = 0;
-
-// Use an array of timers to prevent accidental stacking (double-clicks, race conditions)
-// let timers = []; // Moved to GridContext
-// let playing = false;
-
 // Metronome
-// let metronomeOn = false;
 let audioCtx = null;
-
 let audioUnlocked = false;
 let samplesPreloaded = false;
 
-const AUDIO_DELAY = 0.3; // 300ms delay to sync audio with visual pulse expansion
+// const AUDIO_DELAY = 0.3; // 300ms delay to sync audio with visual pulse expansion
 
 export function unlockAudio() {
   audioUnlocked = true;
@@ -250,15 +243,8 @@ function showCountdown(num) {
   if (overlay && text) {
     overlay.style.display = 'flex';
     text.textContent = num;
-
-    // THE REFLOW TRICK:
-    // 1. Remove the animation
     text.style.animation = 'none';
-
-    // 2. Trigger a reflow (this is the magic bit)
     void text.offsetWidth;
-
-    // 3. Re-apply the animation
     text.style.animation = null;
   }
 }
@@ -268,11 +254,32 @@ function hideCountdown() {
   if (overlay) overlay.style.display = 'none';
 }
 
+// Helper for Sticking Logic - Exported for Virtual Hands
+export function resolveHand(stepIdx, handData, subIdx = 0, isChord = false, mode = '16') {
+  // 1. Explicit Sticking (manual override)
+  let explicit = null;
+  if (Array.isArray(handData)) {
+    explicit = handData[subIdx];
+  } else if (typeof handData === 'string') {
+    explicit = handData;
+  }
+
+  if (explicit === 'L') return 'L';
+  if (explicit === 'R') return 'R';
+
+  // 2. Chord / Slot Logic
+  if (isChord) {
+    return (subIdx <= 1) ? 'L' : 'R';
+  }
+
+  // 3. Default Time-Based Logic (for single notes)
+  return isDownbeatStep(stepIdx, mode) ? 'R' : 'L';
+}
+
 export function tick(ctx) {
   const c = ctx || activeGrid;
   if (!c.playing || c.isMuted) return;
 
-  const all = c.cells;
   const currentData = c.innerLabels[c.step];
   const currentHandsData = c.innerHands[c.step];
   const stepNotes = [];
@@ -280,44 +287,12 @@ export function tick(ctx) {
 
   const AUDIO_DELAY = 0.05;
 
-  // Helper for Sticking Logic
-  function resolveHand(stepIdx, handData, subIdx = 0, isChord = false) {
-    // 1. Explicit Sticking (manual override)
-    let explicit = null;
-    if (Array.isArray(handData)) {
-      explicit = handData[subIdx];
-    } else if (typeof handData === 'string') {
-      explicit = handData;
-    }
-
-    if (explicit === 'L') return 'L';
-    if (explicit === 'R') return 'R';
-
-    // 2. Chord / Slot Logic
-    // If it's a chord (array), we follow the convention:
-    // Index 0, 1 -> Left Hand
-    // Index 2, 3 -> Right Hand
-    if (isChord) {
-      return (subIdx <= 1) ? 'L' : 'R';
-    }
-
-    // 3. Default Time-Based Logic (for single notes)
-    return isDownbeatStep(stepIdx, c.mode) ? 'R' : 'L';
-  }
-
   // CALIBRATION COUNTDOWN LOGIC //
 
   if (countdownRemaining > 0) {
-    // Show the CURRENT number (4, 3, 2, 1)
     showCountdown(countdownRemaining);
-
-    // Play metronome click (Low pitch for count-in)
     if (c.metronomeOn) metroClick(getMetroClickKind('beat', c), AUDIO_DELAY);
-
-    // Decrement for the NEXT tick
     countdownRemaining--;
-
-    // If we just finished 1, the next tick will be the actual start
     return;
   }
 
@@ -325,23 +300,20 @@ export function tick(ctx) {
     hideCountdown();
   }
 
-  // PLAY & HIGHLIGHT SUB-DOTS or SINGLE-NOTE //
   // Only highlight handpan for Grid A
   const shouldHighlight = (c.id === 'A');
 
   // Play and Highlight Multiple Notes
-  if (window.checkCellIsMultiMode && window.checkCellIsMultiMode(currentData)) {
+  if (checkCellIsMultiMode(currentData)) {
     currentData.forEach((label, subIdx) => {
       if (label) {
         // Resolve hand first
-        const hand = resolveHand(c.step, currentHandsData, subIdx, true);
+        const hand = resolveHand(c.step, currentHandsData, subIdx, true, c.mode);
 
         playNoteByLabel(label, c.step, AUDIO_DELAY);
         if (shouldHighlight) {
-          // Assuming highlightHandpan is global for now, or imported?
-          // It's in handpanmap.js, likely global side effect needed or import
-          if (typeof window.highlightHandpan === 'function') {
-            window.highlightHandpan(label, c.step, hand);
+          if (typeof highlighterFn === 'function') {
+            highlighterFn(label, c.step, hand);
           }
         }
         stepNotes.push(label);
@@ -350,59 +322,29 @@ export function tick(ctx) {
     });
   } else if (currentData) {
     // Resolve hand first
-    const hand = resolveHand(c.step, currentHandsData, 0, false);
+    const hand = resolveHand(c.step, currentHandsData, 0, false, c.mode);
 
     playNoteByLabel(currentData, c.step, AUDIO_DELAY);
     if (shouldHighlight) {
-      if (typeof window.highlightHandpan === 'function') {
-        window.highlightHandpan(currentData, c.step, hand); // Pass resolved hand
+      if (typeof highlighterFn === 'function') {
+        highlighterFn(currentData, c.step, hand); // Pass resolved hand
       }
     }
     stepNotes.push(currentData);
     stepHands.push(hand);
   }
 
-  // --- LOOKAHEAD FOR VIRTUAL HANDS ---
-  let nextL = null;
-  let nextR = null;
-
-  if (window.virtualHands && window.virtualHands.enabled && c.id === 'A') {
-    // Limit lookahead to ~2 beats (8 sub-steps) to prevent moving too early
-    const maxLookahead = 8;
-    const totalSteps = all.length;
-
-    for (let i = 1; i <= maxLookahead; i++) {
-      if (nextL && nextR) break;
-
-      const futureStep = (c.step + i) % totalSteps;
-      const futureData = c.innerLabels[futureStep];
-      const futureHands = c.innerHands[futureStep];
-
-      if (!futureData) continue;
-
-      const labels = Array.isArray(futureData) ? futureData : [futureData];
-      const isChord = window.checkCellIsMultiMode && window.checkCellIsMultiMode(futureData);
-
-      labels.forEach((lbl, sIdx) => {
-        if (!lbl) return;
-        const h = resolveHand(futureStep, futureHands, sIdx, isChord);
-        if (h === 'L' && !nextL) nextL = lbl;
-        if (h === 'R' && !nextR) nextR = lbl;
-      });
-    }
+  // Notify Observers (e.g. Virtual Hands)
+  if (tickObservers.length > 0) {
+    tickObservers.forEach(fn => fn(c, stepNotes, stepHands));
   }
 
-  // Update Visual Hands (Only for Grid A)
-  if (window.virtualHands && c.id === 'A') {
-    window.virtualHands.update(stepNotes, stepHands, nextL, nextR);
-  }
-
-  // Remove styles of previously played steps
-  all.forEach(c => c.classList.remove('play'));
-
-  // Add style to current steps
-  const cell = all[c.step];
-  if (cell !== undefined) cell.classList.add('play');
+  // Update Visuals (Play Class)
+  try {
+    c.cells.forEach(el => el.classList.remove('play'));
+    const cell = c.cells[c.step];
+    if (cell) cell.classList.add('play');
+  } catch (e) { /* ignore reflow issues */ }
 
   // Metronome click
   if (c.metronomeOn) {
@@ -419,7 +361,7 @@ export function tick(ctx) {
     }
   }
 
-  c.step = (c.step + 1) % all.length;
+  c.step = (c.step + 1) % c.cells.length;
 }
 
 function getMetroClickKind(ctx) {
@@ -463,19 +405,9 @@ export function setTimeSignature(ts) {
   if (tsDenInput) tsDenInput.value = den;
 
   // 3. Re-render Grids
-  // Changing TS affects how many steps are in a measure.
-  // We should re-render both grids if they exist.
   renderAllMeasures(gridA);
   if (gridB) renderAllMeasures(gridB);
 }
-
-// Re-implementing setTimeSignature with imports in next edit if needed, 
-// here I kept the function but skipped the impl details that require imports I didn't add yet?
-// Wait, I should add the import at the top.
-
-// Ref:
-// import { setTimeSignatureState, calculateSteps } from './rhythm-core.js';
-// (Added above)
 
 export function setMode(nextMode, ctx) {
   const c = ctx || activeGrid;
@@ -487,14 +419,12 @@ export function setMode(nextMode, ctx) {
 
   // Sync global mode and STEPS if Grid A is updated (for backward compatibility)
   if (c.id === 'A') {
-    // window.mode = nextMode; // Removing global pollution
-    // window.STEPS = ...
     if (typeof gridBtn !== 'undefined' && gridBtn) {
       gridBtn.textContent = (nextMode === '8') ? '8ths' : '16ths';
     }
   }
 
-  if (typeof window.renderAllMeasures === 'function') window.renderAllMeasures(c);
+  if (typeof renderAllMeasures === 'function') renderAllMeasures(c);
 
   if (wasPlaying) start(c);
 }
@@ -533,7 +463,6 @@ export function playTone() {
   if (!audioCtx) return;
 
   const t = audioCtx.currentTime;
-
   const osc = audioCtx.createOscillator();
   const gain = audioCtx.createGain();
 
@@ -556,8 +485,6 @@ export function playSlap() {
   if (!audioCtx) return;
 
   const t = audioCtx.currentTime;
-
-  // Noise burst
   const bufferSize = Math.floor(audioCtx.sampleRate * 0.05);
   const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
   const data = buffer.getChannelData(0);
@@ -589,18 +516,6 @@ export function playHandpanSoundForLabel(label) {
 
 // ===== PLAY NOTES BY PITCH =====
 const noteSamples = {};
-
-async function loadNoteSample(n) {
-  if (!audioCtx || samples[n]) return;
-
-  try {
-    const res = await fetch(`./assets/audio/${n}.wav`);
-    const buf = await res.arrayBuffer();
-    noteSamples[n] = await audioCtx.decodeAudioData(buf);
-  } catch (e) {
-    console.warn(`Could not load ${n}.wav`, e);
-  }
-}
 
 export function playNoteSample(n, delay = 0) {
   ensureAudio();
@@ -687,31 +602,3 @@ export function restartIfPlaying(ctx) {
 }
 
 export function getAudioCtx() { return audioCtx; }
-
-// ==== EXPOSE TO WINDOW (Backward Compatibility) ====
-window.setCurrentScale = setCurrentScale;
-window.getScale = getScale;
-window.saveScaleLocal = saveScaleLocal;
-window.loadScaleLocal = loadScaleLocal;
-window.saveScaleRemote = saveScaleRemote;
-window.loadScaleRemote = loadScaleRemote;
-window.start = start;
-window.stop = stop;
-window.restartIfPlaying = restartIfPlaying;
-window.playHandpanSoundForLabel = playHandpanSoundForLabel;
-window.playNoteSample = playNoteSample;
-window.ensureAudio = ensureAudio;
-window.unlockAudio = unlockAudio;
-window.preloadScaleSamples = preloadScaleSamples;
-window.getAudioCtx = getAudioCtx;
-window.playNoteByLabel = playNoteByLabel;
-window.noteForLabel = noteForLabel;
-window.isDownbeatStep = isDownbeatStep;
-window.intervalMs = intervalMs;
-window.setMode = setMode;
-window.playSlap = playSlap;
-window.playTone = playTone;
-window.playSample = playSample;
-window.tick = tick;
-window.updateTimeSignatureFromInputs = updateTimeSignatureFromInputs;
-window.setTimeSignature = setTimeSignature;

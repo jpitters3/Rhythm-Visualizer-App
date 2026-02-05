@@ -1,15 +1,19 @@
 // ==== EVENTS FOR BUTTONS / CONTROLS ====
 import { gridA, gridB, activeGrid } from './grid-context.js';
-import { start, stop, ensureAudio, setMode } from './noteplayer.js';
-import { renderAllMeasures } from './notegrid.js';
+import { start, stop, ensureAudio, setMode, addTickObserver } from './noteplayer.js';
+import { renderAllMeasures, invertRange, invertFollowing, setDualGrid } from './notegrid.js';
 import { TransportRegistry, TransportUI } from './transport-ui.js';
 import {
   isAuthed, dbSavePattern, dbDeletePattern, dbRenamePattern, dbLoadPatternByName,
   serializePattern, applyPattern, getSavedPatterns, setSavedPatterns,
-  getSelectedPatternName, refreshPatternSelect, updatePatternButtons, ensureHasSelection
+  getSelectedPatternName, refreshPatternSelect, updatePatternButtons, ensureHasSelection,
+  LAST_USED_KEY, hasUnsavedChanges
 } from './pattern-crud.js';
 import { setPresentation } from './presentation-mode.js';
 import { getRange } from './range-selection.js';
+import { editHandsMode, setEditHandsMode } from './state.js';
+import { updateUserGridLabelNotation } from './profile.js';
+import { HistoryManager } from './history.js';
 
 const patternSelect = document.getElementById('patternSelect');
 const gridBtn = document.getElementById('gridBtn');
@@ -26,17 +30,13 @@ const deleteBtn = document.getElementById('deleteBtn');
 const exportBtn = document.getElementById('exportBtn');
 const importBtn = document.getElementById('importBtn');
 
-patternSelect.addEventListener('change', updatePatternButtons);
-// vLessonPlayBtn = document.getElementById('vLessonPlayBtn');
+if (patternSelect) {
+  patternSelect.addEventListener('change', updatePatternButtons);
+}
 
-const getReal = (id) => document.getElementById(id);
-
-// Dropdown Logic
 // Dropdown Logic
 const dropdownBtn = document.getElementById('fileDropdownBtn');
 const dropdownMenu = document.getElementById('fileDropdownMenu');
-
-// Mic Dropdown
 const micDropdownMenu = document.getElementById('micDropdownMenu');
 
 function setupDropdown(btn, menu) {
@@ -48,7 +48,6 @@ function setupDropdown(btn, menu) {
 
   // Auto-close when an item is clicked
   menu.addEventListener('click', (e) => {
-    // If the clicked element is a button or inside one
     if (e.target.tagName === 'BUTTON' || e.target.closest('button')) {
       menu.classList.remove('show');
     }
@@ -77,7 +76,8 @@ function setupGridControls(ctx) {
   if (pBtn) {
     pBtn.addEventListener('click', (e) => {
       e.stopPropagation();
-      window.activeGrid = ctx;
+      // We don't generally change activeGrid on playback toggle unless clicked inside grid, but it's okay.
+      // window.activeGrid = ctx; // Removed global assignment
       if (ctx.playing) stop(ctx);
       else start(ctx);
     });
@@ -85,8 +85,8 @@ function setupGridControls(ctx) {
 
   if (bInput) {
     bInput.addEventListener('mousedown', () => {
-      window.activeGrid = ctx;
-      if (window.HistoryManager) window.HistoryManager.pushState();
+      // window.activeGrid = ctx;
+      if (HistoryManager) HistoryManager.pushState();
     });
     bInput.addEventListener('input', () => {
       ctx.bpm = parseInt(bInput.value);
@@ -99,19 +99,18 @@ function setupGridControls(ctx) {
   }
 
   document.getElementById(`clearBtn-${ctx.id}`)?.addEventListener('click', () => {
-    window.activeGrid = ctx;
-    if (window.HistoryManager) window.HistoryManager.pushState();
-    const s = getStepCountPerMeasure(ctx);
+    // window.activeGrid = ctx;
+    if (HistoryManager) HistoryManager.pushState();
+    const s = ctx.stepsPerMeasure;
     ctx.innerLabels = Array(ctx.measures * s).fill('');
     ctx.innerHands = Array(ctx.measures * s).fill(null);
-    if (ctx.id === 'A') window.innerLabels = ctx.innerLabels;
     renderAllMeasures(ctx);
     ctx.step = 0;
   });
 
   if (mBtn) {
     mBtn.addEventListener('click', () => {
-      window.activeGrid = ctx;
+      // window.activeGrid = ctx;
       ctx.isMuted = !ctx.isMuted;
       mBtn.classList.toggle('muted', ctx.isMuted);
       mBtn.textContent = ctx.isMuted ? '🔇' : '🔊';
@@ -122,40 +121,11 @@ function setupGridControls(ctx) {
 setupGridControls(gridA);
 setupGridControls(gridB);
 
-// Dual Mode Toggle
-function setDualGrid(next) {
-  const mB = document.getElementById('measures-B');
-  const cB = document.getElementById('controls-B');
-  const btn = document.getElementById('dualModeBtn');
-  if (!mB || !cB || !btn) return;
-
-  mB.style.display = next ? 'block' : 'none';
-  cB.style.display = next ? 'flex' : 'none';
-  btn.classList.toggle('active', next);
-
-  if (next) {
-    // Initialize Grid B if it's empty
-    if (gridB.innerLabels.length === 0) {
-      const s = gridA.stepsPerMeasure;
-      gridB.innerLabels = Array(gridA.measures * s).fill('');
-      gridB.innerHands = Array(gridA.measures * s).fill(null);
-    }
-    renderAllMeasures(gridB);
-  } else {
-    // Stop Grid B if we are disabling dual mode
-    if (typeof stop === 'function') stop(gridB, false);
-    if (TransportRegistry) TransportRegistry.updateAll(gridB);
-  }
-}
-
-window.setDualGrid = setDualGrid;
-
 document.getElementById('dualModeBtn')?.addEventListener('click', () => {
   const visible = document.getElementById('measures-B').style.display !== 'none';
   setDualGrid(!visible);
 });
 
-// If the tab is hidden, stop both
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) {
     if (gridA.playing) stop(gridA);
@@ -163,12 +133,12 @@ document.addEventListener('visibilitychange', () => {
   }
 });
 
-gridBtn.addEventListener('click', () => {
+gridBtn?.addEventListener('click', () => {
   const ctx = activeGrid;
   setMode(ctx.mode === '8' ? '16' : '8', ctx);
 });
 
-handBtn.addEventListener('click', () => {
+handBtn?.addEventListener('click', () => {
   const on = !document.body.classList.contains('handSplit');
   document.body.classList.toggle('handSplit', on);
   localStorage.setItem('handSplit', on ? 'on' : 'off');
@@ -177,17 +147,16 @@ handBtn.addEventListener('click', () => {
   handBtn.textContent = on ? 'Left/Right: On' : 'Left/Right: Off';
 });
 
-// Sticking Mode (Mobile Friendly)
-window.editHandsMode = false;
+// Sticking Mode
 const stickingBtn = document.getElementById('stickingBtn');
 const flipHandsBtn = document.getElementById('flipHandsBtn');
 
 if (stickingBtn) {
   stickingBtn.addEventListener('click', () => {
-    window.editHandsMode = !window.editHandsMode;
-    stickingBtn.classList.toggle('active', window.editHandsMode);
+    setEditHandsMode(!editHandsMode);
+    stickingBtn.classList.toggle('active', editHandsMode);
 
-    if (window.editHandsMode) {
+    if (editHandsMode) {
       document.body.dataset.cursor = 'hand';
       if (flipHandsBtn) flipHandsBtn.style.display = 'inline-block';
     } else {
@@ -199,48 +168,40 @@ if (stickingBtn) {
 
 if (flipHandsBtn) {
   flipHandsBtn.addEventListener('click', () => {
-    // 1. Check for Range Selection
     const r = (typeof getRange === 'function') ? getRange() : null;
 
-    if (r && window.invertRange) {
-      if (window.HistoryManager) window.HistoryManager.pushState();
-      window.invertRange(r.start, r.end);
+    if (r) {
+      if (HistoryManager) HistoryManager.pushState();
+      invertRange(r.start, r.end);
     } else {
-      // 2. Fallback to Flip Following from Caret
-      const start = (typeof caretIndex !== 'undefined' && caretIndex !== null) ? caretIndex : 0;
-      if (window.invertFollowing) {
-        if (window.HistoryManager) window.HistoryManager.pushState();
-        window.invertFollowing(start);
-      }
+      // Fallback to Flip Following from Caret
+      const idx = activeGrid.caretIndex ?? 0;
+      if (HistoryManager) HistoryManager.pushState();
+      invertFollowing(idx);
     }
 
     if (navigator.vibrate) navigator.vibrate([50, 50, 50]);
   });
 }
 
-themeBtn.addEventListener('click', () => {
+themeBtn?.addEventListener('click', () => {
   document.body.classList.toggle('dark');
   localStorage.setItem('theme', document.body.classList.contains('dark') ? 'dark' : 'light');
 });
 
-presentBtn.addEventListener('click', () => {
+presentBtn?.addEventListener('click', () => {
   const on = !document.body.classList.contains('present');
   if (setPresentation) {
     setPresentation(on);
-  } else {
-    console.error('setPresentation not loaded');
   }
 });
 
-exitPresent.addEventListener('click', () => setPresentation(false));
+exitPresent?.addEventListener('click', () => setPresentation(false));
 
-
-
-metroBtn.addEventListener('click', () => {
+metroBtn?.addEventListener('click', () => {
   const ctx = activeGrid;
   ctx.metronomeOn = !ctx.metronomeOn;
   localStorage.setItem('groovepan_metro' + '-' + ctx.id, ctx.metronomeOn ? 'on' : 'off');
-  // updateMetroUI(); // Replaced by direct call
   if (TransportRegistry) TransportRegistry.updateAll(ctx);
   if (ctx.metronomeOn) ensureAudio();
 });
@@ -267,10 +228,7 @@ document.getElementById('labelNotationBtn')?.addEventListener('click', () => {
   }
 });
 
-// Remove old clearBtn listener as it's now handled in setupGridControls
-// clearBtn.addEventListener('click', ...) 
-
-saveBtn.addEventListener('click', async () => {
+saveBtn?.addEventListener('click', async () => {
   const defaultName = `Pattern ${new Date().toLocaleString()}`;
   window.focus();
   const name = prompt('Save pattern as:', getSelectedPatternName() || defaultName);
@@ -344,29 +302,20 @@ export async function loadPatternByName(pattern) {
     applyPattern(saved[name]);
     localStorage.setItem(LAST_USED_KEY, name);
 
-    // Force refresh presentation view if active (fixes blank screen on refresh)
-    // Force refresh presentation view if active (fixes blank screen on refresh)
-    if (window.updatePresentationView) {
-      // Reset cache because applyPattern rebuilt the DOM
-      if (window.resetPresentationView) window.resetPresentationView();
-      window.updatePresentationView(0);
-    }
+    // Sync presentation view (handled by observers now)
+    // Note: older code had manual update check here.
   } catch (err) {
     console.error(err);
     alert(`Load failed: ${err?.message || err}`);
   }
 }
 
-// window.saveCurrentPatternAs = saveCurrentPatternAs;
-// window.loadPatternByName = loadPatternByName;
-
-loadBtn.addEventListener('click', async () => {
+loadBtn?.addEventListener('click', async () => {
   const selected = getSelectedPatternName();
   loadPatternByName(selected);
 });
 
-
-renameBtn.addEventListener('click', async () => {
+renameBtn?.addEventListener('click', async () => {
   if (!ensureHasSelection()) return;
 
   const oldName = getSelectedPatternName();
@@ -405,7 +354,6 @@ renameBtn.addEventListener('click', async () => {
   }
 });
 
-
 // Custom Confirmation Modal Logic
 const confirmModal = document.getElementById('confirmModal');
 const confirmTitle = document.getElementById('confirmTitle');
@@ -416,7 +364,6 @@ let confirmCallback = null;
 
 function showConfirm(title, message, onConfirm) {
   if (!confirmModal) {
-    // Fallback if modal missing (shouldn't happen)
     if (confirm(message)) onConfirm();
     return;
   }
@@ -442,23 +389,20 @@ confirmOkBtn?.addEventListener('click', () => {
   if (confirmCallback) confirmCallback();
   closeConfirmModal();
 });
-// Close on outside click
 confirmModal?.addEventListener('click', (e) => {
   if (e.target === confirmModal) closeConfirmModal();
 });
 
 
-deleteBtn.addEventListener('click', (e) => {
+deleteBtn?.addEventListener('click', (e) => {
   if (e) {
     e.preventDefault();
     e.stopPropagation();
   }
 
-  // Close the dropdown immediately
   const menu = document.getElementById('fileDropdownMenu');
   if (menu) menu.classList.remove('show');
 
-  // Small delay to let dropdown close visually before modal pops (cleaner UX)
   setTimeout(() => {
     if (!ensureHasSelection()) return;
 
@@ -494,7 +438,7 @@ deleteBtn.addEventListener('click', (e) => {
 });
 
 
-exportBtn.addEventListener('click', async () => {
+exportBtn?.addEventListener('click', async () => {
   const data = JSON.stringify(serializePattern(), null, 2);
   try {
     await navigator.clipboard.writeText(data);
@@ -504,8 +448,8 @@ exportBtn.addEventListener('click', async () => {
   }
 });
 
-importBtn.addEventListener('click', async () => {
-  if (typeof window.hasUnsavedChanges === 'function' && window.hasUnsavedChanges()) {
+importBtn?.addEventListener('click', async () => {
+  if (hasUnsavedChanges()) {
     if (!confirm('You have unsaved changes. Discard them?')) return;
   }
 
@@ -517,7 +461,6 @@ importBtn.addEventListener('click', async () => {
 
     const wantSave = confirm('Loaded! Save this pattern to your list?');
     if (wantSave) {
-      const saved = getSavedPatterns();
       const suggested = obj.name || `Imported ${new Date().toLocaleString()}`;
       const name = prompt('Save imported pattern as:', suggested);
       if (name) {
@@ -537,63 +480,36 @@ importBtn.addEventListener('click', async () => {
   }
 });
 
-// Initialize Pattern from previous session
-// Wait for DOM and refreshPatternSelect
-// Initialize Pattern from previous session
-// MOVED TO init.js to prevent race condition
-
-// === VIRTUAL PLAYBACK CONTROLS (Moved from handpanmap.js) ===
-// Initialize Transport Controls for all containers
-function setupAllTransports() {
+// === VIRTUAL PLAYBACK CONTROLS ===
+export function setupAllTransports() {
   const containers = document.querySelectorAll('.transport-container');
   const template = document.getElementById('transport-template');
   if (!template) return;
 
   containers.forEach(container => {
-    // Clear existing content
     container.innerHTML = '';
-
-    // Clone template
     const clone = template.content.cloneNode(true);
     container.appendChild(clone);
-
-    // Determine GridContext
     const gridId = container.dataset.grid || 'A';
     const ctx = (gridId === 'B') ? gridB : gridA;
-
-    // Initialize Modular UI
     new TransportUI(ctx, container);
   });
 }
 
-// EXPOSE GLOBAL (for init.js or presentation-mode.js)
-window.initModularTransports = setupAllTransports;
-
 // Sync function (Legacy compatibility or triggered broadcast)
-window.syncVirtualHandpanControls = function () {
+export function syncVirtualHandpanControls() {
   TransportRegistry.updateAll(gridA);
-};
-
-// HOOK UPDATE LOOP AND INIT
-function installHook() {
-  const existingHook = window.updatePresentationView;
-  window.updatePresentationView = function (step, ctx) {
-    if (existingHook) existingHook(step, ctx);
-    // TransportRegistry handles UI updates during playback via start() -> tick() 
-    // but we can ensure sync here too.
-    if (ctx) {
-      TransportRegistry.updateAll(ctx);
-    } else {
-      TransportRegistry.updateAll(gridA);
-    }
-  };
-
-  // Run once immediately
-  setupAllTransports();
 }
 
+// Subscribe to Tick to sync UI
+addTickObserver((ctx, notes, hands) => {
+  if (ctx) TransportRegistry.updateAll(ctx);
+  else TransportRegistry.updateAll(gridA);
+});
+
+// Init Transports
 if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', installHook);
+  document.addEventListener('DOMContentLoaded', setupAllTransports);
 } else {
-  installHook();
+  setupAllTransports();
 }

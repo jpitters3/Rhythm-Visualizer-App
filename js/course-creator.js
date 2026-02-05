@@ -1,5 +1,6 @@
 import { currentUser, isAdminUser } from './auth.js';
 import { dbListPatternNames, dbLoadPatternByName, getSavedPatterns, serializePattern } from './pattern-crud.js';
+import { supabase } from './supabase-client.js';
 
 // ===== STATE =====
 let currentCourseData = {
@@ -15,6 +16,31 @@ const expandedLessons = new Set(); // Strings "sIdx-lIdx"
 // Drag State
 let dragEl = null;
 let dragSrcData = null;
+
+export function initCourseCreator() {
+  const list = document.getElementById('courseStructure');
+  if (list) {
+    // Centralized Event Delegation
+    list.addEventListener('click', handleCourseCreatorClick);
+    list.addEventListener('change', handleCourseCreatorChange);
+    // Drag events need careful handling, might keep direct listeners in render or delegate
+    // Delegation for drag is tricky due to dragstart needing the element.
+    // We can attach drag listeners in render or use delegation if we are careful.
+    // Keeping render-attached drag listeners is fine for now as they are specific.
+  }
+
+  // Bind main buttons
+  document.getElementById('openCourseModalBtn')?.addEventListener('click', openCourseCreator);
+  document.getElementById('closeCourseModal')?.addEventListener('click', closeCourseCreator);
+  document.getElementById('courseModal')?.addEventListener('click', (e) => {
+    if (e.target.id === 'courseModal') closeCourseCreator();
+  });
+  document.getElementById('addSectionBtn')?.addEventListener('click', addSection);
+
+  document.getElementById('saveCourseBtn')?.addEventListener('click', () => handleCourseSave(true));
+  document.getElementById('saveAndContinueBtn')?.addEventListener('click', () => handleCourseSave(false));
+}
+
 
 // Fetch patterns on load
 async function loadPatternOptions() {
@@ -49,6 +75,65 @@ function addLessonToSection(sectionIndex) {
   renderCourseStructure();
 }
 
+// --- Event Delegation Handlers ---
+
+function handleCourseCreatorClick(e) {
+  const target = e.target.closest('button, .lesson-header-bar');
+  if (!target) return;
+
+  // Prevent event bubbling issues if clicking nested elements
+  if (e.target.closest('input') || e.target.closest('select') || e.target.closest('textarea')) return;
+
+  const action = target.dataset.action;
+  const sIdx = parseInt(target.dataset.sidx);
+  const lIdx = parseInt(target.dataset.lidx);
+
+  if (action === 'toggleSection') {
+    toggleSection(sIdx);
+  } else if (action === 'removeSection') {
+    removeSection(sIdx);
+  } else if (action === 'addLesson') {
+    addLessonToSection(sIdx);
+  } else if (action === 'toggleLesson' || action === 'toggleLessonHeader') {
+    // If header clicked, ensure we didn't click a button inside it (which is handled separately by closest)
+    // But closest finds the outer div too.
+    // If we clicked the button, target is button. If we clicked div, target is div.
+    // We only want to toggle if action is explicitly set.
+    toggleLesson(sIdx, lIdx);
+  } else if (action === 'removeLesson') {
+    handleRemoveClick(target, sIdx, lIdx);
+  } else if (action === 'uploadVideo') {
+    triggerLessonVideoUpload(sIdx, lIdx);
+  } else if (action === 'capturePattern') {
+    capturePatternForLesson(sIdx, lIdx);
+  }
+}
+
+function handleCourseCreatorChange(e) {
+  const target = e.target;
+  const field = target.dataset.field;
+  const sIdx = parseInt(target.dataset.sidx);
+  const lIdx = parseInt(target.dataset.lidx);
+
+  if (!field) return;
+
+  if (field === 'section-title') {
+    currentCourseData.sections[sIdx].title = target.value;
+  } else if (field === 'section-published') {
+    currentCourseData.sections[sIdx].is_published = target.checked;
+    renderCourseStructure();
+  } else if (field === 'lesson-title') {
+    currentCourseData.sections[sIdx].lessons[lIdx].title = target.value;
+  } else if (field === 'lesson-desc') {
+    currentCourseData.sections[sIdx].lessons[lIdx].description = target.value;
+  } else if (field === 'lesson-video') {
+    currentCourseData.sections[sIdx].lessons[lIdx].video_url = target.value;
+  } else if (field === 'lesson-pattern') {
+    handlePatternSelect(target, sIdx, lIdx);
+  }
+}
+
+
 // Function to handle pattern selection in dropdown
 async function handlePatternSelect(selectEl, sIdx, lIdx) {
   const patternName = selectEl.value;
@@ -70,12 +155,10 @@ async function handlePatternSelect(selectEl, sIdx, lIdx) {
       currentCourseData.sections[sIdx].lessons[lIdx].pattern_name = patternName;
 
       // Visual Feedback
-      const btn = selectEl.nextElementSibling; // The 'Update' button
-      if (btn) {
-        const originalText = btn.textContent;
-        btn.textContent = "Loaded!";
-        setTimeout(() => btn.textContent = originalText, 1500);
-      }
+      const btn = selectEl.nextElementSibling; // The 'Update' button (capture btn)
+      // Actually capture btn is unrelated to select feedback, but maybe useful to flash something?
+      selectEl.style.backgroundColor = '#dff0d8';
+      setTimeout(() => selectEl.style.backgroundColor = '', 500);
     } else {
       alert("Could not load pattern data. It may have been deleted.");
     }
@@ -248,6 +331,7 @@ function courseDrop(e, type, targetSIdx, targetLIdx = null) {
 // Function to render the UI for the course builder
 function renderCourseStructure() {
   const container = document.getElementById('courseStructure');
+  if (!container) return;
   container.innerHTML = '';
 
   currentCourseData.sections.forEach((section, sIdx) => {
@@ -256,8 +340,9 @@ function renderCourseStructure() {
     const sectionEl = document.createElement('div');
     sectionEl.className = 'section-builder';
     sectionEl.setAttribute('draggable', 'true');
+    sectionEl.dataset.sidx = sIdx;
 
-    // Drag Events
+    // Drag Events (Keep specific handlers for now to ensure correct data transfer)
     sectionEl.addEventListener('dragstart', (e) => courseDragStart(e, 'section', sIdx));
     sectionEl.addEventListener('dragover', courseDragOver);
     sectionEl.addEventListener('dragenter', courseDragEnter);
@@ -269,28 +354,28 @@ function renderCourseStructure() {
     sectionEl.innerHTML = `
       <div class="section-header-bar" style="${!section.is_published ? 'border-bottom: 2px dashed #f39c12;' : ''}">
           <div class="drag-handle" title="Drag to reorder section">☰</div>
-          <button class="toggle-btn" onclick="toggleSection(${sIdx})">
+          <button class="toggle-btn" data-action="toggleSection" data-sidx="${sIdx}">
              ${isExpanded ? '▼' : '▶'}
           </button>
           <div class="section-title-input">
-             <input type="text" value="${section.title}" onchange="currentCourseData.sections[${sIdx}].title = this.value" placeholder="Section Title">
+             <input type="text" value="${section.title}" data-field="section-title" data-sidx="${sIdx}" placeholder="Section Title">
           </div>
           
           <div class="section-publish-toggle" style="margin-right: 10px; display: flex; align-items: center; gap: 5px;">
              <input type="checkbox" id="sec-pub-${sIdx}" 
                 ${section.is_published ? 'checked' : ''} 
-                onchange="currentCourseData.sections[${sIdx}].is_published = this.checked; renderCourseStructure();">
+                data-field="section-published" data-sidx="${sIdx}">
              <label for="sec-pub-${sIdx}" style="font-size: 0.8rem; cursor: pointer; color: ${section.is_published ? '#2ecc71' : '#f39c12'};">
                 ${section.is_published ? 'Published' : 'Draft'}
              </label>
           </div>
 
-          <button class="icon-btn remove-section-btn" onclick="removeSection(${sIdx})" title="Remove Section">&times;</button>
+          <button class="icon-btn remove-section-btn" data-action="removeSection" data-sidx="${sIdx}" title="Remove Section">&times;</button>
       </div>
       
       <div class="lessons-container ${isExpanded ? 'active' : ''}" id="section-${sIdx}-lessons" style="${!section.is_published ? 'opacity: 0.8;' : ''}"></div>
       
-      ${isExpanded ? `<button class="add-lesson-btn" onclick="window.addLessonToSection(${sIdx})">+ Add Lesson</button>` : ''}
+      ${isExpanded ? `<button class="add-lesson-btn" data-action="addLesson" data-sidx="${sIdx}">+ Add Lesson</button>` : ''}
     `;
 
     const lessonsContainer = sectionEl.querySelector('.lessons-container');
@@ -307,6 +392,8 @@ function renderCourseStructure() {
         const lessonEl = document.createElement('div');
         lessonEl.className = 'lesson-builder';
         lessonEl.setAttribute('draggable', 'true');
+        lessonEl.dataset.sidx = sIdx;
+        lessonEl.dataset.lidx = lIdx;
 
         // Drag Events (Lesson)
         lessonEl.addEventListener('dragstart', (e) => {
@@ -323,31 +410,31 @@ function renderCourseStructure() {
         lessonEl.addEventListener('dragend', courseDragEnd);
 
         lessonEl.innerHTML = `
-            <div class="lesson-header-bar" onclick="if(event.target.tagName !== 'INPUT' && event.target.tagName !== 'BUTTON') toggleLesson(${sIdx}, ${lIdx})">
+            <div class="lesson-header-bar" data-action="toggleLessonHeader" data-sidx="${sIdx}" data-lidx="${lIdx}">
                 <div class="lesson-drag-handle" title="Drag to reorder lesson">::</div>
-                <button class="toggle-btn lesson-toggle-btn" onclick="event.stopPropagation(); toggleLesson(${sIdx}, ${lIdx})">
+                <button class="toggle-btn lesson-toggle-btn" data-action="toggleLesson" data-sidx="${sIdx}" data-lidx="${lIdx}">
                      ${isLessonExpanded ? '▼' : '▶'}
                 </button>
-                <input type="text" class="lesson-title-input" value="${lesson.title}" placeholder="Lesson Title" onclick="event.stopPropagation()" onchange="currentCourseData.sections[${sIdx}].lessons[${lIdx}].title = this.value">
-                <button class="icon-btn remove-btn-small" onclick="event.stopPropagation(); handleRemoveClick(this, ${sIdx}, ${lIdx})" title="Remove Lesson">&times;</button>
+                <input type="text" class="lesson-title-input" value="${lesson.title}" placeholder="Lesson Title" data-field="lesson-title" data-sidx="${sIdx}" data-lidx="${lIdx}">
+                <button class="icon-btn remove-btn-small" data-action="removeLesson" data-sidx="${sIdx}" data-lidx="${lIdx}" title="Remove Lesson">&times;</button>
             </div>
 
             <div class="lesson-content ${isLessonExpanded ? 'active' : ''}">
-                <textarea placeholder="Description" onchange="currentCourseData.sections[${sIdx}].lessons[${lIdx}].description = this.value">${lesson.description}</textarea>
+                <textarea placeholder="Description" data-field="lesson-desc" data-sidx="${sIdx}" data-lidx="${lIdx}">${lesson.description}</textarea>
                 <div class="input-with-icon">
                     <span>📺</span>
-                    <input type="text" value="${lesson.video_url}" placeholder="YouTube URL or Uploaded Video" onchange="currentCourseData.sections[${sIdx}].lessons[${lIdx}].video_url = this.value">
-                    <button class="small-upload-btn" onclick="triggerLessonVideoUpload(${sIdx}, ${lIdx})" title="Upload Video File">📤</button>
+                    <input type="text" value="${lesson.video_url}" placeholder="YouTube URL or Uploaded Video" data-field="lesson-video" data-sidx="${sIdx}" data-lidx="${lIdx}">
+                    <button class="small-upload-btn" data-action="uploadVideo" data-sidx="${sIdx}" data-lidx="${lIdx}" title="Upload Video File">📤</button>
                 </div>
                 
                 <div class="lesson-meta-box">
                   <div class="meta-label">ASSOCIATED PATTERN</div>
                   <div class="pattern-control-row">
-                    <select class="pattern-select" onchange="handlePatternSelect(this, ${sIdx}, ${lIdx})">
+                    <select class="pattern-select" data-field="lesson-pattern" data-sidx="${sIdx}" data-lidx="${lIdx}">
                       <option value="">-- Capture Current Grid --</option>
                       ${patternOptions}
                     </select>
-                    <button class="small-capture-btn" onclick="capturePatternForLesson(${sIdx}, ${lIdx})" title="Save current grid as pattern">📸</button>
+                    <button class="small-capture-btn" data-action="capturePattern" data-sidx="${sIdx}" data-lidx="${lIdx}" title="Save current grid as pattern">📸</button>
                   </div>
                 </div>
             </div>
@@ -387,43 +474,53 @@ async function triggerLessonVideoUpload(sIdx, lIdx) {
       return;
     }
 
-    const btn = e.target.senderBtn; // We'll need to pass the button reference or find it
-    const originalText = "📤";
-    // For now, let's just alert progress or update the input value
-    const input = document.querySelector(`.section-builder:nth-child(${sIdx + 1}) .lesson-builder:nth-child(${lIdx + 1}) .input-with-icon input`);
+    // Find input element to update
+    // We need to re-select it since we don't have direct reference passed in easily via delegation specific to this function usually
+    // But we know sIdx/lIdx
+    // Selector strategy:
+    // .section-builder:nth-child(...) -> but we re-render often.
+    // Better: We update data model, then render.
+
+    // UI Feedback:
+    // With re-render it might lose focus or state?
+    // Let's rely on data model update + render.
 
     try {
       const fileExt = file.name.split('.').pop();
       const fileName = `${currentUser.id}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
 
       console.log("Uploading video...", fileName);
-      if (input) input.value = "Uploading...";
+      // We can't easily show "Uploading..." in the input without triggering a save/render loop if we modified data.
+      // But we CAN modify the input value in DOM if we find it.
+      const inputs = document.querySelectorAll(`[data-field="lesson-video"]`);
+      let inputEl = null;
+      inputs.forEach(el => {
+        if (parseInt(el.dataset.sidx) === sIdx && parseInt(el.dataset.lidx) === lIdx) inputEl = el;
+      });
 
-      const { data, error } = await supabase1.storage
+      if (inputEl) inputEl.value = "Uploading...";
+
+      const { data, error } = await supabase.storage // Updated to use imported supabase
         .from('lesson-videos')
         .upload(fileName, file);
 
       if (error) throw error;
 
-      const { data: publicData } = supabase1.storage.from('lesson-videos').getPublicUrl(fileName);
+      const { data: publicData } = supabase.storage.from('lesson-videos').getPublicUrl(fileName); // Updated
       const publicUrl = publicData.publicUrl;
 
       // Update state
       currentCourseData.sections[sIdx].lessons[lIdx].video_url = publicUrl;
 
       // Update UI
-      if (input) {
-        input.value = publicUrl;
-        input.classList.add('updated-flash');
-        setTimeout(() => input.classList.remove('updated-flash'), 1000);
-      }
+      renderCourseStructure(); // Safest to just re-render
 
       console.log("Upload successful:", publicUrl);
 
     } catch (err) {
       console.error("Upload failed:", err);
       alert("Upload failed: " + err.message);
-      if (input) input.value = currentCourseData.sections[sIdx].lessons[lIdx].video_url || "";
+      renderCourseStructure(); // Revert
     }
   };
 
@@ -483,7 +580,7 @@ window.loadCourseToEdit = async function (course) {
   openCourseCreator();
 };
 
-function closeCourseCreator() {
+export function closeCourseCreator() {
   courseModal.classList.remove('open');
   courseModal.setAttribute('aria-hidden', 'true');
 }
@@ -504,6 +601,9 @@ courseModal?.addEventListener('click', (e) => {
 
 const addSectionBtn = document.getElementById('addSectionBtn');
 addSectionBtn?.addEventListener('click', addSection);
+
+// ===== SAVE ===== //
+
 
 // ===== SAVE ===== //
 
@@ -544,14 +644,14 @@ async function handleCourseSave(shouldClose = true) {
 
     if (courseId) {
       // === UPDATE Metatdata ===
-      const { error: uErr } = await supabase1
+      const { error: uErr } = await supabase
         .from('courses')
         .update({ title, description })
         .eq('id', courseId);
       if (uErr) throw uErr;
     } else {
       // === CREATE New Course ===
-      const { data: newCourse, error: cErr } = await supabase1
+      const { data: newCourse, error: cErr } = await supabase
         .from('courses')
         .insert([{
           title,
@@ -577,7 +677,7 @@ async function handleCourseSave(shouldClose = true) {
 
       if (sId) {
         // Update Existing Section
-        const { error: sUpdErr } = await supabase1
+        const { error: sUpdErr } = await supabase
           .from('sections')
           .update({
             title: sData.title,
@@ -588,7 +688,7 @@ async function handleCourseSave(shouldClose = true) {
         if (sUpdErr) throw sUpdErr;
       } else {
         // Insert New Section
-        const { data: newSec, error: sInsErr } = await supabase1
+        const { data: newSec, error: sInsErr } = await supabase
           .from('sections')
           .insert([{
             course_id: courseId,
@@ -619,14 +719,14 @@ async function handleCourseSave(shouldClose = true) {
 
         if (lId) {
           // Update Existing Lesson
-          const { error: lUpdErr } = await supabase1
+          const { error: lUpdErr } = await supabase
             .from('lessons')
             .update(lPayload)
             .eq('id', lId);
           if (lUpdErr) throw lUpdErr;
         } else {
           // Insert New Lesson
-          const { data: newLes, error: lInsErr } = await supabase1
+          const { data: newLes, error: lInsErr } = await supabase
             .from('lessons')
             .insert([lPayload])
             .select().single();
@@ -643,7 +743,7 @@ async function handleCourseSave(shouldClose = true) {
 
     // A. Delete Removed Lessons (from kept sections)
     if (keptSectionIds.length > 0) {
-      const { data: existingLessons } = await supabase1
+      const { data: existingLessons } = await supabase
         .from('lessons')
         .select('id')
         .in('section_id', keptSectionIds);
@@ -655,13 +755,13 @@ async function handleCourseSave(shouldClose = true) {
 
         if (toDeleteIds.length > 0) {
           console.log("Deleting orphaned lessons:", toDeleteIds);
-          await supabase1.from('lessons').delete().in('id', toDeleteIds);
+          await supabase.from('lessons').delete().in('id', toDeleteIds);
         }
       }
     }
 
     // B. Delete Removed Sections
-    const { data: existingSections } = await supabase1
+    const { data: existingSections } = await supabase
       .from('sections')
       .select('id')
       .eq('course_id', courseId);
@@ -673,8 +773,8 @@ async function handleCourseSave(shouldClose = true) {
 
       if (secToDelete.length > 0) {
         console.log("Deleting orphaned sections:", secToDelete);
-        await supabase1.from('lessons').delete().in('section_id', secToDelete);
-        await supabase1.from('sections').delete().in('id', secToDelete);
+        await supabase.from('lessons').delete().in('section_id', secToDelete);
+        await supabase.from('sections').delete().in('id', secToDelete);
       }
     }
 
@@ -709,7 +809,8 @@ async function handleCourseSave(shouldClose = true) {
       // We do NOT reset currentCourseData or title/desc
     }
 
-    if (window.fetchCourses) window.fetchCourses(); // Refresh list
+    // Dispatch event to notify other modules (like courses.js) to refresh
+    window.dispatchEvent(new CustomEvent('course-data-changed'));
 
   } catch (err) {
     console.error("Error saving course (catch block):", err);
@@ -722,32 +823,5 @@ async function handleCourseSave(shouldClose = true) {
   }
 }
 
-saveCourseBtn?.addEventListener('click', () => handleCourseSave(true));
-saveAndContinueBtn?.addEventListener('click', () => handleCourseSave(false));
-
-
-window.toggleSection = toggleSection;
-window.toggleLesson = toggleLesson;
-window.removeSection = removeSection;
-window.handleRemoveClick = handleRemoveClick;
-window.courseDragStart = courseDragStart;
-window.courseDragOver = courseDragOver;
-window.courseDragEnd = courseDragEnd;
-window.courseDrop = courseDrop;
-window.addSection = addSection;
-window.addLessonToSection = addLessonToSection;
-window.handleCourseSave = handleCourseSave;
-window.renderCourseStructure = renderCourseStructure;
-window.openCourseCreator = openCourseCreator;
-window.closeCourseCreator = closeCourseCreator;
-window.handlePatternSelect = handlePatternSelect;
-window.triggerLessonVideoUpload = triggerLessonVideoUpload;
-window.capturePatternForLesson = capturePatternForLesson;
-
-// Expose currentCourseData via getter/setter because it's a reassignable 'let'
-Object.defineProperty(window, 'currentCourseData', {
-  get: () => currentCourseData,
-  set: (val) => { currentCourseData = val; }
-});
-window.openCourseCreator = openCourseCreator;
-window.closeCourseCreator = closeCourseCreator;
+// Remove window assignments except where absolutely necessary (e.g. debugging)
+// All handlers should be bound via initCourseCreator or event delegation.

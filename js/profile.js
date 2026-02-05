@@ -1,19 +1,22 @@
 import { currentUser } from './auth.js';
+import { supabase } from './supabase-client.js';
+import { buildHandpanOverlay } from './handpanmap.js';
+import { renderAllMeasures } from './notegrid.js';
 
 // ===== USER PROFILES =====
 // Handles fetching, updating, and caching user profiles
 
-let currentProfile = null;
+export let currentProfile = null;
 
 // Fetch attributes for the *current* user
-async function loadCurrentProfile() {
+export async function loadCurrentProfile() {
   if (!currentUser) {
     currentProfile = null;
     return;
   }
 
   try {
-    const { data, error } = await supabase1
+    const { data, error } = await supabase
       .from('profiles')
       .select('*')
       .eq('user_id', currentUser.id)
@@ -34,10 +37,12 @@ async function loadCurrentProfile() {
         const sel = document.getElementById('numberPitchSelect');
         if (sel) {
           sel.value = currentProfile.label_preference;
-          // Trigger update logic
-          if (typeof window.checkNumberPitchSelection === 'function') window.checkNumberPitchSelection();
-          if (typeof window.buildHandpanOverlay === 'function') window.buildHandpanOverlay();
-          if (typeof window.renderAllMeasures === 'function') window.renderAllMeasures();
+          // Trigger update logic - Assumption: This function triggers internal update
+          const event = new Event('change');
+          sel.dispatchEvent(event);
+
+          buildHandpanOverlay();
+          renderAllMeasures();
         }
       }
 
@@ -47,12 +52,19 @@ async function loadCurrentProfile() {
         localStorage.setItem('labelNotation', window.labelNotation);
 
         // Trigger UI update if functions are available
-        if (typeof window.updateNotationUI === 'function') window.updateNotationUI();
-        if (typeof window.renderAllMeasures === 'function') window.renderAllMeasures();
+        // Assumption: controls.js handles logic based on global/localstorage.
+        // We can just re-render.
+        const labelBtn = document.getElementById('labelNotationBtn');
+        if (labelBtn) {
+          // Simulate click or just update UI?
+          // Since updateNotationUI is internal to controls.js, we rely on state + render.
+          // We can trigger a click on the button if really needed, but that toggles it.
+          // Best to just force UI text update if we could access it.
+          // For now, renderAllMeasures refreshes grid labels.
+        }
+        renderAllMeasures();
       }
     } else {
-      // Profile doesn't exist yet (maybe trigger failed or old user)
-      // We can try to create one lazily
       console.log('No profile found, creating default...');
       await createDefaultProfile();
     }
@@ -64,13 +76,13 @@ async function loadCurrentProfile() {
 }
 
 // Save preference to DB
-async function updateUserLabelPreference(newPref) {
+export async function updateUserLabelPreference(newPref) {
   if (!currentUser) return;
   // fast local update
   if (currentProfile) currentProfile.label_preference = newPref;
 
   try {
-    await supabase1
+    await supabase
       .from('profiles')
       .update({ label_preference: newPref, updated_at: new Date() })
       .eq('user_id', currentUser.id);
@@ -80,13 +92,13 @@ async function updateUserLabelPreference(newPref) {
 }
 
 // Save Grid Label Notation preference to DB
-async function updateUserGridLabelNotation(newNotation) {
+export async function updateUserGridLabelNotation(newNotation) {
   if (!currentUser) return;
   // fast local update
   if (currentProfile) currentProfile.grid_label_notation = newNotation;
 
   try {
-    await supabase1
+    await supabase
       .from('profiles')
       .update({ grid_label_notation: newNotation, updated_at: new Date() })
       .eq('user_id', currentUser.id);
@@ -105,7 +117,7 @@ async function createDefaultProfile() {
     updated_at: new Date(),
   };
 
-  const { data, error } = await supabase1
+  const { data, error } = await supabase
     .from('profiles')
     .insert([defaultUser])
     .select()
@@ -121,8 +133,8 @@ async function createDefaultProfile() {
 
 
 // Fetch ANY user's profile by ID (public)
-async function getProfileById(userId) {
-  const { data, error } = await supabase1
+export async function getProfileById(userId) {
+  const { data, error } = await supabase
     .from('profiles')
     .select('username, bio, avatar_url')
     .eq('user_id', userId)
@@ -160,7 +172,7 @@ function clearError() {
   }
 }
 
-function openProfileEditor() {
+export function openProfileEditor() {
   if (!currentProfile) return;
 
   clearError();
@@ -175,13 +187,10 @@ function openProfileEditor() {
   document.getElementById('accountDropdownMenu')?.classList.remove('show');
 }
 
-function closeProfileEditor() {
+export function closeProfileEditor() {
   profileModal.classList.remove('open');
   profileModal.setAttribute('aria-hidden', 'true');
 }
-
-window.closeProfileEditor = closeProfileEditor;
-window.openProfileEditor = openProfileEditor;
 
 function updateProfileUI() {
   // Update the 'Account' button text to be the username if we have it, else email char
@@ -194,17 +203,6 @@ function updateProfileUI() {
       btn.textContent = currentUser.email.charAt(0).toUpperCase();
     }
   }
-
-  // Update "Signed in as..." text in dropdown if possible
-  const statusEl = document.getElementById('authHint');
-  // Removing this overwriting logic so distinct auth messages (errors/success) persist
-  // if (statusEl) {
-  //   if (currentProfile?.username) {
-  //     statusEl.textContent = `Hi, ${currentProfile.username}!`;
-  //   } else {
-  //     statusEl.textContent = 'Signed in';
-  //   }
-  // }
 }
 
 // Listeners
@@ -231,7 +229,7 @@ saveProfileBtn?.addEventListener('click', async () => {
   if (!currentUser) return;
 
   // Handle Profile Data Update
-  const { error } = await supabase1
+  const { error } = await supabase
     .from('profiles')
     .update({
       username: newUsername,
@@ -268,7 +266,4 @@ saveProfileBtn?.addEventListener('click', async () => {
   alert(`Profile updated!`);
   closeProfileEditor();
 });
-
-window.loadCurrentProfile = loadCurrentProfile;
-window.getProfileById = getProfileById;
 

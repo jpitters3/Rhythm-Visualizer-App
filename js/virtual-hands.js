@@ -1,8 +1,11 @@
 // virtual-hands.js
 // Visualizes hand movements on the virtual handpan
+import { HANDPAN_MAP } from './handpanmap.js';
+import { resolveHand, addTickObserver } from './noteplayer.js';
+import { checkCellIsMultiMode } from './notegrid.js';
 
 class VirtualHands {
-  constructor(overlayId) {
+  constructor() {
     // FIX: Append to 'handpanWrap' instead of 'handpanOverlay'
     // because 'handpanOverlay' gets innerHTML='' frequently.
     this.overlay = document.getElementById('handpanWrap');
@@ -33,6 +36,9 @@ class VirtualHands {
     }
 
     this.updateVisibility();
+
+    // Register with NotePlayer
+    addTickObserver((ctx, notes, hands) => this.onTick(ctx, notes, hands));
   }
 
   setEnabled(val) {
@@ -53,6 +59,47 @@ class VirtualHands {
     return el;
   }
 
+  onTick(ctx, stepNotes, stepHands) {
+    // Only visualize for Grid A
+    if (ctx.id !== 'A' || !this.enabled) return;
+
+    // --- LOOKAHEAD LOGIC ---
+    let nextL = null;
+    let nextR = null;
+
+    // Limit lookahead to ~2 beats (8 sub-steps in 16th mode)
+    const maxLookahead = 8;
+    const all = ctx.cells;
+    const totalSteps = all.length;
+
+    for (let i = 1; i <= maxLookahead; i++) {
+      if (nextL && nextR) break;
+
+      const futureStep = (ctx.step + i) % totalSteps;
+      const futureData = ctx.innerLabels[futureStep];
+      const futureHands = ctx.innerHands[futureStep];
+
+      // Note: We use ctx.step of the current tick, but ctx.step is incremented at end of tick.
+      // noteplayer.js tick calls observers BEFORE incrementing step.
+      // So ctx.step is the CURRENT playing step.
+      // So lookahead starts at step + 1. Correct.
+
+      if (!futureData) continue;
+
+      const labels = Array.isArray(futureData) ? futureData : [futureData];
+      const isChord = checkCellIsMultiMode(futureData);
+
+      labels.forEach((lbl, sIdx) => {
+        if (!lbl) return;
+        const h = resolveHand(futureStep, futureHands, sIdx, isChord, ctx.mode);
+        if (h === 'L' && !nextL) nextL = lbl;
+        if (h === 'R' && !nextR) nextR = lbl;
+      });
+    }
+
+    this.update(stepNotes, stepHands, nextL, nextR);
+  }
+
   /**
    * Update hands for the current step.
    * @param {Array} notes - Active notes triggering a strike
@@ -67,7 +114,7 @@ class VirtualHands {
     this.leftHand.classList.remove('striking');
     this.rightHand.classList.remove('striking');
 
-    // Determine current actions
+    // Determine current active notes for each hand
     let activeL = null;
     let activeR = null;
 
@@ -106,7 +153,8 @@ class VirtualHands {
   }
 
   moveHand(el, note) {
-    const pos = window.HANDPAN_MAP[note];
+    // Look up position in the exported HANDPAN_MAP
+    const pos = HANDPAN_MAP[note];
     if (pos) {
       el.style.left = `${pos.x}%`;
       el.style.top = `${pos.y}%`;
@@ -130,5 +178,6 @@ class VirtualHands {
   }
 }
 
-// Global instance
-window.virtualHands = new VirtualHands('handpanOverlay');
+// Global instance export
+export const virtualHands = new VirtualHands();
+// window.virtualHands = virtualHands; // Removing global

@@ -35,7 +35,7 @@ test.describe('Measure Actions', () => {
     await page.click('#addMeasureBtn');
 
     // Wait for the new measure to appear
-    const stepsPerMeasure = await page.evaluate(() => getStepCountPerMeasure(window.gridA));
+    const stepsPerMeasure = await page.locator('.measure-row').first().locator('.cell').count();
     const expectedCount = initialCells + stepsPerMeasure;
     await expect(page.locator('#measures .cell')).toHaveCount(expectedCount);
 

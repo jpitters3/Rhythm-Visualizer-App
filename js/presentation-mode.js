@@ -1,5 +1,17 @@
 /* ===== PRESENTATION MODE ===== */
-var lastMeasureIndex = -1;
+import { gridA, activeGrid } from './grid-context.js';
+import { labelForStep } from './notegrid.js';
+import { addTickObserver } from './noteplayer.js';
+import { TransportRegistry } from './transport-ui.js';
+
+export const PRESENT_KEY = 'groovepan_presentation_mode';
+
+let lastMeasureIndex = -1;
+
+const presentBtn = document.getElementById('presentBtn');
+const exitPresent = document.getElementById('exitPresent');
+
+
 async function enterFullscreenIfPossible() {
   try {
     if (!document.fullscreenElement && document.documentElement.requestFullscreen) {
@@ -23,14 +35,21 @@ async function exitFullscreenIfPossible() {
 export async function setPresentation(on) {
   document.body.classList.toggle('present', on);
   localStorage.setItem(PRESENT_KEY, on ? 'on' : 'off');
-  presentBtn.classList.toggle('active', on);
-  presentBtn.textContent = on ? '⛶' : '⛶';
-  exitPresent.style.display = on ? 'inline-flex' : 'none';
+
+  if (presentBtn) {
+    presentBtn.classList.toggle('active', on);
+    presentBtn.textContent = on ? '⛶' : '⛶';
+  }
+
+  if (exitPresent) {
+    exitPresent.style.display = on ? 'inline-flex' : 'none';
+  }
 
   if (on) {
     await enterFullscreenIfPossible();
     lastMeasureIndex = -1; // Reset cache
-    updatePresentationView(0, window.gridA); // Initialize view
+    updatePresentationView(0, gridA); // Initialize view
+    updatePresentationControlsVisibility(gridA);
   } else {
     await exitFullscreenIfPossible();
     const pControls = document.getElementById('presentationControls');
@@ -39,7 +58,7 @@ export async function setPresentation(on) {
 }
 
 
-function updatePresentationView(currentStep, ctx = window.gridA) {
+function updatePresentationView(currentStep, ctx = gridA) {
   // Only sync presentation view with Grid A
   if (ctx.id !== 'A') return;
 
@@ -47,9 +66,7 @@ function updatePresentationView(currentStep, ctx = window.gridA) {
   if (!isPresenting) return;
 
   // Calculate current measure index
-  const stepsPerMeasure = (typeof getStepCountPerMeasure === 'function')
-    ? getStepCountPerMeasure(ctx)
-    : ((ctx && ctx.mode === '8') ? 8 : 16);
+  const stepsPerMeasure = ctx.stepsPerMeasure;
   const lookahead = Math.floor(stepsPerMeasure / 8);
   const totalMeasureCount = ctx ? ctx.measures : 1;
   const totalSteps = totalMeasureCount * stepsPerMeasure;
@@ -57,19 +74,15 @@ function updatePresentationView(currentStep, ctx = window.gridA) {
   const visualStep = (currentStep + lookahead) % totalSteps;
   const currentMeasureIndex = Math.floor(visualStep / stepsPerMeasure);
 
-  //console.log(`[Present] updateView: step=${currentStep} idx=${currentMeasureIndex} last=${lastMeasureIndex}`);
-
   // OPTIMIZATION: Only update DOM if measure changed
   if (currentMeasureIndex === lastMeasureIndex) {
-    console.log(`[Present] Skipped (Index match)`);
     return;
   }
   lastMeasureIndex = currentMeasureIndex;
 
   const measuresEl = document.getElementById('measures');
-  if (!measuresEl) { console.warn('[Present] measuresEl not found!'); return; }
+  if (!measuresEl) { return; }
   const measureRows = Array.from(measuresEl.getElementsByClassName('measure-row'));
-  console.log(`[Present] Found ${measureRows.length} rows`);
 
   measureRows.forEach((row, index) => {
     // Reset classes
@@ -84,14 +97,10 @@ function updatePresentationView(currentStep, ctx = window.gridA) {
     }
   });
 
-  // Handle looping (e.g. if at end, show start as next?)
-  // User didn't strictly request looping visual, but it's nice.
-  // For now, simple linear view.
-
   updateStaticHeader(stepsPerMeasure, ctx);
 }
 
-function updateStaticHeader(cols, ctx = window.gridA) {
+function updateStaticHeader(cols, ctx = gridA) {
   const container = document.getElementById('static-measure-labels');
   if (!container) return;
 
@@ -107,22 +116,15 @@ function updateStaticHeader(cols, ctx = window.gridA) {
     if (typeof labelForStep === 'function') {
       el.textContent = labelForStep(i, ctx);
     } else {
-      // Fallback if notegrid.js not loaded? (Unlikely)
       el.textContent = (i % 2 === 0) ? (Math.floor(i / 4) + 1) : '';
     }
     container.appendChild(el);
   }
 }
 
-function resetPresentationView() {
+export function resetPresentationView() {
   lastMeasureIndex = -1;
-  console.log('[Present] Cache reset via resetPresentationView');
 }
-
-// Make it global
-window.updatePresentationView = updatePresentationView;
-window.setPresentation = setPresentation;
-window.resetPresentationView = resetPresentationView;
 
 // Initialize Presentation Mode
 document.addEventListener('DOMContentLoaded', () => {
@@ -135,48 +137,42 @@ document.addEventListener('DOMContentLoaded', () => {
     if (exit) exit.style.display = 'inline-flex';
 
     // Force initial render (even if empty pattern, it sets up structure)
-    updatePresentationView(0);
+    // We can assume gridA is available since we import it
+    updatePresentationView(0, gridA);
   }
 });
 
 // Detect externally triggered Fullscreen exit (e.g. Esc key by user)
-document.addEventListener('fullscreenchange', () => {
-  if (!document.fullscreenElement && document.body.classList.contains('present')) {
-    // User exited fullscreen, switch off
-    setPresentation(false);
-  }
-});
-
-document.addEventListener('mozfullscreenchange', () => {
+const handleFullscreenChange = () => {
   if (!document.fullscreenElement && document.body.classList.contains('present')) {
     setPresentation(false);
   }
-});
-
-document.addEventListener('webkitfullscreenchange', () => {
-  if (!document.fullscreenElement && document.body.classList.contains('present')) {
-    setPresentation(false);
-  }
-});
+};
+document.addEventListener('fullscreenchange', handleFullscreenChange);
+document.addEventListener('mozfullscreenchange', handleFullscreenChange);
+document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
 
 /* ===== PRESENTATION CONTROLS ===== */
-function updatePresentationControlsVisibility(ctx = window.gridA) {
+function updatePresentationControlsVisibility(ctx = gridA) {
   const pControls = document.getElementById('presentationControls');
   if (!pControls) return;
 
   if (document.body.classList.contains('present')) {
     pControls.style.display = 'flex';
-    // Registry update is handled by the playback loop, 
-    // but we can trigger it here to ensure it's fresh on show.
-    if (window.TransportRegistry) window.TransportRegistry.updateAll(ctx);
+    if (TransportRegistry) TransportRegistry.updateAll(ctx);
   } else {
     pControls.style.display = 'none';
   }
 }
 
-// Hook into the Update Loop
-const originalUpdateView = window.updatePresentationView;
-window.updatePresentationView = function (step, ctx) {
-  if (originalUpdateView) originalUpdateView(step, ctx);
-  updatePresentationControlsVisibility(ctx);
-};
+// Subscribe to Tick to sync View
+addTickObserver((ctx, notes, hands) => {
+  // Current step in ctx is updated at end of tick, or beginning? 
+  // noteplayer.js: "c.step++" happens at end of tick.
+  // Observer is called with "c, activeNotes, activeHands".
+  // We should use c.step.
+  if (ctx && ctx.id === 'A') {
+    const step = ctx.step;
+    updatePresentationView(step, ctx);
+  }
+});

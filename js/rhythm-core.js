@@ -34,12 +34,6 @@ export function setTimeSignatureState(ts) {
 // Initialize global STEPS (assuming default mode '8')
 STEPS = calculateSteps(timeSignature, '8');
 
-// Legacy Expose
-window.STEPS = STEPS;
-window.calculateSteps = calculateSteps;
-window.getTimeSignature = getTimeSignature;
-window.setTimeSignatureState = setTimeSignatureState;
-
 // Define 'mode' getter for backward compatibility (init.js uses it)
 // But 'mode' depends on activeGrid which is in grid-context.js / state.js
 // We can't easily access activeGrid here without circular dependency if we import it.

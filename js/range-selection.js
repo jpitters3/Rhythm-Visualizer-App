@@ -1,4 +1,5 @@
 import { activeGrid, gridA, gridB } from './grid-context.js';
+import { setLongPressFired } from './state.js';
 
 function allCells(ctx) {
   return Array.from((ctx || activeGrid).cells);
@@ -32,7 +33,7 @@ export function clearRange(ctx) {
   updateRangeUI(c);
 }
 
-// Local implementation to avoid circular dependency (notegrid.js uses setCaret which uses applySelection (from notegrid.js))
+// Local implementation to avoid circular dependency
 function applySelectionLocal(i, ctx) {
   const c = ctx || activeGrid;
   c.caretIndex = i;
@@ -40,7 +41,6 @@ function applySelectionLocal(i, ctx) {
   cellList.forEach((cell, idx) => cell.classList.toggle('selected', idx === i));
 }
 
-// Export as applySelection for consumers (like compose-mode.js)
 export function applySelection(i, ctx) {
   applySelectionLocal(i, ctx);
 }
@@ -75,12 +75,6 @@ export function updateRangeUI(ctx) {
   // Update action bar (global for now, but linked to activeGrid)
   const selBar = document.getElementById('selBar');
   const selBarText = document.getElementById('selBarText');
-  const selPasteBtn = document.getElementById('selPasteBtn');
-  const beatClipboard = window.beatClipboard; // Still global in notegrid? NO, exported.
-  // We need to check if clipboard has stuff.
-  // Actually, notegrid.js exports beatClipboard. But importing it creates cycle.
-  // I will check `window.beatClipboard` as a fallback or assume clipboard state is managed elsewhere.
-  // Or I can skip the button disable logic here and let notegrid handle it?
 
   if (selBar && c === activeGrid) {
     const count = r ? r.length : 0;
@@ -88,13 +82,11 @@ export function updateRangeUI(ctx) {
     selBar.style.display = showBar ? 'flex' : 'none';
     document.body.classList.toggle('has-selection', showBar);
     if (selBarText) selBarText.textContent = `${count} selected`;
-    // if (selPasteBtn) selPasteBtn.disabled = !beatClipboard; // Commented out to avoid dependency for now
   }
 }
 
 // ===== MOBILE LONG-PRESS RANGE SELECTION =====
 let longPressTimer = null;
-window.longPressFired = false;
 
 function indexFromCellEl(cellEl) {
   return parseInt(cellEl.dataset.index);
@@ -102,26 +94,19 @@ function indexFromCellEl(cellEl) {
 
 export function startLongPress(cellEl) {
   clearTimeout(longPressTimer);
-  window.longPressFired = false;
+  setLongPressFired(false);
 
   // Resolve context from DOM if possible, or use activeGrid
-  // This logic was: const ctx = window.gridA.container.contains(cellEl) ? window.gridA : window.gridB;
-  // We need gridA/gridB.
-  // Import them?
-  // import { gridA, gridB } from './grid-context.js'; (Deferred)
-  // I'll assume activeGrid for simplicity or standard resolution:
-  // We can traverse up to find container ID?
   let ctx = activeGrid;
-  // Better resolution:
   const parent = cellEl.closest('.measures') || cellEl.closest('.secondary-measures');
   if (parent && parent.id === 'measures') ctx = gridA;
-  else if (parent) ctx = gridB;
+  else if (parent) ctx = gridB; // Assuming secondary-measures maps to gridB if needed, or check ID
 
   const idx = indexFromCellEl(cellEl);
   if (isNaN(idx)) return;
 
   longPressTimer = setTimeout(() => {
-    window.longPressFired = true;
+    setLongPressFired(true);
     ctx.selecting = true;
 
     if ('vibrate' in navigator) {
@@ -133,8 +118,6 @@ export function startLongPress(cellEl) {
     setRange(idx, idx, ctx);
   }, 450);
 }
-
-// Helpers resolved via top-level imports
 
 export function cancelLongPress() {
   clearTimeout(longPressTimer);
@@ -156,15 +139,3 @@ window.addEventListener('click', (e) => {
     clearRange(activeGrid);
   }
 });
-
-
-// Expose legacy for now if needed, or rely on imports
-// window.setCaret = setCaret; // Removed
-window.setCaret = setCaret;
-window.setRange = setRange;
-window.clearRange = clearRange;
-window.getRange = getRange;
-window.hasRange = hasRange;
-window.startLongPress = startLongPress;
-window.cancelLongPress = cancelLongPress;
-window.updateDragSelectionOver = updateDragSelectionOver;

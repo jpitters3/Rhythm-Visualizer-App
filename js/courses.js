@@ -1,17 +1,24 @@
+import { supabase } from './supabase-client.js';
+import { currentUser, isAdminUser, updateAdminUI } from './auth.js';
+import { applyPattern, serializePattern, dbSavePattern, refreshPatternSelect, hasUnsavedChanges, snapshotCurrentState } from './pattern-crud.js';
+import { stop } from './noteplayer.js';
+import { isItemInPractice, togglePracticeItem } from './practice.js';
+
 // ===== SIDEBAR LOGIC (OWNED COURSES) =====
 
 let activeCourseId = null;
-window.allCourses = [];
-window.allSections = [];
-window.allLessons = [];
-window.currentLesson = null;
+export let allCourses = [];
+export let allSections = [];
+export let allLessons = [];
+export let currentLesson = null;
+export let completedLessonIds = new Set();
 
-async function fetchCourses() {
-  if (!currentUser) return; // Wait for auth
+export async function fetchCourses() {
+  if (!currentUser) return;
 
   try {
     // 1. Fetch User Profile for Active Course ID
-    const { data: profile } = await supabase1
+    const { data: profile } = await supabase
       .from('profiles')
       .select('current_course_id')
       .eq('user_id', currentUser.id)
@@ -21,17 +28,15 @@ async function fetchCourses() {
 
     // 2. Fetch User's Enrolled Courses AND Completed Lessons
     const [enrollRes, progressRes] = await Promise.all([
-      supabase1.from('user_courses').select('course_id').eq('user_id', currentUser.id),
-      supabase1.from('user_lesson_progress').select('lesson_id').eq('user_id', currentUser.id)
+      supabase.from('user_courses').select('course_id').eq('user_id', currentUser.id),
+      supabase.from('user_lesson_progress').select('lesson_id').eq('user_id', currentUser.id)
     ]);
 
     const enrolledIds = new Set(enrollRes.data?.map(e => e.course_id) || []);
-    window.completedLessonIds = new Set(progressRes.data?.map(p => p.lesson_id) || []);
+    completedLessonIds = new Set(progressRes.data?.map(p => p.lesson_id) || []);
 
     // 3. Fetch ALL courses (we filter in memory or complicated query)
-    // A simplified approach: Fetch all, then filter. 
-    // Optimization: In real app, use a join or RPC. 
-    const { data: allCourses, error } = await supabase1
+    const { data: allCoursesData, error } = await supabase
       .from('courses')
       .select(`
         id, title, description, owner_id, is_published,
@@ -48,9 +53,9 @@ async function fetchCourses() {
 
     // Filter: User Owns (Creator) OR User Enrolled
     // AND: Must be Published, UNLESS User is Owner+Admin
-    const isAdmin = typeof isAdminUser === 'function' && isAdminUser(currentUser);
+    const isAdmin = isAdminUser(currentUser);
 
-    const myCourses = allCourses.filter(c => {
+    const myCourses = allCoursesData.filter(c => {
       const isOwner = c.owner_id === currentUser.id;
       const isEnrolled = enrolledIds.has(c.id);
       const canView = c.is_published || (isOwner && isAdmin);
@@ -58,14 +63,16 @@ async function fetchCourses() {
       return (isOwner || isEnrolled) && canView;
     });
 
-    window.allCourses = myCourses;
-    window.allSections = myCourses.flatMap(c => {
+    allCourses = myCourses;
+
+    allSections = myCourses.flatMap(c => {
       const isOwner = c.owner_id === currentUser?.id;
       return c.sections
         .filter(s => s.is_published || isAdmin || isOwner)
         .map(s => ({ ...s, courseTitle: c.title, courseId: c.id }));
     });
-    window.allLessons = window.allSections.flatMap(s => s.lessons);
+
+    allLessons = allSections.flatMap(s => s.lessons);
 
     renderCourseSidebar(myCourses);
 
@@ -74,21 +81,19 @@ async function fetchCourses() {
   }
 }
 
-function renderCourseSidebar(courses) {
+export function renderCourseSidebar(courses) {
   const list = document.getElementById('courseList');
   const header = document.querySelector('.sidebar-header');
+  if (!list || !header) return;
 
   // 1. Setup Header Button
-  // Remove existing Browse button if any to avoid dupes logic (simplified: overwrite header content?)
-  // Better: Just check logic.
-
   // If no courses, show Empty State
   if (courses.length === 0) {
     list.innerHTML = `
       <div class="empty-courses">
         <h4>No courses yet</h4>
         <p>Browse the marketplace to start learning.</p>
-        <button class="browse-big-btn" onclick="openMarketplace()">Browse Courses</button>
+        <button class="browse-big-btn" data-action="open-marketplace">Browse Courses</button>
       </div>
     `;
     // Clean header action
@@ -102,7 +107,7 @@ function renderCourseSidebar(courses) {
   if (!header.querySelector('.browse-icon-btn')) {
     const btn = document.createElement('button');
     btn.className = 'browse-icon-btn';
-    btn.onclick = () => window.openMarketplace();
+    btn.dataset.action = 'open-marketplace';
     btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M12 8v8m-4-4h8"></path></svg> Marketplace`;
 
     // Insert before the close button so 'X' is always on the right
@@ -144,14 +149,14 @@ function renderCourseSidebar(courses) {
         <div class="course-item active" data-id="${course.id}">
           <div class="course-header">
             <h4>${course.title}</h4>
-            ${(typeof isAdminUser === 'function' && isAdminUser(currentUser)) ? `<div class="edit-course" onclick="editCourse('${course.id}')" title="Edit Course">
-               <svg width="16px" height="16px" cursor="pointer" fill="currentColor" viewBox="0 0 16 16"><path d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.813-6.814z"/><path fill-rule="evenodd" d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5H9a.5.5 0 0 0 0-1H2.5A1.5 1.5 0 0 0 1 2.5z"/></svg>
+            ${(isAdminUser(currentUser)) ? `<div class="edit-course" data-action="edit-course" data-id="${course.id}" title="Edit Course">
+               <svg width="16px" height="16px" style="pointer-events: none;" fill="currentColor" viewBox="0 0 16 16"><path d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.813-6.814z"/><path fill-rule="evenodd" d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5H9a.5.5 0 0 0 0-1H2.5A1.5 1.5 0 0 0 1 2.5z"/></svg>
              </div>` : ''}
           </div>
           <div class="course-body">
             ${course.sections
           .filter(s => {
-            const isAdmin = typeof isAdminUser === 'function' ? isAdminUser(currentUser) : false;
+            const isAdmin = isAdminUser(currentUser);
             const isOwner = course.owner_id === currentUser?.id;
             return s.is_published || isAdmin || isOwner;
           })
@@ -160,9 +165,9 @@ function renderCourseSidebar(courses) {
                 ${section.title} ${!section.is_published ? '(Draft)' : ''}
               </div>
               ${section.lessons.sort((a, b) => a.order_index - b.order_index).map(lesson => {
-            const isComplete = window.completedLessonIds?.has(lesson.id);
+            const isComplete = completedLessonIds.has(lesson.id);
             return `
-                <div class="lesson-link" onclick="loadLesson('${lesson.id}')">
+                <div class="lesson-link" data-action="load-lesson" data-id="${lesson.id}">
                   ${isComplete
                 ? '<span style="color:#4CAF50; margin-right:6px; font-weight:bold;">✓</span>'
                 : '<span style="opacity:0.6; margin-right:6px;">•</span>'}
@@ -176,7 +181,7 @@ function renderCourseSidebar(courses) {
     } else {
       // === COLLAPSED (INACTIVE) ===
       return `
-        <div class="course-item collapsed" data-id="${course.id}" onclick="setActiveCourse('${course.id}')">
+        <div class="course-item collapsed" data-id="${course.id}" data-action="set-active-course" data-course-id="${course.id}">
           <div class="course-header">
             <h4>${course.title}</h4>
             <span class="collapsed-hint">Click to expand</span>
@@ -222,72 +227,55 @@ function renderCourseSidebar(courses) {
   });
 
   // Re-apply admin UI because we just injected new admin-only elements
-  if (typeof updateAdminUI === 'function') updateAdminUI();
+  updateAdminUI();
 }
 
-async function setActiveCourse(courseId) {
+export async function setActiveCourse(courseId) {
   if (activeCourseId === courseId) return;
 
   activeCourseId = courseId;
 
   // Optimistic Render
-  renderCourseSidebar(window.allCourses);
+  renderCourseSidebar(allCourses);
 
   // Persist
   if (currentUser) {
-    await supabase1
+    await supabase
       .from('profiles')
       .update({ current_course_id: courseId })
       .eq('user_id', currentUser.id);
   }
 }
 
-
-function loadLesson(lessonId) {
+export function loadLesson(lessonId) {
   try {
     // Check unsaved changes
-    if (typeof window.hasUnsavedChanges === 'function' && window.hasUnsavedChanges()) {
+    if (hasUnsavedChanges()) {
       if (!confirm('You have unsaved changes. Discard them?')) return;
     }
 
-    // DEBUG: Trace execution
-    // alert(`DEBUG: Loading lesson ID: ${lessonId}`);
-
-    const lesson = window.allLessons.find(l => l.id === lessonId);
+    const lesson = allLessons.find(l => l.id === lessonId);
     if (!lesson) {
-      alert(`DEBUG ERROR: Lesson not found! ID: ${lessonId}. Total lessons loaded: ${window.allLessons.length}`);
+      alert(`DEBUG ERROR: Lesson not found! ID: ${lessonId}. Total lessons loaded: ${allLessons.length}`);
       return;
     }
-    window.currentLesson = lesson;
-
-    // alert(`DEBUG: Found lesson: ${lesson.title}`);
+    currentLesson = lesson;
 
     // 1. Apply the groove to the grid
     if (lesson.pattern_json) {
-      if (typeof applyPattern === 'function') {
-        applyPattern(lesson.pattern_json);
-      } else {
-        console.error("applyPattern function missing");
-      }
-
-      // Explicitly sync lastSavedState to the *serialized* version of what we just loaded
-      // This prevents false positives if the saved JSON differs slightly from fresh serialization
-      if (typeof serializePattern === 'function') {
-        window.lastSavedState = JSON.stringify(serializePattern());
-      }
+      applyPattern(lesson.pattern_json);
+      // Update last saved state to prevent false dirty check
+      snapshotCurrentState();
     }
 
     // 2. Show UI info
     const player = document.getElementById('lessonPlayer');
-    if (!player) {
-      alert("DEBUG ERROR: #lessonPlayer element not found in DOM!");
-      return;
-    }
+    if (!player) return;
 
     // Force visible
     player.style.display = 'block';
 
-    const section = window.allSections.find(s => s.id === lesson.section_id);
+    const section = allSections.find(s => s.id === lesson.section_id);
     const sectionTitle = section ? section.title : 'Unknown Section';
 
     // Also update the separate section header if it exists (for layout flexibility)
@@ -296,14 +284,7 @@ function loadLesson(lessonId) {
     const courseId = section ? section.courseId : null;
 
     if (secTitleEl) {
-      secTitleEl.innerHTML = `<span class="clickable-nav-title" title="Open course sidebar">${courseTitle} • ${sectionTitle}</span>`;
-      const navSpan = secTitleEl.querySelector('.clickable-nav-title');
-      if (navSpan && courseId) {
-        navSpan.onclick = () => {
-          if (typeof setActiveCourse === 'function') setActiveCourse(courseId);
-          openSidebar();
-        };
-      }
+      secTitleEl.innerHTML = `<span class="clickable-nav-title" data-action="open-sidebar-course" data-course-id="${courseId}" title="Open course sidebar">${courseTitle} • ${sectionTitle}</span>`;
     }
 
     const titleEl = document.getElementById('activeLessonTitle');
@@ -327,8 +308,12 @@ function loadLesson(lessonId) {
 
       // Set Initial State
       const updateBtnState = () => {
-        const isAdded = (typeof window.isItemInPractice === 'function') && window.isItemInPractice('lesson', lesson.id);
+        const isAdded = isItemInPractice('lesson', lesson.id);
         pBtn.innerHTML = isAdded ? '⛔️ Remove' : '➕ Add to Plan';
+        pBtn.dataset.action = "toggle-practice";
+        pBtn.dataset.lessonId = lesson.id;
+        pBtn.dataset.lessonTitle = lesson.title;
+
         if (isAdded) {
           pBtn.style.borderColor = 'rgba(255,0,0,0.2)';
           pBtn.style.backgroundColor = 'rgba(255,0,0,0.02)';
@@ -339,16 +324,8 @@ function loadLesson(lessonId) {
       };
       updateBtnState();
 
-      pBtn.onclick = async (e) => {
-        e.stopPropagation();
-        if (window.togglePracticeItem) {
-          await window.togglePracticeItem('lesson', lesson.id, lesson.title);
-          updateBtnState();
-        }
-      };
-
       // == ADMIN ONLY: Update Lesson from Grid Button ==
-      if (typeof isAdminUser === 'function' && isAdminUser(currentUser)) {
+      if (isAdminUser(currentUser)) {
         let uBtn = document.getElementById('updateLessonBtn');
         if (!uBtn) {
           uBtn = document.createElement('button');
@@ -360,10 +337,8 @@ function loadLesson(lessonId) {
           header.appendChild(uBtn);
         }
         uBtn.innerHTML = '✏️ Update Lesson';
-        uBtn.onclick = (e) => {
-          e.stopPropagation();
-          window.updateLessonFromGrid(lesson.id);
-        };
+        uBtn.dataset.action = "update-lesson-grid";
+        uBtn.dataset.lessonId = lesson.id;
       } else {
         document.getElementById('updateLessonBtn')?.remove();
       }
@@ -373,7 +348,7 @@ function loadLesson(lessonId) {
     if (descEl) {
       descEl.textContent = lesson.description || '';
       // Toggle readonly based on admin status
-      if (typeof isAdminUser === 'function' && isAdminUser(currentUser)) {
+      if (isAdminUser(currentUser)) {
         descEl.setAttribute('contenteditable', 'true');
       } else {
         descEl.setAttribute('contenteditable', 'false');
@@ -385,11 +360,12 @@ function loadLesson(lessonId) {
 
     // Completion Button
     const btn = document.getElementById('lessonCompleteBtn');
-    const isComplete = window.completedLessonIds?.has(lesson.id);
+    const isComplete = completedLessonIds.has(lesson.id);
 
     if (btn) {
       btn.textContent = isComplete ? '✅ Completed' : 'Mark as Complete';
-      btn.onclick = () => toggleLessonCompletion(lesson.id);
+      btn.dataset.action = "toggle-completion";
+      btn.dataset.lessonId = lesson.id;
       btn.style.display = 'inline-flex';
     }
 
@@ -399,14 +375,14 @@ function loadLesson(lessonId) {
 
     if (nextBtn || prevBtn) {
       // Find the course this lesson belongs to
-      const course = window.allCourses.find(c => c.sections.some(s => s.lessons.some(l => l.id === lessonId)));
+      const course = allCourses.find(c => c.sections.some(s => s.lessons.some(l => l.id === lessonId)));
 
       let nextLesson = null;
       let prevLesson = null;
 
       if (course) {
         // Flatten lessons for THIS course only (respecting section draft rules)
-        const isAdmin = typeof isAdminUser === 'function' ? isAdminUser(currentUser) : false;
+        const isAdmin = isAdminUser(currentUser);
         const isOwner = course.owner_id === currentUser?.id;
 
         const courseLessons = course.sections
@@ -426,14 +402,12 @@ function loadLesson(lessonId) {
       if (nextBtn) {
         if (nextLesson) {
           nextBtn.style.display = 'inline-flex';
-          nextBtn.onclick = () => {
-            if (typeof stop === 'function') stop();
-            loadLesson(nextLesson.id);
-          };
+          nextBtn.dataset.action = 'load-lesson';
+          nextBtn.dataset.id = nextLesson.id;
           nextBtn.title = `Next: ${nextLesson.title}`;
 
           // Visual cue : Faded if current lesson not complete
-          if (window.completedLessonIds?.has(lesson.id)) {
+          if (completedLessonIds.has(lesson.id)) {
             nextBtn.classList.remove('faded');
           } else {
             nextBtn.classList.add('faded');
@@ -447,10 +421,8 @@ function loadLesson(lessonId) {
       if (prevBtn) {
         if (prevLesson) {
           prevBtn.style.display = 'inline-flex';
-          prevBtn.onclick = () => {
-            if (typeof stop === 'function') stop();
-            loadLesson(prevLesson.id);
-          };
+          prevBtn.dataset.action = 'load-lesson';
+          prevBtn.dataset.id = prevLesson.id;
           prevBtn.title = `Previous: ${prevLesson.title}`;
         } else {
           prevBtn.style.display = 'none';
@@ -484,33 +456,14 @@ function loadLesson(lessonId) {
   }
 }
 
-const titleEl = document.getElementById('activeLessonTitle');
-const lessonHeader = document.getElementById('lessonHeader');
-const lessonContent = document.getElementById('lessonContent')
-
-lessonHeader.addEventListener('click', () => {
-  if (lessonContent.style.display === 'none') {
-    lessonContent.style.display = 'block';
-    if (titleEl) titleEl.textContent = '▲ ' + titleEl.textContent.replace('▼ ', '');
-  } else {
-    lessonContent.style.display = 'none';
-    if (titleEl) titleEl.textContent = '▼ ' + titleEl.textContent.replace('▲ ', '');
-  }
-});
-
-
-// ============================================================================
-// Sidebar Functions
-// ============================================================================
-function editCourse(courseId) {
-  if (event) event.stopPropagation(); // Prevent collapsing/expanding if clicking edit
-  const course = window.allCourses.find(c => c.id === courseId);
+export function editCourse(courseId) {
+  const course = allCourses.find(c => c.id === courseId);
   if (!course) return;
-  loadCourseToEdit(course);
+  if (window.loadCourseToEdit) window.loadCourseToEdit(course);
   if (window.innerWidth < 768) closeSidebar();
 }
 
-function closeSidebar() {
+export function closeSidebar() {
   const sb = document.getElementById('courseSidebar');
   if (sb) {
     sb.classList.remove('open');
@@ -518,12 +471,12 @@ function closeSidebar() {
   }
 }
 
-function openSidebar() {
+export function openSidebar() {
   const sb = document.getElementById('courseSidebar');
   if (sb && !sb.classList.contains('open')) {
     sb.classList.add('open');
     sb.removeAttribute('aria-hidden');
-    if (!window.allCourses || window.allCourses.length === 0) fetchCourses();
+    if (allCourses.length === 0) fetchCourses();
   }
 }
 
@@ -533,69 +486,36 @@ function extractYouTubeId(url) {
   return (match && match[2].length === 11) ? match[2] : null;
 }
 
-// Sidebar Toggles
-const sidebarEl = document.getElementById('courseSidebar');
-document.getElementById('toggleSidebarBtn').onclick = () => {
-  // Close Practice Sidebar if open
-  const practiceSb = document.getElementById('practiceSidebar');
-  if (practiceSb && practiceSb.classList.contains('open')) {
-    practiceSb.classList.remove('open');
-    practiceSb.setAttribute('aria-hidden', 'true');
-  }
 
-  const isOpen = sidebarEl.classList.toggle('open');
-  if (isOpen) {
-    sidebarEl.removeAttribute('aria-hidden');
-    if (!window.allCourses || window.allCourses.length === 0) fetchCourses();
-  } else {
-    sidebarEl.setAttribute('aria-hidden', 'true');
-  }
-};
-document.getElementById('closeSidebar').onclick = () => closeSidebar();
-document.getElementById('closeLessonBtn').onclick = () => document.getElementById('lessonPlayer').style.display = 'none';
-
-// Search
-const searchInput = document.getElementById('courseSearchInput');
-searchInput?.addEventListener('input', (e) => {
-  const term = e.target.value.toLowerCase();
-  // Filter active course items only? Or all?
-  // Current implementation: Just simple DOM filtering on expanded items
-  const lessonLinks = document.querySelectorAll('.lesson-link');
-  lessonLinks.forEach(link => {
-    const text = link.textContent.toLowerCase();
-    link.style.display = text.includes(term) ? 'flex' : 'none';
-  });
-});
-
-async function toggleLessonCompletion(lessonId) {
+export async function toggleLessonCompletion(lessonId) {
   if (!currentUser) {
     alert("Please sign in to track progress.");
     return;
   }
 
-  const isComplete = window.completedLessonIds.has(lessonId);
+  const isComplete = completedLessonIds.has(lessonId);
 
   if (isComplete) {
-    const { error } = await supabase1
+    const { error } = await supabase
       .from('user_lesson_progress')
       .delete()
       .eq('lesson_id', lessonId)
       .eq('user_id', currentUser.id);
 
-    if (!error) window.completedLessonIds.delete(lessonId);
+    if (!error) completedLessonIds.delete(lessonId);
   } else {
-    const { error } = await supabase1
+    const { error } = await supabase
       .from('user_lesson_progress')
       .insert({ user_id: currentUser.id, lesson_id: lessonId });
 
     if (!error) {
-      window.completedLessonIds.add(lessonId);
+      completedLessonIds.add(lessonId);
 
       // Check for Course Completion
-      const course = window.allCourses.find(c => c.sections.some(s => s.lessons.some(l => l.id === lessonId)));
+      const course = allCourses.find(c => c.sections.some(s => s.lessons.some(l => l.id === lessonId)));
       if (course) {
         const courseLessonIds = course.sections.flatMap(s => s.lessons).map(l => l.id);
-        const allComplete = courseLessonIds.every(id => window.completedLessonIds.has(id));
+        const allComplete = courseLessonIds.every(id => completedLessonIds.has(id));
         if (allComplete) {
           triggerCourseCompletionCelebration(course.title);
         }
@@ -604,14 +524,14 @@ async function toggleLessonCompletion(lessonId) {
   }
 
   // Refresh UI
-  renderCourseSidebar(window.allCourses);
+  renderCourseSidebar(allCourses);
 
   // Also update current button if viewing that lesson
   const btn = document.getElementById('lessonCompleteBtn');
   const nextBtn = document.getElementById('nextLessonBtn');
 
   if (btn) {
-    const newState = window.completedLessonIds.has(lessonId);
+    const newState = completedLessonIds.has(lessonId);
     btn.textContent = newState ? '✅ Completed' : 'Mark as Complete';
 
     if (nextBtn) {
@@ -636,7 +556,7 @@ function triggerCourseCompletionCelebration(courseTitle) {
                 <h1 style="font-size: 3rem; margin-bottom: 20px;">🎉 Course Completed! 🎉</h1>
                 <h2 id="celCourseTitle" style="font-size: 2rem; color: #ffd166; margin-bottom: 40px;"></h2>
                 <div style="font-size: 4rem; margin-bottom: 30px;">🏆</div>
-                <button class="primary-btn" style="font-size:1.2rem; padding: 12px 32px;" onclick="document.getElementById('celebrationOverlay').style.opacity='0'; setTimeout(()=>document.getElementById('celebrationOverlay').remove(), 500)">Continue</button>
+                <button class="primary-btn" style="font-size:1.2rem; padding: 12px 32px;" data-action="dismiss-celebration">Continue</button>
             </div>
             <style>
                 @keyframes popIn { to { transform: scale(1); } }
@@ -649,10 +569,8 @@ function triggerCourseCompletionCelebration(courseTitle) {
   requestAnimationFrame(() => overlay.style.opacity = '1');
 }
 
-window.toggleLessonCompletion = toggleLessonCompletion;
-
-window.updateLessonFromGrid = async function (lessonId) {
-  const lesson = window.allLessons.find(l => l.id === lessonId);
+export async function updateLessonFromGrid(lessonId) {
+  const lesson = allLessons.find(l => l.id === lessonId);
   if (!lesson) {
     alert("Lesson not found.");
     return;
@@ -687,7 +605,7 @@ window.updateLessonFromGrid = async function (lessonId) {
     }
 
     // 2. Update Lesson in Supabase (Pattern + Description)
-    const { error } = await supabase1
+    const { error } = await supabase
       .from('lessons')
       .update({
         pattern_json: pattern_json,
@@ -712,17 +630,194 @@ window.updateLessonFromGrid = async function (lessonId) {
     }
 
     // sync lastSavedState to avoid "unsaved changes" warnings
-    window.lastSavedState = JSON.stringify(pattern_json);
+    snapshotCurrentState();
 
     console.log(`Lesson ${lessonId} and Pattern "${trimmedName}" updated successfully.`);
   } catch (err) {
     console.error("Failed to update lesson/pattern:", err);
     alert("Error updating: " + err.message);
   }
-};
+}
 
-window.closeSidebar = closeSidebar;
-window.openSidebar = openSidebar;
-window.setActiveCourse = setActiveCourse;
-window.editCourse = editCourse;
-window.loadLesson = loadLesson;
+// ==== EVENT DELEGATION ====
+
+document.body.addEventListener('click', async (e) => {
+  const target = e.target.closest('[data-action]');
+  if (!target) return;
+
+  const action = target.dataset.action;
+  const id = target.dataset.id; // generic ID
+
+  switch (action) {
+    case 'open-marketplace':
+      if (window.openMarketplace) window.openMarketplace();
+      break;
+    case 'edit-course':
+      if (id) editCourse(id);
+      break;
+    case 'load-lesson':
+      if (id) {
+        if (typeof stop === 'function') stop(); // ensure we stop playback
+        loadLesson(id);
+      }
+      break;
+    case 'set-active-course':
+      const cid = target.dataset.courseId;
+      if (cid) setActiveCourse(cid);
+      break;
+    case 'toggle-completion':
+      const lid = target.dataset.lessonId;
+      if (lid) toggleLessonCompletion(lid);
+      break;
+    case 'update-lesson-grid':
+      const updateLid = target.dataset.lessonId;
+      if (updateLid) updateLessonFromGrid(updateLid);
+      break;
+    case 'open-sidebar-course':
+      const sideCid = target.dataset.courseId;
+      if (sideCid) setActiveCourse(sideCid);
+      openSidebar();
+      break;
+    case 'toggle-practice':
+      const pLid = target.dataset.lessonId;
+      const pTitle = target.dataset.lessonTitle;
+      if (pLid) {
+        e.stopPropagation();
+        await togglePracticeItem('lesson', pLid, pTitle);
+        // Refresh state is tricky without re-rendering or accessing local variable function
+        // We can just rely on the button click handler updating itself if we kept the `onclick` but we removed it.
+        // Wait. loadLesson created the button with specific logic.
+        // The button in `loadLesson` is dynamic.
+        // Let's re-run the check logic or just update that button directly here?
+        // Simplest is to re-call `loadLesson` or extract the `updateBtnState` logic.
+        // Actually, the button in `loadLesson` is re-created on load.
+        // If we want it to update visually:
+        const pBtn = document.getElementById('addPracticeBtn');
+        if (pBtn) {
+          const isAdded = isItemInPractice('lesson', pLid);
+          pBtn.innerHTML = isAdded ? '⛔️ Remove' : '➕ Add to Plan';
+          if (isAdded) {
+            pBtn.style.borderColor = 'rgba(255,0,0,0.2)';
+            pBtn.style.backgroundColor = 'rgba(255,0,0,0.02)';
+          } else {
+            pBtn.style.borderColor = 'var(--panel-border)';
+            pBtn.style.backgroundColor = 'transparent';
+          }
+        }
+      }
+      break;
+    case 'dismiss-celebration':
+      const overlay = document.getElementById('celebrationOverlay');
+      if (overlay) {
+        overlay.style.opacity = '0';
+        setTimeout(() => overlay.remove(), 500);
+      }
+      break;
+  }
+});
+
+// Sidebar Toggles (Existing ID-based, can stay or move to delegation)
+const navbarToggle = document.getElementById('toggleSidebarBtn');
+if (navbarToggle) {
+  navbarToggle.addEventListener('click', () => {
+    // Close Practice Sidebar if open
+    const practiceSb = document.getElementById('practiceSidebar');
+    if (practiceSb && practiceSb.classList.contains('open')) {
+      practiceSb.classList.remove('open');
+      practiceSb.setAttribute('aria-hidden', 'true');
+    }
+
+    const sidebarEl = document.getElementById('courseSidebar');
+    if (sidebarEl) {
+      const isOpen = sidebarEl.classList.toggle('open');
+      if (isOpen) {
+        sidebarEl.removeAttribute('aria-hidden');
+        if (allCourses.length === 0) fetchCourses();
+      } else {
+        sidebarEl.setAttribute('aria-hidden', 'true');
+      }
+    }
+  });
+}
+
+const sidebarCloseBtn = document.getElementById('closeSidebar');
+if (sidebarCloseBtn) sidebarCloseBtn.addEventListener('click', closeSidebar);
+
+const activeLessonHeader = document.getElementById('lessonHeader');
+if (activeLessonHeader) {
+  activeLessonHeader.addEventListener('click', () => {
+    const lessonContent = document.getElementById('lessonContent');
+    const titleEl = document.getElementById('activeLessonTitle');
+    if (!lessonContent) return;
+
+    if (lessonContent.style.display === 'none') {
+      lessonContent.style.display = 'block';
+      if (titleEl) titleEl.textContent = '▲ ' + titleEl.textContent.replace('▼ ', '');
+    } else {
+      lessonContent.style.display = 'none';
+      if (titleEl) titleEl.textContent = '▼ ' + titleEl.textContent.replace('▲ ', '');
+    }
+  });
+}
+
+const closeLessonBtn = document.getElementById('closeLessonBtn');
+if (closeLessonBtn) {
+  closeLessonBtn.addEventListener('click', () => {
+    const player = document.getElementById('lessonPlayer');
+    if (player) player.style.display = 'none';
+  });
+}
+
+// Cross-module Events
+window.addEventListener('course-data-changed', () => {
+  fetchCourses();
+});
+
+window.addEventListener('request-load-lesson', (e) => {
+  if (e.detail && e.detail.lessonId) {
+    // Ensure courses are loaded?
+    // If we are here, likely courses are loaded or we should await them?
+    // But loadLesson handles "finding" the lesson in allLessons.
+    if (allLessons.length === 0) {
+      fetchCourses().then(() => {
+        loadLesson(e.detail.lessonId);
+      });
+    } else {
+      loadLesson(e.detail.lessonId);
+    }
+  }
+});
+
+const searchInput = document.getElementById('courseSearchInput');
+if (searchInput) {
+  searchInput.addEventListener('input', (e) => {
+    const term = e.target.value.toLowerCase();
+    const lessonLinks = document.querySelectorAll('.lesson-link');
+    lessonLinks.forEach(link => {
+      const text = link.textContent.toLowerCase();
+      link.style.display = text.includes(term) ? 'flex' : 'none';
+    });
+  });
+}
+
+// Global Auth Listener to re-fetch if sidebar is open
+window.addEventListener('user-auth-state-changed', (e) => {
+  console.log("courses.js: user-auth-state-changed event received", e.detail);
+  // If user logged in/out, we should refresh IF the sidebar is open or just clear data
+  // For now, if user logs in, we can try to fetch if we have nothing.
+  if (e.detail && e.detail.user) {
+    // Logged In
+    const sidebarEl = document.getElementById('courseSidebar');
+    if (sidebarEl && sidebarEl.classList.contains('open')) {
+      console.log("courses.js: Sidebar open during auth change. Fetching courses...");
+      fetchCourses();
+    }
+  } else {
+    // Logged Out
+    activeCourseId = null;
+    allCourses.length = 0; // Clear array
+    // Optionally clear UI
+    const list = document.getElementById('courseList');
+    if (list) list.innerHTML = '';
+  }
+});

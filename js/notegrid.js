@@ -1,8 +1,10 @@
-// NoteGrid: ESM Refactor Verified
-import { activeGrid, gridA, gridB } from './grid-context.js';
+import { activeGrid, gridA, gridB, setActiveGridGlobal } from './grid-context.js';
 import { getTimeSignature, calculateSteps } from './rhythm-core.js';
-import { getScale } from './noteplayer.js';
+import { getScale, stop } from './noteplayer.js';
 import { setCaret, setRange, clearRange, getRange, updateDragSelectionOver, startLongPress, cancelLongPress } from './range-selection.js';
+import { HistoryManager } from './history.js';
+import { editHandsMode, isEditMulti, longPressFired, setLongPressFired, setIsEditMulti } from './state.js';
+import { TransportRegistry } from './transport-ui.js';
 
 export const cells = (ctx) => (ctx || activeGrid).cells;
 export let activeSubIndex = null;
@@ -12,7 +14,7 @@ export function setActiveSubIndex(val) {
   activeSubIndex = val;
 }
 
-export function toggleSticking(index, ctx = window.activeGrid) {
+export function toggleSticking(index, ctx = activeGrid) {
   // 1. Get current effective hand (could be manual or auto)
   const currentEffective = getEffectiveHand(index, ctx);
 
@@ -49,7 +51,7 @@ export function getEffectiveHand(index, ctx) {
   }
 };
 
-export function invertRange(start, end, ctx = window.activeGrid) {
+export function invertRange(start, end, ctx = activeGrid) {
   const gridCells = cells(ctx);
   const max = Math.min(ctx.innerHands.length, gridCells.length);
   const limit = Math.min(end + 1, max); // end is inclusive in range, loop is exclusive
@@ -62,17 +64,17 @@ export function invertRange(start, end, ctx = window.activeGrid) {
   renderAllMeasures(ctx);
 };
 
-export function invertFollowing(startIndex, ctx = window.activeGrid) {
+export function invertFollowing(startIndex, ctx = activeGrid) {
   invertRange(startIndex, Infinity, ctx);
 };
 
-export function setCols(n, ctx = window.activeGrid) {
+export function setCols(n, ctx = activeGrid) {
   // Apply to the measures wrapper (it cascades to measure children)
   const measuresEl = ctx.container;
   if (measuresEl) measuresEl.style.setProperty('--cols', String(n));
 }
 
-export function labelForStep(i, ctx = window.activeGrid) {
+export function labelForStep(i, ctx = activeGrid) {
   const ts = getTimeSignature();
   let [num, den] = ts.split('/');
   den = Number(den) || 4;
@@ -106,12 +108,12 @@ export function labelForStep(i, ctx = window.activeGrid) {
   return '';
 }
 
-export function clearGridDom(ctx = window.activeGrid) {
+export function clearGridDom(ctx = activeGrid) {
   const measuresEl = ctx.container;
   if (measuresEl) measuresEl.innerHTML = '';
 }
 
-export function clearSelection(ctx = window.activeGrid) {
+export function clearSelection(ctx = activeGrid) {
   ctx.caretIndex = null;
   ctx.anchorIndex = null;
   ctx.selecting = false;
@@ -124,15 +126,15 @@ export function clearSelection(ctx = window.activeGrid) {
       s.classList.remove('active');
     });
   });
-  window.isEditMulti = false; // Assuming global for now
+  setIsEditMulti(false);
 }
 
-export function applySelection(i, ctx = window.activeGrid) {
+export function applySelection(i, ctx = activeGrid) {
   ctx.caretIndex = i;
   cells(ctx).forEach((c, idx) => c.classList.toggle('selected', idx === i));
 }
 
-export function renderAllMeasures(ctx = window.activeGrid) {
+export function renderAllMeasures(ctx = activeGrid) {
   const measuresEl = ctx.container;
   if (!measuresEl) return;
 
@@ -285,23 +287,16 @@ export function renderAllMeasures(ctx = window.activeGrid) {
   }
 
   // After re-render, update selection visuals
-  if (typeof updateRangeUI === 'function') updateRangeUI(ctx); // Check if global or imported? 
+  // if (typeof updateRangeUI === 'function') updateRangeUI(ctx);
   // It's imported from range-selection.js but that module might not export it yet. 
-  // I will comment out imports of missing modules if they fail? no.
-  // I must fix range-selection.js NOW.
-  if (ctx.id === 'A') {
-    // window.measures = measureCount; // Use state.js? 
-    // measures is exported from state.js as readable?
-    // Actually state.js exports 'measures' var but updating it requires a setter or direct access if 'let'
-    // I'll leave it as is for now or use window.measures if needed.
-  }
+  // TODO: Fix range-selection.js exports
 }
 
 // ===== SELECTION ACTIONS ===== //
 
 export let beatClipboard = null;
 
-function snapshotBeat(i, ctx = window.activeGrid) {
+function snapshotBeat(i, ctx = activeGrid) {
   // Adjust if your state storage differs:
   let label = Array.isArray(ctx.innerLabels) ? (ctx.innerLabels[i] || '') : '';
   // Deep copy if it is a multi-cell array, so we don't store a reference
@@ -311,7 +306,7 @@ function snapshotBeat(i, ctx = window.activeGrid) {
   return { label };
 }
 
-function applyBeat(i, beat, ctx = window.activeGrid) {
+function applyBeat(i, beat, ctx = activeGrid) {
   // Adjust if your state storage differs:
   let val = beat.label || '';
   // Deep copy on paste/apply so multiple pastes don't share references
@@ -322,13 +317,13 @@ function applyBeat(i, beat, ctx = window.activeGrid) {
   setInnerLabel(i, val, ctx); // internal call
 }
 
-function setBeatToGhost(i, ctx = window.activeGrid) {
+export function setBeatToGhost(i, ctx = activeGrid) {
   // Your ghost behavior may be "no label + default dot".
   // We'll implement as clearing label + turning OFF accent.
   setInnerLabel(i, '', ctx);
 }
 
-export function copySelection(ctx = window.activeGrid) {
+export function copySelection(ctx = activeGrid) {
   const r = (typeof getRange === 'function') ? getRange(ctx) : null;
   if (!r) return;
 
@@ -342,9 +337,9 @@ export function copySelection(ctx = window.activeGrid) {
   if (btn) btn.disabled = false;
 }
 
-export function pasteSelection(ctx = window.activeGrid) {
+export function pasteSelection(ctx = activeGrid) {
   if (!beatClipboard || beatClipboard.type !== 'beats') return;
-  if (window.HistoryManager) window.HistoryManager.pushState();
+  if (HistoryManager) HistoryManager.pushState();
 
   const startAt = (ctx.caretIndex !== null) ? ctx.caretIndex : ((typeof getRange === 'function') ? getRange(ctx)?.start ?? 0 : 0);
   const gridCells = cells(ctx);
@@ -375,10 +370,10 @@ export function pasteSelection(ctx = window.activeGrid) {
   if (typeof setRange === 'function') setRange(startAt, endIdx, ctx);
 }
 
-export function deleteSelection(ctx = window.activeGrid) {
+export function deleteSelection(ctx = activeGrid) {
   const r = (typeof getRange === 'function') ? getRange(ctx) : null;
   if (!r) return;
-  if (window.HistoryManager) window.HistoryManager.pushState();
+  if (HistoryManager) HistoryManager.pushState();
 
   // Update model directly
   for (let i = r.start; i <= r.end; i++) {
@@ -398,7 +393,7 @@ document.getElementById('selCancelBtn')?.addEventListener('click', () => {
   clearRange(); // imported
 });
 
-export function setInnerLabel(i, value, ctx = window.activeGrid) {
+export function setInnerLabel(i, value, ctx = activeGrid) {
   const cell = cells(ctx)[i];
   if (!cell) return;
 
@@ -446,13 +441,13 @@ export function setInnerLabel(i, value, ctx = window.activeGrid) {
   }
 }
 
-function attachCellListeners(cell, ctx = window.activeGrid) {
+function attachCellListeners(cell, ctx = activeGrid) {
   // Pointer selection
   cell.addEventListener('click', (ev) => {
     ev.stopPropagation();
 
     // Set activeGrid on click
-    window.activeGrid = ctx; // Should use setActiveGridGlobal
+    setActiveGridGlobal(ctx);
 
     const x = ev.clientX;
     const y = ev.clientY;
@@ -463,14 +458,14 @@ function attachCellListeners(cell, ctx = window.activeGrid) {
     if (isNaN(i)) return;
 
     // CHECK EDIT HANDS MODE
-    if (window.editHandsMode) {
-      if (window.HistoryManager) window.HistoryManager.pushState();
+    if (editHandsMode) {
+      if (HistoryManager) HistoryManager.pushState();
       toggleSticking(i, ctx);
       setCaret(i, ctx);
       return;
     }
 
-    if (subDot && window.isEditMulti) {
+    if (subDot && isEditMulti) {
       cell.classList.add('multi-mode');
       const allSubs = Array.from(cell.querySelectorAll('.sub-dot'));
       activeSubIndex = allSubs.indexOf(subDot);
@@ -492,12 +487,12 @@ function attachCellListeners(cell, ctx = window.activeGrid) {
     });
 
     const lbl = ctx.innerLabels[i] || [];
-    if (!checkCellIsMultiMode(lbl) || lbl.filter(l => l !== '').length <= 1) {
+    if (!checkCellIsMultiMode(lbl)) {
       cell.classList.remove('multi-mode');
     }
 
-    if (window.longPressFired) {
-      window.longPressFired = false;
+    if (longPressFired) {
+      setLongPressFired(false);
       return;
     }
 
@@ -528,7 +523,7 @@ function attachCellListeners(cell, ctx = window.activeGrid) {
 
   cell.addEventListener('dblclick', (ev) => {
     ev.stopPropagation();
-    window.isEditMulti = true;
+    setIsEditMulti(true);
     cell.classList.add('multi-selected');
     const allSubs = Array.from(cell.querySelectorAll('.sub-dot'));
     allSubs.forEach(s => s.classList.add('active'));
@@ -563,7 +558,7 @@ function attachCellListeners(cell, ctx = window.activeGrid) {
     const i = parseInt(cell.dataset.index);
     if (isNaN(i)) return;
 
-    if (window.HistoryManager) window.HistoryManager.pushState();
+    if (HistoryManager) HistoryManager.pushState();
     toggleSticking(i, ctx);
 
     // Only move caret/selection if NOT a multi-note cell
@@ -578,16 +573,39 @@ export function checkCellIsMultiMode(label) {
   return Array.isArray(label);
 }
 
+export function setDualGrid(next) {
+  const mB = document.getElementById('measures-B');
+  const cB = document.getElementById('controls-B');
+  const btn = document.getElementById('dualModeBtn');
+  if (!mB || !cB || !btn) return;
+
+  mB.style.display = next ? 'block' : 'none';
+  cB.style.display = next ? 'flex' : 'none';
+  btn.classList.toggle('active', next);
+
+  if (next) {
+    if (gridB.innerLabels.length === 0) {
+      const s = gridA.stepsPerMeasure;
+      gridB.innerLabels = Array(gridA.measures * s).fill('');
+      gridB.innerHands = Array(gridA.measures * s).fill(null);
+    }
+    renderAllMeasures(gridB);
+  } else {
+    stop(gridB, false);
+    TransportRegistry.updateAll(gridB);
+  }
+}
+
 // ==== CHORD INJECTION LOGIC ====
 
-export function assignChordToSelectedCell(labels, ctx = window.activeGrid) {
+export function assignChordToSelectedCell(labels, ctx = activeGrid) {
   // Find selected cell
   const gridCells = cells(ctx);
   let selIdx = ctx.caretIndex ?? -1;
 
   if (selIdx === -1) return false;
 
-  if (window.HistoryManager) window.HistoryManager.pushState();
+  if (HistoryManager) HistoryManager.pushState();
 
   // Slots: 0=LI, 1=LT, 2=RI, 3=RT
   const slots = ['', '', '', ''];
@@ -673,35 +691,3 @@ export function assignChordToSelectedCell(labels, ctx = window.activeGrid) {
 
   return true;
 };
-
-// ==== EXPOSE TO WINDOW (Backward Compatibility) ====
-window.cells = cells;
-Object.defineProperty(window, 'activeSubIndex', {
-  get: () => activeSubIndex,
-  set: (val) => setActiveSubIndex(val)
-});
-
-window.toggleSticking = toggleSticking;
-window.getEffectiveHand = getEffectiveHand;
-window.invertRange = invertRange;
-window.invertFollowing = invertFollowing;
-window.setCols = setCols;
-window.labelForStep = labelForStep;
-window.clearGridDom = clearGridDom;
-window.clearSelection = clearSelection;
-window.applySelection = applySelection;
-window.renderAllMeasures = renderAllMeasures;
-window.copySelection = copySelection;
-window.pasteSelection = pasteSelection;
-window.deleteSelection = deleteSelection;
-window.setInnerLabel = setInnerLabel;
-window.checkCellIsMultiMode = checkCellIsMultiMode;
-window.assignChordToSelectedCell = assignChordToSelectedCell;
-
-Object.defineProperty(window, 'beatClipboard', {
-  get: () => beatClipboard,
-  set: (val) => {
-    // beatClipboard = val; // Cannot set exported binding directly without setter.
-    // Assuming setter not needed, or we add one.
-  }
-});

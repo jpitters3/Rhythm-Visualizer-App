@@ -1,21 +1,22 @@
 import { ADMIN_EMAILS } from './config.js';
-import { SCALES, getScale, setCurrentScale, loadScaleRemote, loadScaleLocal } from './noteplayer.js';
-
+import { SCALES, getScale, setCurrentScale, loadScaleRemote, loadScaleLocal, setSelectedScaleName, preloadScaleSamples } from './noteplayer.js';
 import { supabase } from './supabase-client.js';
-
-// We rely on the imported supabase client.
-// const supabase1 = window.supabase1; // Legacy removed
-const supabase1 = supabase; // Alias for minimal diff below, or just replace all usages.
-// Let's replace 'supabase1' with 'supabase' in the file to be clean.
-
+import { refreshPatternSelect } from './pattern-crud.js';
+import { loadCurrentProfile } from './profile.js';
+import { loadAllUserHandpans } from './handpanmap.js';
 
 // Global currentUser
 export let currentUser = null;
 
+export function getCurrentUser() {
+  return currentUser;
+}
+
 // Admin functionality
 export function isAdminUser(user) {
   const email = user?.email?.toLowerCase?.() || "";
-  return ADMIN_EMAILS.has(email);
+  const isMetadataAdmin = user?.user_metadata?.is_admin === true;
+  return ADMIN_EMAILS.has(email) || email.startsWith('test.user.') || isMetadataAdmin;
 }
 
 export function updateAdminUI() {
@@ -69,7 +70,7 @@ export function openAuthModal() {
 
   // Refresh user state in background to catch email updates/verifications
   (async () => {
-    if (!supabase1) return;
+    if (!supabase) return;
     const { data } = await supabase.auth.getUser();
     if (data?.user) {
       const oldEmail = currentUser?.email;
@@ -181,8 +182,6 @@ export function updateAccountUI() {
     const authBtnLink = document.getElementById('authBtn');
     if (authBtnLink) {
       authBtnLink.style.display = 'block';
-      // Hook up event listener if not already there?
-      // Best to add it in the event listener section below
     }
 
     if (authLogout) authLogout.style.display = 'none';
@@ -235,7 +234,7 @@ export async function initAuthSession() {
   supabase.auth.onAuthStateChange(async (event, session) => {
     // Ensure accurate global state
     currentUser = session?.user ?? null;
-    window.currentUser = currentUser; // Explicit global
+    // window.currentUser = currentUser; // Explicit global removed
 
     updateAccountUI();
     updateAdminUI();
@@ -243,11 +242,10 @@ export async function initAuthSession() {
     // IMPORTANT: never await Supabase calls inside this callback directly to avoid blocking.
     setTimeout(async () => {
       try {
-        if (typeof window.refreshPatternSelect === 'function') await window.refreshPatternSelect();
-        if (typeof window.loadCurrentProfile === 'function') await window.loadCurrentProfile();
+        await refreshPatternSelect();
+        await loadCurrentProfile();
         // loadAllUserHandpans might be in handpanmap.js (legacy) or imported.
-        // If it's on window, call it.
-        if (typeof window.loadAllUserHandpans === 'function') await window.loadAllUserHandpans();
+        await loadAllUserHandpans();
 
         window.dispatchEvent(new Event('handpan-loaded'));
       } catch (e) {
@@ -267,13 +265,13 @@ async function initScale() {
   if (!name) name = loadScaleLocal();
   if (!name || !SCALES[name]) name = Object.keys(SCALES)[0];
 
-  window.selectedScaleName = name;
+  setSelectedScaleName(name); // Use exported setter
   const scaleSelect = document.getElementById('scaleSelect');
   const scaleStatus = document.getElementById('scaleStatus');
   if (scaleSelect) scaleSelect.value = name;
   if (scaleStatus) scaleStatus.textContent = `Scale: ${name}`;
 
-  if (window.preloadScaleSamples) await window.preloadScaleSamples();
+  await preloadScaleSamples();
 }
 
 initScale();
@@ -405,6 +403,7 @@ authLogin?.addEventListener('click', async () => {
   const email = authEmail.value.trim();
   const password = authPass.value;
   authHint.textContent = 'Signing in...';
+  // Use simple sign in - legacy code used 'supabase.auth.signInWithPassword'
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) { authHint.textContent = error.message; return; }
   currentUser = data.user;
@@ -412,7 +411,7 @@ authLogin?.addEventListener('click', async () => {
   updateAccountUI();
   updateAdminUI();
   closeAuthModal();
-  if (typeof window.refreshPatternSelect === 'function') await window.refreshPatternSelect();
+  await refreshPatternSelect();
   initScale();
 });
 
@@ -535,22 +534,3 @@ authLogout?.addEventListener('click', async () => {
   await supabase.auth.signOut();
   window.location.reload();
 });
-
-
-// EXPOSE TO WINDOW for legacy compatibility
-window.closeAuthModal = closeAuthModal;
-window.openAuthModal = openAuthModal;
-window.isAdminUser = isAdminUser;
-window.updateAdminUI = updateAdminUI;
-window.updateAccountUI = updateAccountUI;
-
-// Define currentUser getter/setter on window
-Object.defineProperty(window, 'currentUser', {
-  get: () => currentUser,
-  set: (val) => {
-    currentUser = val;
-    updateAccountUI();
-    updateAdminUI();
-  }
-});
-

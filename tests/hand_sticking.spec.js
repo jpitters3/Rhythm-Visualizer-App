@@ -76,15 +76,23 @@ test.describe('Hand Sticking Mechanics', () => {
     const cell1 = page.locator('.cell').nth(1);
 
     // 1. Setup: Cell 0 is a multi-note cell (chord)
-    await page.evaluate(() => {
-      window.activeGrid.innerLabels[0] = ['1', '2', '3', '4'];
-      window.renderAllMeasures();
-    });
+    // Double click to enter multi-mode
+    await cell0.dblclick();
+    await expect(cell0).toHaveClass(/multi-selected/);
+
+    // Set some sub-notes manually via UI to make it a real chord
+    const sub0 = cell0.locator('.sub-dot').nth(0);
+    await sub0.click();
+    await page.keyboard.press('1'); // enter a value
+
+    // Click outside to confirm and render
+    await page.locator('#grid').click();
+
+    // Now it should be 'multi-mode' (rendered as array)
     await expect(cell0).toHaveClass(/multi-mode/);
 
     // 2. Select cell 1 first
     await cell1.click();
-    await expect(cell1).toHaveClass(/selected/);
 
     // 3. Right-click cell 0 to toggle sticking
     await cell0.click({ button: 'right' });

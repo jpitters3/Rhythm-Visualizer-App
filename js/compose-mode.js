@@ -1,14 +1,12 @@
 import { activeGrid } from './grid-context.js';
-import { setCaret, clearRange, applySelection } from './range-selection.js';
+import { setCaret, clearRange } from './range-selection.js';
 import { cells, setInnerLabel, renderAllMeasures } from './notegrid.js';
-import { getStepCountPerMeasure } from './measure-actions.js';
+import { HistoryManager } from './history.js';
 
 export const COMPOSE_KEY = 'groovepan_compose_mode';
 let composeOn = (localStorage.getItem(COMPOSE_KEY) === 'on');
 
 const composeBtn = document.getElementById('composeBtn');
-// handpanSection / ghostNoteSection are likely globals from index.html (IDs) or other scripts.
-// We'll trust they exist on window or DOM query them.
 const handpanSection = document.getElementById('handpanSection');
 const ghostNoteSection = document.getElementById('ghostNoteSection');
 
@@ -44,31 +42,17 @@ function clampIndex(i, ctx) {
   return (i % n + n) % n; // wrap
 }
 
-function advanceSelection(delta = 1, ctx) {
+export function advanceSelection(delta = 1, ctx) {
   const c = ctx || activeGrid;
   if (c.caretIndex === null) return;
 
   const next = clampIndex(c.caretIndex + delta, c);
-  // applySelection(next, c); // Not exported? It's applySelectionLocal inside, but exposed as window.applySelection?
-  // Check range-selection.js... it exported setCaret.
-  // compose-mode calls applySelection?
-  // Let's check imports.
-  // Actually, we imported applySelection from range-selection.js if it exists.
-  // In previous steps, range-selection.js had applySelection available?
-  // Wait, range-selection.js exported setCaret, setRange, clearRange... 
-  // It has a local 'applySelectionLocal'.
-  // But notegrid.js exposed window.applySelection = applySelection.
-  // We should prefer setCaret if it does the job.
-  // setCaret calls applySelectionLocal.
 
   setCaret(next, c);
-  // Optimization: setCaret clears range? No, setRange(i,i) does.
-  // setCaret usually handles single selection.
-
-  clearRange(c); // Ensure range is cleared
+  clearRange(c);
 
   // Nice UX: keep selection visible when you have many measures
-  const s = getStepCountPerMeasure(c);
+  const s = c.stepsPerMeasure;
   const gridCells = cells(c);
   let cell = gridCells[next - s]; // Scroll to one measure before the next cell
   cell = cell ? cell : gridCells[next];
@@ -77,7 +61,7 @@ function advanceSelection(delta = 1, ctx) {
 
 export function writeToSelected(label, { advance = true } = {}, ctx) {
   const c = ctx || activeGrid;
-  if (window.HistoryManager) window.HistoryManager.pushState();
+  if (HistoryManager) HistoryManager.pushState();
   if (c.caretIndex === null) return;
 
   setInnerLabel(c.caretIndex, label, c);
@@ -111,10 +95,3 @@ export function setComposeOn(val) {
   localStorage.setItem(COMPOSE_KEY, val ? 'on' : 'off');
   updateComposeUI();
 }
-
-// ==== WINDOW EXPOSE ====
-window.writeToSelected = writeToSelected;
-window.updateComposeUI = updateComposeUI;
-window.getComposeOn = getComposeOn;
-window.setComposeOn = setComposeOn;
-window.advanceSelection = advanceSelection;

@@ -159,7 +159,7 @@ function applyGroove({ D, T, S, placement = 'none', completelyRandom = false, en
   clearSelection(ctx);
 }
 
-function closeGrooveModal() {
+export function closeGrooveModal() {
   grooveModal.classList.remove('open');
   grooveModal.setAttribute('aria-hidden', 'true');
 }

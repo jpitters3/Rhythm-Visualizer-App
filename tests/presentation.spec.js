@@ -12,7 +12,7 @@ test.describe('Presentation Mode', () => {
 
     // Mock Supabase
     await page.evaluate(() => {
-      window.supabase1 = {
+      supabase = {
         auth: { getSession: async () => ({ data: { session: null }, error: null }) },
         from: () => ({
           select: () => ({
@@ -24,19 +24,12 @@ test.describe('Presentation Mode', () => {
       };
     });
 
-    // Wait for app objects and functions
-    await page.waitForFunction(() =>
-      typeof window.gridA !== 'undefined' &&
-      typeof window.appendEmptyMeasure === 'function' &&
-      typeof window.renderAllMeasures === 'function'
-    );
-
     // Add 3 measures to have enough for animation checks
     await page.click('#addMeasureBtn');
     await page.click('#addMeasureBtn');
     await page.click('#addMeasureBtn');
 
-    await page.waitForFunction(() => window.gridA.measures >= 3, { timeout: 5000 });
+    await expect(page.locator('.measure-row')).toHaveCount(4);
   });
 
   test('should toggle presentation mode with "P" key', async ({ page }) => {

@@ -1,16 +1,32 @@
 // SAVE / LOAD PATTERNS WITH SUPABASE
-window.lastSavedState = ''; // Snapshot for data loss prevention
+import { supabase } from './supabase-client.js';
+import { gridA, gridB } from './grid-context.js';
+import { start, stop, setMode, setTimeSignature } from './noteplayer.js';
+import { getTimeSignature } from './rhythm-core.js';
+import { renderAllMeasures, clearSelection, setDualGrid } from './notegrid.js';
+import { TransportRegistry } from './transport-ui.js';
 
-window.hasUnsavedChanges = function () {
+export const STORAGE_KEY = 'groovepan_patterns';
+export const LAST_USED_KEY = 'groovepan_last_pattern';
+
+let lastSavedState = ''; // Snapshot for data loss prevention
+
+export function hasUnsavedChanges() {
   if (typeof serializePattern !== 'function') return false;
   const current = JSON.stringify(serializePattern());
-  return current !== window.lastSavedState;
-};
+  return current !== lastSavedState;
+}
+
+export function snapshotCurrentState() {
+  if (typeof serializePattern === 'function') {
+    lastSavedState = JSON.stringify(serializePattern());
+  }
+}
 
 export async function isAuthed() {
-  if (typeof supabase1 === 'undefined' || !supabase1.auth) return false;
+  if (typeof supabase === 'undefined' || !supabase.auth) return false;
   try {
-    const { data, error } = await supabase1.auth.getUser();
+    const { data, error } = await supabase.auth.getUser();
     return !!(data?.user);
   } catch (e) {
     console.warn('Auth check failed:', e);
@@ -19,7 +35,7 @@ export async function isAuthed() {
 }
 
 export async function dbListPatternNames() {
-  const { data, error } = await supabase1
+  const { data, error } = await supabase
     .from('patterns')
     .select('name')
     .order('updated_at', { ascending: false });
@@ -29,7 +45,7 @@ export async function dbListPatternNames() {
 }
 
 export async function dbLoadPatternByName(name) {
-  const { data, error } = await supabase1
+  const { data, error } = await supabase
     .from('patterns')
     .select('data')
     .eq('name', name)
@@ -41,19 +57,24 @@ export async function dbLoadPatternByName(name) {
 }
 
 export async function dbSavePattern(name, stateObj) {
+  // Ensure we have current user
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Not authenticated');
+
   const row = {
+    user_id: user.id, // Explicitly set user_id
     name,
     data: stateObj,
     updated_at: new Date().toISOString(),
   };
 
   // unique(user_id, name) => upsert to overwrite
-  const { error } = await supabase1
+  const { error } = await supabase
     .from('patterns')
     .upsert(row, { onConflict: 'user_id,name' });
 
   if (error) throw error;
-  window.lastSavedState = JSON.stringify(stateObj);
+  lastSavedState = JSON.stringify(stateObj);
 }
 
 function withTimeout(promise, ms = 3000, label = 'timeout') {
@@ -65,7 +86,9 @@ function withTimeout(promise, ms = 3000, label = 'timeout') {
 
 
 export async function dbDeletePattern(name) {
-  const { error } = await supabase1
+  // Since RLS is on, we don't strictly need user_id in .eq() if calling delete() on own rows,
+  // but it's safer to rely on RLS + name logic.
+  const { error } = await supabase
     .from('patterns')
     .delete()
     .eq('name', name);
@@ -75,7 +98,7 @@ export async function dbDeletePattern(name) {
 
 export async function dbRenamePattern(oldName, newName) {
   // rename = update name (unique per user enforced)
-  const { error } = await supabase1
+  const { error } = await supabase
     .from('patterns')
     .update({ name: newName, updated_at: new Date().toISOString() })
     .eq('name', oldName);
@@ -99,17 +122,28 @@ export function setSavedPatterns(obj) {
 }
 
 export function getSelectedPatternName() {
-  return patternSelect.value || '';
+  const patternSelect = document.getElementById('patternSelect');
+  return patternSelect ? (patternSelect.value || '') : '';
 }
 
 export function updatePatternButtons() {
+  const patternSelect = document.getElementById('patternSelect');
+  const loadBtn = document.getElementById('loadBtn');
+  const renameBtn = document.getElementById('renameBtn');
+  const deleteBtn = document.getElementById('deleteBtn');
+
+  if (!patternSelect) return;
+
   const hasSelection = !!patternSelect.value;
-  loadBtn.disabled = false;
-  renameBtn.disabled = !hasSelection;
-  deleteBtn.disabled = !hasSelection;
+  if (loadBtn) loadBtn.disabled = false;
+  if (renameBtn) renameBtn.disabled = !hasSelection;
+  if (deleteBtn) deleteBtn.disabled = !hasSelection;
 }
 
 export async function refreshPatternSelect(selectedName = '') {
+  const patternSelect = document.getElementById('patternSelect');
+  if (!patternSelect) return;
+
   try {
     patternSelect.innerHTML = '';
 
@@ -117,7 +151,7 @@ export async function refreshPatternSelect(selectedName = '') {
     let loadLocal = true;
 
     // Try cloud first if supabase exists
-    if (typeof supabase1 !== 'undefined') {
+    if (typeof supabase !== 'undefined') {
       try {
         const authed = await withTimeout(isAuthed(), 1000, 'auth-check');
         if (authed) {
@@ -164,9 +198,9 @@ export async function refreshPatternSelect(selectedName = '') {
 
 
 
-export function serializePattern(ctx = window.gridA) {
+export function serializePattern(ctx = gridA) {
   const state = {
-    version: (typeof VERSION !== 'undefined' ? VERSION : 'v1.0'),
+    version: (typeof window.VERSION !== 'undefined' ? window.VERSION : 'v1.0'), // Maybe import VERSION?
     mode: ctx.mode,
     bpm: Number(ctx.bpm),
     timeSignature: (typeof getTimeSignature === 'function' ? getTimeSignature() : '4/4'),
@@ -178,15 +212,15 @@ export function serializePattern(ctx = window.gridA) {
   };
 
   // If serializing Grid A, check if Dual Mode is active to include Grid B
-  if (ctx === window.gridA) {
+  if (ctx === gridA) {
     const isDual = document.getElementById('dualModeBtn')?.classList.contains('active');
-    if (isDual && window.gridB) {
+    if (isDual && gridB) {
       state.gridB = {
-        mode: window.gridB.mode,
-        bpm: Number(window.gridB.bpm),
-        measures: window.gridB.measures,
-        labels: window.gridB.innerLabels ? window.gridB.innerLabels.slice() : [],
-        hands: window.gridB.innerHands ? window.gridB.innerHands.slice() : [],
+        mode: gridB.mode,
+        bpm: Number(gridB.bpm),
+        measures: gridB.measures,
+        labels: gridB.innerLabels ? gridB.innerLabels.slice() : [],
+        hands: gridB.innerHands ? gridB.innerHands.slice() : [],
       };
     }
   }
@@ -194,7 +228,7 @@ export function serializePattern(ctx = window.gridA) {
   return state;
 }
 
-export function applyPattern(state, ctx = window.gridA) {
+export function applyPattern(state, ctx = gridA) {
   if (!state || !state.mode || !Array.isArray(state.labels)) {
     console.error('Invalid pattern state:', state);
     alert('That pattern JSON does not look valid.');
@@ -207,15 +241,15 @@ export function applyPattern(state, ctx = window.gridA) {
   setMode(state.mode === '16' ? '16' : '8', ctx);
 
   // Only set global time signature if provided and if applying to Grid A
-  // (Pattern sub-objects for Grid B don't have their own time signature)
-  if (ctx === window.gridA && state.timeSignature && typeof setTimeSignature === 'function') {
+  if (ctx === gridA && state.timeSignature) {
     setTimeSignature(state.timeSignature);
   }
 
   if (typeof state.handSplit === 'boolean') {
     document.body.classList.toggle('handSplit', state.handSplit);
     localStorage.setItem('handSplit', state.handSplit ? 'on' : 'off');
-    if (typeof handBtn !== 'undefined' && handBtn) {
+    const handBtn = document.getElementById('handBtn');
+    if (handBtn) {
       handBtn.classList.add('active');
       handBtn.textContent = state.handSplit ? 'Left/Right: On' : 'Left/Right: Off';
     }
@@ -223,8 +257,8 @@ export function applyPattern(state, ctx = window.gridA) {
 
   if (typeof state.bpm === 'number' && !Number.isNaN(state.bpm)) {
     ctx.bpm = Math.max(40, Math.min(220, Math.round(state.bpm)));
-    if (window.TransportRegistry) {
-      window.TransportRegistry.updateAll(ctx);
+    if (TransportRegistry) {
+      TransportRegistry.updateAll(ctx);
     }
   }
 
@@ -232,9 +266,7 @@ export function applyPattern(state, ctx = window.gridA) {
   ctx.innerLabels = state.labels;
   ctx.innerHands = Array.isArray(state.hands) ? state.hands : Array(ctx.innerLabels.length).fill(null);
 
-  if (ctx.id === 'A') {
-    window.innerLabels = ctx.innerLabels;
-  }
+  // No Sync to window.innerLabels
 
   renderAllMeasures(ctx);
   clearSelection(ctx);
@@ -242,17 +274,17 @@ export function applyPattern(state, ctx = window.gridA) {
   if (wasPlaying) start(ctx);
 
   // Dual Grid Handling
-  if (ctx === window.gridA) {
+  if (ctx === gridA) {
     if (state.gridB) {
-      if (window.setDualGrid) window.setDualGrid(true);
-      applyPattern(state.gridB, window.gridB);
+      setDualGrid(true);
+      applyPattern(state.gridB, gridB);
     } else {
       // If loading a single-grid pattern, hide grid B
       // But only if we are currently looking at Grid A
-      if (window.setDualGrid) window.setDualGrid(false);
+      setDualGrid(false);
     }
     // Only save the top-level state as lastSavedState
-    window.lastSavedState = JSON.stringify(state);
+    lastSavedState = JSON.stringify(state);
   }
 }
 
@@ -264,18 +296,3 @@ export function ensureHasSelection() {
   }
   return true;
 }
-
-window.isAuthed = isAuthed;
-window.dbListPatternNames = dbListPatternNames;
-window.dbLoadPatternByName = dbLoadPatternByName;
-window.dbSavePattern = dbSavePattern;
-window.dbDeletePattern = dbDeletePattern;
-window.dbRenamePattern = dbRenamePattern;
-window.getSavedPatterns = getSavedPatterns;
-window.setSavedPatterns = setSavedPatterns;
-window.getSelectedPatternName = getSelectedPatternName;
-window.updatePatternButtons = updatePatternButtons;
-window.refreshPatternSelect = refreshPatternSelect;
-window.serializePattern = serializePattern;
-window.applyPattern = applyPattern;
-window.ensureHasSelection = ensureHasSelection;

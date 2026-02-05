@@ -1,5 +1,13 @@
 /* Includes scale selector */
-import { SCALES, setCurrentScale } from './noteplayer.js';
+import { SCALES, setCurrentScale, saveScaleLocal, saveScaleRemote, preloadScaleSamples, noteForLabel, getScale, isDownbeatStep, setSelectedScaleName, getSelectedScaleName, registerHighlighter, loadScaleLocal, playNoteByLabel } from './noteplayer.js';
+import { supabase } from './supabase-client.js';
+import { activeGrid } from './grid-context.js';
+import { currentUser } from './auth.js';
+import { intervalMs } from './noteplayer.js';
+import { setInnerLabel, setBeatToGhost } from './notegrid.js';
+
+// Note: Removed legacy "window.supabase1" usage. We use imported supabase.
+const supabase1 = supabase;
 
 /* Mapped to nine-note-handpan-numbered.png */
 const HANDPAN_MAP_SKETCH = {
@@ -30,7 +38,7 @@ const HANDPAN_MAP_BRONZE = {
   "S": { x: 93.3, y: 47.9, r: 6 },
 };
 
-window.HANDPAN_MAP = HANDPAN_MAP_BRONZE;
+export let HANDPAN_MAP = HANDPAN_MAP_BRONZE;
 
 // const HANDPAN_IMG_SKETCH = 'nine-note-handpan-numbered.png';
 const HANDPAN_IMG_SKETCH_EMPTY = 'handpan-empty-notes.png';
@@ -46,10 +54,10 @@ let hpMapSaveTimeout = null;
 // Custom Handpan Cache
 let customHandpansCache = [];
 
-async function loadAllUserHandpans() {
+export async function loadAllUserHandpans() {
   if (!currentUser) return;
 
-  const { data, error } = await supabase1
+  const { data, error } = await supabase
     .from('user_handpans')
     .select('*')
     .eq('user_id', currentUser.id)
@@ -162,19 +170,17 @@ function applyCustomHandpan(handpanData) {
     }
   });
 
-  window.HANDPAN_MAP = newMap;
+  HANDPAN_MAP = newMap;
 
   // Update Global Current Scale
-  if (window.setCurrentScale) {
-    window.setCurrentScale({
-      ding: dingPitch,
-      map: musicalMap
-    });
-  }
+  setCurrentScale({
+    ding: dingPitch,
+    map: musicalMap
+  });
 
-  window.selectedScaleName = `custom:${handpanData.id}`;
+  setSelectedScaleName(`custom:${handpanData.id}`);
 
-  if (window.preloadScaleSamples) window.preloadScaleSamples();
+  if (preloadScaleSamples) preloadScaleSamples();
 
   // Update UI Selectors
   // Set Scale Select to this custom one
@@ -407,15 +413,16 @@ async function deleteUserHandpan(id) {
 }
 
 
-// Expose
-window.loadAllUserHandpans = loadAllUserHandpans;
 
-function buildHandpanOverlay() {
+// Expose
+// window.loadAllUserHandpans = loadAllUserHandpans; // Removed global
+
+export function buildHandpanOverlay() {
   if (!handpanOverlay) return;
   handpanOverlay.innerHTML = '';
   handpanDots.clear();
 
-  for (const [note, p] of Object.entries(window.HANDPAN_MAP)) {
+  for (const [note, p] of Object.entries(HANDPAN_MAP)) {
     const dot = document.createElement('div');
     dot.className = 'hp-dot';
     dot.dataset.note = note; // This note key is used for playing sound
@@ -446,14 +453,17 @@ function buildHandpanOverlay() {
     overlayNumberPitchNotes(); else removeNoteLabels();
 }
 
-window.buildHandpanOverlay = buildHandpanOverlay;
-window.highlightHandpan = highlightHandpan;
+// window.buildHandpanOverlay = buildHandpanOverlay;
+// window.highlightHandpan = highlightHandpan;
+
+// Register with Note Player
+registerHighlighter(highlightHandpan);
 
 buildHandpanOverlay();
 
 let hpPulseTimers = new Map();
 
-function highlightHandpan(note, stepIndex, forceHand = null) {
+export function highlightHandpan(note, stepIndex, forceHand = null) {
   const key = String(note || '').toUpperCase();
   const el = handpanDots.get(key);
   if (!el) return;
@@ -532,7 +542,7 @@ handpanOverlay?.addEventListener('click', (e) => {
     // If a beat is selected, write to it.
 
     // Play note sound on click / tap
-    window.playNoteByLabel(note, null);
+    playNoteByLabel(note, null);
     highlightHandpan(note, null);
 
     // If a beat is selected, write to it (Compose auto-advance applies)
@@ -558,13 +568,13 @@ handpanOverlay?.addEventListener('mousedown', (e) => {
 
   e.preventDefault(); // prevent text selection
   const note = dot.dataset.note;
-  if (!window.HANDPAN_MAP[note]) return;
+  if (!HANDPAN_MAP[note]) return;
 
   selectHpDot(note); // Selects it visually
 
   isHpDragging = true;
   hpDragStart = { x: e.clientX, y: e.clientY };
-  hpNoteStart = { x: window.HANDPAN_MAP[note].x, y: window.HANDPAN_MAP[note].y };
+  hpNoteStart = { x: HANDPAN_MAP[note].x, y: HANDPAN_MAP[note].y };
 });
 
 // Drag Move
@@ -610,13 +620,13 @@ handpanOverlay?.addEventListener('touchstart', (e) => {
 
   e.preventDefault(); // prevent scroll
   const note = dot.dataset.note;
-  if (!window.HANDPAN_MAP[note]) return;
+  if (!HANDPAN_MAP[note]) return;
 
   selectHpDot(note);
   isHpDragging = true;
   const t = e.touches[0];
   hpDragStart = { x: t.clientX, y: t.clientY };
-  hpNoteStart = { x: window.HANDPAN_MAP[note].x, y: window.HANDPAN_MAP[note].y };
+  hpNoteStart = { x: HANDPAN_MAP[note].x, y: HANDPAN_MAP[note].y };
 }, { passive: false });
 
 window.addEventListener('touchmove', (e) => {
@@ -664,8 +674,8 @@ document.addEventListener('keydown', (e) => {
   // C prints current map
   if (e.key.toLowerCase() === 'c') {
     e.preventDefault();
-    console.log('HANDPAN_MAP =', JSON.parse(JSON.stringify(window.HANDPAN_MAP)));
-    console.log('Copy/paste version:\n' + stringifyHandpanMap(window.HANDPAN_MAP));
+    console.log('HANDPAN_MAP =', JSON.parse(JSON.stringify(HANDPAN_MAP)));
+    console.log('Copy/paste version:\n' + stringifyHandpanMap(HANDPAN_MAP));
     return;
   }
 
@@ -683,7 +693,7 @@ document.addEventListener('keydown', (e) => {
 
   e.preventDefault();
 
-  const p = window.HANDPAN_MAP[selectedHpNote];
+  const p = HANDPAN_MAP[selectedHpNote];
   p.x = clamp(p.x + dx, 0, 100);
   p.y = clamp(p.y + dy, 0, 100);
 
@@ -699,8 +709,9 @@ document.addEventListener('keydown', (e) => {
 });
 
 async function saveHandpanPositions() {
-  if (!window.selectedScaleName.startsWith('custom:')) return;
-  const hpId = window.selectedScaleName.split(':')[1];
+  const selName = getSelectedScaleName();
+  if (!selName || !selName.startsWith('custom:')) return;
+  const hpId = selName.split(':')[1];
 
   const customHp = customHandpansCache.find(hp => hp.id === hpId);
   if (!customHp) return;
@@ -711,7 +722,7 @@ async function saveHandpanPositions() {
   let changed = false;
 
   // Update the data model from the Visual Map
-  for (const [note, p] of Object.entries(window.HANDPAN_MAP)) {
+  for (const [note, p] of Object.entries(HANDPAN_MAP)) {
     if (!p.id) continue; // Not a custom note with ID
     const tf = customHp.note_map.find(t => t.id === p.id);
     if (tf) {
@@ -762,16 +773,17 @@ function stringifyHandpanMap(map) {
 let lastStandardModel = 'Bronze';
 
 scaleSelect.addEventListener('change', async () => {
-  window.selectedScaleName = scaleSelect.value;
+  const val = scaleSelect.value;
+  setSelectedScaleName(val);
 
   // Persist Scale Selection
-  if (window.saveScaleLocal) window.saveScaleLocal(window.selectedScaleName);
-  if (typeof window.isAuthed === 'function' && (await window.isAuthed()) && window.saveScaleRemote) {
-    window.saveScaleRemote(window.selectedScaleName);
+  saveScaleLocal(val);
+  if (typeof window.isAuthed === 'function' && (await window.isAuthed()) && saveScaleRemote) {
+    saveScaleRemote(val);
   }
 
-  if (window.selectedScaleName.startsWith('custom:')) {
-    const id = window.selectedScaleName.split(':')[1];
+  if (val.startsWith('custom:')) {
+    const id = val.split(':')[1];
     const customHp = customHandpansCache.find(hp => hp.id === id);
     if (customHp) {
       applyCustomHandpan(customHp);
@@ -784,8 +796,8 @@ scaleSelect.addEventListener('change', async () => {
     return;
   }
 
-  scaleStatus.textContent = `Scale: ${window.selectedScaleName}`;
-  saveScaleLocal(window.selectedScaleName);
+  scaleStatus.textContent = `Scale: ${val}`;
+  saveScaleLocal(val);
 
   // Restore visual map if we were previously on a custom scale
   let currentModel = handpanSelect.value;
@@ -803,20 +815,20 @@ scaleSelect.addEventListener('change', async () => {
   if (currentModel === 'Bronze') {
     handpanImg.src = `./assets/images/${HANDPAN_IMG_BRONZE}`;
     handpanImg.style.transform = '';
-    window.HANDPAN_MAP = HANDPAN_MAP_BRONZE;
+    HANDPAN_MAP = HANDPAN_MAP_BRONZE;
   } else if (currentModel === 'Sketch') {
     handpanImg.src = `./assets/images/${HANDPAN_IMG_SKETCH_EMPTY}`;
     handpanImg.style.transform = '';
-    window.HANDPAN_MAP = HANDPAN_MAP_SKETCH;
+    HANDPAN_MAP = HANDPAN_MAP_SKETCH;
   }
 
   // Update Current Scale for Standard Scales
   if (setCurrentScale && SCALES) {
-    setCurrentScale(SCALES[selectedScaleName]);
+    setCurrentScale(SCALES[val]);
   }
 
   await preloadScaleSamples();
-  if (currentUser) await saveScaleRemote(selectedScaleName);
+  if (currentUser) await saveScaleRemote(val);
   checkNumberPitchSelection();
   buildHandpanOverlay();
 });
@@ -842,14 +854,13 @@ handpanSelect.addEventListener('change', async () => {
     lastStandardModel = 'Bronze';
     handpanImg.src = `./assets/images/${HANDPAN_IMG_BRONZE}`;
     handpanImg.style.transform = ''; // Reset rotation
-    window.HANDPAN_MAP = HANDPAN_MAP_BRONZE;
-
+    HANDPAN_MAP = HANDPAN_MAP_BRONZE;
   }
   else if (selectedHandpanName === 'Sketch') {
     lastStandardModel = 'Sketch';
     handpanImg.src = `./assets/images/${HANDPAN_IMG_SKETCH_EMPTY}`;
     handpanImg.style.transform = ''; // Reset rotation
-    window.HANDPAN_MAP = HANDPAN_MAP_SKETCH;
+    HANDPAN_MAP = HANDPAN_MAP_SKETCH;
   }
   checkNumberPitchSelection();
   buildHandpanOverlay();
@@ -887,7 +898,7 @@ function overlayNumberPitchNotes() {
   const isCustom = scaleSelect.value.startsWith('custom:');
 
   for (const [note, el] of handpanDots.entries()) {
-    const p = window.HANDPAN_MAP[note];
+    const p = HANDPAN_MAP[note];
     if (!p) continue;
 
     const label = document.createElement('div');
@@ -899,8 +910,8 @@ function overlayNumberPitchNotes() {
       text = note; // Default to key (e.g. "1", "2" or "A3")
     } else if (overlayPitches) {
       // Unified: Look up pitch for the label
-      if (typeof window.noteForLabel === 'function') {
-        const pitch = window.noteForLabel(note);
+      if (typeof noteForLabel === 'function') {
+        const pitch = noteForLabel(note);
         // Clean up pitch string? e.g. "Cs4" -> "C#4"?
         // Also handle if pitch is file path? (Unified map stores "A3", "C#4")
         text = pitch ? pitch.replace('s', '#') : '';
@@ -913,7 +924,7 @@ function overlayNumberPitchNotes() {
 
     // Never show label for Ding
     // Check key ('D'), full label ('Ding'), or if it matches current scale ding pitch
-    const scale = typeof window.getScale === 'function' ? window.getScale() : null;
+    const scale = typeof getScale === 'function' ? getScale() : null;
     const dingPitch = scale ? scale.ding : 'D3'; // Default to D3
 
     // Check note key (e.g. 'D') or resolved pitch text (e.g. 'D3_ding')
@@ -1030,17 +1041,17 @@ saveNewHandpanBtn?.addEventListener('click', async () => {
     // 1. Upload Image
     const fileExt = topImageFile.name.split('.').pop();
     const fileName = `${currentUser.id}_${Date.now()}.${fileExt}`;
-    const { data: uploadData, error: uploadError } = await supabase1
+    const { data: uploadData, error: uploadError } = await supabase
       .storage
       .from('handpan-images')
       .upload(fileName, topImageFile);
 
     if (uploadError) throw uploadError;
 
-    const { data: { publicUrl } } = supabase1.storage.from('handpan-images').getPublicUrl(fileName);
+    const { data: { publicUrl } } = supabase.storage.from('handpan-images').getPublicUrl(fileName);
 
     // 2. Insert DB Record
-    const { data: insertData, error: insertError } = await supabase1
+    const { data: insertData, error: insertError } = await supabase
       .from('user_handpans')
       .insert([{
         user_id: currentUser.id,
@@ -1080,8 +1091,8 @@ saveNewHandpanBtn?.addEventListener('click', async () => {
 
 // Initialize Scale from previous session
 setTimeout(async () => {
-  if (window.loadScaleLocal && scaleSelect) {
-    let saved = window.loadScaleLocal();
+  if (loadScaleLocal && scaleSelect) {
+    let saved = loadScaleLocal();
     // If logged in, remote check logic exists but is async. 
     // We trust local for immediate UI feedback.
 

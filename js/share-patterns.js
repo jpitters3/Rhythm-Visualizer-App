@@ -1,10 +1,15 @@
 import { supabase } from './supabase-client.js';
 import { currentUser } from './auth.js';
+import { getProfileById } from './profile.js';
+import { saveCurrentPatternAs } from './controls.js';
+import { serializePattern, applyPattern, updatePatternButtons, getSelectedPatternName } from './pattern-crud.js';
+import { clearSelection } from './notegrid.js';
 
 const shareBtn = document.getElementById('shareBtn');
+const renameBtn = document.getElementById('renameBtn');
+const deleteBtn = document.getElementById('deleteBtn');
 
 function genShareId(len = 10) {
-  // short URL-safe id
   const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
   const bytes = new Uint8Array(len);
   crypto.getRandomValues(bytes);
@@ -27,20 +32,17 @@ async function upsertSharedPattern() {
     return null;
   }
 
-  // pick a friendly name
-  const fallback = getSelectedPatternName?.() || `Shared ${new Date().toLocaleString()}`;
+  const fallback = getSelectedPatternName() || `Shared ${new Date().toLocaleString()}`;
   const name = prompt('Share pattern name:', fallback);
   if (!name) return null;
 
   const row = {
-    user_id: currentUser.id, // Renamed from owner_id
-    profile_id: currentUser.id, // Matches profiles.user_id
+    user_id: currentUser.id,
+    profile_id: currentUser.id,
     name: name.trim(),
     pattern_json: serializePattern(),
   };
 
-  // Try update existing share for same user+name (via unique index)
-  // If it doesn't exist, create a new one with a new share_id.
   const { data: existing, error: exErr } = await supabase
     .from('shared_patterns')
     .select('share_id, is_public')
@@ -53,14 +55,10 @@ async function upsertSharedPattern() {
   }
 
   let share_id = existing?.share_id || genShareId();
-
-  // Preserve existing public status if available, otherwise default to false
   const is_public_val = existing?.is_public ?? false;
 
   const { error } = await supabase
     .from('shared_patterns')
-    // We explicitly set is_public. If it was already true, it stays true.
-    // If it was undefined (new), it becomes false.
     .upsert({ ...row, share_id, is_public: is_public_val }, { onConflict: 'user_id,name' });
 
   if (error) {
@@ -81,13 +79,11 @@ shareBtn?.addEventListener('click', async () => {
     const url = `${location.origin}${location.pathname}?share=${encodeURIComponent(share_id)}`;
     await copyText(url);
 
-    // If already public, just notify
     if (is_public) {
       alert('Link copied! (This pattern is Public)');
       return;
     }
 
-    // Ask if they want to publish to community
     if (confirm('Link copied! Would you also like to publish this pattern to the Community Feed?')) {
       const { error } = await supabase
         .from('shared_patterns')
@@ -120,11 +116,9 @@ export async function loadSharedFromURL() {
     return false;
   }
 
-  // Public read
   const { data, error } = await supabase
     .from('shared_patterns')
-    .select('pattern_json, name, user_id')  // Renamed from owner_id
-    // Public read or Private Link
+    .select('pattern_json, name, user_id')
     .eq('share_id', share)
     .maybeSingle();
 
@@ -140,30 +134,23 @@ export async function loadSharedFromURL() {
 
   applyPattern(data.pattern_json);
 
-  // Fetch creator name
   let creatorName = "Unknown";
   if (data.user_id) {
-    // try global function
-    if (window.getProfileById) {
-      const p = await getProfileById(data.user_id);
-      if (p?.username) creatorName = p.username;
-    }
+    const p = await getProfileById(data.user_id);
+    if (p?.username) creatorName = p.username;
   }
 
-  // Show banner
   viewingShared = true;
-  sharedMeta = { shareId: share, name: data?.name || null, creator: creatorName }; // added creator
+  sharedMeta = { shareId: share, name: data?.name || null, creator: creatorName };
   updateSharedUI();
 
-  clearSelection?.();
+  if (clearSelection) clearSelection();
 
-  // Optional: reflect the shared name in UI
   if (data.name) document.title = `GroovePan — ${data.name}`;
 
   return true;
 }
 
-window.loadSharedFromURL = loadSharedFromURL;
 
 // Banner //
 
@@ -185,35 +172,27 @@ function updateSharedUI() {
     const by = sharedMeta?.creator && sharedMeta.creator !== 'Unknown' ? ` by ${sharedMeta.creator}` : '';
     sharedBannerSub.textContent = `You can play and edit locally. Use “Save a copy” to keep it. (${nm}${by})`;
 
-    // Make shared view “read-only” in terms of destructive pattern management
-    // (still allows Export/Import and other app features)
-    renameBtn.disabled = true;
-    deleteBtn.disabled = true;
-
-    // You can decide whether Load should be enabled or not — I recommend leaving it enabled.
-    // loadBtn.disabled = false;
+    if (renameBtn) renameBtn.disabled = true;
+    if (deleteBtn) deleteBtn.disabled = true;
 
   } else {
-    // restore normal behavior
-    updatePatternButtons(); // your existing logic
+    updatePatternButtons();
   }
 }
 
-// Banner buttons //
 sharedSaveCopyBtn?.addEventListener('click', async () => {
   const base = sharedMeta?.name || 'Shared Pattern';
   const suggested = `${base} (copy)`;
   const name = prompt('Save a copy as:', suggested);
   if (!name) return;
 
-  const ok = saveCurrentPatternAs(name);
-  if (!ok) return;
-
-  alert('Saved! You can now find it in your patterns list.');
+  // We need to await saveCurrentPatternAs if we want to confirm, IF it returns a value.
+  // controls.js export is async.
+  await saveCurrentPatternAs(name);
+  // It alerts on failure.
 });
 
 sharedExitBtn?.addEventListener('click', () => {
-  // Remove ?share=... from the URL without reloading
   const url = new URL(location.href);
   url.searchParams.delete('share');
   history.replaceState({}, '', url.toString());

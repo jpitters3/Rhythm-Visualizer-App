@@ -41,14 +41,56 @@ test.describe('Undo/Redo Features', () => {
     await page.locator('.cell').nth(0).click();
     await page.keyboard.press('1');
 
-    // 3. Test Function directly
-    const dirty = await page.evaluate(() => window.hasUnsavedChanges());
-    expect(dirty).toBeTruthy();
+    // 3. Verify Dirty State via Import Prompt
+    // If dirty, clicking Import should trigger "You have unsaved changes" confirm
+    let confirmMsg = '';
+    page.once('dialog', dialog => {
+      confirmMsg = dialog.message();
+      dialog.dismiss(); // Cancel import
+    });
 
-    // Undo
+    // Open File Dropdown first
+    // Mobile Check: If file dropdown is hidden, we might need to open mobile menu?
+    // Actually, File Dropdown is usually in the top bar. On mobile it might be hidden or collapsed.
+    // If #fileDropdownBtn is not visible, try opening #mobileMenuBtn first (if it exists)
+    if (!await page.locator('#fileDropdownBtn').isVisible()) {
+      const mobileBtn = page.locator('#mobileMenuBtn');
+      if (await mobileBtn.isVisible()) {
+        await mobileBtn.click();
+      }
+    }
+    await page.click('#fileDropdownBtn');
+    await expect(page.locator('#fileDropdownMenu')).toBeVisible();
+    await page.click('#importBtn');
+
+    expect(confirmMsg).toContain('unsaved changes');
+
+    // 4. Undo and Verify Clean State
+    // Click outside to close dropdown if needed, or just press Undo
+    await page.locator('body').click();
     await page.keyboard.press('Meta+z');
-    const clean = await page.evaluate(() => window.hasUnsavedChanges());
-    expect(clean).toBeFalsy();
+
+    // Now clicking Import should NOT warn about unsaved changes.
+    // It should prompt for JSON input immediately.
+    let promptMsg = '';
+    page.once('dialog', dialog => {
+      promptMsg = dialog.message();
+      dialog.dismiss(); // Cancel input
+    });
+
+    if (!await page.locator('#fileDropdownBtn').isVisible()) {
+      const mobileBtn = page.locator('#mobileMenuBtn');
+      if (await mobileBtn.isVisible()) {
+        await mobileBtn.click();
+      }
+    }
+    await page.click('#fileDropdownBtn'); // Re-open dropdown
+    await expect(page.locator('#fileDropdownMenu')).toBeVisible();
+    await page.click('#importBtn');
+
+    // The prompt message is "Paste pattern JSON here:"
+    expect(promptMsg).toContain('Paste pattern JSON');
+    expect(promptMsg).not.toContain('unsaved changes');
   });
 
   /*
