@@ -1,10 +1,11 @@
 // ==== EVENTS FOR BUTTONS / CONTROLS ====
 import { gridA, gridB, activeGrid } from './grid-context.js';
+import { isAuthed } from './auth.js';
 import { start, stop, ensureAudio, setMode, addTickObserver } from './noteplayer.js';
 import { renderAllMeasures, invertRange, invertFollowing, setDualGrid } from './notegrid.js';
 import { TransportRegistry, TransportUI } from './transport-ui.js';
 import {
-  isAuthed, dbSavePattern, dbDeletePattern, dbRenamePattern, dbLoadPatternByName,
+  dbSavePattern, dbDeletePattern, dbRenamePattern, dbLoadPatternByName,
   serializePattern, applyPattern, getSavedPatterns, setSavedPatterns,
   getSelectedPatternName, refreshPatternSelect, updatePatternButtons, ensureHasSelection,
   LAST_USED_KEY, hasUnsavedChanges

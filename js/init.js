@@ -182,8 +182,11 @@ const DEBUG = new URLSearchParams(location.search).has('debug');
 
 function safeInit() {
   try {
+    console.log('SafeInit Started');
     restorePrefs();
+    console.log('Restored Prefs');
     renderAllMeasures();
+    console.log('Initial Render Complete');
 
     (async () => {
       await loadSharedFromURL();

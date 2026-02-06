@@ -1,15 +1,27 @@
 import { ADMIN_EMAILS } from './config.js';
 import { SCALES, getScale, setCurrentScale, loadScaleRemote, loadScaleLocal, setSelectedScaleName, preloadScaleSamples } from './noteplayer.js';
 import { supabase } from './supabase-client.js';
-import { refreshPatternSelect } from './pattern-crud.js';
-import { loadCurrentProfile } from './profile.js';
-import { loadAllUserHandpans } from './handpanmap.js';
+// Imports moved to dynamic import to avoid circular dependency
+// import { refreshPatternSelect } from './pattern-crud.js';
+// import { loadAllUserHandpans } from './handpanmap.js';
 
 // Global currentUser
 export let currentUser = null;
 
 export function getCurrentUser() {
   return currentUser;
+}
+
+export async function isAuthed() {
+  if (typeof supabase === 'undefined' || !supabase.auth) return false;
+  try {
+    // Check session validity (token refresh if needed)
+    const { data } = await supabase.auth.getUser();
+    return !!(data?.user);
+  } catch (e) {
+    console.warn('Auth check failed:', e);
+    return false;
+  }
 }
 
 // Admin functionality
@@ -242,9 +254,13 @@ export async function initAuthSession() {
     // IMPORTANT: never await Supabase calls inside this callback directly to avoid blocking.
     setTimeout(async () => {
       try {
+        // Dynamic imports to break circular dependencies
+        const { refreshPatternSelect } = await import('./pattern-crud.js');
+        const { loadCurrentProfile } = await import('./profile.js');
+        const { loadAllUserHandpans } = await import('./handpanmap.js');
+
         await refreshPatternSelect();
         await loadCurrentProfile();
-        // loadAllUserHandpans might be in handpanmap.js (legacy) or imported.
         await loadAllUserHandpans();
 
         window.dispatchEvent(new Event('handpan-loaded'));

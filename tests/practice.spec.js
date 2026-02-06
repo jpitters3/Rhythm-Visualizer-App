@@ -31,8 +31,6 @@ test.describe('Practice Plan', () => {
     if (await accountBtn.isVisible()) {
       const text = await accountBtn.innerText();
       if (!text.includes('Sign In')) {
-        // If somehow logged in (shouldn't happen with fresh context), log out? 
-        // Or just assume fresh context.
       }
     }
 

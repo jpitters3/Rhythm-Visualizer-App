@@ -1,7 +1,6 @@
 /* ==== Audio and musical functionality including scales ==== */
 import { activeGrid, gridA, gridB } from './grid-context.js';
-import { calculateSteps, setTimeSignatureState } from './rhythm-core.js';
-import { renderAllMeasures, checkCellIsMultiMode } from './notegrid.js';
+import { setTimeSignatureState } from './rhythm-core.js';
 import { supabase } from './supabase-client.js';
 
 /* Scale Selector */
@@ -304,7 +303,8 @@ export function tick(ctx) {
   const shouldHighlight = (c.id === 'A');
 
   // Play and Highlight Multiple Notes
-  if (checkCellIsMultiMode(currentData)) {
+  // Dynamic check or assume array
+  if (Array.isArray(currentData)) {
     currentData.forEach((label, subIdx) => {
       if (label) {
         // Resolve hand first
@@ -417,14 +417,15 @@ export function setMode(nextMode, ctx) {
 
   c.mode = nextMode;
 
-  // Sync global mode and STEPS if Grid A is updated (for backward compatibility)
   if (c.id === 'A') {
     if (typeof gridBtn !== 'undefined' && gridBtn) {
       gridBtn.textContent = (nextMode === '8') ? '8ths' : '16ths';
     }
   }
 
-  if (typeof renderAllMeasures === 'function') renderAllMeasures(c);
+  import('./notegrid.js').then(({ renderAllMeasures }) => {
+    renderAllMeasures(c);
+  });
 
   if (wasPlaying) start(c);
 }

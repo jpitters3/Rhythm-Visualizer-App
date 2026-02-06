@@ -1,5 +1,6 @@
 // SAVE / LOAD PATTERNS WITH SUPABASE
 import { supabase } from './supabase-client.js';
+import { isAuthed } from './auth.js';
 import { gridA, gridB } from './grid-context.js';
 import { start, stop, setMode, setTimeSignature } from './noteplayer.js';
 import { getTimeSignature } from './rhythm-core.js';
@@ -23,16 +24,7 @@ export function snapshotCurrentState() {
   }
 }
 
-export async function isAuthed() {
-  if (typeof supabase === 'undefined' || !supabase.auth) return false;
-  try {
-    const { data, error } = await supabase.auth.getUser();
-    return !!(data?.user);
-  } catch (e) {
-    console.warn('Auth check failed:', e);
-    return false;
-  }
-}
+
 
 export async function dbListPatternNames() {
   const { data, error } = await supabase

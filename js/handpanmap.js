@@ -1,13 +1,12 @@
 /* Includes scale selector */
 import { SCALES, setCurrentScale, saveScaleLocal, saveScaleRemote, preloadScaleSamples, noteForLabel, getScale, isDownbeatStep, setSelectedScaleName, getSelectedScaleName, registerHighlighter, loadScaleLocal, playNoteByLabel } from './noteplayer.js';
 import { supabase } from './supabase-client.js';
+import { enterCalibrationMode } from './calibration.js';
 import { activeGrid } from './grid-context.js';
 import { currentUser } from './auth.js';
 import { intervalMs } from './noteplayer.js';
-import { setInnerLabel, setBeatToGhost } from './notegrid.js';
-
-// Note: Removed legacy "window.supabase1" usage. We use imported supabase.
-const supabase1 = supabase;
+import { setBeatToGhost, renderAllMeasures } from './notegrid.js';
+import { isAuthed } from './auth.js';
 
 /* Mapped to nine-note-handpan-numbered.png */
 const HANDPAN_MAP_SKETCH = {
@@ -306,8 +305,8 @@ function renderMyScalesList() {
       // Close modal and enter calibration
       closeMyScalesModal();
 
-      if (window.enterCalibrationMode) {
-        window.enterCalibrationMode(hp, () => {
+      if (enterCalibrationMode) {
+        enterCalibrationMode(hp, () => {
           // On Done: Re-open My Scales
           openMyScalesModal();
           // Reload list to reflect changes
@@ -358,7 +357,7 @@ function renderMyScalesList() {
         return;
       }
 
-      const { error } = await supabase1
+      const { error } = await supabase
         .from('user_handpans')
         .update({ name: newName })
         .eq('id', hp.id);
@@ -388,7 +387,7 @@ async function swapHandpanOrder(indexA, indexB) {
   // Sync DB: Update everyone's sort_order to match new index
   // This is robust against nulls/misses
   for (let i = 0; i < newCache.length; i++) {
-    await supabase1.from('user_handpans').update({ sort_order: i }).eq('id', newCache[i].id);
+    await supabase.from('user_handpans').update({ sort_order: i }).eq('id', newCache[i].id);
   }
   // Also refresh dropdowns in background
   renderCustomOptions();
@@ -397,7 +396,7 @@ async function swapHandpanOrder(indexA, indexB) {
 async function deleteUserHandpan(id) {
   if (!confirm("Are you sure you want to delete this scale? This cannot be undone.")) return;
 
-  const { error } = await supabase1.from('user_handpans').delete().eq('id', id);
+  const { error } = await supabase.from('user_handpans').delete().eq('id', id);
   if (error) {
     alert("Error deleting: " + error.message);
   } else {
@@ -411,11 +410,6 @@ async function deleteUserHandpan(id) {
     }
   }
 }
-
-
-
-// Expose
-// window.loadAllUserHandpans = loadAllUserHandpans; // Removed global
 
 export function buildHandpanOverlay() {
   if (!handpanOverlay) return;
@@ -452,9 +446,6 @@ export function buildHandpanOverlay() {
   if (overlayPitches || overlayNumbers)
     overlayNumberPitchNotes(); else removeNoteLabels();
 }
-
-// window.buildHandpanOverlay = buildHandpanOverlay;
-// window.highlightHandpan = highlightHandpan;
 
 // Register with Note Player
 registerHighlighter(highlightHandpan);
@@ -546,7 +537,7 @@ handpanOverlay?.addEventListener('click', (e) => {
     highlightHandpan(note, null);
 
     // If a beat is selected, write to it (Compose auto-advance applies)
-    const selIdx = window.activeGrid.caretIndex;
+    const selIdx = activeGrid.caretIndex;
     if (selIdx !== null) {
       // Alt click means "don’t advance"
       const noAdvance = e.altKey; // Alt = write without advancing
@@ -590,7 +581,7 @@ window.addEventListener('mousemove', (e) => {
   const dxPct = (dxPx / overlay.width) * 100;
   const dyPct = (dyPx / overlay.height) * 100;
 
-  const p = window.HANDPAN_MAP[selectedHpNote];
+  const p = HANDPAN_MAP[selectedHpNote];
   p.x = clamp(hpNoteStart.x + dxPct, 0, 100);
   p.y = clamp(hpNoteStart.y + dyPct, 0, 100);
 
@@ -641,7 +632,7 @@ window.addEventListener('touchmove', (e) => {
   const dxPct = (dxPx / overlay.width) * 100;
   const dyPct = (dyPx / overlay.height) * 100;
 
-  const p = window.HANDPAN_MAP[selectedHpNote];
+  const p = HANDPAN_MAP[selectedHpNote];
   p.x = clamp(hpNoteStart.x + dxPct, 0, 100);
   p.y = clamp(hpNoteStart.y + dyPct, 0, 100);
 
@@ -736,7 +727,7 @@ async function saveHandpanPositions() {
 
   if (changed) {
     console.log('Saving handpan positions...', customHp.name);
-    const { error } = await supabase1
+    const { error } = await supabase
       .from('user_handpans')
       .update({ note_map: customHp.note_map })
       .eq('id', hpId);
@@ -778,7 +769,7 @@ scaleSelect.addEventListener('change', async () => {
 
   // Persist Scale Selection
   saveScaleLocal(val);
-  if (typeof window.isAuthed === 'function' && (await window.isAuthed()) && saveScaleRemote) {
+  if (isAuthed() && saveScaleRemote) {
     saveScaleRemote(val);
   }
 
@@ -789,8 +780,8 @@ scaleSelect.addEventListener('change', async () => {
       applyCustomHandpan(customHp);
       // Update active status
       if (currentUser) {
-        await supabase1.from('user_handpans').update({ is_active: false }).eq('user_id', currentUser.id);
-        await supabase1.from('user_handpans').update({ is_active: true }).eq('id', id);
+        await supabase.from('user_handpans').update({ is_active: false }).eq('user_id', currentUser.id);
+        await supabase.from('user_handpans').update({ is_active: true }).eq('id', id);
       }
     }
     return;
@@ -843,8 +834,8 @@ handpanSelect.addEventListener('change', async () => {
       applyCustomHandpan(customHp);
       // Important: Update active status in DB
       if (currentUser) {
-        await supabase1.from('user_handpans').update({ is_active: false }).eq('user_id', currentUser.id);
-        await supabase1.from('user_handpans').update({ is_active: true }).eq('id', id);
+        await supabase.from('user_handpans').update({ is_active: false }).eq('user_id', currentUser.id);
+        await supabase.from('user_handpans').update({ is_active: true }).eq('id', id);
       }
     }
     return;
@@ -964,7 +955,7 @@ numberPitchSelect.addEventListener('change', async () => {
 
   checkNumberPitchSelection();
   buildHandpanOverlay();
-  if (typeof window.renderAllMeasures === 'function') window.renderAllMeasures();
+  if (typeof renderAllMeasures === 'function') renderAllMeasures();
 });
 
 // Initial Load
@@ -1069,7 +1060,7 @@ saveNewHandpanBtn?.addEventListener('click', async () => {
 
     // 3. Success -> Go to Calibration
     alert('Saved! Entering calibration mode...');
-    if (window.enterCalibrationMode) {
+    if (enterCalibrationMode) {
       enterCalibrationMode(insertData);
       // Hide the creation form
       hpCreationForm.style.display = 'none';

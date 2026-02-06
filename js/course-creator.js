@@ -474,17 +474,6 @@ async function triggerLessonVideoUpload(sIdx, lIdx) {
       return;
     }
 
-    // Find input element to update
-    // We need to re-select it since we don't have direct reference passed in easily via delegation specific to this function usually
-    // But we know sIdx/lIdx
-    // Selector strategy:
-    // .section-builder:nth-child(...) -> but we re-render often.
-    // Better: We update data model, then render.
-
-    // UI Feedback:
-    // With re-render it might lose focus or state?
-    // Let's rely on data model update + render.
-
     try {
       const fileExt = file.name.split('.').pop();
       const fileName = `${currentUser.id}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;

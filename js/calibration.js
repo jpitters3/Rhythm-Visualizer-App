@@ -1,4 +1,5 @@
 /* Handpan Calibration Logic */
+import { supabase } from './supabase-client.js';
 
 const CAL_PITCHES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 
@@ -22,6 +23,20 @@ const calPitchSelect = document.getElementById('calPitchSelect');
 const calOctaveSelect = document.getElementById('calOctaveSelect');
 const calNumberSelect = document.getElementById('calNumberSelect');
 const calSaveStatus = document.getElementById('calSaveStatus');
+const calImgRotInput = document.getElementById('calImgRotInput');
+const valImgRot = document.getElementById('valImgRot');
+const calPropTitle = document.getElementById('calPropTitle');
+const calNoteProps = document.getElementById('calNoteProps');
+const calGlobalProps = document.getElementById('calGlobalProps');
+const calSizeInput = document.getElementById('calSizeInput');
+const valSize = document.getElementById('valSize');
+const calShapeInput = document.getElementById('calShapeInput');
+const valShape = document.getElementById('valShape');
+const calRotInput = document.getElementById('calRotInput');
+const valRot = document.getElementById('valRot');
+const addTonefieldBtn = document.getElementById('addTonefieldBtn');
+const deleteTonefieldBtn = document.getElementById('deleteTonefieldBtn');
+const calDoneBtn = document.getElementById('calDoneBtn');
 
 // Initialize Dropdowns
 function initCalDropdowns() {
@@ -37,7 +52,7 @@ function initCalDropdowns() {
 }
 
 // === ENTRY POINT ===
-async function enterCalibrationMode(handpanData, onDone = null) {
+export async function enterCalibrationMode(handpanData, onDone = null) {
   if (!handpanData) return;
   initCalDropdowns();
 
@@ -48,49 +63,54 @@ async function enterCalibrationMode(handpanData, onDone = null) {
   currentNoteMap = handpanData.note_map || [];
 
   // Reset UI
-  calHandpanName.textContent = `Calibrating: ${handpanData.name}`;
+  if (calHandpanName) calHandpanName.textContent = `Calibrating: ${handpanData.name}`;
+
   // Resize container to match image aspect ratio
-  calHandpanImage.onload = function () {
-    const ratio = this.naturalHeight / this.naturalWidth;
-    const container = document.getElementById('calCanvasContainer');
+  if (calHandpanImage) {
+    calHandpanImage.onload = function () {
+      const ratio = this.naturalHeight / this.naturalWidth;
+      const container = document.getElementById('calCanvasContainer');
+      if (!container) return;
 
-    // Max dimension 800px
-    let w = 800;
-    let h = 800;
+      // Max dimension 800px
+      let w = 800;
+      let h = 800;
 
-    if (ratio > 1) {
-      // Portrait: Constrain Height
-      h = 800;
-      w = 800 / ratio;
-    } else {
-      // Landscape: Constrain Width
-      w = 800;
-      h = 800 * ratio;
-    }
+      if (ratio > 1) {
+        // Portrait: Constrain Height
+        h = 800;
+        w = 800 / ratio;
+      } else {
+        // Landscape: Constrain Width
+        w = 800;
+        h = 800 * ratio;
+      }
 
-    container.style.width = `${w}px`;
-    container.style.height = `${h}px`;
-  };
+      container.style.width = `${w}px`;
+      container.style.height = `${h}px`;
+    };
 
-  calHandpanImage.src = handpanData.top_image_url;
+    calHandpanImage.src = handpanData.top_image_url;
 
-  // Apply Image Rotation
-  const imgRot = handpanData.image_rotation || 0;
-  calHandpanImage.style.transform = `rotate(${imgRot}deg)`;
-  if (calImgRotInput) calImgRotInput.value = imgRot;
-  if (valImgRot) valImgRot.textContent = imgRot + '°';
+    // Apply Image Rotation
+    const imgRot = handpanData.image_rotation || 0;
+    calHandpanImage.style.transform = `rotate(${imgRot}deg)`;
+    if (calImgRotInput) calImgRotInput.value = imgRot;
+    if (valImgRot) valImgRot.textContent = imgRot + '°';
+  }
 
   // Render existing dots
   renderTonefields();
 
   // Show Overlay
-  calOverlay.style.display = 'flex';
+  if (calOverlay) calOverlay.style.display = 'flex';
 
   // Reset selection (Show Global Props by default)
   selectTonefield(null);
 }
 
 function renderTonefields() {
+  if (!calTonefieldsLayer) return;
   calTonefieldsLayer.innerHTML = '';
   currentNoteMap.forEach((tf, index) => {
     createTonefieldDOM(tf, index);
@@ -98,6 +118,7 @@ function renderTonefields() {
 }
 
 function createTonefieldDOM(tf, index) {
+  if (!calTonefieldsLayer) return;
   const el = document.createElement('div');
   el.className = 'tonefield';
   el.id = `tf-${tf.id}`;
@@ -139,6 +160,8 @@ function onTonefieldMouseDown(e, id) {
 
   const el = document.getElementById(`tf-${id}`);
   const container = document.getElementById('calCanvasContainer');
+  if (!el || !container) return;
+
   const rect = container.getBoundingClientRect();
 
   const startX = e.clientX;
@@ -186,24 +209,24 @@ function selectTonefield(id) {
   selectedTonefieldId = id;
 
   // Show Panel
-  calPropertiesPanel.style.display = 'block';
+  if (calPropertiesPanel) calPropertiesPanel.style.display = 'block';
 
   // Toggle Selection Visuals
   document.querySelectorAll('.tonefield').forEach(el => el.classList.remove('selected'));
 
   if (id) {
     // === NOTE MODE ===
-    calPropTitle.textContent = "Note Settings";
-    calNoteProps.style.display = 'block';
-    calGlobalProps.style.display = 'none';
+    if (calPropTitle) calPropTitle.textContent = "Note Settings";
+    if (calNoteProps) calNoteProps.style.display = 'block';
+    if (calGlobalProps) calGlobalProps.style.display = 'none';
 
     const el = document.getElementById(`tf-${id}`);
     if (el) el.classList.add('selected');
 
     const tf = currentNoteMap.find(t => t.id === id);
     if (tf) {
-      calPitchSelect.value = tf.note;
-      calOctaveSelect.value = tf.octave;
+      if (calPitchSelect) calPitchSelect.value = tf.note;
+      if (calOctaveSelect) calOctaveSelect.value = tf.octave;
       if (calNumberSelect) calNumberSelect.value = tf.assignedNumber || '1';
 
       // Load Advanced Props (with defaults)
@@ -212,25 +235,25 @@ function selectTonefield(id) {
       const h = tf.height || (r * 2);
 
       // Size = Width
-      calSizeInput.value = w;
+      if (calSizeInput) calSizeInput.value = w;
       if (valSize) valSize.textContent = Math.round(w);
 
       // Shape = Width / Height ratio? Or just direct H manipulation?
       // Let's define Shape as Aspect Ratio (Height / Width). 1 = Circle. < 1 = Squashed.
       const ratio = w > 0 ? (h / w) : 1; // Avoid division by zero
-      calShapeInput.value = ratio;
+      if (calShapeInput) calShapeInput.value = ratio;
       if (valShape) valShape.textContent = ratio.toFixed(2);
 
       // Rotation
       const rot = tf.rotation || 0;
-      calRotInput.value = rot;
+      if (calRotInput) calRotInput.value = rot;
       if (valRot) valRot.textContent = rot + '°';
     }
   } else {
     // === GLOBAL MODE ===
-    calPropTitle.textContent = "Handpan Settings";
-    calNoteProps.style.display = 'none';
-    calGlobalProps.style.display = 'block';
+    if (calPropTitle) calPropTitle.textContent = "Handpan Settings";
+    if (calNoteProps) calNoteProps.style.display = 'none';
+    if (calGlobalProps) calGlobalProps.style.display = 'block';
 
     // Load Global Props
     const imgRot = currentHandpanData?.image_rotation || 0;
@@ -241,67 +264,71 @@ function selectTonefield(id) {
 
 // === ACTIONS ===
 
-addTonefieldBtn.addEventListener('click', () => {
-  // Smart Logic: Increment Semitone
-  let nextPitchIndex = lastAssignedPitchIndex;
-  let nextOctave = lastAssignedOctave;
+if (addTonefieldBtn) {
+  addTonefieldBtn.addEventListener('click', () => {
+    // Smart Logic: Increment Semitone
+    let nextPitchIndex = lastAssignedPitchIndex;
+    let nextOctave = lastAssignedOctave;
 
-  // Smart Logic: Number (Default D if first, else last + 1)
-  let nextNum = 'Ding';
+    // Smart Logic: Number (Default D if first, else last + 1)
+    let nextNum = 'Ding';
 
-  if (currentNoteMap.length === 0) {
-    nextPitchIndex = CAL_PITCHES.indexOf('Ding');
-    nextOctave = 3;
-    nextNum = 'Ding';
-  } else {
-    // Pitch Logic
-    nextPitchIndex += 2;
-    if (nextPitchIndex >= CAL_PITCHES.length) {
-      nextPitchIndex -= CAL_PITCHES.length;
-      nextOctave++;
+    if (currentNoteMap.length === 0) {
+      nextPitchIndex = CAL_PITCHES.indexOf('Ding');
+      nextOctave = 3;
+      nextNum = 'Ding';
+    } else {
+      // Pitch Logic
+      nextPitchIndex += 2;
+      if (nextPitchIndex >= CAL_PITCHES.length) {
+        nextPitchIndex -= CAL_PITCHES.length;
+        nextOctave++;
+      }
+
+      // Number Logic: Find max number assigned so far
+      let maxNum = 0;
+      currentNoteMap.forEach(t => {
+        if (t.assignedNumber && t.assignedNumber !== 'Ding') {
+          const val = parseInt(t.assignedNumber);
+          if (!isNaN(val) && val > maxNum) maxNum = val;
+        }
+      });
+      nextNum = String(maxNum + 1);
     }
 
-    // Number Logic: Find max number assigned so far
-    let maxNum = 0;
-    currentNoteMap.forEach(t => {
-      if (t.assignedNumber && t.assignedNumber !== 'Ding') {
-        const val = parseInt(t.assignedNumber);
-        if (!isNaN(val) && val > maxNum) maxNum = val;
-      }
-    });
-    nextNum = String(maxNum + 1);
-  }
+    // Update Tracking
+    lastAssignedPitchIndex = nextPitchIndex;
+    lastAssignedOctave = nextOctave;
 
-  // Update Tracking
-  lastAssignedPitchIndex = nextPitchIndex;
-  lastAssignedOctave = nextOctave;
+    const newId = Date.now();
+    const newTf = {
+      id: newId,
+      x: 50,
+      y: 50,
+      width: 12,
+      height: 12,
+      rotation: 0,
+      note: CAL_PITCHES[nextPitchIndex],
+      octave: nextOctave,
+      assignedNumber: nextNum
+    };
 
-  const newId = Date.now();
-  const newTf = {
-    id: newId,
-    x: 50,
-    y: 50,
-    width: 12,
-    height: 12,
-    rotation: 0,
-    note: CAL_PITCHES[nextPitchIndex],
-    octave: nextOctave,
-    assignedNumber: nextNum
-  };
+    currentNoteMap.push(newTf);
+    createTonefieldDOM(newTf, currentNoteMap.length - 1);
+    selectTonefield(newId);
+    triggerAutoSave();
+  });
+}
 
-  currentNoteMap.push(newTf);
-  createTonefieldDOM(newTf, currentNoteMap.length - 1);
-  selectTonefield(newId);
-  triggerAutoSave();
-});
-
-deleteTonefieldBtn.addEventListener('click', () => {
-  if (!selectedTonefieldId) return;
-  currentNoteMap = currentNoteMap.filter(t => t.id !== selectedTonefieldId);
-  renderTonefields();
-  selectTonefield(null);
-  triggerAutoSave();
-});
+if (deleteTonefieldBtn) {
+  deleteTonefieldBtn.addEventListener('click', () => {
+    if (!selectedTonefieldId) return;
+    currentNoteMap = currentNoteMap.filter(t => t.id !== selectedTonefieldId);
+    renderTonefields();
+    selectTonefield(null);
+    triggerAutoSave();
+  });
+}
 
 // Update Note Prop
 function updateSelectedTf(prop, value) {
@@ -326,8 +353,8 @@ function updateSelectedTf(prop, value) {
   triggerAutoSave();
 }
 
-calPitchSelect.addEventListener('change', () => updateSelectedTf('note', calPitchSelect.value));
-calOctaveSelect.addEventListener('change', () => updateSelectedTf('octave', parseInt(calOctaveSelect.value)));
+if (calPitchSelect) calPitchSelect.addEventListener('change', () => updateSelectedTf('note', calPitchSelect.value));
+if (calOctaveSelect) calOctaveSelect.addEventListener('change', () => updateSelectedTf('octave', parseInt(calOctaveSelect.value)));
 if (calNumberSelect) calNumberSelect.addEventListener('change', () => updateSelectedTf('assignedNumber', calNumberSelect.value));
 
 // New Inputs
@@ -376,7 +403,7 @@ calImgRotInput?.addEventListener('input', () => {
   const rot = parseInt(calImgRotInput.value);
   if (valImgRot) valImgRot.textContent = rot + '°';
 
-  calHandpanImage.style.transform = `rotate(${rot}deg)`;
+  if (calHandpanImage) calHandpanImage.style.transform = `rotate(${rot}deg)`;
 
   if (currentHandpanData) {
     currentHandpanData.image_rotation = rot;
@@ -387,6 +414,7 @@ calImgRotInput?.addEventListener('input', () => {
 
 function updateTonefieldLabel(id, tf) {
   const el = document.getElementById(`tf-${id}`);
+  if (!el) return;
   const label = el.querySelector('.tf-label');
   if (label) label.textContent = `${tf.note}${tf.octave}`;
 }
@@ -394,9 +422,11 @@ function updateTonefieldLabel(id, tf) {
 // === PERSISTENCE ===
 
 function triggerAutoSave(saveHandpanRecord = false) {
-  calSaveStatus.textContent = "Saving...";
-  calSaveStatus.className = 'cal-status saving'; // Reset classes, add saving
-  calSaveStatus.style.opacity = '1';
+  if (calSaveStatus) {
+    calSaveStatus.textContent = "Saving...";
+    calSaveStatus.className = 'cal-status saving'; // Reset classes, add saving
+    calSaveStatus.style.opacity = '1';
+  }
 
   if (saveTimeout) clearTimeout(saveTimeout);
 
@@ -407,14 +437,14 @@ function triggerAutoSave(saveHandpanRecord = false) {
 
     if (saveHandpanRecord) {
       // Save Image Rotation to main record
-      const { error: hpErr } = await supabase1
+      const { error: hpErr } = await supabase
         .from('user_handpans')
         .update({ image_rotation: currentHandpanData.image_rotation })
         .eq('id', currentHandpanId);
       error = hpErr;
     } else {
       // Save Tonefields
-      const { error: tfErr } = await supabase1
+      const { error: tfErr } = await supabase
         .from('user_handpans')
         .update({ note_map: currentNoteMap })
         .eq('id', currentHandpanId);
@@ -422,36 +452,40 @@ function triggerAutoSave(saveHandpanRecord = false) {
     }
 
     if (error) {
-      calSaveStatus.textContent = "Error saving";
-      calSaveStatus.className = 'cal-status error'; // Logic needed in CSS or reuse generic
+      if (calSaveStatus) {
+        calSaveStatus.textContent = "Error saving";
+        calSaveStatus.className = 'cal-status error'; // Logic needed in CSS or reuse generic
+      }
       console.error(error);
     } else {
-      calSaveStatus.textContent = "All changes saved";
-      calSaveStatus.className = 'cal-status'; // Remove 'saving', keep base
-      // Use styles to handle green color? 
-      // Reuse the base styling (green by default in CSS for #calSaveStatus)
-      calSaveStatus.style.opacity = '1';
+      if (calSaveStatus) {
+        calSaveStatus.textContent = "All changes saved";
+        calSaveStatus.className = 'cal-status'; // Remove 'saving', keep base
+        // Use styles to handle green color? 
+        // Reuse the base styling (green by default in CSS for #calSaveStatus)
+        calSaveStatus.style.opacity = '1';
 
-      // Fade out after 2s
-      setTimeout(() => {
-        calSaveStatus.style.opacity = '0';
-      }, 2000);
+        // Fade out after 2s
+        setTimeout(() => {
+          calSaveStatus.style.opacity = '0';
+        }, 2000);
+      }
     }
   }, 1000); // 1 sec debounce
 }
 
-calDoneBtn.addEventListener('click', () => {
-  // Exit calibration
-  calOverlay.style.display = 'none';
+if (calDoneBtn) {
+  calDoneBtn.addEventListener('click', () => {
+    // Exit calibration
+    if (calOverlay) calOverlay.style.display = 'none';
 
-  if (onCalibrationDone) {
-    onCalibrationDone(); // Custom exit (e.g. return to My Scales)
-  } else {
-    // Default: Reload handpans list or select this one
-    alert("Setup Complete! Your custom handpan is ready.");
-    location.reload();
-  }
-});
+    if (onCalibrationDone) {
+      onCalibrationDone(); // Custom exit (e.g. return to My Scales)
+    } else {
+      // Default: Reload handpans list or select this one
+      alert("Setup Complete! Your custom handpan is ready.");
+      location.reload();
+    }
+  });
+}
 
-// Expose to window for access from other scripts
-window.enterCalibrationMode = enterCalibrationMode;
