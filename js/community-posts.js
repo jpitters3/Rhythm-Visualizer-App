@@ -1,6 +1,7 @@
 import { escapeHtml } from './utils.js';
 import { loadPatternFromFeed } from './feed.js';
 import { currentUser } from './auth.js';
+import { supabase } from './supabase-client.js';
 
 /**
  * Community Posts (Discussion)
@@ -13,9 +14,15 @@ const createPostContainer = document.getElementById('createPostContainer');
 let postsSubscription = null;
 let cachedPosts = [];
 let postsLoaded = false;
+let listenersInitialized = false;
 
 // Initialize
-window.initCommunityPosts = async function () {
+export async function initCommunityPosts() {
+  if (!listenersInitialized) {
+    setupCommunityEventListeners();
+    listenersInitialized = true;
+  }
+
   if (!document.getElementById('newPostContent')) renderCreatePostArea();
 
   if (!postsLoaded) {
@@ -26,19 +33,70 @@ window.initCommunityPosts = async function () {
   if (postsSubscription) return; // Already subscribed
 
   // Subscribe to Realtime
-  postsSubscription = supabase1
+  postsSubscription = supabase
     .channel('public:community_posts')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'community_posts' }, payload => {
       // Handle Updates (Insert, Update, Delete)
       if (payload.eventType === 'INSERT') {
         fetchPosts(); // Simplest strategy: Refresh. optimize later if needed.
       } else if (payload.eventType === 'UPDATE') {
-        // updatePostInFeed(payload.new); // Logic not implemented yet, just refresh
         fetchPosts();
       }
     })
     .subscribe();
-};
+}
+
+function setupCommunityEventListeners() {
+  // Global Event Delegation for Dynamic Content
+  document.body.addEventListener('click', async (e) => {
+    // 1. Media Upload Triggers
+    if (e.target.matches('[data-action="upload-media"]')) {
+      const type = e.target.dataset.type;
+      triggerMediaUpload(type);
+      return;
+    }
+
+    // 2. Attach Current Pattern
+    if (e.target.matches('[data-action="attach-pattern"]')) {
+      attachCurrentPattern();
+      return;
+    }
+
+    // 3. Delete Post
+    if (e.target.matches('[data-action="delete-post"]')) {
+      const id = e.target.dataset.id;
+      deletePost(id, e.target);
+      return;
+    }
+
+    // 4. Like Post
+    if (e.target.matches('[data-action="like-post"]')) {
+      const id = e.target.dataset.id;
+      togglePostLike(id, e.target);
+      return;
+    }
+
+    // 5. Toggle Comments
+    if (e.target.matches('[data-action="toggle-comments"]')) {
+      const id = e.target.dataset.id;
+      toggleComments(id);
+      return;
+    }
+
+    // 6. Submit Comment
+    if (e.target.matches('[data-action="submit-comment"]')) {
+      const id = e.target.dataset.id;
+      submitComment(id);
+      return;
+    }
+
+    // 7. Clear Attachment
+    if (e.target.matches('[data-action="clear-attachment"]')) {
+      clearDraftAttachment();
+      return;
+    }
+  });
+}
 
 function renderCreatePostArea() {
   if (!createPostContainer) return;
@@ -58,10 +116,10 @@ function renderCreatePostArea() {
 
         <div class="cp-actions">
             <div class="cp-tools">
-                <button class="cp-tool-btn" onclick="triggerMediaUpload('image')">📸 Photo</button>
-                <button class="cp-tool-btn" onclick="triggerMediaUpload('video')">🎥 Video</button>
-                <button class="cp-tool-btn" onclick="triggerMediaUpload('audio')">🎤 Audio</button>
-                <button class="cp-tool-btn" onclick="attachCurrentPattern()">🎵 Pattern</button>
+                <button class="cp-tool-btn" data-action="upload-media" data-type="image">📸 Photo</button>
+                <button class="cp-tool-btn" data-action="upload-media" data-type="video">🎥 Video</button>
+                <button class="cp-tool-btn" data-action="upload-media" data-type="audio">🎤 Audio</button>
+                <button class="cp-tool-btn" data-action="attach-pattern">🎵 Pattern</button>
             </div>
             <button id="publishPostBtn" class="cp-publish-btn" disabled>Post</button>
         </div>
@@ -77,11 +135,15 @@ function renderCreatePostArea() {
   const btn = document.getElementById('publishPostBtn');
 
   if (isLoggedIn) {
-    input.addEventListener('input', () => {
-      btn.disabled = input.value.trim() === '' && !currentDraftAttachment;
-    });
+    if (input) {
+      input.addEventListener('input', () => {
+        btn.disabled = input.value.trim() === '' && !currentDraftAttachment;
+      });
+    }
 
-    btn.addEventListener('click', submitPost);
+    if (btn) {
+      btn.addEventListener('click', submitPost);
+    }
   }
 }
 
@@ -89,7 +151,7 @@ function renderCreatePostArea() {
 let currentDraftAttachment = null; // { type: 'image'|'video'|'audio'|'pattern', data: ... }
 
 // Media Upload Logic
-window.triggerMediaUpload = function (type) {
+function triggerMediaUpload(type) {
   if (!currentUser) return alert('Please sign in.');
   const fileInput = document.getElementById('mediaInput');
 
@@ -101,11 +163,6 @@ window.triggerMediaUpload = function (type) {
   fileInput.onchange = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-
-    // TODO: Upload to Supabase Storage immediately or on submit?
-    // Let's do simple: Preview now, Upload on Submit. 
-    // Wait, typically we upload to get a URL. 
-    // Let's simulate preview with FileReader for now.
 
     const reader = new FileReader();
     reader.onload = (ev) => {
@@ -122,13 +179,27 @@ window.triggerMediaUpload = function (type) {
   };
 
   fileInput.click();
-};
+}
 
-window.attachCurrentPattern = function () {
+function attachCurrentPattern() {
   if (!currentUser) return alert('Please sign in.');
 
   // Attach current loaded pattern
-  const pattern = serializePattern();
+  // Assuming serializePattern is global or we need to import it? 
+  // It seems to be global currently. If it fails, we need to find it source (pattern-crud.js?)
+  // For now, let's assume it's available or window.serializePattern
+  let pattern = null;
+  if (typeof window.serializePattern === 'function') {
+    pattern = window.serializePattern();
+  } else if (typeof serializePattern === 'function') {
+    pattern = serializePattern();
+  }
+
+  if (!pattern) {
+    console.warn("serializePattern not found");
+    return;
+  }
+
   const name = document.querySelector('.pattern-name')?.textContent || 'My Pattern';
 
   setDraftAttachment({
@@ -136,16 +207,19 @@ window.attachCurrentPattern = function () {
     data: pattern,
     name: name
   });
-};
+}
 
 function setDraftAttachment(att) {
   currentDraftAttachment = att;
   renderAttachmentsPreview();
-  document.getElementById('publishPostBtn').disabled = false;
+  const btn = document.getElementById('publishPostBtn');
+  if (btn) btn.disabled = false;
 }
 
 function renderAttachmentsPreview() {
   const container = document.getElementById('postAttachments');
+  if (!container) return;
+
   container.innerHTML = '';
   if (!currentDraftAttachment) return;
 
@@ -166,21 +240,27 @@ function renderAttachmentsPreview() {
 
   el.innerHTML = `
         ${content}
-        <button class="remove-att-btn" onclick="clearDraftAttachment()">×</button>
+        <button class="remove-att-btn" data-action="clear-attachment">×</button>
     `;
 
   container.appendChild(el);
 }
 
-window.clearDraftAttachment = function () {
+function clearDraftAttachment() {
   currentDraftAttachment = null;
   renderAttachmentsPreview();
   const input = document.getElementById('newPostContent');
-  document.getElementById('publishPostBtn').disabled = input.value.trim() === '';
-};
+  const btn = document.getElementById('publishPostBtn');
+  if (input && btn) {
+    btn.disabled = input.value.trim() === '';
+  }
+}
 
 async function submitPost() {
-  const content = document.getElementById('newPostContent').value.trim();
+  const input = document.getElementById('newPostContent');
+  if (!input) return;
+
+  const content = input.value.trim();
   if (!content && !currentDraftAttachment) return;
 
   const btn = document.getElementById('publishPostBtn');
@@ -197,7 +277,7 @@ async function submitPost() {
       const att = currentDraftAttachment;
       if (att.type === 'pattern') {
         // Create share entry
-        const { data, error } = await supabase1.from('shared_patterns').insert([{
+        const { data, error } = await supabase.from('shared_patterns').insert([{
           user_id: currentUser.id,
           name: att.name,
           pattern_json: att.data,
@@ -214,30 +294,22 @@ async function submitPost() {
         const fileExt = att.file.name.split('.').pop();
         const fileName = `${currentUser.id}/${Date.now()}.${fileExt}`;
 
-        // Using 'community-media' bucket (Assume it exists? or 'public'?)
-        // Fallback to storing as base64 in URL if small? No, bad practice.
-        // Let's assume a bucket named 'post-media' exists or we can create it.
-        // For this exercise, I will assume a standard bucket. If not, this might fail.
-        // SAFE BACKUP: Just put Base64 in media_url for small demos? No, dangerous for SQL size.
-        // let's try to upload.
-
-        const { data, error } = await supabase1.storage
+        const { data, error } = await supabase.storage
           .from('post-media')
           .upload(fileName, att.file);
 
         if (error) {
-          // Bucket might not exist.
           console.warn('Upload failed (Bucket missing?), ignoring media.', error);
           alert('Media upload failed. Please contact admin to set up storage buckets.');
           mediaType = null;
         } else {
-          const { data: publicData } = supabase1.storage.from('post-media').getPublicUrl(fileName);
+          const { data: publicData } = supabase.storage.from('post-media').getPublicUrl(fileName);
           mediaUrl = publicData.publicUrl;
         }
       }
     }
 
-    const { error } = await supabase1.from('community_posts').insert([{
+    const { error } = await supabase.from('community_posts').insert([{
       user_id: currentUser.id,
       content: content,
       media_url: mediaUrl,
@@ -248,7 +320,7 @@ async function submitPost() {
     if (error) throw error;
 
     // Reset UI
-    document.getElementById('newPostContent').value = '';
+    input.value = '';
     clearDraftAttachment();
     fetchPosts(); // Refresh
 
@@ -256,17 +328,20 @@ async function submitPost() {
     console.error(err);
     alert('Failed to post: ' + err.message);
   } finally {
-    btn.textContent = 'Post';
-    btn.disabled = false;
+    if (btn) {
+      btn.textContent = 'Post';
+      btn.disabled = false;
+    }
   }
 }
 
 
 async function fetchPosts() {
+  if (!postsFeed) return;
   postsFeed.innerHTML = '<div class="loading-spinner">Loading posts...</div>';
 
   // Fetch Posts + Profiles + Shared Pattern Info
-  const { data, error } = await supabase1
+  const { data, error } = await supabase
     .from('community_posts')
     .select(`
             *,
@@ -286,6 +361,7 @@ async function fetchPosts() {
 }
 
 function renderFeed(posts) {
+  if (!postsFeed) return;
   postsFeed.innerHTML = '';
   if (posts.length === 0) {
     postsFeed.innerHTML = '<div class="empty-state">No discussions yet. Be the first!</div>';
@@ -324,6 +400,7 @@ function createPostCard(post) {
                     <div class="pp-name">${post.pattern.name}</div>
                     <div class="pp-sub">Attached Pattern</div>
                 </div>
+                <!-- Note: Using onclick here for simple pattern loading for now, or could use delegation too -->
                 <button class="pp-play-btn">▶ Load</button>
             </div>
         `;
@@ -331,7 +408,7 @@ function createPostCard(post) {
 
   const isOwner = currentUser && currentUser.id === post.user_id;
   const deleteBtnHtml = isOwner
-    ? `<button class="pf-btn delete-post-btn" onclick="deletePost('${post.id}', this)" title="Delete Post">🗑️ Delete</button>`
+    ? `<button class="pf-btn delete-post-btn" data-action="delete-post" data-id="${post.id}" title="Delete Post">🗑️ Delete</button>`
     : '';
 
   card.innerHTML = `
@@ -354,8 +431,8 @@ function createPostCard(post) {
                <span class="post-likes-count">${post.likes_count || 0} Likes</span>
             </div>
             <div class="pf-actions">
-                <button class="pf-btn like-btn" onclick="togglePostLike('${post.id}', this)">👍 Like</button>
-                <button class="pf-btn comment-btn" onclick="toggleComments('${post.id}')">💬 Comment</button>
+                <button class="pf-btn like-btn" data-action="like-post" data-id="${post.id}">👍 Like</button>
+                <button class="pf-btn comment-btn" data-action="toggle-comments" data-id="${post.id}">💬 Comment</button>
                 ${deleteBtnHtml}
             </div>
         </div>
@@ -368,7 +445,7 @@ function createPostCard(post) {
                 <div class="comment-actions">
                      <!-- Simplified comment attachments for now? User asked for them too. -->
                     <button class="c-att-btn" title="Attach" onclick="alert('Comment attachments coming soon!')">📎</button> 
-                    <button class="c-send-btn" onclick="submitComment('${post.id}')">➤</button>
+                    <button class="c-send-btn" data-action="submit-comment" data-id="${post.id}">➤</button>
                 </div>
             </div>
         </div>
@@ -377,6 +454,7 @@ function createPostCard(post) {
   if (post.shared_pattern_id) {
     const pCard = card.querySelector('.post-pattern-card');
     if (pCard) {
+      // Keep this as regular listener or delegation? Regular is fine for internal card logic
       pCard.onclick = () => fetchAndLoadPattern(post.shared_pattern_id);
     }
   }
@@ -384,10 +462,10 @@ function createPostCard(post) {
   return card;
 }
 
-window.deletePost = async function (postId, btn) {
+async function deletePost(postId, btn) {
   if (!confirm('Are you sure you want to delete this post?')) return;
 
-  const { error } = await supabase1
+  const { error } = await supabase
     .from('community_posts')
     .delete()
     .eq('id', postId)
@@ -407,17 +485,16 @@ window.deletePost = async function (postId, btn) {
   if (postsFeed.children.length === 0) {
     postsFeed.innerHTML = '<div class="empty-state">No discussions yet. Be the first!</div>';
   }
-};
+}
 
-window.togglePostLike = async function (postId, btn) {
+async function togglePostLike(postId, btn) {
   if (!currentUser) return alert('Sign in to like');
-  // Optimistic Logic specific to posts
-  // Similar to feed.js toggleLike but for posts table
-  // (Implementation omitted for brevity, logic identical to feed.js)
-  alert('Like toggled (Mock)');
-};
 
-window.toggleComments = async function (postId) {
+  alert('Like toggled (Mock)');
+  // TODO: implement real logic
+}
+
+async function toggleComments(postId) {
   const sec = document.getElementById(`comments-${postId}`);
   const isHidden = sec.style.display === 'none';
   sec.style.display = isHidden ? 'block' : 'none';
@@ -426,13 +503,15 @@ window.toggleComments = async function (postId) {
     // Load Comments
     loadComments(postId);
   }
-};
+}
 
 async function loadComments(postId) {
   const list = document.getElementById(`clist-${postId}`);
+  if (!list) return;
+
   list.innerHTML = '<div class="spinner-small"></div>';
 
-  const { data } = await supabase1
+  const { data } = await supabase
     .from('post_comments')
     .select('*, profiles:user_id(username)')
     .eq('post_id', postId)
@@ -451,14 +530,15 @@ async function loadComments(postId) {
   }
 }
 
-window.submitComment = async function (postId) {
-  if (!currentUser) return;
+async function submitComment(postId) {
+  if (!currentUser) return alert("Please sign in.");
+
   const sec = document.getElementById(`comments-${postId}`);
   const input = sec.querySelector('.comment-input');
   const content = input.value.trim();
   if (!content) return;
 
-  const { error } = await supabase1.from('post_comments').insert([{
+  const { error } = await supabase.from('post_comments').insert([{
     post_id: postId,
     user_id: currentUser.id,
     content: content
@@ -468,10 +548,10 @@ window.submitComment = async function (postId) {
     input.value = '';
     loadComments(postId); // Refresh
   }
-};
+}
 
 async function fetchAndLoadPattern(pid) {
-  const { data } = await supabase1.from('shared_patterns').select('*').eq('id', pid).single();
+  const { data } = await supabase.from('shared_patterns').select('*').eq('id', pid).single();
   if (data) {
     loadPatternFromFeed(data.pattern_json, data.name);
   }

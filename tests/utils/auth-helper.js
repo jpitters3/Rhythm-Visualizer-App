@@ -39,4 +39,4 @@ async function deleteTestUser(userId) {
   }
 }
 
-module.exports = { createTestUser, deleteTestUser };
+module.exports = { createTestUser, deleteTestUser, supabaseAdmin };

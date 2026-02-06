@@ -427,6 +427,7 @@ authLogin?.addEventListener('click', async () => {
   updateAccountUI();
   updateAdminUI();
   closeAuthModal();
+  const { refreshPatternSelect } = await import('./pattern-crud.js');
   await refreshPatternSelect();
   initScale();
 });

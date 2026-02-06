@@ -33,9 +33,16 @@ const discussionView = document.getElementById('discussionView');
 let currentFeedFilter = 'newest'; // newest, top, mine
 
 // Initial Load
-document.getElementById('communityBtn')?.addEventListener('click', () => {
-  openFeedModal();
-});
+// Initial Load
+console.log('[Feed.js] Initializing, communityBtn:', document.getElementById('communityBtn'));
+const commBtn = document.getElementById('communityBtn');
+if (commBtn) {
+  commBtn.addEventListener('click', () => {
+    console.log('[Feed.js] Community Button Clicked');
+    openFeedModal();
+  });
+  commBtn.dataset.jsReady = 'true';
+}
 
 closeFeedBtn?.addEventListener('click', () => {
   document.body.style.overflow = '';
@@ -54,7 +61,9 @@ function switchMainTab(tabName) {
     compositionsView.style.display = 'none';
 
     // Lazy Init Discussion
-    if (window.initCommunityPosts) window.initCommunityPosts();
+    import('./community-posts.js').then(({ initCommunityPosts }) => {
+      initCommunityPosts();
+    });
   } else {
     navCompositionsBtn.classList.add('active');
     navDiscussionBtn.classList.remove('active');

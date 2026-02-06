@@ -1,0 +1,176 @@
+const { test, expect } = require('@playwright/test');
+const { createClient } = require('@supabase/supabase-js');
+const { createTestUser, deleteTestUser, supabaseAdmin } = require('./utils/auth-helper');
+
+// Supabase Setup
+const SUPABASE_URL = process.env.VITE_SUPABASE_URL || "";
+const SUPABASE_KEY = process.env.VITE_SUPABASE_ANON_KEY || "";
+
+const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+test.describe('Community Features', () => {
+  let testUser;
+
+  test.beforeEach(async ({ page }) => {
+    // Debug console logs (keep for now)
+    page.on('console', msg => console.log(`[Browser Console]: ${msg.text()}`));
+    page.on('pageerror', err => console.log(`[Browser Error]: ${err.message}`));
+
+    // 1. Create unique test user
+    try {
+      testUser = await createTestUser();
+    } catch (e) {
+      console.error("Skipping auth test due to missing credentials/admin keys");
+      test.skip();
+      return;
+    }
+
+    // 2. Navigate
+    await page.goto('/');
+
+    // 3. Login
+    // Check Desktop vs Mobile login button
+    const accountBtn = page.locator('#accountBtn');
+    const mobileMenuBtn = page.locator('#mobileMenuBtn');
+
+    if (await accountBtn.isVisible()) {
+      // Desktop/Tablet: Button is visible. Clicking it opens Modal (if logged out)
+      await accountBtn.click();
+    } else {
+      // Mobile: Button hidden. Open menu first.
+      if (await mobileMenuBtn.isVisible()) {
+        await mobileMenuBtn.click();
+        await page.waitForTimeout(500); // Wait for menu animation
+        // Now #authBtn inside the menu should be visible and clickable
+        await page.click('#authBtn');
+      }
+    }
+
+    await expect(page.locator('#authModal')).toHaveClass(/open/);
+
+    await page.fill('#authEmail', testUser.email);
+    await page.fill('#authPass', testUser.password);
+    await page.click('#authLogin');
+
+    await expect(page.locator('#authHint')).toContainText('Signed in!');
+    await expect(page.locator('#authModal')).not.toHaveClass(/open/);
+
+    // 4. Seed Profile immediately to ensure it exists for all tests
+    // Use admin client to bypass RLS and ensure FK satisfaction
+    try {
+      await supabaseAdmin.from('profiles').insert({
+        user_id: testUser.user.id,
+        username: testUser.email.split('@')[0],
+        first_name: 'Test',
+        last_name: 'User'
+      });
+    } catch (e) {
+      console.warn('Profile seed in beforeEach failed (may exist):', e);
+    }
+  });
+
+  test.afterEach(async () => {
+    if (testUser) {
+      await deleteTestUser(testUser.user.id);
+    }
+  });
+
+  test('Create and Delete a Community Post', async ({ page }) => {
+    // 1. Open Community Modal
+    // Wait for JS initialization
+    const commBtn = page.locator('#communityBtn');
+    await expect(commBtn).toHaveAttribute('data-js-ready', 'true', { timeout: 10000 });
+
+    // Mobile: Be robust about menu state. If button hidden, try opening menu.
+    if (!await commBtn.isVisible()) {
+      const mobileMenu = page.locator('#mobileMenuBtn');
+      if (await mobileMenu.isVisible()) {
+        await mobileMenu.click();
+        await page.waitForTimeout(500);
+      }
+    }
+
+    await commBtn.click();
+    const modal = page.locator('#feedModal');
+    await expect(modal).toHaveClass(/open/);
+
+    // 2. Switch to Discussion Tab
+    await page.click('#navDiscussionBtn'); // Ensure tab is active
+
+    // 3. Wait for Feed to Load
+    const feed = page.locator('#postsFeed');
+    await expect(feed).toBeVisible();
+
+    // 4. Create Post
+    const postContent = `Test Post ${Date.now()}`;
+    await page.fill('#newPostContent', postContent);
+    await page.click('#publishPostBtn');
+
+    // 5. Verify Post Appears
+    // Wait for feed update (it fetches after post)
+    await expect(page.locator('.post-text').filter({ hasText: postContent })).toBeVisible({ timeout: 10000 });
+
+    // 6. Delete Post
+    const postCard = page.locator('.post-card').filter({ hasText: postContent }).first();
+
+    // Handle Confirm Dialog
+    page.once('dialog', async dialog => {
+      await dialog.accept();
+    });
+
+    const deleteBtn = postCard.locator('[data-action="delete-post"]');
+    // Wait for hover or just click? Usually visible for owner.
+    await deleteBtn.click();
+
+    // 7. Verify Removal
+    await expect(postCard).not.toBeVisible();
+  });
+
+  test('Feed renders existing posts', async ({ page }) => {
+    // 1. Seed a post via API
+    const timestamp = Date.now();
+    const content = `Seeded Post ${timestamp}`;
+
+    // Profile is already seeded in beforeEach!
+
+    // Use admin client to seed post (bypassing RLS need for auth client)
+    const { data: post, error } = await supabaseAdmin
+      .from('community_posts')
+      .insert({
+        user_id: testUser.user.id,
+        content: content
+      })
+      .select()
+      .single();
+
+    if (error) throw new Error(`Seeding failed: ${error.message}`);
+
+    // 2. Open Community
+    // Wait for JS initialization
+    const commBtn = page.locator('#communityBtn');
+    await expect(commBtn).toHaveAttribute('data-js-ready', 'true', { timeout: 10000 });
+
+    // Mobile: Be robust about menu state. If button hidden, try opening menu.
+    if (!await commBtn.isVisible()) {
+      const mobileMenu = page.locator('#mobileMenuBtn');
+      if (await mobileMenu.isVisible()) {
+        await mobileMenu.click();
+        await page.waitForTimeout(500);
+      }
+    }
+
+    await commBtn.click();
+    const modal = page.locator('#feedModal');
+    await expect(modal).toHaveClass(/open/);
+    await page.click('#navDiscussionBtn');
+
+    // 3. Verify it appears
+    const postCard = page.locator('.post-card').filter({ hasText: content });
+    await expect(postCard).toBeVisible({ timeout: 10000 });
+
+    // Cleanup happens in afterEach (User deletion cascades? Or we delete manually?)
+    // Usually cascading delete on user_id, but explicit delete is safer.
+    await supabase.from('community_posts').delete().eq('id', post.id);
+  });
+
+});
