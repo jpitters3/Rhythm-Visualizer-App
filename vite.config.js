@@ -2,7 +2,7 @@ import { defineConfig } from 'vite';
 
 export default defineConfig({
   server: {
-    port: 8000, // Keep 8000 to match existing Playwright config
+    port: 3000, // Change port to avoid cache/conflict on 8000
     open: true, // Auto-open browser
   },
   build: {
