@@ -3,7 +3,7 @@ import { gridA, activeGrid } from './grid-context.js';
 import { activeSubIndex, cells, renderAllMeasures } from './notegrid.js';
 import { ADMIN_EMAILS } from './config.js';
 import { TransportRegistry } from './transport-ui.js';
-import { stop, setMode } from './noteplayer.js';
+import { stop, setMode, initNotePlayer } from './noteplayer.js';
 import { loadSharedFromURL } from './share-patterns.js';
 import { refreshPatternSelect, serializePattern, updatePatternButtons, snapshotCurrentState } from './pattern-crud.js';
 import { initCourseCreator } from './course-creator.js';
@@ -22,6 +22,7 @@ import { initShortcuts } from './keyboard-shortcuts.js';
 initCourseCreator();
 initControls();
 initShortcuts();
+initNotePlayer();
 
 function updateMetroUI() {
   const ctx = activeGrid || gridA;

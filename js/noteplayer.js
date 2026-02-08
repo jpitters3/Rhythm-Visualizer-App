@@ -4,7 +4,6 @@ import { setTimeSignatureState } from './rhythm-core.js';
 import { supabase } from './supabase-client.js';
 import { getCurrentUser } from './auth.js';
 import { HistoryManager } from './history.js';
-// import { syncVirtualHandpanControls } from './controls.js'; // Removed to break circular dependency
 import { TransportRegistry } from './transport-ui.js';
 import { isListening, getSelectedScaleName, setSelectedScaleName, getScale, setCurrentScale } from './state.js';
 import { SCALE_KEY_LOCAL, SCALE_KEY_REMOTE, SCALES } from './config.js';
@@ -38,9 +37,6 @@ function buildScaleSelect() {
     scaleSelect.appendChild(opt);
   }
 }
-
-// Call init logic if element exists (can be moved to init function)
-buildScaleSelect();
 
 // export function setCurrentScale(scaleObj) { ... } // Moved to state.js
 // export function getScale() { ... } // Moved to state.js
@@ -325,9 +321,6 @@ export function tick(ctx) {
     metroClick(getMetroClickKind(c), AUDIO_DELAY);
   }
 
-  // Removed direct window.transcriptionIndex and window.updatePresentationView calls
-  // Observers handle this now.
-
   c.step = (c.step + 1) % c.cells.length;
 }
 
@@ -355,9 +348,6 @@ export function updateTimeSignatureFromInputs() {
   const ts = `${num}/${den}`;
   setTimeSignature(ts);
 }
-
-tsNumInput?.addEventListener('change', updateTimeSignatureFromInputs);
-tsDenInput?.addEventListener('change', updateTimeSignatureFromInputs);
 
 export function setTimeSignature(ts) {
   if (!ts) return;
@@ -574,3 +564,13 @@ export function restartIfPlaying(ctx) {
 }
 
 export function getAudioCtx() { return audioCtx; }
+
+// ===== INITIALIZATION =====
+export function initNotePlayer() {
+  // Build scale selection dropdown
+  buildScaleSelect();
+
+  // Attach time signature input listeners
+  tsNumInput?.addEventListener('change', updateTimeSignatureFromInputs);
+  tsDenInput?.addEventListener('change', updateTimeSignatureFromInputs);
+}
