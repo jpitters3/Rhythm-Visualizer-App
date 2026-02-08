@@ -14,29 +14,29 @@ let saveTimeout = null;
 let onCalibrationDone = null; // Callback for when "Done" is clicked
 
 // DOM Elements
-const calOverlay = document.getElementById('calibrationOverlay');
-const calHandpanName = document.getElementById('calHandpanName');
-const calHandpanImage = document.getElementById('calHandpanImage');
-const calTonefieldsLayer = document.getElementById('calTonefieldsLayer');
-const calPropertiesPanel = document.getElementById('calPropertiesPanel');
-const calPitchSelect = document.getElementById('calPitchSelect');
-const calOctaveSelect = document.getElementById('calOctaveSelect');
-const calNumberSelect = document.getElementById('calNumberSelect');
-const calSaveStatus = document.getElementById('calSaveStatus');
-const calImgRotInput = document.getElementById('calImgRotInput');
-const valImgRot = document.getElementById('valImgRot');
-const calPropTitle = document.getElementById('calPropTitle');
-const calNoteProps = document.getElementById('calNoteProps');
-const calGlobalProps = document.getElementById('calGlobalProps');
-const calSizeInput = document.getElementById('calSizeInput');
-const valSize = document.getElementById('valSize');
-const calShapeInput = document.getElementById('calShapeInput');
-const valShape = document.getElementById('valShape');
-const calRotInput = document.getElementById('calRotInput');
-const valRot = document.getElementById('valRot');
-const addTonefieldBtn = document.getElementById('addTonefieldBtn');
-const deleteTonefieldBtn = document.getElementById('deleteTonefieldBtn');
-const calDoneBtn = document.getElementById('calDoneBtn');
+let calOverlay = null;
+let calHandpanName = null;
+let calHandpanImage = null;
+let calTonefieldsLayer = null;
+let calPropertiesPanel = null;
+let calPitchSelect = null;
+let calOctaveSelect = null;
+let calNumberSelect = null;
+let calSaveStatus = null;
+let calImgRotInput = null;
+let valImgRot = null;
+let calPropTitle = null;
+let calNoteProps = null;
+let calGlobalProps = null;
+let calSizeInput = null;
+let valSize = null;
+let calShapeInput = null;
+let valShape = null;
+let calRotInput = null;
+let valRot = null;
+let addTonefieldBtn = null;
+let deleteTonefieldBtn = null;
+let calDoneBtn = null;
 
 // Initialize Dropdowns
 function initCalDropdowns() {
@@ -262,10 +262,57 @@ function selectTonefield(id) {
   }
 }
 
+// Update Note Prop
+function updateSelectedTf(prop, value) {
+  if (!selectedTonefieldId) return;
+  const tf = currentNoteMap.find(t => t.id === selectedTonefieldId);
+  if (!tf) return;
+
+  tf[prop] = value;
+
+  if (prop === 'note' || prop === 'octave') {
+    updateTonefieldLabel(selectedTonefieldId, tf);
+    if (prop === 'note') lastAssignedPitchIndex = CAL_PITCHES.indexOf(value);
+    if (prop === 'octave') lastAssignedOctave = value;
+  }
+
+  // Re-calc dimensions if size/shape changed
+  if (prop === 'width' || prop === 'height' || prop === 'rotation') {
+    const el = document.getElementById(`tf-${selectedTonefieldId}`);
+    if (el) updateTonefieldVisuals(el, tf);
+  }
+
+  triggerAutoSave();
+}
+
 // === ACTIONS ===
 
-if (addTonefieldBtn) {
-  addTonefieldBtn.addEventListener('click', () => {
+export function initCalibration() {
+  calOverlay = document.getElementById('calibrationOverlay');
+  calHandpanName = document.getElementById('calHandpanName');
+  calHandpanImage = document.getElementById('calHandpanImage');
+  calTonefieldsLayer = document.getElementById('calTonefieldsLayer');
+  calPropertiesPanel = document.getElementById('calPropertiesPanel');
+  calPitchSelect = document.getElementById('calPitchSelect');
+  calOctaveSelect = document.getElementById('calOctaveSelect');
+  calNumberSelect = document.getElementById('calNumberSelect');
+  calSaveStatus = document.getElementById('calSaveStatus');
+  calImgRotInput = document.getElementById('calImgRotInput');
+  valImgRot = document.getElementById('valImgRot');
+  calPropTitle = document.getElementById('calPropTitle');
+  calNoteProps = document.getElementById('calNoteProps');
+  calGlobalProps = document.getElementById('calGlobalProps');
+  calSizeInput = document.getElementById('calSizeInput');
+  valSize = document.getElementById('valSize');
+  calShapeInput = document.getElementById('calShapeInput');
+  valShape = document.getElementById('valShape');
+  calRotInput = document.getElementById('calRotInput');
+  valRot = document.getElementById('valRot');
+  addTonefieldBtn = document.getElementById('addTonefieldBtn');
+  deleteTonefieldBtn = document.getElementById('deleteTonefieldBtn');
+  calDoneBtn = document.getElementById('calDoneBtn');
+
+  addTonefieldBtn?.addEventListener('click', () => {
     // Smart Logic: Increment Semitone
     let nextPitchIndex = lastAssignedPitchIndex;
     let nextOctave = lastAssignedOctave;
@@ -318,98 +365,84 @@ if (addTonefieldBtn) {
     selectTonefield(newId);
     triggerAutoSave();
   });
-}
 
-if (deleteTonefieldBtn) {
-  deleteTonefieldBtn.addEventListener('click', () => {
+  deleteTonefieldBtn?.addEventListener('click', () => {
     if (!selectedTonefieldId) return;
     currentNoteMap = currentNoteMap.filter(t => t.id !== selectedTonefieldId);
     renderTonefields();
     selectTonefield(null);
     triggerAutoSave();
   });
-}
 
-// Update Note Prop
-function updateSelectedTf(prop, value) {
-  if (!selectedTonefieldId) return;
-  const tf = currentNoteMap.find(t => t.id === selectedTonefieldId);
-  if (!tf) return;
+  calPitchSelect?.addEventListener('change', () => updateSelectedTf('note', calPitchSelect.value));
+  calOctaveSelect?.addEventListener('change', () => updateSelectedTf('octave', parseInt(calOctaveSelect.value)));
+  calNumberSelect?.addEventListener('change', () => updateSelectedTf('assignedNumber', calNumberSelect.value));
 
-  tf[prop] = value;
+  calSizeInput?.addEventListener('input', () => {
+    const size = parseFloat(calSizeInput.value);
+    if (valSize) valSize.textContent = size;
 
-  if (prop === 'note' || prop === 'octave') {
-    updateTonefieldLabel(selectedTonefieldId, tf);
-    if (prop === 'note') lastAssignedPitchIndex = CAL_PITCHES.indexOf(value);
-    if (prop === 'octave') lastAssignedOctave = value;
-  }
+    // Update Width/Height based on current ratio
+    if (!selectedTonefieldId) return;
+    const tf = currentNoteMap.find(t => t.id === selectedTonefieldId);
+    if (!tf) return;
 
-  // Re-calc dimensions if size/shape changed
-  if (prop === 'width' || prop === 'height' || prop === 'rotation') {
+    const currentRatio = parseFloat(calShapeInput.value);
+    tf.width = size;
+    tf.height = size * currentRatio;
+
     const el = document.getElementById(`tf-${selectedTonefieldId}`);
     if (el) updateTonefieldVisuals(el, tf);
-  }
+    triggerAutoSave(); // Debounced
+  });
 
-  triggerAutoSave();
+  calShapeInput?.addEventListener('input', () => {
+    const ratio = parseFloat(calShapeInput.value);
+    if (valShape) valShape.textContent = ratio.toFixed(2);
+
+    if (!selectedTonefieldId) return;
+    const tf = currentNoteMap.find(t => t.id === selectedTonefieldId);
+    if (!tf) return;
+
+    // Keep width, update height
+    tf.height = tf.width * ratio;
+
+    const el = document.getElementById(`tf-${selectedTonefieldId}`);
+    if (el) updateTonefieldVisuals(el, tf);
+    triggerAutoSave();
+  });
+
+  calRotInput?.addEventListener('input', () => {
+    const rot = parseInt(calRotInput.value);
+    if (valRot) valRot.textContent = rot + '°';
+    updateSelectedTf('rotation', rot);
+  });
+
+  calImgRotInput?.addEventListener('input', () => {
+    const rot = parseInt(calImgRotInput.value);
+    if (valImgRot) valImgRot.textContent = rot + '°';
+
+    if (calHandpanImage) calHandpanImage.style.transform = `rotate(${rot}deg)`;
+
+    if (currentHandpanData) {
+      currentHandpanData.image_rotation = rot;
+      triggerAutoSave(true); // Save Handpan record
+    }
+  });
+
+  calDoneBtn?.addEventListener('click', () => {
+    // Exit calibration
+    if (calOverlay) calOverlay.style.display = 'none';
+
+    if (onCalibrationDone) {
+      onCalibrationDone(); // Custom exit (e.g. return to My Scales)
+    } else {
+      // Default: Reload handpans list or select this one
+      alert("Setup Complete! Your custom handpan is ready.");
+      location.reload();
+    }
+  });
 }
-
-if (calPitchSelect) calPitchSelect.addEventListener('change', () => updateSelectedTf('note', calPitchSelect.value));
-if (calOctaveSelect) calOctaveSelect.addEventListener('change', () => updateSelectedTf('octave', parseInt(calOctaveSelect.value)));
-if (calNumberSelect) calNumberSelect.addEventListener('change', () => updateSelectedTf('assignedNumber', calNumberSelect.value));
-
-// New Inputs
-calSizeInput?.addEventListener('input', () => {
-  const size = parseFloat(calSizeInput.value);
-  if (valSize) valSize.textContent = size;
-
-  // Update Width/Height based on current ratio
-  if (!selectedTonefieldId) return;
-  const tf = currentNoteMap.find(t => t.id === selectedTonefieldId);
-  if (!tf) return;
-
-  const currentRatio = parseFloat(calShapeInput.value);
-  tf.width = size;
-  tf.height = size * currentRatio;
-
-  const el = document.getElementById(`tf-${selectedTonefieldId}`);
-  if (el) updateTonefieldVisuals(el, tf);
-  triggerAutoSave(); // Debounced
-});
-
-calShapeInput?.addEventListener('input', () => {
-  const ratio = parseFloat(calShapeInput.value);
-  if (valShape) valShape.textContent = ratio.toFixed(2);
-
-  if (!selectedTonefieldId) return;
-  const tf = currentNoteMap.find(t => t.id === selectedTonefieldId);
-  if (!tf) return;
-
-  // Keep width, update height
-  tf.height = tf.width * ratio;
-
-  const el = document.getElementById(`tf-${selectedTonefieldId}`);
-  if (el) updateTonefieldVisuals(el, tf);
-  triggerAutoSave();
-});
-
-calRotInput?.addEventListener('input', () => {
-  const rot = parseInt(calRotInput.value);
-  if (valRot) valRot.textContent = rot + '°';
-  updateSelectedTf('rotation', rot);
-});
-
-// Global Image Rotation
-calImgRotInput?.addEventListener('input', () => {
-  const rot = parseInt(calImgRotInput.value);
-  if (valImgRot) valImgRot.textContent = rot + '°';
-
-  if (calHandpanImage) calHandpanImage.style.transform = `rotate(${rot}deg)`;
-
-  if (currentHandpanData) {
-    currentHandpanData.image_rotation = rot;
-    triggerAutoSave(true); // Save Handpan record
-  }
-});
 
 
 function updateTonefieldLabel(id, tf) {
@@ -474,18 +507,4 @@ function triggerAutoSave(saveHandpanRecord = false) {
   }, 1000); // 1 sec debounce
 }
 
-if (calDoneBtn) {
-  calDoneBtn.addEventListener('click', () => {
-    // Exit calibration
-    if (calOverlay) calOverlay.style.display = 'none';
-
-    if (onCalibrationDone) {
-      onCalibrationDone(); // Custom exit (e.g. return to My Scales)
-    } else {
-      // Default: Reload handpans list or select this one
-      alert("Setup Complete! Your custom handpan is ready.");
-      location.reload();
-    }
-  });
-}
 

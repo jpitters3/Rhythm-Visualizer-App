@@ -24,6 +24,7 @@ import { initPOTW } from './pattern-of-the-week.js';
 import { initHandpanMap } from './handpanmap.js';
 import { initTranscription } from './transcription.js';
 import { initAiAssistant } from './ai-assistant.js';
+import { initCalibration } from './calibration.js';
 
 /**
  * Main application initializer
@@ -45,6 +46,7 @@ async function init() {
     initHandpanMap();
     initTranscription();
     initAiAssistant();
+    initCalibration();
     initCourseCreator();
     initControls();
     initShortcuts();
