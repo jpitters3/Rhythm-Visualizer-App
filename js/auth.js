@@ -2,11 +2,8 @@ import { ADMIN_EMAILS, SCALES } from './config.js';
 import { loadScaleRemote, loadScaleLocal, preloadScaleSamples } from './noteplayer.js';
 import { setSelectedScaleName } from './state.js';
 import { supabase } from './supabase-client.js';
-// Imports moved to dynamic import to avoid circular dependency
-// import { refreshPatternSelect } from './pattern-crud.js';
-// import { loadAllUserHandpans } from './handpanmap.js';
+import { closeSidebar } from './courses.js';
 
-// Global currentUser
 export let currentUser = null;
 
 export function getCurrentUser() {
@@ -159,7 +156,7 @@ export function updateAccountUI() {
     // Update hint only if it's the default or signed-out message
     const hint = document.getElementById('authHint');
     if (hint && (hint.textContent.includes('Tip:') || hint.textContent === 'Signed out.' || hint.textContent === 'Not signed in')) {
-      hint.textContent = `Signed in as ${currentUser.email}`;
+      hint.textContent = `Signed in as ${currentUser.email} `;
     }
 
   } else {
@@ -285,7 +282,7 @@ async function initScale() {
   const scaleSelect = document.getElementById('scaleSelect');
   const scaleStatus = document.getElementById('scaleStatus');
   if (scaleSelect) scaleSelect.value = name;
-  if (scaleStatus) scaleStatus.textContent = `Scale: ${name}`;
+  if (scaleStatus) scaleStatus.textContent = `Scale: ${name} `;
 
   await preloadScaleSamples();
 }
@@ -340,9 +337,10 @@ authModal?.addEventListener('click', (e) => {
 // Logout Cleanup
 function performLogoutCleanup() {
   // 1. Close Sidebar
-  if (typeof window.closeSidebar === 'function') {
-    window.closeSidebar();
-  } else {
+  if (typeof closeSidebar === 'function') {
+    closeSidebar();
+  }
+  else {
     // Fallback if function not global
     const sb = document.getElementById('courseSidebar');
     if (sb) {
@@ -394,7 +392,7 @@ authUpdatePassword?.addEventListener('click', async () => {
   const { error } = await supabase.auth.updateUser({ password: newPassword });
 
   if (error) {
-    authHint.textContent = `Error: ${error.message}`;
+    authHint.textContent = `Error: ${error.message} `;
   } else {
     authHint.textContent = 'Password updated successfully!';
     authPass.value = '';
@@ -447,7 +445,7 @@ document.getElementById('authForgotPassword')?.addEventListener('click', async (
   });
 
   if (error) {
-    authHint.textContent = `Error: ${error.message}`;
+    authHint.textContent = `Error: ${error.message} `;
   } else {
     authHint.textContent = 'Reset link sent! Check your email.';
   }
@@ -539,7 +537,7 @@ authUpdateEmail?.addEventListener('click', async () => {
   );
 
   if (error) {
-    authHint.textContent = `Error: ${error.message}`;
+    authHint.textContent = `Error: ${error.message} `;
   } else {
     authHint.textContent = 'Please check BOTH your old and new email inboxes. You must click both verification links to complete the change.';
     authCurrentPass.value = '';

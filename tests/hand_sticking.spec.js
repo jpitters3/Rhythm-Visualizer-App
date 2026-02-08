@@ -9,7 +9,8 @@ test.describe('Hand Sticking Mechanics', () => {
     await page.click('#clearBtn-A');
   });
 
-  test('Right-click toggles hand sticking (skips redundant state)', async ({ page }) => {
+  test('Right-click toggles hand sticking (skips redundant state)', async ({ page, isMobile }) => {
+    test.skip(isMobile, 'Right-click not available on mobile');
     const cell0 = page.locator('.cell').nth(0); // Usually 'R' (downbeat)
     const cell1 = page.locator('.cell').nth(1); // Usually 'L' (upbeat)
 
@@ -33,7 +34,8 @@ test.describe('Hand Sticking Mechanics', () => {
     await expect(cell0).toHaveClass(/downbeat/);
   });
 
-  test('Hand Sticking flip undo/redo', async ({ page }) => {
+  test('Hand Sticking flip undo/redo', async ({ page, isMobile }) => {
+    test.skip(isMobile, 'Right-click not available on mobile');
     const cell0 = page.locator('.cell').nth(0); // auto R
 
     // 1. Right Click to set Hand 'L' (auto was R)
@@ -50,7 +52,8 @@ test.describe('Hand Sticking Mechanics', () => {
     await expect(cell0).toHaveClass(/force-hand-l/);
   });
 
-  test('Flip hands button', async ({ page }) => {
+  test('Flip hands button', async ({ page, isMobile }) => {
+    test.skip(isMobile, 'Right-click not available on mobile');
     const cell0 = page.locator('.cell').nth(0); // auto R
 
     // Enter sticking mode to show the flip button
@@ -71,7 +74,8 @@ test.describe('Hand Sticking Mechanics', () => {
     await expect(cell0).toHaveClass(/force-hand-l/);
   });
 
-  test('Right-click multi-note cell does NOT select it', async ({ page }) => {
+  test('Right-click multi-note cell does NOT select it', async ({ page, isMobile }) => {
+    test.skip(isMobile, 'Right-click not available on mobile');
     const cell0 = page.locator('.cell').nth(0);
     const cell1 = page.locator('.cell').nth(1);
 
@@ -86,7 +90,7 @@ test.describe('Hand Sticking Mechanics', () => {
     await page.keyboard.press('1'); // enter a value
 
     // Click outside to confirm and render
-    await page.locator('#grid').click();
+    await page.locator('#measures').click();
 
     // Now it should be 'multi-mode' (rendered as array)
     await expect(cell0).toHaveClass(/multi-mode/);

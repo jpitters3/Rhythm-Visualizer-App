@@ -6,7 +6,8 @@ import { TransportRegistry } from './transport-ui.js';
 import { stop, setMode } from './noteplayer.js';
 import { loadSharedFromURL } from './share-patterns.js';
 import { refreshPatternSelect, serializePattern, updatePatternButtons, snapshotCurrentState } from './pattern-crud.js';
-import { loadPatternByName, syncVirtualHandpanControls } from './controls.js';
+import { initCourseCreator } from './course-creator.js';
+import { initControls, loadPatternByName, syncVirtualHandpanControls } from './controls.js';
 import { updateComposeUI } from './compose-mode.js';
 import { setPresentation } from './presentation-mode.js';
 import { currentUser } from './auth.js';
@@ -15,10 +16,10 @@ import { supabase } from './supabase-client.js';
 import './courses.js'; // Initialize course sidebar and listeners
 import './practice.js'; // Initialize practice sidebar
 import './mobile-menu.js'; // Initialize mobile menu logic
-import { initCourseCreator } from './course-creator.js';
 
-// Initialize Course Creator Logic
+// Initialize Logic
 initCourseCreator();
+initControls();
 
 function updateMetroUI() {
   const ctx = activeGrid || gridA;

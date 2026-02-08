@@ -232,7 +232,7 @@ document.getElementById('labelNotationBtn')?.addEventListener('click', () => {
 });
 
 // Event Listener for External Updates (e.g. Profile)
-window.addEventListener('labelNotationChanged', (e) => {
+document.addEventListener('labelNotationChanged', (e) => {
   const newVal = e.detail;
   if (newVal && newVal !== labelNotation) {
     setLabelNotation(newVal);
@@ -333,7 +333,6 @@ renameBtn?.addEventListener('click', async () => {
   if (!ensureHasSelection()) return;
 
   const oldName = getSelectedPatternName();
-  window.focus();
   const nextName = prompt('Rename pattern to:', oldName);
   if (!nextName) return;
 
@@ -526,15 +525,11 @@ function initControls() {
   });
 
   // Handle external playback state changes
-  window.addEventListener('playbackStateChange', (e) => {
+  document.addEventListener('playbackStateChange', (e) => {
     const ctx = e.detail?.grid || gridA;
     TransportRegistry.updateAll(ctx);
     if (ctx.id === 'A') syncVirtualHandpanControls();
   });
 }
 
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', initControls);
-} else {
-  initControls();
-}
+export { initControls };

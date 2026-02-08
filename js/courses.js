@@ -3,6 +3,8 @@ import { currentUser, isAdminUser, updateAdminUI } from './auth.js';
 import { applyPattern, serializePattern, dbSavePattern, refreshPatternSelect, hasUnsavedChanges, snapshotCurrentState } from './pattern-crud.js';
 import { stop } from './noteplayer.js';
 import { isItemInPractice, togglePracticeItem } from './practice.js';
+import { loadCourseToEdit } from './course-creator.js';
+import { openMarketplace } from './course-marketplace.js';
 
 // ===== SIDEBAR LOGIC (OWNED COURSES) =====
 
@@ -459,7 +461,7 @@ export function loadLesson(lessonId) {
 export function editCourse(courseId) {
   const course = allCourses.find(c => c.id === courseId);
   if (!course) return;
-  if (window.loadCourseToEdit) window.loadCourseToEdit(course);
+  loadCourseToEdit(course);
   if (window.innerWidth < 768) closeSidebar();
 }
 
@@ -650,7 +652,7 @@ document.body.addEventListener('click', async (e) => {
 
   switch (action) {
     case 'open-marketplace':
-      if (window.openMarketplace) window.openMarketplace();
+      openMarketplace();
       break;
     case 'edit-course':
       if (id) editCourse(id);

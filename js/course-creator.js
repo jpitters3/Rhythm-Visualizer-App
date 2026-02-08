@@ -551,7 +551,7 @@ async function openCourseCreator() {
   renderCourseStructure();
 }
 
-window.loadCourseToEdit = async function (course) {
+export async function loadCourseToEdit(course) {
   await loadPatternOptions(); // Fetch patterns first
 
   currentCourseData = JSON.parse(JSON.stringify(course)); // Deep copy to avoid mutating original
@@ -567,14 +567,12 @@ window.loadCourseToEdit = async function (course) {
   expandedSections.clear();
 
   openCourseCreator();
-};
+}
 
 export function closeCourseCreator() {
   courseModal.classList.remove('open');
   courseModal.setAttribute('aria-hidden', 'true');
 }
-
-window.closeCourseCreator = closeCourseCreator;
 
 // Listeners
 openCourseBtn?.addEventListener('click', openCourseCreator);
@@ -592,10 +590,6 @@ const addSectionBtn = document.getElementById('addSectionBtn');
 addSectionBtn?.addEventListener('click', addSection);
 
 // ===== SAVE ===== //
-
-
-// ===== SAVE ===== //
-
 
 const saveCourseBtn = document.getElementById('saveCourseBtn');
 const saveAndContinueBtn = document.getElementById('saveAndContinueBtn');
@@ -811,6 +805,3 @@ async function handleCourseSave(shouldClose = true) {
     }
   }
 }
-
-// Remove window assignments except where absolutely necessary (e.g. debugging)
-// All handlers should be bound via initCourseCreator or event delegation.
