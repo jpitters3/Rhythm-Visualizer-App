@@ -1,4 +1,11 @@
-let micStream = null, audioAnalyser = null, isListening = false;
+import { ensureAudio, getAudioCtx, addTickObserver, stop, start } from './noteplayer.js';
+import { getScale } from './state.js';
+import { activeGrid } from './grid-context.js';
+import { cells, setInnerLabel, renderAllMeasures } from './notegrid.js';
+import { loadPatternByName } from './controls.js';
+import { isListening, setIsListening } from './state.js';
+
+export let micStream = null, audioAnalyser = null;
 const BUFSIZE = 2048, buf = new Float32Array(BUFSIZE);
 
 // --- Settings & State ---
@@ -43,9 +50,19 @@ const micCalOverlay = document.getElementById('calibrationStatus');
 const sensValDisplay = document.getElementById('sensVal');
 const meter = document.getElementById('micVisualizer');
 
+// --- Sync State ---
+let transcriptionIndex = -1;
+document.addEventListener('DOMContentLoaded', () => {
+    addTickObserver((ctx) => {
+        if (ctx && ctx.id === 'A') {
+            transcriptionIndex = ctx.step;
+        }
+    });
+});
+
 async function toggleListening() {
     if (isListening) {
-        isListening = false;
+        setIsListening(false);
         micBtn.textContent = "🎤";
         micBtn.classList.remove('active');
         meter.style.display = 'none';
@@ -56,27 +73,31 @@ async function toggleListening() {
     try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         micStream = stream;
-        ensureAudio(); // From noteplayer.js
+        ensureAudio();
+
+        const audioCtx = getAudioCtx();
+        if (!audioCtx) return;
 
         const source = audioCtx.createMediaStreamSource(stream);
         audioAnalyser = audioCtx.createAnalyser();
         audioAnalyser.fftSize = BUFSIZE;
         source.connect(audioAnalyser);
 
-        isListening = true;
+        setIsListening(true);
         micBtn.textContent = "🎤";
         micBtn.classList.add('active');
         meter.style.display = 'block';
 
         requestAnimationFrame(transcriptionLoop);
     } catch (err) {
+        console.error(err);
         alert("Microphone access denied or not supported.");
     }
 }
 
 // --- 1. Rhythmic Intelligence (Auto-Gate) ---
 function getDynamicGate() {
-    const ctx = window.activeGrid;
+    const ctx = activeGrid;
     const subdivisions = (ctx.mode === '16') ? 4 : 2;
     const currentBPM = ctx.bpm;
     const msPerStep = 60000 / (currentBPM * subdivisions);
@@ -87,7 +108,9 @@ function getDynamicGate() {
 function transcriptionLoop() {
     if (!isListening) return;
 
+    if (!audioAnalyser) return;
     audioAnalyser.getFloatTimeDomainData(buf);
+    const audioCtx = getAudioCtx();
     const pitch = autoCorrelate(buf, audioCtx.sampleRate);
 
     let sum = 0;
@@ -95,8 +118,8 @@ function transcriptionLoop() {
     const rms = Math.sqrt(sum / buf.length);
     const now = Date.now();
 
-    // Using your custom transcriptionIndex snapshot from noteplayer.js
-    const currentIndex = (typeof transcriptionIndex !== 'undefined') ? transcriptionIndex : -1;
+    // Use local sync variable
+    const currentIndex = transcriptionIndex;
 
     // Update Guided Calibration display
     if (isGuidedCalibrating) {
@@ -121,7 +144,7 @@ function transcriptionLoop() {
 
     if (isCalibrating) {
         handleCalibration(pitch, rms);
-    } else if (window.activeGrid.playing && !stepWasRecorded && rms > (roomNoiseFloor)) {
+    } else if (activeGrid.playing && !stepWasRecorded && rms > (roomNoiseFloor)) {
         const detected = findClosestScaleNote(pitch); // Returns label string directly
 
         if (detected) {
@@ -142,7 +165,7 @@ function transcriptionLoop() {
                 tally[detected] = (tally[detected] || 0) + 1;
 
                 if (tally[detected] >= CONFIDENCE_THRESHOLD) {
-                    recordNoteToGrid(detected, currentIndex, window.activeGrid);
+                    recordNoteToGrid(detected, currentIndex, activeGrid);
                     lastNoteTime = now;
                     stepWasRecorded = true;
                     tally = {};
@@ -173,7 +196,7 @@ function handleCalibration(pitch, rms) {
         if (calIndex >= calQueue.length) {
             isCalibrating = false;
             micCalOverlay.style.display = 'none';
-            calBtn.classList.remove('active');
+            // calBtn.classList.remove('active'); // calBtn not defined? Assuming micCalBtn logic handles it or this was legacy
             localStorage.setItem('gp_cal', JSON.stringify(noteSensitivities));
             alert("Handpan Profile Calibrated!");
         } else {
@@ -183,7 +206,7 @@ function handleCalibration(pitch, rms) {
 }
 
 // Record the detected note to the grid
-function recordNoteToGrid(label, index, ctx = window.activeGrid) {
+function recordNoteToGrid(label, index, ctx = activeGrid) {
     if (index === -1) return;
 
     let currentArray = ctx.innerLabels[index];
@@ -197,11 +220,12 @@ function recordNoteToGrid(label, index, ctx = window.activeGrid) {
     if (!currentArray.includes(label) && currentArray.length < 4) {
         currentArray.push(label);
 
-        // Pass the array to your updated setInnerLabel
+        // Pass the array to setInnerLabel
         if (typeof setInnerLabel === 'function') setInnerLabel(index, currentArray, ctx);
 
         // Visual feedback flash
-        const cell = cells(ctx)[index];
+        const cellList = cells(ctx);
+        const cell = cellList[index];
         if (cell) {
             cell.style.transition = 'none';
             cell.style.boxShadow = '0 0 20px var(--btn-active)';
@@ -218,18 +242,23 @@ function analyzeGuidedResults() {
     const expected = ['D', '1', '2', '3', '4', '5', '6', '7', '8'];
     let adjustments = [];
 
+    const ctx = activeGrid;
+
     expected.forEach((note, i) => {
         const targetStep = i * 2; // We expect one note every 2 beats
-        const recorded = innerLabels[targetStep];
-        const doubleTrigger = innerLabels[targetStep + 1];
+        const recorded = ctx.innerLabels[targetStep];
+        const doubleTrigger = ctx.innerLabels[targetStep + 1];
 
         // MISS: Lower multiplier (make it easier to trigger)
-        if (recorded !== note) {
+        // recorded might be array or string. simplify check:
+        const recVal = Array.isArray(recorded) ? recorded[0] : recorded;
+
+        if (recVal !== note) {
             noteMultipliers[note] = Math.max(0.1, noteMultipliers[note] - 0.1);
             adjustments.push(`${note}: Sensitivity Increased`);
         }
         // DOUBLE: Raise multiplier (make it harder to trigger)
-        else if (doubleTrigger === note) {
+        else if ((Array.isArray(doubleTrigger) ? doubleTrigger[0] : doubleTrigger) === note) {
             noteMultipliers[note] = Math.min(0.95, noteMultipliers[note] + 0.1);
             adjustments.push(`${note}: Double-Trigger Fixed`);
         }
@@ -243,12 +272,12 @@ function analyzeGuidedResults() {
 
     localStorage.setItem('gp_multipliers', JSON.stringify(noteMultipliers));
     isGuidedCalibrating = false;
-    stop(window.activeGrid); // From noteplayer.js
+    stop(activeGrid);
 }
 
 // --- 4. Logic Fix: findClosestScaleNote returns label ---
 function findClosestScaleNote(freq) {
-    const currentScale = (typeof getScale === 'function') ? getScale() : null;
+    const currentScale = getScale();
     if (!currentScale) return null;
 
     let targets = [{ label: 'D', freq: NOTE_FREQS[currentScale.ding] }];
@@ -351,6 +380,8 @@ micCalBtn?.addEventListener('click', () => {
     targetNoteDisplay.textContent = calQueue[0];
 });
 
+let lastActiveElement = null;
+
 // Open Modal
 guidedCalBtn?.addEventListener('click', () => {
     if (!isListening) return alert("Please enable 'Listen Mode' first.");
@@ -358,10 +389,10 @@ guidedCalBtn?.addEventListener('click', () => {
     const confirmCalibrateMsg = "Calibration will clear the grid without saving changes. Are you are ready to Calibrate?";
     if (!confirm(confirmCalibrateMsg) == true) return;
 
-    const ctx = window.activeGrid;
+    const ctx = activeGrid;
 
     // Clear the grid
-    if (ctx.muteBtn) ctx.muteBtn.click(); // Wait, this clears? No.
+    if (ctx.muteBtn) ctx.muteBtn.click();
     // We should use context-aware clear
     ctx.innerLabels = Array(ctx.innerLabels.length).fill('');
     ctx.innerHands = Array(ctx.innerHands.length).fill(null);
@@ -402,7 +433,7 @@ closeGuidedBtn?.addEventListener('click', () => {
 
     modal.setAttribute('aria-hidden', true);
 
-    if (window.activeGrid.playing) stop(window.activeGrid);
+    if (activeGrid.playing) stop(activeGrid);
 
     // RETURN FOCUS to the original button
     if (lastActiveElement) lastActiveElement.focus();
@@ -415,7 +446,7 @@ startGuidedBtn?.addEventListener('click', () => {
     startGuidedBtn.textContent = "Calibrating...";
 
     // Clear the grid so we have a fresh slate for analysis
-    const ctx = window.activeGrid;
+    const ctx = activeGrid;
     ctx.innerLabels = Array(ctx.innerLabels.length).fill('');
     ctx.innerHands = Array(ctx.innerHands.length).fill(null);
     renderAllMeasures(ctx);

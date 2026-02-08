@@ -1,6 +1,7 @@
 import { activeGrid, gridA, gridB, setActiveGridGlobal } from './grid-context.js';
 import { getTimeSignature, calculateSteps } from './rhythm-core.js';
-import { getScale, stop } from './noteplayer.js';
+import { stop } from './noteplayer.js';
+import { getScale } from './state.js';
 import { setCaret, setRange, clearRange, getRange, updateDragSelectionOver, startLongPress, cancelLongPress } from './range-selection.js';
 import { HistoryManager } from './history.js';
 import { editHandsMode, isEditMulti, longPressFired, setLongPressFired, setIsEditMulti, labelNotation } from './state.js';

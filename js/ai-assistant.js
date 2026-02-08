@@ -1,7 +1,8 @@
-/**
- * AI Assistant Logic
- * Handles chat interaction and real AI pattern generation using Google Gemini.
- */
+import { SCALES } from './config.js';
+import { currentUser } from './auth.js';
+import { innerLabels, setInnerLabels, measures, setMeasures } from './state.js';
+import { renderAllMeasures } from './notegrid.js';
+import { supabase } from './supabase-client.js';
 
 class AiAssistant {
   constructor() {
@@ -53,7 +54,7 @@ class AiAssistant {
     if (this.dbKey) return; // already have it
 
     // Check if Supabase client exists
-    if (typeof supabase1 === 'undefined') {
+    if (typeof supabase === 'undefined') {
       console.warn("Supabase client not validation yet.");
       return;
     }
@@ -62,7 +63,7 @@ class AiAssistant {
     // But currentUser might be null on page load.
     // We'll try anyway; if RLS fails (null data), we handle it.
     try {
-      const { data, error } = await supabase1
+      const { data, error } = await supabase
         .from('app_config')
         .select('value')
         .eq('key', 'gemini_api_key')
@@ -408,11 +409,13 @@ Output ONLY valid JSON. No markdown formatting.
 
     // We append to the global innerLabels
     // pattern.labels should be an array.
-    innerLabels = innerLabels.concat(pattern.labels);
+    setInnerLabels(innerLabels.concat(pattern.labels));
 
     // 2. Recalculate 'measures' count
-    const stepCount = (typeof STEPS !== 'undefined') ? STEPS : 16;
-    measures = Math.ceil(innerLabels.length / stepCount);
+    // STEPS is defined in rhythm-core usually, or assume 16
+    const stepCount = 16;
+    const newMeasures = Math.ceil(innerLabels.length / stepCount);
+    setMeasures(newMeasures);
 
     // 3. Render
     if (typeof renderAllMeasures === 'function') {

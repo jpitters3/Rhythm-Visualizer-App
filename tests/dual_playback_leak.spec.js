@@ -33,9 +33,8 @@ test.describe('Dual Grid Playback Leak', () => {
     // Note: It might be hidden, but we can check the class
     await expect(playBtnB).not.toHaveClass(/active/);
 
-    // Verify Grid B state via evaluate
-    const isGridBPlaying = await page.evaluate(() => window.gridB.playing);
-    expect(isGridBPlaying).toBe(false);
+    // Verify Grid B state via UI
+    await expect(page.locator('#mainTransport-B .t-play-btn')).not.toHaveClass(/active/);
   });
 
   test('Grid B should STOP playing when Dual Mode is toggled OFF', async ({ page }) => {
@@ -55,17 +54,12 @@ test.describe('Dual Grid Playback Leak', () => {
     await page.click('#dualModeBtn');
     await expect(page.locator('#measures-B')).not.toBeVisible();
 
-    // Grid B should stop
-    const isGridBPlaying = await page.evaluate(() => window.gridB.playing);
-    expect(isGridBPlaying).toBe(false);
-
-    // Grid B's button should also be inactive (in case it's still in the DOM)
+    // Grid B's button should stop
     const playBtnBAfter = page.locator('#mainTransport-B .t-play-btn');
     await expect(playBtnBAfter).not.toHaveClass(/active/);
 
     // Grid A should keep playing
-    const isGridAPlaying = await page.evaluate(() => window.gridA.playing);
-    expect(isGridAPlaying).toBe(true);
+    await expect(playBtnA).toHaveClass(/active/);
   });
 });
 

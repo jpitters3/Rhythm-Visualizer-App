@@ -28,12 +28,6 @@ test.describe('Dual Grid Playback Synchronization', () => {
     await expect(playBtnA).toHaveClass(/playing/);
     await expect(playBtnB).toHaveClass(/playing/);
 
-    // Check internal state
-    const isPlayingA = await page.evaluate(() => window.gridA.playing);
-    const isPlayingB = await page.evaluate(() => window.gridB.playing);
-    expect(isPlayingA).toBe(true);
-    expect(isPlayingB).toBe(true);
-
     // Stop A
     await playBtnA.click();
     await expect(playBtnA).not.toHaveClass(/playing/);

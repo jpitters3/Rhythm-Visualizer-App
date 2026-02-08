@@ -515,15 +515,26 @@ export function syncVirtualHandpanControls() {
   TransportRegistry.updateAll(gridA);
 }
 
-// Subscribe to Tick to sync UI
-addTickObserver((ctx, notes, hands) => {
-  if (ctx) TransportRegistry.updateAll(ctx);
-  else TransportRegistry.updateAll(gridA);
-});
-
-// Init Transports
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', setupAllTransports);
-} else {
+// Init Transports & Observers
+function initControls() {
   setupAllTransports();
+
+  // Subscribe to Tick to sync UI
+  addTickObserver((ctx, notes, hands) => {
+    if (ctx) TransportRegistry.updateAll(ctx);
+    else TransportRegistry.updateAll(gridA);
+  });
+
+  // Handle external playback state changes
+  window.addEventListener('playbackStateChange', (e) => {
+    const ctx = e.detail?.grid || gridA;
+    TransportRegistry.updateAll(ctx);
+    if (ctx.id === 'A') syncVirtualHandpanControls();
+  });
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initControls);
+} else {
+  initControls();
 }

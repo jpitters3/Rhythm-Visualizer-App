@@ -1,5 +1,7 @@
 import { getComposeOn } from './compose-mode.js';
-import { SCALES, setCurrentScale, saveScaleLocal, saveScaleRemote, preloadScaleSamples, noteForLabel, getScale, isDownbeatStep, setSelectedScaleName, getSelectedScaleName, registerHighlighter, loadScaleLocal, playNoteByLabel } from './noteplayer.js';
+import { saveScaleLocal, saveScaleRemote, preloadScaleSamples, noteForLabel, isDownbeatStep, registerHighlighter, loadScaleLocal, playNoteByLabel } from './noteplayer.js';
+import { SCALES } from './config.js';
+import { getScale, getSelectedScaleName, setSelectedScaleName, setCurrentScale } from './state.js';
 import { supabase } from './supabase-client.js';
 import { enterCalibrationMode } from './calibration.js';
 import { activeGrid } from './grid-context.js';
@@ -447,10 +449,11 @@ export function buildHandpanOverlay() {
     overlayNumberPitchNotes(); else removeNoteLabels();
 }
 
-// Register with Note Player
-registerHighlighter(highlightHandpan);
-
-buildHandpanOverlay();
+// Register with Note Player and Build Overlay
+document.addEventListener('DOMContentLoaded', () => {
+  registerHighlighter(highlightHandpan);
+  buildHandpanOverlay();
+});
 
 let hpPulseTimers = new Map();
 

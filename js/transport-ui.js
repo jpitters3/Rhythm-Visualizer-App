@@ -1,8 +1,5 @@
-/**
- * TransportUI manages a set of transport controls (Play, Metronome, BPM).
- * It binds a GridContext to a DOM container and keeps them in sync.
- */
-import { start, stop } from './noteplayer.js';
+// TransportUI manages a set of transport controls
+// Removed top-level import to break circular dependency
 
 export class TransportUI {
   constructor(ctx, container) {
@@ -21,8 +18,9 @@ export class TransportUI {
 
   init() {
     if (this.playBtn) {
-      this.playBtn.onclick = (e) => {
+      this.playBtn.onclick = async (e) => {
         e.stopPropagation();
+        const { start, stop } = await import('./noteplayer.js');
         if (this.ctx.playing) {
           stop(this.ctx);
         } else {

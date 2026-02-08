@@ -10,7 +10,7 @@ import { closeGrooveModal } from './groove-generator.js';
 import { closeAuthModal } from './auth.js';
 import { closeProfileEditor } from './profile.js';
 import { TransportRegistry } from './transport-ui.js';
-import { writeToSelected } from './compose-mode.js';
+import { writeToSelected, getComposeOn } from './compose-mode.js';
 import { aiAssistant } from './ai-assistant.js'; // Assuming aiAssistant is exported as a singleton or similar
 
 document.addEventListener('keydown', (e) => {
@@ -60,17 +60,13 @@ document.addEventListener('keydown', (e) => {
     }
 
     // AI Assistant
-    // Assuming aiAssistant is available globally or imported. 
-    // It seems to be attached to window in some legacy code, but we should import it if possible.
-    // If not, we can check a DOM element state.
     const aiCont = document.getElementById('aiChatContainer');
     if (aiCont && aiCont.classList.contains('open')) {
-      // Assuming specific close logic or just removing class
       aiCont.classList.remove('open');
       return;
     }
-    if (window.aiAssistant && window.aiAssistant.isOpen) { // Fallback if still global
-      window.aiAssistant.toggleChat(false);
+    if (aiAssistant && aiAssistant.isOpen) {
+      aiAssistant.toggleChat(false);
       return;
     }
 
@@ -89,6 +85,7 @@ document.addEventListener('keydown', (e) => {
 
     // Clear Selection
     clearSelection(activeGrid);
+    // clearGridDom(activeGrid); // Should not clear dom on escape, just selection
     clearRange(activeGrid);
     return;
   }
@@ -138,7 +135,7 @@ document.addEventListener('keydown', (e) => {
   }
 
   if (mod && e.key.toLowerCase() === 'v') {
-    // We need to know if clipboard has content. 
+    // We need to know if clipboard has content.
     // Usually 'beatClipboard' was exported from notegrid.js?
     // Let's assume pasteSelection handles empty clipboard gracefully.
     // or checks internal variable.
@@ -148,7 +145,6 @@ document.addEventListener('keydown', (e) => {
 
   // Esc cancels range selection -- Handled above in "Escape" block generally
 
-  // Enter: Play / Stop
   // Space: Play / Stop
   if (e.code === 'Space') {
     e.preventDefault();
@@ -179,27 +175,7 @@ document.addEventListener('keydown', (e) => {
   }
 
   // Delete single cell or selection
-  if (k === 'Backspace' || k === 'Delete' || k === 'g' || e.code === 'Space') { // Space also deletes?? Legacy code had it?
-    // Wait, Space triggers Play/Stop usually. 
-    // Line 129 handles Space for Play/Stop. 
-    // Line 158 in original code: if (k === 'Backspace' || ... || e.code === 'Space')
-    // If Space was handled above with return, this won't be reached.
-    // But line 129 only checks `e.code === 'Space'`. 
-    // If we conform to legacy, Space is Play/Stop. It shouldn't delete.
-    // Unless caret is active? No, usually Space is strictly transport.
-    // The legacy code had Space in BOTH? 
-    // Let's check original.
-    /*
-     129:   if (e.code === 'Space') {
-     130:     e.preventDefault();
-     131:     if (ctx.playing) window.stop(ctx);
-     132:     else window.start(ctx);
-     133:     return;
-     134:   }
-    */
-    // It returned. So Space never reached line 158.
-    // So I can omit Space from delete check.
-
+  if (k === 'Backspace' || k === 'Delete' || k === 'g') {
     e.preventDefault();
     const r = getRange(ctx);
     if (r && r.length > 1) {
@@ -215,23 +191,14 @@ document.addEventListener('click', (ev) => {
   const locked = getAudioCtx()?.state === 'suspended';
   if (locked) ensureAudio(); // includes resume logic
 
-  // Clear selection when clicking / tapping anywhere except 
+  // Clear selection when clicking / tapping anywhere except
   // on the beat cells, or on the handpan notes while Compose mode is ON
   let shouldClear = true;
 
   if (ev.target.closest('.cell')) shouldClear = false;
 
-  // Compose logic: window.getComposeOn
-  // We need to import getComposeOn? Or just check a flag?
-  // compose-mode.js tracks this.
-  // Assuming we can check the button class or similar if we don't want to import state getter.
-  // But let's check imports.
-  // Actually, simpler: if target is .hp-dot and compose is active.
-  // Checking .compose-btn.active?
-  const composeBtn = document.getElementById('composeBtn');
-  const isComposeOn = composeBtn && composeBtn.classList.contains('active');
-
-  if (isComposeOn && ev.target.closest('.hp-dot')) shouldClear = false;
+  // Compose logic
+  if (getComposeOn() && ev.target.closest('.hp-dot')) shouldClear = false;
 
   // Also don't clear if interacting with key UI elements
   if (ev.target.closest('#aiFab') || ev.target.closest('#aiChatContainer')) shouldClear = false;
@@ -242,7 +209,5 @@ document.addEventListener('click', (ev) => {
 
   if (shouldClear) {
     clearRange(activeGrid);
-    // And possibly clearSelection(activeGrid) too if needed, but legacy said just clearRange.
-    // Wait, original: `if (shouldClear) clearRange(window.activeGrid);`
   }
 });

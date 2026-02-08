@@ -2,7 +2,11 @@
  * Chord Library UI
  * Handles the display and interaction of the analyzed chords.
  */
-import { SCALES } from './noteplayer.js';
+import { playNoteByLabel } from './noteplayer.js';
+import { getScale } from './state.js';
+import { SCALES } from './config.js';
+import { ChordAnalyzer } from './chord-analyzer.js';
+import { assignChordToSelectedCell } from './notegrid.js';
 
 const ChordUI = (function () {
 
@@ -59,12 +63,13 @@ const ChordUI = (function () {
   }
 
   function updateLibraryFromState() {
-    if (!window.ChordAnalyzer) return;
+    // ChordAnalyzer is now imported, assumed available
+    if (!ChordAnalyzer) return;
 
     const notes = getAllCurrentNotes();
     if (!notes || notes.length === 0) return;
 
-    const results = window.ChordAnalyzer.analyze(notes);
+    const results = ChordAnalyzer.analyze(notes);
     currentChords = results;
 
     if (countLabel) countLabel.textContent = results.length;
@@ -72,8 +77,8 @@ const ChordUI = (function () {
   }
 
   function getAllCurrentNotes() {
-    // 1. Check if we have a global currentScale object via accessor
-    const scale = window.getScale ? window.getScale() : null;
+    // 1. Check if we already have a currentScale object
+    const scale = getScale();
     if (scale && scale.map) {
       const notes = [];
       if (scale.ding) notes.push(scale.ding);
@@ -208,8 +213,7 @@ const ChordUI = (function () {
   }
 
   function highlightChord(notes, active) {
-    // Window.getScale().map is Label -> Pitch.
-    const scale = window.getScale ? window.getScale() : null;
+    const scale = getScale();
     const labelToPitch = scale ? scale.map : null;
     const dingPitch = scale ? scale.ding : null;
 
@@ -239,8 +243,8 @@ const ChordUI = (function () {
   }
 
   function playChord(notes) {
-    if (window.playNoteByLabel) {
-      const scale = window.getScale ? window.getScale() : null;
+    if (playNoteByLabel) {
+      const scale = getScale();
       const labelToPitch = scale ? scale.map : null;
       const dingPitch = scale ? scale.ding : null;
 
@@ -260,13 +264,13 @@ const ChordUI = (function () {
 
         if (targetLabel) {
           targetLabels.push(targetLabel);
-          window.playNoteByLabel(targetLabel);
+          playNoteByLabel(targetLabel);
         }
       });
 
-      // Inject to Grid if a cell is selected
-      if (typeof window.assignChordToSelectedCell === 'function') {
-        window.assignChordToSelectedCell(targetLabels);
+      // Inject to Grid if a cell is selected based on imported function
+      if (typeof assignChordToSelectedCell === 'function') {
+        assignChordToSelectedCell(targetLabels);
       }
     }
   }
@@ -280,3 +284,4 @@ const ChordUI = (function () {
 
 // Init on load
 document.addEventListener('DOMContentLoaded', ChordUI.init);
+export default ChordUI;

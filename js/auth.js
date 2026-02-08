@@ -1,5 +1,6 @@
-import { ADMIN_EMAILS } from './config.js';
-import { SCALES, getScale, setCurrentScale, loadScaleRemote, loadScaleLocal, setSelectedScaleName, preloadScaleSamples } from './noteplayer.js';
+import { ADMIN_EMAILS, SCALES } from './config.js';
+import { loadScaleRemote, loadScaleLocal, preloadScaleSamples } from './noteplayer.js';
+import { setSelectedScaleName } from './state.js';
 import { supabase } from './supabase-client.js';
 // Imports moved to dynamic import to avoid circular dependency
 // import { refreshPatternSelect } from './pattern-crud.js';
@@ -246,7 +247,6 @@ export async function initAuthSession() {
   supabase.auth.onAuthStateChange(async (event, session) => {
     // Ensure accurate global state
     currentUser = session?.user ?? null;
-    // window.currentUser = currentUser; // Explicit global removed
 
     updateAccountUI();
     updateAdminUI();

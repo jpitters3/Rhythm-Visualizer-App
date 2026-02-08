@@ -2,50 +2,25 @@
 import { activeGrid, gridA, gridB } from './grid-context.js';
 import { setTimeSignatureState } from './rhythm-core.js';
 import { supabase } from './supabase-client.js';
-
-/* Scale Selector */
-
-export const SCALES = {
-  "D Kurd": {
-    ding: "D3",
-    map: { "1": "A3", "2": "Bb3", "3": "C4", "4": "D4", "5": "E4", "6": "F4", "7": "G4", "8": "A4" }
-  },
-  "D Major": {
-    ding: "D3",
-    map: { "1": "G3", "2": "A3", "3": "B3", "4": "Cs4", "5": "D4", "6": "E4", "7": "Fs4", "8": "A4" }
-  },
-  "D Amara": {
-    ding: "D3",
-    map: { "1": "A3", "2": "C4", "3": "D4", "4": "E4", "5": "F4", "6": "G4", "7": "A4", "8": "C5" }
-  },
-  "B Celtic": {
-    ding: "B3",
-    map: { "1": "Fs3", "2": "A3", "3": "B3", "4": "Cs4", "5": "D4", "6": "E4", "7": "Fs4", "8": "B4" }
-  }
-};
+import { getCurrentUser } from './auth.js';
+import { HistoryManager } from './history.js';
+// import { syncVirtualHandpanControls } from './controls.js'; // Removed to break circular dependency
+import { TransportRegistry } from './transport-ui.js';
+import { isListening, getSelectedScaleName, setSelectedScaleName, getScale, setCurrentScale } from './state.js';
+import { SCALE_KEY_LOCAL, SCALE_KEY_REMOTE, SCALES } from './config.js';
 
 const SOUND_TAK = 'Tak';
 const SOUND_SLAP = 'Slap';
 
-const SCALE_KEY_LOCAL = 'groovepan_scale';            // for non-logged-in users
-const SCALE_KEY_REMOTE = 'handpan_scale';             // for logged-in users in Supabase profile
-
-// State Management
-let selectedScaleName = null;
+// highlighterFn and observers stay here as they are logic-bound
 let highlighterFn = null;
 let tickObservers = [];
 
-export function getSelectedScaleName() { return selectedScaleName; }
-export function setSelectedScaleName(n) { selectedScaleName = n; }
 export function registerHighlighter(fn) { highlighterFn = fn; }
 export function addTickObserver(fn) { tickObservers.push(fn); }
 
-
-// UNIFIED SCALE STATE
-let currentScale = {
-  ding: "D3",
-  map: { "1": "A3", "2": "Bb3", "3": "C4", "4": "D4", "5": "E4", "6": "F4", "7": "G4", "8": "A4" }
-};
+// UNIFIED SCALE STATE - Moved to state.js
+// let currentScale = ...;
 
 const scaleSelect = document.getElementById('scaleSelect');
 const scaleStatus = document.getElementById('scaleStatus');
@@ -67,14 +42,8 @@ function buildScaleSelect() {
 // Call init logic if element exists (can be moved to init function)
 buildScaleSelect();
 
-export function setCurrentScale(scaleObj) {
-  if (!scaleObj) return;
-  currentScale = scaleObj;
-}
-
-export function getScale() {
-  return currentScale;
-}
+// export function setCurrentScale(scaleObj) { ... } // Moved to state.js
+// export function getScale() { ... } // Moved to state.js
 
 export function noteForLabel(label) {
   // 1. Common Sounds
@@ -82,13 +51,16 @@ export function noteForLabel(label) {
   if (label === 'S') return SOUND_SLAP;
 
   // 2. Look up in current scale (Unified)
-  if (label === 'D') return `${currentScale.ding}_ding`;
+  const scale = getScale();
+  if (!scale) return null;
+
+  if (label === 'D') return `${scale.ding}_ding`;
 
   // Return Pitch if found in map (e.g. "1" -> "A3")
-  if (currentScale.map[label]) return currentScale.map[label];
+  if (scale.map && scale.map[label]) return scale.map[label];
 
   // 3. Absolute Pitch Fallback (for MIDI songs)
-  if (label.match(/^[A-G][#b]?[0-9]$/)) {
+  if (label && String(label).match(/^[A-G][#b]?[0-9]$/)) {
     return label;
   }
 
@@ -111,23 +83,25 @@ export function loadScaleLocal() {
 }
 
 export async function saveScaleRemote(name) {
-  if (typeof window.currentUser === 'undefined' || !window.currentUser) return;
+  const user = getCurrentUser();
+  if (!user) return;
   if (!supabase) return;
 
   await supabase.from('profiles').upsert(
-    { user_id: window.currentUser.id, handpan_scale: name },
+    { user_id: user.id, handpan_scale: name },
     { onConflict: 'user_id' }
   );
 }
 
 export async function loadScaleRemote() {
-  if (typeof window.currentUser === 'undefined' || !window.currentUser) return null;
+  const user = getCurrentUser();
+  if (!user) return null;
   if (!supabase) return null;
 
   const { data, error } = await supabase
     .from('profiles')
     .select('handpan_scale')
-    .eq('user_id', window.currentUser.id)
+    .eq('user_id', user.id)
     .maybeSingle();
   if (error) return null;
   return data?.handpan_scale || null;
@@ -334,7 +308,7 @@ export function tick(ctx) {
     stepHands.push(hand);
   }
 
-  // Notify Observers (e.g. Virtual Hands)
+  // Notify Observers (e.g. Virtual Hands, Presentation Mode, Transcription)
   if (tickObservers.length > 0) {
     tickObservers.forEach(fn => fn(c, stepNotes, stepHands));
   }
@@ -351,15 +325,8 @@ export function tick(ctx) {
     metroClick(getMetroClickKind(c), AUDIO_DELAY);
   }
 
-  // Since transcription happens after tick(), 
-  // we need to use the index before we increment 'step'
-  if (c.id === 'A') {
-    window.transcriptionIndex = c.step;
-    // Update Presentation View if active
-    if (typeof window.updatePresentationView === 'function') {
-      window.updatePresentationView(c.step, c);
-    }
-  }
+  // Removed direct window.transcriptionIndex and window.updatePresentationView calls
+  // Observers handle this now.
 
   c.step = (c.step + 1) % c.cells.length;
 }
@@ -381,7 +348,7 @@ const tsNumInput = document.getElementById('tsNum');
 const tsDenInput = document.getElementById('tsDen');
 
 export function updateTimeSignatureFromInputs() {
-  if (window.HistoryManager) window.HistoryManager.pushState();
+  if (HistoryManager) HistoryManager.pushState();
   if (!tsNumInput || !tsDenInput) return;
   const num = Math.max(1, parseInt(tsNumInput.value) || 4);
   const den = Math.max(1, parseInt(tsDenInput.value) || 4);
@@ -420,6 +387,7 @@ export function setMode(nextMode, ctx) {
   c.mode = nextMode;
 
   if (c.id === 'A') {
+    const gridBtn = document.getElementById('gridBtn');
     if (typeof gridBtn !== 'undefined' && gridBtn) {
       gridBtn.textContent = (nextMode === '8') ? '8ths' : '16ths';
     }
@@ -537,7 +505,8 @@ export function start(ctx, isSync = true) {
   unlockAudio();
   if (c.playing || c.timers.length) return;
 
-  if (typeof window.isListening !== 'undefined' && window.isListening) {
+  // Use imported isListening state
+  if (isListening) {
     countdownRemaining = COUNTDOWN_LENGTH;
   } else {
     countdownRemaining = 0;
@@ -566,7 +535,7 @@ export function start(ctx, isSync = true) {
     if (isDual) {
       stop(gridB, false);
       start(gridB, false);
-      if (window.TransportRegistry) window.TransportRegistry.updateAll(gridB);
+      if (TransportRegistry) TransportRegistry.updateAll(gridB);
     }
   }
 }
@@ -584,14 +553,14 @@ export function stop(ctx, isSync = true) {
     c.playBtn.classList.remove('playing');
   }
   c.cells.forEach(cell => cell.classList.remove('play'));
-  if (c.id === 'A' && typeof window.syncVirtualHandpanControls === 'function') {
-    window.syncVirtualHandpanControls();
+  if (c.id === 'A') {
+    window.dispatchEvent(new CustomEvent('playbackStateChange', { detail: { grid: c } }));
   }
 
   // A -> B Sync
   if (isSync && c === gridA && gridB) {
     stop(gridB, false);
-    if (window.TransportRegistry) window.TransportRegistry.updateAll(gridB);
+    if (TransportRegistry) TransportRegistry.updateAll(gridB);
   }
 }
 

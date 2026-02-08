@@ -12,6 +12,3 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
     storage: window.localStorage,
   },
 });
-
-// Backward compatibility for legacy scripts and debugging
-window.supabase1 = supabase;

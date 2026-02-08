@@ -140,6 +140,18 @@ document.addEventListener('DOMContentLoaded', () => {
     // We can assume gridA is available since we import it
     updatePresentationView(0, gridA);
   }
+
+  // Subscribe to Tick to sync View
+  addTickObserver((ctx, notes, hands) => {
+    // Current step in ctx is updated at end of tick, or beginning? 
+    // noteplayer.js: "c.step++" happens at end of tick.
+    // Observer is called with "c, activeNotes, activeHands".
+    // We should use c.step.
+    if (ctx && ctx.id === 'A') {
+      const step = ctx.step;
+      updatePresentationView(step, ctx);
+    }
+  });
 });
 
 // Detect externally triggered Fullscreen exit (e.g. Esc key by user)
@@ -164,15 +176,3 @@ function updatePresentationControlsVisibility(ctx = gridA) {
     pControls.style.display = 'none';
   }
 }
-
-// Subscribe to Tick to sync View
-addTickObserver((ctx, notes, hands) => {
-  // Current step in ctx is updated at end of tick, or beginning? 
-  // noteplayer.js: "c.step++" happens at end of tick.
-  // Observer is called with "c, activeNotes, activeHands".
-  // We should use c.step.
-  if (ctx && ctx.id === 'A') {
-    const step = ctx.step;
-    updatePresentationView(step, ctx);
-  }
-});
