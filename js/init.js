@@ -16,10 +16,12 @@ import { supabase } from './supabase-client.js';
 import './courses.js'; // Initialize course sidebar and listeners
 import './practice.js'; // Initialize practice sidebar
 import './mobile-menu.js'; // Initialize mobile menu logic
+import { initShortcuts } from './keyboard-shortcuts.js';
 
 // Initialize Logic
 initCourseCreator();
 initControls();
+initShortcuts();
 
 function updateMetroUI() {
   const ctx = activeGrid || gridA;
