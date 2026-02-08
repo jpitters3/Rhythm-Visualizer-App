@@ -3,9 +3,9 @@ import { supabase } from './supabase-client.js';
 import { currentUser, isAdminUser } from './auth.js';
 import { setActiveCourse, fetchCourses } from './courses.js';
 
-const marketplaceModal = document.getElementById('marketplaceModal');
-const closeMarketBtn = document.getElementById('closeMarketBtn');
-const marketGrid = document.getElementById('marketGrid');
+let marketplaceModal = null;
+let closeMarketBtn = null;
+let marketGrid = null;
 
 export async function openMarketplace() {
   if (!marketplaceModal) return;
@@ -151,24 +151,6 @@ function renderMarketplace(courses, ownedIds) {
   });
 }
 
-// Event Delegation for Marketplace
-marketGrid?.addEventListener('click', async (e) => {
-  const target = e.target.closest('[data-action]');
-  if (!target) return;
-
-  const action = target.dataset.action;
-  const id = target.dataset.id;
-  const status = target.dataset.status === 'true';
-  const isPaid = target.dataset.paid === 'true';
-
-  if (action === 'toggle-publish') {
-    togglePublish(id, status);
-  } else if (action === 'delete-course') {
-    deleteCourse(id);
-  } else if (action === 'unlock-course') {
-    unlockCourse(id, isPaid);
-  }
-});
 
 export async function togglePublish(courseId, currentStatus) {
   const newStatus = !currentStatus;
@@ -268,9 +250,35 @@ export async function unlockCourse(courseId, isPaid) {
 export function closeMarketplace() {
   if (!marketplaceModal) return;
   marketplaceModal.classList.remove('open');
+  marketplaceModal.setAttribute('aria-hidden', 'true');
 }
 
-closeMarketBtn?.addEventListener('click', closeMarketplace);
-marketplaceModal?.addEventListener('click', (e) => {
-  if (e.target === marketplaceModal) closeMarketplace();
-});
+export function initCourseMarketplace() {
+  marketplaceModal = document.getElementById('marketplaceModal');
+  closeMarketBtn = document.getElementById('closeMarketBtn');
+  marketGrid = document.getElementById('marketGrid');
+
+  // Event Delegation for Marketplace
+  marketGrid?.addEventListener('click', async (e) => {
+    const target = e.target.closest('[data-action]');
+    if (!target) return;
+
+    const action = target.dataset.action;
+    const id = target.dataset.id;
+    const status = target.dataset.status === 'true';
+    const isPaid = target.dataset.paid === 'true';
+
+    if (action === 'toggle-publish') {
+      togglePublish(id, status);
+    } else if (action === 'delete-course') {
+      deleteCourse(id);
+    } else if (action === 'unlock-course') {
+      unlockCourse(id, isPaid);
+    }
+  });
+
+  closeMarketBtn?.addEventListener('click', closeMarketplace);
+  marketplaceModal?.addEventListener('click', (e) => {
+    if (e.target === marketplaceModal) closeMarketplace();
+  });
+}

@@ -2,53 +2,63 @@ import { escapeHtml } from './utils.js';
 import { currentUser } from './auth.js';
 import { supabase } from './supabase-client.js';
 import { addToPractice } from './practice.js';
+import { applyPattern } from './pattern-crud.js';
 
 // Community Feed Logic
 
 export function loadPatternFromFeed(json, name) {
   if (confirm(`Load pattern "${name}"? Unsaved changes will be lost.`)) {
-    // Assuming applyPattern is global or imported. It seems global from notegrid/controls?
-    // Checking controls.js later. For now, rely on window.applyPattern if it exists, or import it.
-    // applyPattern was likely a global function.
-    if (window.applyPattern) {
-      window.applyPattern(json);
-    } else {
-      console.error("applyPattern not found");
-    }
+    applyPattern(json);
     document.title = `GroovePan — ${name}`;
   }
 }
 
-const feedModal = document.getElementById('feedModal');
-const closeFeedBtn = document.getElementById('closeFeedBtn');
-const feedGrid = document.getElementById('feedGrid');
-const feedFilterTabs = document.querySelectorAll('.feed-filter-tab'); // Inner filters
+let feedModal;
+let closeFeedBtn;
+let feedGrid;
+let feedFilterTabs;
+let navCompositionsBtn;
+let navDiscussionBtn;
+let compositionsView;
+let discussionView;
 
-// Top Level Nav
-const navCompositionsBtn = document.getElementById('navCompositionsBtn');
-const navDiscussionBtn = document.getElementById('navDiscussionBtn');
-const compositionsView = document.getElementById('compositionsView');
-const discussionView = document.getElementById('discussionView');
+export function initFeed() {
+  feedModal = document.getElementById('feedModal');
+  closeFeedBtn = document.getElementById('closeFeedBtn');
+  feedGrid = document.getElementById('feedGrid');
+  feedFilterTabs = document.querySelectorAll('.feed-filter-tab');
+  navCompositionsBtn = document.getElementById('navCompositionsBtn');
+  navDiscussionBtn = document.getElementById('navDiscussionBtn');
+  compositionsView = document.getElementById('compositionsView');
+  discussionView = document.getElementById('discussionView');
 
-let currentFeedFilter = 'newest'; // newest, top, mine
+  const commBtn = document.getElementById('communityBtn');
+  if (commBtn && !commBtn.dataset.listenerAttached) {
+    commBtn.addEventListener('click', () => {
+      openFeedModal();
+    });
+    commBtn.dataset.jsReady = 'true';
+    commBtn.dataset.listenerAttached = 'true';
+  }
 
-// Initial Load
-// Initial Load
-console.log('[Feed.js] Initializing, communityBtn:', document.getElementById('communityBtn'));
-const commBtn = document.getElementById('communityBtn');
-if (commBtn) {
-  commBtn.addEventListener('click', () => {
-    console.log('[Feed.js] Community Button Clicked');
-    openFeedModal();
+  closeFeedBtn?.addEventListener('click', () => {
+    document.body.style.overflow = '';
+    feedModal.classList.remove('open');
+    feedModal.setAttribute('aria-hidden', 'true');
   });
-  commBtn.dataset.jsReady = 'true';
-}
 
-closeFeedBtn?.addEventListener('click', () => {
-  document.body.style.overflow = '';
-  feedModal.classList.remove('open');
-  feedModal.setAttribute('aria-hidden', 'true');
-});
+  navCompositionsBtn?.addEventListener('click', () => switchMainTab('compositions'));
+  navDiscussionBtn?.addEventListener('click', () => switchMainTab('discussion'));
+
+  feedFilterTabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      feedFilterTabs.forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      currentFeedFilter = tab.dataset.filter;
+      fetchFeed(currentFeedFilter);
+    });
+  });
+}
 
 let compositionsLoaded = false;
 
@@ -78,22 +88,6 @@ function switchMainTab(tabName) {
   }
 }
 
-navCompositionsBtn?.addEventListener('click', () => switchMainTab('compositions'));
-navDiscussionBtn?.addEventListener('click', () => switchMainTab('discussion'));
-
-
-// Tab Switching
-feedFilterTabs.forEach(tab => {
-  tab.addEventListener('click', () => {
-    // Update active state
-    feedFilterTabs.forEach(t => t.classList.remove('active'));
-    tab.classList.add('active');
-
-    // Fetch
-    currentFeedFilter = tab.dataset.filter;
-    fetchFeed(currentFeedFilter);
-  });
-});
 
 function openFeedModal() {
   document.body.style.overflow = 'hidden';

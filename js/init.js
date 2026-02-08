@@ -25,6 +25,8 @@ import { initHandpanMap } from './handpanmap.js';
 import { initTranscription } from './transcription.js';
 import { initAiAssistant } from './ai-assistant.js';
 import { initCalibration } from './calibration.js';
+import { initFeed } from './feed.js';
+import { initCourseMarketplace } from './course-marketplace.js';
 
 /**
  * Main application initializer
@@ -47,6 +49,8 @@ async function init() {
     initTranscription();
     initAiAssistant();
     initCalibration();
+    initFeed();
+    initCourseMarketplace();
     initCourseCreator();
     initControls();
     initShortcuts();

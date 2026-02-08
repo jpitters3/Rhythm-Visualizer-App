@@ -2,14 +2,15 @@ import { escapeHtml } from './utils.js';
 import { loadPatternFromFeed } from './feed.js';
 import { currentUser } from './auth.js';
 import { supabase } from './supabase-client.js';
+import { serializePattern } from './pattern-crud.js';
 
 /**
  * Community Posts (Discussion)
  * Handles Posts, Comments, Likes, and Media Attachments
  */
 
-const postsFeed = document.getElementById('postsFeed');
-const createPostContainer = document.getElementById('createPostContainer');
+let postsFeed;
+let createPostContainer;
 
 let postsSubscription = null;
 let cachedPosts = [];
@@ -18,6 +19,9 @@ let listenersInitialized = false;
 
 // Initialize
 export async function initCommunityPosts() {
+  postsFeed = document.getElementById('postsFeed');
+  createPostContainer = document.getElementById('createPostContainer');
+
   if (!listenersInitialized) {
     setupCommunityEventListeners();
     listenersInitialized = true;
@@ -188,15 +192,10 @@ function attachCurrentPattern() {
   // Assuming serializePattern is global or we need to import it? 
   // It seems to be global currently. If it fails, we need to find it source (pattern-crud.js?)
   // For now, let's assume it's available or window.serializePattern
-  let pattern = null;
-  if (typeof window.serializePattern === 'function') {
-    pattern = window.serializePattern();
-  } else if (typeof serializePattern === 'function') {
-    pattern = serializePattern();
-  }
+  const pattern = serializePattern();
 
   if (!pattern) {
-    console.warn("serializePattern not found");
+    console.warn("serializePattern failed or returned null");
     return;
   }
 
