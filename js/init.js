@@ -22,6 +22,7 @@ import { HistoryManager } from './history.js';
 import ChordUI from './chord-ui.js';
 import { initPOTW } from './pattern-of-the-week.js';
 import { initHandpanMap } from './handpanmap.js';
+import { initTranscription } from './transcription.js';
 
 // Initialize Logic
 initMobileMenu();
@@ -31,6 +32,7 @@ initPOTW();
 HistoryManager.init();
 ChordUI.init();
 initHandpanMap();
+initTranscription();
 initCourseCreator();
 initControls();
 initShortcuts();

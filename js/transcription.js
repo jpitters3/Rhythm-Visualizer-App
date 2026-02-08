@@ -42,23 +42,11 @@ const NOTE_FREQS = {
 };
 
 // --- UI References ---
-const micBtn = document.getElementById('micBtn');
-const micCalBtn = document.getElementById('micCalBtn');
-const guidedCalBtn = document.getElementById('guidedCalBtn'); // Add this to your HTML
-const targetNoteDisplay = document.getElementById('targetNoteName');
-const micCalOverlay = document.getElementById('calibrationStatus');
-const sensValDisplay = document.getElementById('sensVal');
-const meter = document.getElementById('micVisualizer');
+let micBtn, micCalBtn, guidedCalBtn, targetNoteDisplay, micCalOverlay, sensValDisplay, meter;
 
 // --- Sync State ---
 let transcriptionIndex = -1;
-document.addEventListener('DOMContentLoaded', () => {
-    addTickObserver((ctx) => {
-        if (ctx && ctx.id === 'A') {
-            transcriptionIndex = ctx.step;
-        }
-    });
-});
+
 
 async function toggleListening() {
     if (isListening) {
@@ -369,88 +357,94 @@ function resetGuideUI() {
     startGuidedBtn.textContent = "Begin Calibration";
 }
 
-// --- 5. Event Listeners ---
-micBtn?.addEventListener('click', toggleListening);
 
-micCalBtn?.addEventListener('click', () => {
-    if (!isListening) return;
-    isCalibrating = true;
-    calIndex = 0;
-    micCalOverlay.style.display = 'block';
-    targetNoteDisplay.textContent = calQueue[0];
-});
+export function initTranscription() {
+    micBtn = document.getElementById('micBtn');
+    micCalBtn = document.getElementById('micCalBtn');
+    guidedCalBtn = document.getElementById('guidedCalBtn');
+    targetNoteDisplay = document.getElementById('targetNoteName');
+    micCalOverlay = document.getElementById('calibrationStatus');
+    sensValDisplay = document.getElementById('sensVal');
+    meter = document.getElementById('micVisualizer');
 
-let lastActiveElement = null;
+    if (!micBtn) return;
 
-// Open Modal
-guidedCalBtn?.addEventListener('click', () => {
-    if (!isListening) return alert("Please enable 'Listen Mode' first.");
+    // Tick Observer for sync
+    addTickObserver((ctx) => {
+        if (ctx && ctx.id === 'A') {
+            transcriptionIndex = ctx.step;
+        }
+    });
 
-    const confirmCalibrateMsg = "Calibration will clear the grid without saving changes. Are you are ready to Calibrate?";
-    if (!confirm(confirmCalibrateMsg) == true) return;
+    // Listeners
+    micBtn.addEventListener('click', toggleListening);
 
-    const ctx = activeGrid;
+    micCalBtn?.addEventListener('click', () => {
+        if (!isListening) return;
+        isCalibrating = true;
+        calIndex = 0;
+        micCalOverlay.style.display = 'block';
+        targetNoteDisplay.textContent = calQueue[0];
+    });
 
-    // Clear the grid
-    if (ctx.muteBtn) ctx.muteBtn.click();
-    // We should use context-aware clear
-    ctx.innerLabels = Array(ctx.innerLabels.length).fill('');
-    ctx.innerHands = Array(ctx.innerHands.length).fill(null);
-    renderAllMeasures(ctx);
+    guidedCalBtn?.addEventListener('click', () => {
+        if (!isListening) return alert("Please enable 'Listen Mode' first.");
 
-    // Set BPM super slow
-    ctx.bpm = 40;
-    if (ctx.bpmInput) ctx.bpmInput.value = '40';
-    const bVal = document.getElementById('bpmVal-' + ctx.id);
-    if (bVal) bVal.textContent = '40';
+        const confirmCalibrateMsg = "Calibration will clear the grid without saving changes. Are you are ready to Calibrate?";
+        if (!confirm(confirmCalibrateMsg)) return;
 
-    // Ensure there are just enough empty measures
-    if (typeof loadPatternByName === 'function') loadPatternByName(CALIBRATE_PATTERN_8_BEATS);
+        const ctx = activeGrid;
 
-    // Remember the button that was clicked
-    lastActiveElement = document.activeElement;
+        // Clear the grid
+        if (ctx.muteBtn) ctx.muteBtn.click();
+        ctx.innerLabels = Array(ctx.innerLabels.length).fill('');
+        ctx.innerHands = Array(ctx.innerHands.length).fill(null);
+        renderAllMeasures(ctx);
 
-    const modal = document.getElementById('guidedCalModal');
-    modal.style.display = 'flex';
+        // Set BPM super slow
+        ctx.bpm = 40;
+        if (ctx.bpmInput) ctx.bpmInput.value = '40';
+        const bVal = document.getElementById('bpmVal-' + ctx.id);
+        if (bVal) bVal.textContent = '40';
 
-    // REMOVE aria-hidden from the modal itself if it was there
-    modal.setAttribute('aria-hidden', false);
+        // Ensure there are just enough empty measures
+        if (typeof loadPatternByName === 'function') loadPatternByName(CALIBRATE_PATTERN_8_BEATS);
 
-    // MOVE FOCUS to the "Begin" button inside the modal
-    // This stops the "Blocked aria-hidden" error
-    setTimeout(() => {
-        document.getElementById('startGuidedBtn')?.focus();
-    }, 10);
+        lastActiveElement = document.activeElement;
 
-    resetGuideUI();
-});
+        const modal = document.getElementById('guidedCalModal');
+        modal.style.display = 'flex';
+        modal.setAttribute('aria-hidden', false);
 
-// Close Modal
-closeGuidedBtn?.addEventListener('click', () => {
-    const modal = document.getElementById('guidedCalModal');
-    modal.style.display = 'none';
-    isGuidedCalibrating = false;
+        setTimeout(() => {
+            document.getElementById('startGuidedBtn')?.focus();
+        }, 10);
 
-    modal.setAttribute('aria-hidden', true);
+        resetGuideUI();
+    });
 
-    if (activeGrid.playing) stop(activeGrid);
+    const closeGuidedBtnLocal = document.getElementById('closeGuidedBtn');
+    closeGuidedBtnLocal?.addEventListener('click', () => {
+        const modal = document.getElementById('guidedCalModal');
+        modal.style.display = 'none';
+        isGuidedCalibrating = false;
+        modal.setAttribute('aria-hidden', true);
 
-    // RETURN FOCUS to the original button
-    if (lastActiveElement) lastActiveElement.focus();
-});
+        if (activeGrid.playing) stop(activeGrid);
+        if (lastActiveElement) lastActiveElement.focus();
+    });
 
-// Start the Sequence
-startGuidedBtn?.addEventListener('click', () => {
-    isGuidedCalibrating = true;
-    startGuidedBtn.disabled = true;
-    startGuidedBtn.textContent = "Calibrating...";
+    const startGuidedBtnLocal = document.getElementById('startGuidedBtn');
+    startGuidedBtnLocal?.addEventListener('click', () => {
+        isGuidedCalibrating = true;
+        startGuidedBtnLocal.disabled = true;
+        startGuidedBtnLocal.textContent = "Calibrating...";
 
-    // Clear the grid so we have a fresh slate for analysis
-    const ctx = activeGrid;
-    ctx.innerLabels = Array(ctx.innerLabels.length).fill('');
-    ctx.innerHands = Array(ctx.innerHands.length).fill(null);
-    renderAllMeasures(ctx);
+        const ctx = activeGrid;
+        ctx.innerLabels = Array(ctx.innerLabels.length).fill('');
+        ctx.innerHands = Array(ctx.innerHands.length).fill(null);
+        renderAllMeasures(ctx);
 
-    // Trigger the count-in and start the sequencer (from noteplayer.js)
-    start(ctx);
-});
+        start(ctx);
+    });
+}
