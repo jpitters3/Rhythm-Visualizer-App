@@ -384,15 +384,6 @@ export function deleteSelection(ctx = activeGrid) {
   renderAllMeasures(ctx);
 }
 
-// EVENT LISTENERS //
-
-document.getElementById('selCopyBtn')?.addEventListener('click', () => copySelection());
-document.getElementById('selPasteBtn')?.addEventListener('click', () => pasteSelection());
-document.getElementById('selDeleteBtn')?.addEventListener('click', () => deleteSelection());
-document.getElementById('selCancelBtn')?.addEventListener('click', () => {
-  clearRange(); // imported
-});
-
 export function setInnerLabel(i, value, ctx = activeGrid) {
   const cell = cells(ctx)[i];
   if (!cell) return;
@@ -691,3 +682,14 @@ export function assignChordToSelectedCell(labels, ctx = activeGrid) {
 
   return true;
 };
+
+// ===== INITIALIZATION =====
+export function initNoteGrid() {
+  // Attach selection button event listeners
+  document.getElementById('selCopyBtn')?.addEventListener('click', () => copySelection());
+  document.getElementById('selPasteBtn')?.addEventListener('click', () => pasteSelection());
+  document.getElementById('selDeleteBtn')?.addEventListener('click', () => deleteSelection());
+  document.getElementById('selCancelBtn')?.addEventListener('click', () => {
+    clearRange(); // imported from range-selection.js
+  });
+}

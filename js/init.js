@@ -1,6 +1,6 @@
 // ===== INIT =====
 import { gridA, activeGrid } from './grid-context.js';
-import { activeSubIndex, cells, renderAllMeasures } from './notegrid.js';
+import { activeSubIndex, cells, renderAllMeasures, initNoteGrid } from './notegrid.js';
 import { ADMIN_EMAILS } from './config.js';
 import { TransportRegistry } from './transport-ui.js';
 import { stop, setMode, initNotePlayer } from './noteplayer.js';
@@ -23,6 +23,7 @@ initCourseCreator();
 initControls();
 initShortcuts();
 initNotePlayer();
+initNoteGrid();
 
 function updateMetroUI() {
   const ctx = activeGrid || gridA;
