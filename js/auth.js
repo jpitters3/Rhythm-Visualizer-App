@@ -45,15 +45,19 @@ export function updateAdminUI() {
 }
 
 // Elements (Globals previously, now local resolution if possible, or assume global ID access)
-const authModal = document.getElementById('authModal');
-const authEmail = document.getElementById('authEmail');
-const authPass = document.getElementById('authPass');
-const authHint = document.getElementById('authHint');
-const accountStatus = document.getElementById('accountStatus');
-const accountBtn = document.getElementById('accountBtn');
-const authLogin = document.getElementById('authLogin');
-const authRegister = document.getElementById('authRegister');
-const authLogout = document.getElementById('authLogout');
+// Elements (Globals previously, now local resolution if possible, or assume global ID access)
+let authModal = null;
+let authEmail = null;
+let authPass = null;
+let authHint = null;
+let accountStatus = null;
+let accountBtn = null;
+let authLogin = null;
+let authRegister = null;
+let authLogout = null;
+
+let accountDropdownMenu = null;
+let authLogoutDropdown = null;
 
 // Auth modal
 export function openAuthModal() {
@@ -101,8 +105,7 @@ export function closeAuthModal() {
 }
 
 // Dropdown
-const accountDropdownMenu = document.getElementById('accountDropdownMenu');
-const authLogoutDropdown = document.getElementById('authLogoutDropdown');
+// Dropdown
 
 export function updateAccountUI() {
   if (!accountStatus) return;
@@ -225,12 +228,6 @@ export function updateAccountUI() {
 
 // ... (SKIP TO LISTENERS) ... until initScale() call
 // We need to add listener for authBtn
-setTimeout(() => {
-  document.getElementById('authBtn')?.addEventListener('click', () => {
-    accountDropdownMenu?.classList.remove('show');
-    openAuthModal();
-  });
-}, 0);
 
 let authInitDone = false;
 
@@ -268,8 +265,6 @@ export async function initAuthSession() {
   });
 }
 
-// Auto-run if imported
-initAuthSession();
 
 async function initScale() {
   let name = null;
@@ -287,265 +282,240 @@ async function initScale() {
   await preloadScaleSamples();
 }
 
-initScale();
 
-// === EVENT LISTENERS ===
-const authCancel = document.getElementById('authCancel');
+export async function initAuth() {
+  // Elements
+  authModal = document.getElementById('authModal');
+  authEmail = document.getElementById('authEmail');
+  authPass = document.getElementById('authPass');
+  authHint = document.getElementById('authHint');
+  accountStatus = document.getElementById('accountStatus');
+  accountBtn = document.getElementById('accountBtn');
+  authLogin = document.getElementById('authLogin');
+  authRegister = document.getElementById('authRegister');
+  authLogout = document.getElementById('authLogout');
+  accountDropdownMenu = document.getElementById('accountDropdownMenu');
+  authLogoutDropdown = document.getElementById('authLogoutDropdown');
 
-// New Logic: Click Account -> If Signed In (Toggle Dropdown) ELSE (Open Modal)
-accountBtn?.addEventListener('click', (e) => {
-  e.stopPropagation();
-  if (currentUser) {
-    // Toggle Dropdown
-    accountDropdownMenu?.classList.toggle('show');
-  } else {
-    // Open Modal
+  const authCancel = document.getElementById('authCancel');
+  const closeAuthBtn = document.getElementById('closeAuthBtn');
+  const authUpdatePasswordBtn = document.getElementById('authUpdatePassword');
+  const authPassConfirm = document.getElementById('authPassConfirm');
+  const openAccountAuthBtn = document.getElementById('openAccountAuthBtn');
+  const authForgotPassword = document.getElementById('authForgotPassword');
+  const authTogglePasswordBtn = document.getElementById('authTogglePasswordBtn');
+  const authUpdateEmailBtn = document.getElementById('authUpdateEmail');
+  const authCurrentPass = document.getElementById('authCurrentPass');
+
+  // New Logic: Click Account -> If Signed In (Toggle Dropdown) ELSE (Open Modal)
+  accountBtn?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (currentUser) {
+      accountDropdownMenu?.classList.toggle('show');
+    } else {
+      openAuthModal();
+    }
+  });
+
+  // Auto-close Account Dropdown on Item Click
+  document.getElementById('authBtn')?.addEventListener('click', () => {
+    accountDropdownMenu?.classList.remove('show');
     openAuthModal();
-  }
-});
+  });
 
-// Auto-close Account Dropdown on Item Click
-accountDropdownMenu?.addEventListener('click', (e) => {
-  if (e.target.tagName === 'BUTTON' || e.target.closest('button')) {
-    accountDropdownMenu.classList.remove('show');
-  }
-});
-
-// "Account Settings" from dropdown
-document.getElementById('openAccountAuthBtn')?.addEventListener('click', () => {
-  accountDropdownMenu?.classList.remove('show');
-  openAuthModal();
-});
-
-authCancel?.addEventListener('click', closeAuthModal);
-document.getElementById('closeAuthBtn')?.addEventListener('click', closeAuthModal);
-
-// Close dropdown when clicking outside
-window.addEventListener('click', (e) => {
-  if (accountBtn && accountDropdownMenu && !accountBtn.contains(e.target) && !accountDropdownMenu.contains(e.target)) {
-    accountDropdownMenu.classList.remove('show');
-  }
-});
-
-// Close Auth Modal when clicking outside (overlay)
-authModal?.addEventListener('click', (e) => {
-  if (e.target === authModal) {
-    closeAuthModal();
-  }
-});
-
-// Logout Cleanup
-function performLogoutCleanup() {
-  // 1. Close Sidebar
-  if (typeof closeSidebar === 'function') {
-    closeSidebar();
-  }
-  else {
-    // Fallback if function not global
-    const sb = document.getElementById('courseSidebar');
-    if (sb) {
-      sb.classList.remove('open');
-      sb.setAttribute('aria-hidden', 'true');
-    }
-  }
-
-  // 2. Close all other modals (except Auth)
-  const modals = document.querySelectorAll('.modal-overlay');
-  modals.forEach(modal => {
-    if (modal.id !== 'authModal') {
-      modal.classList.remove('open');
-      modal.setAttribute('aria-hidden', 'true');
-      if (modal.style.display === 'block' || modal.style.display === 'flex') {
-        modal.style.display = 'none';
-      }
+  accountDropdownMenu?.addEventListener('click', (e) => {
+    if (e.target.tagName === 'BUTTON' || e.target.closest('button')) {
+      accountDropdownMenu.classList.remove('show');
     }
   });
-}
 
-authLogoutDropdown?.addEventListener('click', async () => {
-  await supabase.auth.signOut();
-  window.location.reload();
-});
+  openAccountAuthBtn?.addEventListener('click', () => {
+    accountDropdownMenu?.classList.remove('show');
+    openAuthModal();
+  });
 
+  authCancel?.addEventListener('click', closeAuthModal);
+  closeAuthBtn?.addEventListener('click', closeAuthModal);
 
-// Modal Action Buttons (Actual Submit)
-const authUpdatePassword = document.getElementById('authUpdatePassword');
-const authPassConfirm = document.getElementById('authPassConfirm');
+  window.addEventListener('click', (e) => {
+    if (accountBtn && accountDropdownMenu && !accountBtn.contains(e.target) && !accountDropdownMenu.contains(e.target)) {
+      accountDropdownMenu.classList.remove('show');
+    }
+  });
 
-authUpdatePassword?.addEventListener('click', async () => {
-  const newPassword = authPass.value;
-  const confirm = authPassConfirm.value;
+  authModal?.addEventListener('click', (e) => {
+    if (e.target === authModal) {
+      closeAuthModal();
+    }
+  });
 
-  if (!newPassword) {
-    authHint.textContent = 'Please enter a new password.';
-    authPass.focus();
-    return;
-  }
+  authLogoutDropdown?.addEventListener('click', async () => {
+    await supabase.auth.signOut();
+    window.location.reload();
+  });
 
-  if (newPassword !== confirm) {
-    authHint.textContent = 'Passwords do not match.';
-    authPassConfirm.focus();
-    return;
-  }
+  authUpdatePasswordBtn?.addEventListener('click', async () => {
+    const newPassword = authPass.value;
+    const confirm = authPassConfirm.value;
 
-  authHint.textContent = 'Updating password...';
-  const { error } = await supabase.auth.updateUser({ password: newPassword });
+    if (!newPassword) {
+      authHint.textContent = 'Please enter a new password.';
+      authPass.focus();
+      return;
+    }
 
-  if (error) {
-    authHint.textContent = `Error: ${error.message} `;
-  } else {
-    authHint.textContent = 'Password updated successfully!';
+    if (newPassword !== confirm) {
+      authHint.textContent = 'Passwords do not match.';
+      authPassConfirm.focus();
+      return;
+    }
+
+    authHint.textContent = 'Updating password...';
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+
+    if (error) {
+      authHint.textContent = `Error: ${error.message} `;
+    } else {
+      authHint.textContent = 'Password updated successfully!';
+      authPass.value = '';
+      authPassConfirm.value = '';
+      setTimeout(() => closeAuthModal(), 1500);
+    }
+  });
+
+  authRegister?.addEventListener('click', async () => {
+    const email = authEmail.value.trim();
+    const password = authPass.value;
+    authHint.textContent = 'Registering...';
+    const { data, error } = await supabase.auth.signUp({ email, password });
+    if (error) { authHint.textContent = error.message; return; }
+    authHint.textContent = 'Registered! Please check your email for confirmation, then sign in.';
+    authEmail.value = '';
     authPass.value = '';
-    authPassConfirm.value = '';
-    setTimeout(() => closeAuthModal(), 1500);
-  }
-});
-
-authRegister?.addEventListener('click', async () => {
-  const email = authEmail.value.trim();
-  const password = authPass.value;
-  authHint.textContent = 'Registering...';
-  const { data, error } = await supabase.auth.signUp({ email, password });
-  if (error) { authHint.textContent = error.message; return; }
-  authHint.textContent = 'Registered! Please check your email for confirmation, then sign in.';
-  authEmail.value = '';
-  authPass.value = '';
-  authPassConfirm.value = '';
-});
-
-authLogin?.addEventListener('click', async () => {
-  const email = authEmail.value.trim();
-  const password = authPass.value;
-  authHint.textContent = 'Signing in...';
-  // Use simple sign in - legacy code used 'supabase.auth.signInWithPassword'
-  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-  if (error) { authHint.textContent = error.message; return; }
-  currentUser = data.user;
-  authHint.textContent = 'Signed in!';
-  updateAccountUI();
-  updateAdminUI();
-  closeAuthModal();
-  const { refreshPatternSelect } = await import('./pattern-crud.js');
-  await refreshPatternSelect();
-  initScale();
-});
-
-// Forgot Password
-document.getElementById('authForgotPassword')?.addEventListener('click', async () => {
-  const email = authEmail.value.trim();
-  if (!email) {
-    authHint.textContent = 'Please enter your email above first.';
-    authEmail.focus();
-    return;
-  }
-
-  authHint.textContent = 'Sending reset link...';
-  const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: window.location.origin, // Sends them back here
+    if (authPassConfirm) authPassConfirm.value = '';
   });
 
-  if (error) {
-    authHint.textContent = `Error: ${error.message} `;
-  } else {
-    authHint.textContent = 'Reset link sent! Check your email.';
-  }
-});
+  authLogin?.addEventListener('click', async () => {
+    const email = authEmail.value.trim();
+    const password = authPass.value;
+    authHint.textContent = 'Signing in...';
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) { authHint.textContent = error.message; return; }
+    currentUser = data.user;
+    authHint.textContent = 'Signed in!';
+    updateAccountUI();
+    updateAdminUI();
+    closeAuthModal();
+    const { refreshPatternSelect } = await import('./pattern-crud.js');
+    await refreshPatternSelect();
+    initScale();
+  });
 
-// Toggle Password Update UI
-document.getElementById('authTogglePasswordBtn')?.addEventListener('click', () => {
-  const upPass = document.getElementById('authUpdatePassword');
-  if (upPass) upPass.style.display = '';
-  const pcr = document.getElementById('authPasswordConfirmRow');
-  if (pcr) pcr.style.display = '';
-  const pr = document.getElementById('authPasswordRow');
-  if (pr) pr.style.display = '';
+  authForgotPassword?.addEventListener('click', async () => {
+    const email = authEmail.value.trim();
+    if (!email) {
+      authHint.textContent = 'Please enter your email above first.';
+      authEmail.focus();
+      return;
+    }
 
-  document.getElementById('authTogglePasswordBtn').style.display = 'none';
-  // Hide Email update UI
-  const cpr = document.getElementById('authCurrentPassRow');
-  if (cpr) cpr.style.display = 'none';
-  const upEmail = document.getElementById('authUpdateEmail');
-  if (upEmail) upEmail.style.display = 'none';
-  authPass.focus();
-});
+    authHint.textContent = 'Sending reset link...';
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.origin,
+    });
 
-// Detect Email Change
-authEmail?.addEventListener('input', () => {
-  if (!currentUser) return;
-  const current = currentUser.email;
-  const val = authEmail.value.trim();
+    if (error) {
+      authHint.textContent = `Error: ${error.message} `;
+    } else {
+      authHint.textContent = 'Reset link sent! Check your email.';
+    }
+  });
 
-  if (val !== current) {
-    // Show Email Update UI
-    const cpr = document.getElementById('authCurrentPassRow');
-    if (cpr) cpr.style.display = '';
-    const upEmail = document.getElementById('authUpdateEmail');
-    if (upEmail) upEmail.style.display = '';
-
-    // Hide Password Update UI
-    const pr = document.getElementById('authPasswordRow');
-    if (pr) pr.style.display = 'none';
-    const pcr = document.getElementById('authPasswordConfirmRow');
-    if (pcr) pcr.style.display = 'none';
+  authTogglePasswordBtn?.addEventListener('click', () => {
     const upPass = document.getElementById('authUpdatePassword');
-    if (upPass) upPass.style.display = 'none';
-    const tpb = document.getElementById('authTogglePasswordBtn');
-    if (tpb) tpb.style.display = 'none';
-  } else {
-    // Revert
+    if (upPass) upPass.style.display = '';
+    const pcr = document.getElementById('authPasswordConfirmRow');
+    if (pcr) pcr.style.display = '';
+    const pr = document.getElementById('authPasswordRow');
+    if (pr) pr.style.display = '';
+
+    authTogglePasswordBtn.style.display = 'none';
     const cpr = document.getElementById('authCurrentPassRow');
     if (cpr) cpr.style.display = 'none';
     const upEmail = document.getElementById('authUpdateEmail');
     if (upEmail) upEmail.style.display = 'none';
-    // Show password toggle again
-    const tpb = document.getElementById('authTogglePasswordBtn');
-    if (tpb) tpb.style.display = '';
-  }
-});
-
-// Update Email Action
-const authUpdateEmail = document.getElementById('authUpdateEmail');
-const authCurrentPass = document.getElementById('authCurrentPass');
-
-authUpdateEmail?.addEventListener('click', async () => {
-  const newEmail = authEmail.value.trim();
-  const password = authCurrentPass.value;
-
-  if (!password) {
-    authHint.textContent = 'Please enter your current password.';
-    authCurrentPass.focus();
-    return;
-  }
-
-  authHint.textContent = 'Verifying...';
-
-  // Re-auth
-  const { error: loginErr } = await supabase.auth.signInWithPassword({
-    email: currentUser.email,
-    password: password
+    authPass.focus();
   });
 
-  if (loginErr) {
-    authHint.textContent = 'Incorrect password.';
-    return;
-  }
+  authEmail?.addEventListener('input', () => {
+    if (!currentUser) return;
+    const current = currentUser.email;
+    const val = authEmail.value.trim();
 
-  authHint.textContent = 'Updating email...';
-  const { error } = await supabase.auth.updateUser(
-    { email: newEmail },
-    { emailRedirectTo: window.location.href }
-  );
+    if (val !== current) {
+      const cpr = document.getElementById('authCurrentPassRow');
+      if (cpr) cpr.style.display = '';
+      const upEmail = document.getElementById('authUpdateEmail');
+      if (upEmail) upEmail.style.display = '';
+      const pr = document.getElementById('authPasswordRow');
+      if (pr) pr.style.display = 'none';
+      const pcr = document.getElementById('authPasswordConfirmRow');
+      if (pcr) pcr.style.display = 'none';
+      const upPass = document.getElementById('authUpdatePassword');
+      if (upPass) upPass.style.display = 'none';
+      const tpb = document.getElementById('authTogglePasswordBtn');
+      if (tpb) tpb.style.display = 'none';
+    } else {
+      const cpr = document.getElementById('authCurrentPassRow');
+      if (cpr) cpr.style.display = 'none';
+      const upEmail = document.getElementById('authUpdateEmail');
+      if (upEmail) upEmail.style.display = 'none';
+      const tpb = document.getElementById('authTogglePasswordBtn');
+      if (tpb) tpb.style.display = '';
+    }
+  });
 
-  if (error) {
-    authHint.textContent = `Error: ${error.message} `;
-  } else {
-    authHint.textContent = 'Please check BOTH your old and new email inboxes. You must click both verification links to complete the change.';
-    authCurrentPass.value = '';
-  }
-});
+  authUpdateEmailBtn?.addEventListener('click', async () => {
+    const newEmail = authEmail.value.trim();
+    const password = authCurrentPass.value;
 
-// Keep existing logout for safety if it exists elsewhere
-authLogout?.addEventListener('click', async () => {
-  await supabase.auth.signOut();
-  window.location.reload();
-});
+    if (!password) {
+      authHint.textContent = 'Please enter your current password.';
+      authCurrentPass.focus();
+      return;
+    }
+
+    authHint.textContent = 'Verifying...';
+    const { error: loginErr } = await supabase.auth.signInWithPassword({
+      email: currentUser.email,
+      password: password
+    });
+
+    if (loginErr) {
+      authHint.textContent = 'Incorrect password.';
+      return;
+    }
+
+    authHint.textContent = 'Updating email...';
+    const { error } = await supabase.auth.updateUser(
+      { email: newEmail },
+      { emailRedirectTo: window.location.href }
+    );
+
+    if (error) {
+      authHint.textContent = `Error: ${error.message} `;
+    } else {
+      authHint.textContent = 'Please check BOTH your old and new email inboxes. You must click both verification links to complete the change.';
+      authCurrentPass.value = '';
+    }
+  });
+
+  authLogout?.addEventListener('click', async () => {
+    await supabase.auth.signOut();
+    window.location.reload();
+  });
+
+  // Initialization calls
+  await initAuthSession();
+  await initScale();
+}

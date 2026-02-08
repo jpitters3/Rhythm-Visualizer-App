@@ -10,7 +10,7 @@ import { initCourseCreator } from './course-creator.js';
 import { initControls, loadPatternByName, syncVirtualHandpanControls } from './controls.js';
 import { updateComposeUI } from './compose-mode.js';
 import { setPresentation, initPresentation } from './presentation-mode.js';
-import { currentUser } from './auth.js';
+import { currentUser, initAuth } from './auth.js';
 import { STEPS } from './rhythm-core.js';
 import { supabase } from './supabase-client.js';
 import './courses.js'; // Initialize course sidebar and listeners
@@ -25,21 +25,40 @@ import { initHandpanMap } from './handpanmap.js';
 import { initTranscription } from './transcription.js';
 import { initAiAssistant } from './ai-assistant.js';
 
-// Initialize Logic
-initMobileMenu();
-initMeasureActions();
-initPresentation();
-initPOTW();
-HistoryManager.init();
-ChordUI.init();
-initHandpanMap();
-initTranscription();
-initAiAssistant();
-initCourseCreator();
-initControls();
-initShortcuts();
-initNotePlayer();
-initNoteGrid();
+/**
+ * Main application initializer
+ */
+async function init() {
+  console.log('--- APP INIT START ---');
+
+  try {
+    // 1. Auth (Must be first for currentProfile/currentUser dependent modules)
+    await initAuth();
+
+    // 2. Core UI/Logic
+    initMobileMenu();
+    initMeasureActions();
+    initPresentation();
+    initPOTW();
+    HistoryManager.init();
+    ChordUI.init();
+    initHandpanMap();
+    initTranscription();
+    initAiAssistant();
+    initCourseCreator();
+    initControls();
+    initShortcuts();
+    initNotePlayer();
+    initNoteGrid();
+
+    // 3. Launch safeInit (which handles pattern loading and final renders)
+    safeInit();
+
+    console.log('--- APP INIT COMPLETE ---');
+  } catch (err) {
+    showFatalError(err);
+  }
+}
 
 function updateMetroUI() {
   const ctx = activeGrid || gridA;
@@ -254,6 +273,6 @@ function safeInit() {
 // Let the browser paint UI first, then init.
 requestAnimationFrame(() => {
   setTimeout(() => {
-    safeInit();
+    init();
   }, 0);
 });
