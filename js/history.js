@@ -89,10 +89,3 @@ export const HistoryManager = {
     if (redoBtn) redoBtn.disabled = (this.redoStack.length === 0);
   }
 };
-
-// Auto-init if DOM ready, or wait
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', () => HistoryManager.init());
-} else {
-  HistoryManager.init();
-}

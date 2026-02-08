@@ -282,6 +282,4 @@ const ChordUI = (function () {
 
 })();
 
-// Init on load
-document.addEventListener('DOMContentLoaded', ChordUI.init);
 export default ChordUI;

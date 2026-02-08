@@ -1,5 +1,4 @@
 import { activeGrid } from './grid-context.js';
-import { calculateSteps, getTimeSignature } from './rhythm-core.js';
 import { renderAllMeasures } from './notegrid.js';
 import { setCaret, setRange, clearRange, getRange } from './range-selection.js';
 import { HistoryManager } from './history.js';
@@ -140,28 +139,30 @@ export function deleteMeasuresRange(startM, endM, ctx) {
 
 // ===== UI EVENT LISTENERS ===== //
 
-document.getElementById('addMeasureBtn')?.addEventListener('click', () => {
-  const ctx = activeGrid;
-  appendEmptyMeasure(ctx);
-  // append is end?
-  const m = ctx.measures - 1;
-  const { start } = measureRange(m, ctx);
-  setCaret(start, ctx);
-});
+export function initMeasureActions() {
+  document.getElementById('addMeasureBtn')?.addEventListener('click', () => {
+    const ctx = activeGrid;
+    appendEmptyMeasure(ctx);
+    // append is end?
+    const m = ctx.measures - 1;
+    const { start } = measureRange(m, ctx);
+    setCaret(start, ctx);
+  });
 
-document.getElementById('delMeasureBtn')?.addEventListener('click', () => {
-  const ctx = activeGrid;
-  const range = getRange(ctx);
-  if (range && range.length > 1) {
-    const s = ctx.stepsPerMeasure;
-    const startM = Math.floor(range.start / s);
-    const endM = Math.floor(range.end / s);
-    deleteMeasuresRange(startM, endM, ctx);
-  } else {
-    deleteMeasure(getActiveMeasureIndex(ctx), ctx);
-  }
-});
+  document.getElementById('delMeasureBtn')?.addEventListener('click', () => {
+    const ctx = activeGrid;
+    const range = getRange(ctx);
+    if (range && range.length > 1) {
+      const s = ctx.stepsPerMeasure;
+      const startM = Math.floor(range.start / s);
+      const endM = Math.floor(range.end / s);
+      deleteMeasuresRange(startM, endM, ctx);
+    } else {
+      deleteMeasure(getActiveMeasureIndex(ctx), ctx);
+    }
+  });
 
-document.getElementById('selDuplicateBtn')?.addEventListener('click', () => {
-  duplicateSelection(activeGrid);
-});
+  document.getElementById('selDuplicateBtn')?.addEventListener('click', () => {
+    duplicateSelection(activeGrid);
+  });
+}

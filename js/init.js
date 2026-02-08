@@ -9,7 +9,7 @@ import { refreshPatternSelect, serializePattern, updatePatternButtons, snapshotC
 import { initCourseCreator } from './course-creator.js';
 import { initControls, loadPatternByName, syncVirtualHandpanControls } from './controls.js';
 import { updateComposeUI } from './compose-mode.js';
-import { setPresentation } from './presentation-mode.js';
+import { setPresentation, initPresentation } from './presentation-mode.js';
 import { currentUser } from './auth.js';
 import { STEPS } from './rhythm-core.js';
 import { supabase } from './supabase-client.js';
@@ -17,9 +17,18 @@ import './courses.js'; // Initialize course sidebar and listeners
 import './practice.js'; // Initialize practice sidebar
 import { initMobileMenu } from './mobile-menu.js';
 import { initShortcuts } from './keyboard-shortcuts.js';
+import { initMeasureActions } from './measure-actions.js';
+import { HistoryManager } from './history.js';
+import ChordUI from './chord-ui.js';
+import { initPOTW } from './pattern-of-the-week.js';
 
 // Initialize Logic
 initMobileMenu();
+initMeasureActions();
+initPresentation();
+initPOTW();
+HistoryManager.init();
+ChordUI.init();
 initCourseCreator();
 initControls();
 initShortcuts();

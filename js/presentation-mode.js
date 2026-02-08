@@ -127,7 +127,7 @@ export function resetPresentationView() {
 }
 
 // Initialize Presentation Mode
-document.addEventListener('DOMContentLoaded', () => {
+export function initPresentation() {
   if (localStorage.getItem(PRESENT_KEY) === 'on') {
     // Restore UI state immediately
     document.body.classList.add('present');
@@ -152,7 +152,12 @@ document.addEventListener('DOMContentLoaded', () => {
       updatePresentationView(step, ctx);
     }
   });
-});
+
+  // Detect externally triggered Fullscreen exit (e.g. Esc key by user)
+  document.addEventListener('fullscreenchange', handleFullscreenChange);
+  document.addEventListener('mozfullscreenchange', handleFullscreenChange);
+  document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+}
 
 // Detect externally triggered Fullscreen exit (e.g. Esc key by user)
 const handleFullscreenChange = () => {
@@ -160,9 +165,6 @@ const handleFullscreenChange = () => {
     setPresentation(false);
   }
 };
-document.addEventListener('fullscreenchange', handleFullscreenChange);
-document.addEventListener('mozfullscreenchange', handleFullscreenChange);
-document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
 
 /* ===== PRESENTATION CONTROLS ===== */
 function updatePresentationControlsVisibility(ctx = gridA) {
