@@ -4,7 +4,9 @@ import { applyPattern, serializePattern, dbSavePattern, refreshPatternSelect, ha
 import { stop } from './noteplayer.js';
 import { supabase } from './supabase-client.js';
 import { updateAdminUI } from './auth.js';
-import { isItemInPractice } from './practice.js';
+import { isItemInPractice, togglePracticeItem } from './practice.js';
+import { loadCourseToEdit } from './course-creator.js';
+import { openMarketplace } from './course-marketplace.js';
 
 // ===== SIDEBAR LOGIC (OWNED COURSES) =====
 
@@ -472,7 +474,6 @@ export function loadLesson(lessonId) {
 export async function editCourse(courseId) {
   const course = allCourses.find(c => c.id === courseId);
   if (!course) return;
-  const { loadCourseToEdit } = await import('./course-creator.js');
   loadCourseToEdit(course);
   if (window.innerWidth < 768) closeSidebar();
 }
@@ -810,8 +811,7 @@ export function initCourses() {
   refreshBtn?.addEventListener('click', fetchCourses);
 
   const openMarketBtn = document.getElementById('openMarketBtn');
-  openMarketBtn?.addEventListener('click', async () => {
-    const { openMarketplace } = await import('./course-marketplace.js');
+  openMarketBtn?.addEventListener('click', () => {
     openMarketplace();
   });
 

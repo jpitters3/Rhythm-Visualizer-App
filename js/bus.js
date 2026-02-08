@@ -5,7 +5,12 @@ export const BUS_EVENT = {
   REQUEST_LOAD_LESSON: 'lesson:load',
   SIDEBAR_CLOSE_ALL: 'sidebar:close-all',
   NOTIFY_STATE_CHANGE: 'state:change',
-  COURSE_DATA_CHANGED: 'course:data-changed'
+  COURSE_DATA_CHANGED: 'course:data-changed',
+  PLAYBACK_START: 'playback:start',
+  PLAYBACK_STOP: 'playback:stop',
+  PATTERN_REFRESH_NEEDED: 'pattern:refresh-needed',
+  PROFILE_LOAD_NEEDED: 'profile:load-needed',
+  HANDPANS_LOAD_NEEDED: 'handpans:load-needed'
 };
 
 /**

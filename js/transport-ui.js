@@ -1,5 +1,5 @@
 // TransportUI manages a set of transport controls
-// Removed top-level import to break circular dependency
+import { start, stop } from './noteplayer.js';
 
 export class TransportUI {
   constructor(ctx, container) {
@@ -18,9 +18,8 @@ export class TransportUI {
 
   init() {
     if (this.playBtn) {
-      this.playBtn.onclick = async (e) => {
+      this.playBtn.onclick = (e) => {
         e.stopPropagation();
-        const { start, stop } = await import('./noteplayer.js');
         if (this.ctx.playing) {
           stop(this.ctx);
         } else {

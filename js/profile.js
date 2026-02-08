@@ -2,6 +2,7 @@ import { currentUser } from './state.js';
 import { supabase } from './supabase-client.js';
 import { buildHandpanOverlay } from './handpanmap.js';
 import { renderAllMeasures } from './notegrid.js';
+import { Bus, BUS_EVENT } from './bus.js';
 
 // ===== USER PROFILES =====
 // Handles fetching, updating, and caching user profiles
@@ -268,3 +269,7 @@ saveProfileBtn?.addEventListener('click', async () => {
   closeProfileEditor();
 });
 
+// Event Bus Listener: Profile Load
+Bus.on(BUS_EVENT.PROFILE_LOAD_NEEDED, async () => {
+  await loadCurrentProfile();
+});

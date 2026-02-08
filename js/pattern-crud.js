@@ -6,6 +6,7 @@ import { start, stop, setMode, setTimeSignature } from './noteplayer.js';
 import { getTimeSignature } from './rhythm-core.js';
 import { renderAllMeasures, clearSelection, setDualGrid } from './notegrid.js';
 import { TransportRegistry } from './transport-ui.js';
+import { Bus, BUS_EVENT } from './bus.js';
 
 export const STORAGE_KEY = 'groovepan_patterns';
 export const LAST_USED_KEY = 'groovepan_last_pattern';
@@ -23,8 +24,6 @@ export function snapshotCurrentState() {
     lastSavedState = JSON.stringify(serializePattern());
   }
 }
-
-
 
 export async function dbListPatternNames() {
   const { data, error } = await supabase
@@ -188,8 +187,6 @@ export async function refreshPatternSelect(selectedName = '') {
   }
 }
 
-
-
 export function serializePattern(ctx = gridA) {
   const state = {
     version: (typeof window.VERSION !== 'undefined' ? window.VERSION : 'v1.0'), // Maybe import VERSION?
@@ -226,9 +223,6 @@ export async function applyPattern(state, ctx = gridA) {
     alert('That pattern JSON does not look valid.');
     return;
   }
-
-  // Dynamic import to solve circular dependency
-  const { renderAllMeasures, clearSelection, setDualGrid } = await import('./notegrid.js');
 
   const wasPlaying = ctx.playing;
   if (wasPlaying) stop(ctx);
@@ -291,3 +285,8 @@ export function ensureHasSelection() {
   }
   return true;
 }
+
+// Event Bus Listener: Pattern Refresh
+Bus.on(BUS_EVENT.PATTERN_REFRESH_NEEDED, async ({ detail }) => {
+  await refreshPatternSelect(detail?.selectedName);
+});

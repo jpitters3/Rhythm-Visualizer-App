@@ -8,6 +8,7 @@ import { getScale, getSelectedScaleName, setSelectedScaleName, setCurrentScale }
 import { supabase } from './supabase-client.js';
 import { enterCalibrationMode } from './calibration.js';
 import { activeGrid } from './grid-context.js';
+import { Bus, BUS_EVENT } from './bus.js';
 import { setBeatToGhost, renderAllMeasures } from './notegrid.js';
 
 // DOM Elements (previously globals)
@@ -358,6 +359,11 @@ function renderMyScalesList() {
     };
   });
 }
+
+// Event Bus Listener: Handpans Load
+Bus.on(BUS_EVENT.HANDPANS_LOAD_NEEDED, async () => {
+  await loadAllUserHandpans();
+});
 
 async function swapHandpanOrder(indexA, indexB) {
   if (indexA < 0 || indexB < 0 || indexA >= customHandpansCache.length || indexB >= customHandpansCache.length) return;

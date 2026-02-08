@@ -242,14 +242,10 @@ export async function initAuthSession() {
     // IMPORTANT: never await Supabase calls inside this callback directly to avoid blocking.
     setTimeout(async () => {
       try {
-        // Dynamic imports to break circular dependencies
-        const { refreshPatternSelect } = await import('./pattern-crud.js');
-        const { loadCurrentProfile } = await import('./profile.js');
-        const { loadAllUserHandpans } = await import('./handpanmap.js');
-
-        await refreshPatternSelect();
-        await loadCurrentProfile();
-        await loadAllUserHandpans();
+        // Emit events instead of dynamic imports
+        Bus.emit(BUS_EVENT.PATTERN_REFRESH_NEEDED);
+        Bus.emit(BUS_EVENT.PROFILE_LOAD_NEEDED);
+        Bus.emit(BUS_EVENT.HANDPANS_LOAD_NEEDED);
 
         window.dispatchEvent(new Event('handpan-loaded'));
       } catch (e) {
@@ -403,8 +399,7 @@ export async function initAuth() {
 
     Bus.emit(BUS_EVENT.AUTH_LOGIN, { user: currentUser });
 
-    const { refreshPatternSelect } = await import('./pattern-crud.js');
-    await refreshPatternSelect();
+    Bus.emit(BUS_EVENT.PATTERN_REFRESH_NEEDED);
     initScale();
   });
 

@@ -7,6 +7,7 @@ import { HistoryManager } from './history.js';
 import { TransportRegistry } from './transport-ui.js';
 import { isListening, getSelectedScaleName, setSelectedScaleName, getScale, setCurrentScale } from './state.js';
 import { SCALE_KEY_LOCAL, SCALE_KEY_REMOTE, SCALES } from './config.js';
+import { renderAllMeasures } from './notegrid.js';
 
 const SOUND_TAK = 'Tak';
 const SOUND_SLAP = 'Slap';
@@ -360,10 +361,8 @@ export function setTimeSignature(ts) {
   if (tsDenInput) tsDenInput.value = den;
 
   // 3. Re-render Grids
-  import('./notegrid.js').then(({ renderAllMeasures }) => {
-    renderAllMeasures(gridA);
-    if (gridB) renderAllMeasures(gridB);
-  });
+  renderAllMeasures(gridA);
+  if (gridB) renderAllMeasures(gridB);
 }
 
 export function setMode(nextMode, ctx) {
@@ -381,9 +380,7 @@ export function setMode(nextMode, ctx) {
     }
   }
 
-  import('./notegrid.js').then(({ renderAllMeasures }) => {
-    renderAllMeasures(c);
-  });
+  renderAllMeasures(c);
 
   if (wasPlaying) start(c);
 }
