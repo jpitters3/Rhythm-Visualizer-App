@@ -18,11 +18,14 @@
   height: 40px;
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.15);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
+  /* backdrop-filter: blur(4px); */
+  /* -webkit-backdrop-filter: blur(4px); */
+  /* Performance Fix: Removed blur to prevent crash in Chrome/Brave */
+  
   border: 1px solid rgba(255, 255, 255, 0.4);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2), inset 0 0 10px rgba(255, 255, 255, 0.1);
   transform: translate(-50%, -50%);
+  will-change: transform, left, top;
   transition: top 0.15s cubic-bezier(0.25, 0.46, 0.45, 0.94),
     left 0.15s cubic-bezier(0.25, 0.46, 0.45, 0.94),
     transform 0.1s ease-out,

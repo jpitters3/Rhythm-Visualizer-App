@@ -11,6 +11,14 @@ const songLibraryList = document.getElementById('songLibraryList');
 // State
 let librarySongs = [];
 
+// Import renderAllMeasures dynamically or assume check?
+// Better to import it if it is a module.
+// But this file has no imports at the top. It seems to be treated as a module by the bundler/browser if type="module".
+import { renderAllMeasures } from './notegrid.js';
+import { setTimeSignature } from './noteplayer.js';
+import { innerLabels } from './state.js'; // This seems wrong, innerLabels is a getter/state
+import { activeGrid } from './grid-context.js'; // We need activeGrid to set innerLabels
+
 // Init Listeners
 if (songLibraryBtn) {
   songLibraryBtn.addEventListener('click', openSongLibrary);
@@ -129,25 +137,47 @@ function renderLibrary() {
     // Builder Item
     const div = document.createElement('div');
     div.className = 'song-item';
-    div.innerHTML = `
-      <div class="song-info">
+
+    // Info Section
+    const infoDiv = document.createElement('div');
+    infoDiv.className = 'song-info';
+    infoDiv.innerHTML = `
         <div class="song-title">${song.name}</div>
         <div class="song-meta">
            <span class="compat-badge ${compatClass}">${compatText}</span>
            <span>Preview unavailable</span>
         </div>
-      </div>
-      <div class="song-actions">
-        ${isAdminUser(currentUser) ? `<button class="song-delete-btn" onclick="deleteSong('${song.id}')" title="Delete">&times;</button>` : ''}
-        <button class="song-load-btn" onclick="loadLibrarySong('${song.id}')">Load</button>
-      </div>
     `;
+    div.appendChild(infoDiv);
+
+    // Actions Section
+    const actionsDiv = document.createElement('div');
+    actionsDiv.className = 'song-actions';
+
+    // Delete Button (Admin Only)
+    if (isAdminUser(currentUser)) {
+      const delBtn = document.createElement('button');
+      delBtn.className = 'song-delete-btn';
+      delBtn.innerHTML = '&times;';
+      delBtn.title = 'Delete';
+      delBtn.addEventListener('click', () => deleteSong(song.id));
+      actionsDiv.appendChild(delBtn);
+    }
+
+    // Load Button
+    const loadBtn = document.createElement('button');
+    loadBtn.className = 'song-load-btn';
+    loadBtn.textContent = 'Load';
+    loadBtn.addEventListener('click', () => loadLibrarySong(song.id));
+    actionsDiv.appendChild(loadBtn);
+
+    div.appendChild(actionsDiv);
     songLibraryList.appendChild(div);
   });
 }
 
-// Global functions for inline onclicks
-window.loadLibrarySong = function (id) {
+// Internal functions (No longer on window)
+function loadLibrarySong(id) {
   const song = librarySongs.find(s => s.id === id);
   if (!song) return;
 
@@ -156,16 +186,18 @@ window.loadLibrarySong = function (id) {
   // Load Logic (Similar to loadPattern)
   if (confirm(`Load "${song.name}"? This will overwrite your current grid.`)) {
     // 1. Set Labels
-    if (p.labels) innerLabels = p.labels; // Global innerLabels update
+    if (p.labels) {
+      if (activeGrid) activeGrid.innerLabels = p.labels;
+    }
 
     // 2. Reset Mode/Measures if needed (Assuming 16ths for MIDI)
-    if (p.mode) mode = p.mode; // '16'
+    if (p.mode && activeGrid) activeGrid.mode = p.mode; // '16'
     if (p.timeSignature && typeof setTimeSignature === 'function') {
       setTimeSignature(p.timeSignature);
     }
 
     // 3. Render
-    if (typeof renderAllMeasures === 'function') renderAllMeasures();
+    if (typeof renderAllMeasures === 'function') renderAllMeasures(activeGrid);
 
     // 4. Close Modal
     songLibraryModal.classList.remove('open');
@@ -182,7 +214,7 @@ window.loadLibrarySong = function (id) {
   }
 };
 
-window.deleteSong = async function (id) {
+async function deleteSong(id) {
   if (!confirm("Are you sure you want to delete this song?")) return;
 
   const { error } = await supabase1

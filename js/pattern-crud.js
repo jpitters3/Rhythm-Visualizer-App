@@ -220,12 +220,15 @@ export function serializePattern(ctx = gridA) {
   return state;
 }
 
-export function applyPattern(state, ctx = gridA) {
+export async function applyPattern(state, ctx = gridA) {
   if (!state || !state.mode || !Array.isArray(state.labels)) {
     console.error('Invalid pattern state:', state);
     alert('That pattern JSON does not look valid.');
     return;
   }
+
+  // Dynamic import to solve circular dependency
+  const { renderAllMeasures, clearSelection, setDualGrid } = await import('./notegrid.js');
 
   const wasPlaying = ctx.playing;
   if (wasPlaying) stop(ctx);

@@ -405,8 +405,10 @@ export function setTimeSignature(ts) {
   if (tsDenInput) tsDenInput.value = den;
 
   // 3. Re-render Grids
-  renderAllMeasures(gridA);
-  if (gridB) renderAllMeasures(gridB);
+  import('./notegrid.js').then(({ renderAllMeasures }) => {
+    renderAllMeasures(gridA);
+    if (gridB) renderAllMeasures(gridB);
+  });
 }
 
 export function setMode(nextMode, ctx) {

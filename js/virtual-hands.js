@@ -39,6 +39,47 @@ class VirtualHands {
 
     // Register with NotePlayer
     addTickObserver((ctx, notes, hands) => this.onTick(ctx, notes, hands));
+
+    // Performance Observer: Hide hands when heavy modals are open
+    this.initVisibilityObserver();
+  }
+
+  initVisibilityObserver() {
+    // We want to hide the layer if #courseModal has class 'open' 
+    // OR #lessonPlayer is visible
+    const courseModal = document.getElementById('courseModal');
+    const lessonPlayer = document.getElementById('lessonPlayer');
+
+    const check = () => {
+      if (!this.layer) return;
+
+      const isCourseOpen = courseModal && courseModal.classList.contains('open');
+      const isLessonOpen = lessonPlayer && lessonPlayer.style.display !== 'none' && lessonPlayer.style.display !== '';
+
+      if (isCourseOpen || isLessonOpen) {
+        if (this.layer.style.display !== 'none') {
+          this.layer.style.display = 'none';
+        }
+      } else {
+        // Only restore if globally enabled
+        if (this.enabled && this.layer.style.display === 'none') {
+          this.layer.style.display = 'block';
+        }
+      }
+    };
+
+    // Observer for Course Modal Class Changes
+    if (courseModal) {
+      new MutationObserver(check).observe(courseModal, { attributes: true, attributeFilter: ['class'] });
+    }
+
+    // Observer for Lesson Player Style Changes
+    if (lessonPlayer) {
+      new MutationObserver(check).observe(lessonPlayer, { attributes: true, attributeFilter: ['style'] });
+    }
+
+    // Also check on interval just in case interaction misses observer
+    setInterval(check, 1000);
   }
 
   setEnabled(val) {
@@ -48,6 +89,8 @@ class VirtualHands {
   }
 
   updateVisibility() {
+    if (!this.layer) return;
+    // Respect the manual toggle, but Observer will override if modal is open
     this.layer.style.display = this.enabled ? 'block' : 'none';
   }
 

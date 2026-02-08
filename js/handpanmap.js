@@ -1,4 +1,4 @@
-/* Includes scale selector */
+import { getComposeOn } from './compose-mode.js';
 import { SCALES, setCurrentScale, saveScaleLocal, saveScaleRemote, preloadScaleSamples, noteForLabel, getScale, isDownbeatStep, setSelectedScaleName, getSelectedScaleName, registerHighlighter, loadScaleLocal, playNoteByLabel } from './noteplayer.js';
 import { supabase } from './supabase-client.js';
 import { enterCalibrationMode } from './calibration.js';
@@ -461,7 +461,7 @@ export function highlightHandpan(note, stepIndex, forceHand = null) {
 
   // Sticking Override
   let down;
-  const sticking = forceHand || (window.innerHands && window.innerHands[stepIndex]);
+  const sticking = forceHand || (activeGrid.innerHands && activeGrid.innerHands[stepIndex]);
 
   if (sticking === 'R') {
     down = true;
@@ -541,6 +541,11 @@ handpanOverlay?.addEventListener('click', (e) => {
     if (selIdx !== null) {
       // Alt click means "don’t advance"
       const noAdvance = e.altKey; // Alt = write without advancing
+
+      // Check compose mode via module export
+      if (getComposeOn && getComposeOn()) {
+        // ... logic handled inside writeToSelected usually, but if we need it here:
+      }
       writeToSelected(note, { advance: !noAdvance });
     }
   }
