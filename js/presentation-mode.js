@@ -8,8 +8,7 @@ export const PRESENT_KEY = 'groovepan_presentation_mode';
 
 let lastMeasureIndex = -1;
 
-const presentBtn = document.getElementById('presentBtn');
-const exitPresent = document.getElementById('exitPresent');
+let presentBtn, exitPresent;
 
 
 async function enterFullscreenIfPossible() {
@@ -128,6 +127,9 @@ export function resetPresentationView() {
 
 // Initialize Presentation Mode
 export function initPresentation() {
+  presentBtn = document.getElementById('presentBtn');
+  exitPresent = document.getElementById('exitPresent');
+
   if (localStorage.getItem(PRESENT_KEY) === 'on') {
     // Restore UI state immediately
     document.body.classList.add('present');

@@ -13,13 +13,15 @@ const ChordUI = (function () {
   let currentChords = [];
   let favoriteChords = new Set();
   const FAV_KEY = 'groovepan_favorite_chords';
-  const drawer = document.getElementById('chordDrawer');
-  const header = document.getElementById('chordDrawerHeader');
-  const list = document.getElementById('chordList');
-  const countLabel = document.getElementById('chordCount');
-  const toggleIcon = document.querySelector('#chordDrawer .toggle-icon');
+  let drawer, header, list, countLabel, toggleIcon;
 
   function init() {
+    drawer = document.getElementById('chordDrawer');
+    header = document.getElementById('chordDrawerHeader');
+    list = document.getElementById('chordList');
+    countLabel = document.getElementById('chordCount');
+    toggleIcon = document.querySelector('#chordDrawer .toggle-icon');
+
     if (!drawer) return;
 
     // Load Favorites

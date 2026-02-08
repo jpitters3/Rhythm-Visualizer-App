@@ -214,7 +214,7 @@ function renderList(container, items, emptyText) {
                  <div class="meta">${d}</div>
                </div>
                <div class="potw-actions">
-                 <button class="icon-btn edit-btn" onclick="window.potwActions.editItem(${itemJson})" title="Edit / Reschedule">✏️</button>
+                 <button class="icon-btn edit-btn" onclick='window.potwActions.editItem(${itemJson})' title="Edit / Reschedule">✏️</button>
                  <button class="icon-btn delete-btn" onclick="window.potwActions.deleteItem('${item.id}')" title="Unschedule / Delete">🗑️</button>
                </div>
             </div>

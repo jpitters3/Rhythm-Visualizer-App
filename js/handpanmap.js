@@ -11,16 +11,7 @@ import { activeGrid } from './grid-context.js';
 import { setBeatToGhost, renderAllMeasures } from './notegrid.js';
 
 // DOM Elements (previously globals)
-const scaleSelect = document.getElementById('scaleSelect');
-const handpanImg = document.getElementById('handpanImg');
-const scaleStatus = document.getElementById('scaleStatus');
-const handpanSelect = document.getElementById('handpanSelect');
-const numberPitchSelect = document.getElementById('numberPitchSelect');
-const ghostBtn = document.getElementById('ghostBtn');
-const lockBtn = document.getElementById('lockBtn');
-const composeBtn = document.getElementById('composeBtn');
-const handpanSection = document.getElementById('handpanSection');
-const handpanOverlay = document.getElementById('handpanOverlay');
+let scaleSelect, handpanImg, scaleStatus, handpanSelect, numberPitchSelect, ghostBtn, lockBtn, composeBtn, handpanSection, handpanOverlay;
 
 /* Mapped to nine-note-handpan-numbered.png */
 const HANDPAN_MAP_SKETCH = {
@@ -215,25 +206,7 @@ function applyCustomHandpan(handpanData) {
 }
 
 // === MY SCALES MANAGEMENT ===
-const myScalesBtn = document.getElementById('myScalesBtn');
-const myScalesModal = document.getElementById('myScalesModal');
-const closeMyScalesBtn = document.getElementById('closeMyScalesBtn');
-const myScalesList = document.getElementById('myScalesList');
-
-myScalesBtn?.addEventListener('click', openMyScalesModal);
-closeMyScalesBtn?.addEventListener('click', closeMyScalesModal);
-
-// Close on Backdrop Click
-myScalesModal.addEventListener('click', (e) => {
-  if (e.target === myScalesModal) closeMyScalesModal();
-});
-
-// Close on Escape Key
-document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && myScalesModal.classList.contains('open')) {
-    closeMyScalesModal();
-  }
-});
+let myScalesBtn, myScalesModal, closeMyScalesBtn, myScalesList;
 
 function closeMyScalesModal() {
   myScalesModal.classList.remove('open');
@@ -461,32 +434,7 @@ export function buildHandpanOverlay() {
     overlayNumberPitchNotes(); else removeNoteLabels();
 }
 
-// Consolidated Initialization
-function runHandpanInit() {
-  registerHighlighter(highlightHandpan);
-  buildHandpanOverlay();
 
-  // Initialize Scale from previous session
-  if (loadScaleLocal && scaleSelect) {
-    let saved = loadScaleLocal();
-    if (saved) {
-      const exists = Array.from(scaleSelect.options).some(o => o.value === saved);
-      if (exists || saved.startsWith('custom:')) {
-        scaleSelect.value = saved;
-        // Manually trigger change to apply it
-        scaleSelect.dispatchEvent(new Event('change'));
-      }
-    }
-  }
-
-  window.dispatchEvent(new Event('handpan-loaded'));
-}
-
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', runHandpanInit);
-} else {
-  runHandpanInit();
-}
 
 let hpPulseTimers = new Map();
 
@@ -522,7 +470,7 @@ export function highlightHandpan(note, stepIndex, forceHand = null) {
 }
 
 /* Calibration */
-const calBtn = document.getElementById('calBtn');
+let calBtn;
 let calibrating = false;
 let selectedHpNote = null;
 
@@ -539,7 +487,6 @@ function setCalibrating(on) {
   }
 }
 
-calBtn?.addEventListener('click', () => setCalibrating(!calibrating));
 
 function selectHpDot(note) {
   selectedHpNote = note;
@@ -548,197 +495,19 @@ function selectHpDot(note) {
   }
 }
 
-// Click-to-select dots
-handpanOverlay?.addEventListener('click', (e) => {
-  if (calibrating) {
-    const dot = e.target.closest('.hp-dot');
-    if (!dot) return;
-    const note = dot.dataset.note;
-    if (!note || !HANDPAN_MAP[note]) return;
-    selectHpDot(note);
-
-  } else {
-    // Play notes like a virtual handpan
-    const dot = e.target.closest('.hp-dot');
-    if (!dot) return;
-
-    const note = dot.dataset.note;
-    if (!note) return;
-
-    // If not composing and nothing selected, we can still play sounds.
-    // If a beat is selected, write to it.
-
-    // Play note sound on click / tap
-    playNoteByLabel(note, null);
-    highlightHandpan(note, null);
-
-    // If a beat is selected, write to it (Compose auto-advance applies)
-    const selIdx = activeGrid.caretIndex;
-    if (selIdx !== null) {
-      // Alt click means "don’t advance"
-      const noAdvance = e.altKey; // Alt = write without advancing
-
-      // Check compose mode via module export
-      if (getComposeOn && getComposeOn()) {
-        // ... logic handled inside writeToSelected usually, but if we need it here:
-      }
-      writeToSelected(note, { advance: !noAdvance });
-    }
-  }
-});
 
 // Nudge with arrow keys
 let isHpDragging = false;
 let hpDragStart = { x: 0, y: 0 }; // px
 let hpNoteStart = { x: 0, y: 0 }; // %
 
-// Drag Start
-handpanOverlay?.addEventListener('mousedown', (e) => {
-  if (!calibrating) return;
-  const dot = e.target.closest('.hp-dot');
-  if (!dot) return;
-
-  e.preventDefault(); // prevent text selection
-  const note = dot.dataset.note;
-  if (!HANDPAN_MAP[note]) return;
-
-  selectHpDot(note); // Selects it visually
-
-  isHpDragging = true;
-  hpDragStart = { x: e.clientX, y: e.clientY };
-  hpNoteStart = { x: HANDPAN_MAP[note].x, y: HANDPAN_MAP[note].y };
-});
-
-// Drag Move
-window.addEventListener('mousemove', (e) => {
-  if (!isHpDragging || !calibrating || !selectedHpNote) return;
-
-  const overlay = handpanOverlay.getBoundingClientRect();
-  if (overlay.width === 0 || overlay.height === 0) return;
-
-  const dxPx = e.clientX - hpDragStart.x;
-  const dyPx = e.clientY - hpDragStart.y;
-
-  const dxPct = (dxPx / overlay.width) * 100;
-  const dyPct = (dyPx / overlay.height) * 100;
-
-  const p = HANDPAN_MAP[selectedHpNote];
-  p.x = clamp(hpNoteStart.x + dxPct, 0, 100);
-  p.y = clamp(hpNoteStart.y + dyPct, 0, 100);
-
-  // Update DOM
-  const el = handpanDots.get(selectedHpNote);
-  if (el) {
-    el.style.left = `${p.x}%`;
-    el.style.top = `${p.y}%`;
-  }
-});
-
-// Drag End
-window.addEventListener('mouseup', () => {
-  if (isHpDragging) {
-    isHpDragging = false;
-    // Trigger Save
-    if (hpMapSaveTimeout) clearTimeout(hpMapSaveTimeout);
-    hpMapSaveTimeout = setTimeout(saveHandpanPositions, 1000);
-  }
-});
-
-/* Touch Support (Basic) */
-handpanOverlay?.addEventListener('touchstart', (e) => {
-  if (!calibrating) return;
-  const dot = e.target.closest('.hp-dot');
-  if (!dot) return;
-
-  e.preventDefault(); // prevent scroll
-  const note = dot.dataset.note;
-  if (!HANDPAN_MAP[note]) return;
-
-  selectHpDot(note);
-  isHpDragging = true;
-  const t = e.touches[0];
-  hpDragStart = { x: t.clientX, y: t.clientY };
-  hpNoteStart = { x: HANDPAN_MAP[note].x, y: HANDPAN_MAP[note].y };
-}, { passive: false });
-
-window.addEventListener('touchmove', (e) => {
-  if (!isHpDragging || !calibrating || !selectedHpNote) return;
-  e.preventDefault(); // prevent scroll
-  const t = e.touches[0];
-  const overlay = handpanOverlay.getBoundingClientRect();
-
-  const dxPx = t.clientX - hpDragStart.x;
-  const dyPx = t.clientY - hpDragStart.y;
-
-  const dxPct = (dxPx / overlay.width) * 100;
-  const dyPct = (dyPx / overlay.height) * 100;
-
-  const p = HANDPAN_MAP[selectedHpNote];
-  p.x = clamp(hpNoteStart.x + dxPct, 0, 100);
-  p.y = clamp(hpNoteStart.y + dyPct, 0, 100);
-
-  const el = handpanDots.get(selectedHpNote);
-  if (el) {
-    el.style.left = `${p.x}%`;
-    el.style.top = `${p.y}%`;
-  }
-}, { passive: false });
-
-window.addEventListener('touchend', () => {
-  if (isHpDragging) {
-    isHpDragging = false;
-    if (hpMapSaveTimeout) clearTimeout(hpMapSaveTimeout);
-    hpMapSaveTimeout = setTimeout(saveHandpanPositions, 1000);
-  }
-});
 
 
-// Nudge with arrow keys
-document.addEventListener('keydown', (e) => {
-  if (!calibrating) return;
 
-  // Esc exits calibration
-  if (e.key === 'Escape') {
-    setCalibrating(false);
-    return;
-  }
 
-  // C prints current map
-  if (e.key.toLowerCase() === 'c') {
-    e.preventDefault();
-    console.log('HANDPAN_MAP =', JSON.parse(JSON.stringify(HANDPAN_MAP)));
-    console.log('Copy/paste version:\n' + stringifyHandpanMap(HANDPAN_MAP));
-    return;
-  }
 
-  if (!selectedHpNote) return;
 
-  const step = e.shiftKey ? 0.5 : 0.2; // percent increments
-  let dx = 0, dy = 0;
 
-  if (e.key === 'ArrowLeft') dx = -step;
-  if (e.key === 'ArrowRight') dx = step;
-  if (e.key === 'ArrowUp') dy = -step;
-  if (e.key === 'ArrowDown') dy = step;
-
-  if (!dx && !dy) return;
-
-  e.preventDefault();
-
-  const p = HANDPAN_MAP[selectedHpNote];
-  p.x = clamp(p.x + dx, 0, 100);
-  p.y = clamp(p.y + dy, 0, 100);
-
-  // Update DOM position live
-  const el = handpanDots.get(selectedHpNote);
-  if (el) {
-    el.style.left = `${p.x}%`;
-    el.style.top = `${p.y}%`;
-  }
-
-  if (hpMapSaveTimeout) clearTimeout(hpMapSaveTimeout);
-  hpMapSaveTimeout = setTimeout(saveHandpanPositions, 1000); // Auto-save after 1s of inactivity
-});
 
 async function saveHandpanPositions() {
   const selName = getSelectedScaleName();
@@ -801,102 +570,6 @@ function stringifyHandpanMap(map) {
   return `const HANDPAN_MAP = {\n${lines.join('\n')}\n};`;
 }
 
-// Event handlers
-let lastStandardModel = 'Bronze';
-
-scaleSelect.addEventListener('change', async () => {
-  const val = scaleSelect.value;
-  setSelectedScaleName(val);
-
-  // Persist Scale Selection
-  saveScaleLocal(val);
-  if (isAuthed() && saveScaleRemote) {
-    saveScaleRemote(val);
-  }
-
-  if (val.startsWith('custom:')) {
-    const id = val.split(':')[1];
-    const customHp = customHandpansCache.find(hp => hp.id === id);
-    if (customHp) {
-      applyCustomHandpan(customHp);
-      // Update active status
-      if (currentUser) {
-        await supabase.from('user_handpans').update({ is_active: false }).eq('user_id', currentUser.id);
-        await supabase.from('user_handpans').update({ is_active: true }).eq('id', id);
-      }
-    }
-    return;
-  }
-
-  scaleStatus.textContent = `Scale: ${val}`;
-  saveScaleLocal(val);
-
-  // Restore visual map if we were previously on a custom scale
-  let currentModel = handpanSelect.value;
-
-  // Show the dropdown again (User Request: Show only for System Scales)
-  const row = handpanSelect.closest('.setting-row');
-  if (row) row.style.display = 'flex'; // or block/flex based on CSS
-
-  // If current model is custom (or we just hid it), revert to last standard
-  if (currentModel.startsWith('custom:') || currentModel === 'Custom') {
-    currentModel = lastStandardModel;
-    handpanSelect.value = currentModel; // Update Dropdown UI
-  }
-
-  if (currentModel === 'Bronze') {
-    handpanImg.src = `./assets/images/${HANDPAN_IMG_BRONZE}`;
-    handpanImg.style.transform = '';
-    HANDPAN_MAP = HANDPAN_MAP_BRONZE;
-  } else if (currentModel === 'Sketch') {
-    handpanImg.src = `./assets/images/${HANDPAN_IMG_SKETCH_EMPTY}`;
-    handpanImg.style.transform = '';
-    HANDPAN_MAP = HANDPAN_MAP_SKETCH;
-  }
-
-  // Update Current Scale for Standard Scales
-  if (setCurrentScale && SCALES) {
-    setCurrentScale(SCALES[val]);
-  }
-
-  await preloadScaleSamples();
-  if (currentUser) await saveScaleRemote(val);
-  checkNumberPitchSelection();
-  buildHandpanOverlay();
-});
-
-handpanSelect.addEventListener('change', async () => {
-  selectedHandpanName = handpanSelect.value;
-
-  if (selectedHandpanName.startsWith('custom:')) {
-    const id = selectedHandpanName.split(':')[1];
-    const customHp = customHandpansCache.find(hp => hp.id === id);
-    if (customHp) {
-      applyCustomHandpan(customHp);
-      // Important: Update active status in DB
-      if (currentUser) {
-        await supabase.from('user_handpans').update({ is_active: false }).eq('user_id', currentUser.id);
-        await supabase.from('user_handpans').update({ is_active: true }).eq('id', id);
-      }
-    }
-    return;
-  }
-
-  if (selectedHandpanName === 'Bronze') {
-    lastStandardModel = 'Bronze';
-    handpanImg.src = `./assets/images/${HANDPAN_IMG_BRONZE}`;
-    handpanImg.style.transform = ''; // Reset rotation
-    HANDPAN_MAP = HANDPAN_MAP_BRONZE;
-  }
-  else if (selectedHandpanName === 'Sketch') {
-    lastStandardModel = 'Sketch';
-    handpanImg.src = `./assets/images/${HANDPAN_IMG_SKETCH_EMPTY}`;
-    handpanImg.style.transform = ''; // Reset rotation
-    HANDPAN_MAP = HANDPAN_MAP_SKETCH;
-  }
-  checkNumberPitchSelection();
-  buildHandpanOverlay();
-});
 
 function checkNumberPitchSelection() {
   const val = numberPitchSelect.value;
@@ -985,71 +658,13 @@ function overlayNumberPitchNotes() {
 // Ensure buildHandpanOverlay calls this
 const originalBuild = buildHandpanOverlay;
 
-numberPitchSelect.addEventListener('change', async () => {
-  const val = numberPitchSelect.value;
-  localStorage.setItem('handpanLabelPref', val);
 
-  // Save to DB if logged in
-  if (typeof updateUserLabelPreference === 'function') {
-    updateUserLabelPreference(val);
-  }
 
-  checkNumberPitchSelection();
-  buildHandpanOverlay();
-  if (typeof renderAllMeasures === 'function') renderAllMeasures();
-});
-
-// Initial Load
-const savedLabelPref = localStorage.getItem('handpanLabelPref');
-if (savedLabelPref) {
-  numberPitchSelect.value = savedLabelPref;
-  checkNumberPitchSelection();
-}
-
-ghostBtn.addEventListener('click', (e) => {
-  const idx = activeGrid.caretIndex;
-  if (idx === null) return;
-
-  setBeatToGhost(idx);
-
-  // If your "compose/tracking" is enabled, advance:
-  if (getComposeOn && getComposeOn()) { // rename to your actual flag
-    const next = clampIndex(idx + 1);
-    setCaret(next);
-  }
-});
-
-lockBtn.addEventListener('click', (e) => {
-  composeBtn.click();
-});
 
 // Settings Toggle
-const hpSettingsToggle = document.getElementById('hpSettingsToggle');
-const hpSettingsPanel = document.getElementById('hpSettingsPanel');
+let hpSettingsToggle, hpSettingsPanel, hpSettingsInitial, hpCreationForm, buildScaleBtn, cancelBuildBtn, saveNewHandpanBtn;
 
-hpSettingsToggle?.addEventListener('click', (e) => {
-  e.stopPropagation();
-  const isHidden = hpSettingsPanel.style.display === 'none';
-  hpSettingsPanel.style.display = isHidden ? 'block' : 'none';
-  hpSettingsToggle.classList.toggle('active', isHidden);
-});
-
-// === CUSTOM HANDPAN UI ===
-const hpSettingsInitial = document.getElementById('hpSettingsInitial') || document.getElementById('hpCustomizeControls');
-const hpCreationForm = document.getElementById('hpCreationForm');
-const buildScaleBtn = document.getElementById('buildScaleBtn');
-const cancelBuildBtn = document.getElementById('cancelBuildBtn');
-const saveNewHandpanBtn = document.getElementById('saveNewHandpanBtn');
-
-buildScaleBtn?.addEventListener('click', () => {
-  hpSettingsInitial.style.display = 'none';
-  hpCreationForm.style.display = 'flex';
-});
-
-cancelBuildBtn?.addEventListener('click', () => {
-  hpCreationForm.style.display = 'none';
-  hpSettingsInitial.style.display = 'block';
-});
+// Settings Toggle
 
 saveNewHandpanBtn?.addEventListener('click', async () => {
   const builder = document.getElementById('hpBuilderName').value.trim();
@@ -1121,43 +736,336 @@ saveNewHandpanBtn?.addEventListener('click', async () => {
   }
 });
 
-// Scale initialization moved to unified runHandpanInit
 
-// === DRAWER MANAGER ===
-// === TAB MANAGER ===
-(function initTabs() {
-  const run = () => {
-    console.log('Initializing Tab Manager');
-    const tabs = document.querySelectorAll('.tab-btn');
-    const panes = document.querySelectorAll('.tab-pane');
+let lastStandardModel = 'Bronze';
 
-    tabs.forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        e.preventDefault();
-        const targetId = btn.getAttribute('data-tab');
-        const targetPane = document.getElementById(targetId);
+export function initHandpanMap() {
+  scaleSelect = document.getElementById('scaleSelect');
+  handpanImg = document.getElementById('handpanImg');
+  scaleStatus = document.getElementById('scaleStatus');
+  handpanSelect = document.getElementById('handpanSelect');
+  numberPitchSelect = document.getElementById('numberPitchSelect');
+  ghostBtn = document.getElementById('ghostBtn');
+  lockBtn = document.getElementById('lockBtn');
+  composeBtn = document.getElementById('composeBtn');
+  handpanSection = document.getElementById('handpanSection');
+  handpanOverlay = document.getElementById('handpanOverlay');
+  myScalesBtn = document.getElementById('myScalesBtn');
+  myScalesModal = document.getElementById('myScalesModal');
+  closeMyScalesBtn = document.getElementById('closeMyScalesBtn');
+  myScalesList = document.getElementById('myScalesList');
+  calBtn = document.getElementById('calBtn');
+  hpSettingsToggle = document.getElementById('hpSettingsToggle');
+  hpSettingsPanel = document.getElementById('hpSettingsPanel');
+  hpSettingsInitial = document.getElementById('hpSettingsInitial') || document.getElementById('hpCustomizeControls');
+  hpCreationForm = document.getElementById('hpCreationForm');
+  buildScaleBtn = document.getElementById('buildScaleBtn');
+  cancelBuildBtn = document.getElementById('cancelBuildBtn');
+  saveNewHandpanBtn = document.getElementById('saveNewHandpanBtn');
 
-        if (!targetPane) return;
+  if (!handpanOverlay) return;
 
-        // Check if currently active (before clearing)
-        const wasActive = btn.classList.contains('active');
+  // Listeners
+  myScalesBtn?.addEventListener('click', openMyScalesModal);
+  closeMyScalesBtn?.addEventListener('click', closeMyScalesModal);
+  myScalesModal?.addEventListener('click', (e) => {
+    if (e.target === myScalesModal) closeMyScalesModal();
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && myScalesModal?.classList.contains('open')) {
+      closeMyScalesModal();
+    }
+  });
 
-        // Deactivate all
-        tabs.forEach(t => t.classList.remove('active'));
-        panes.forEach(p => p.classList.remove('active'));
+  handpanOverlay?.addEventListener('click', (e) => {
+    if (calibrating) {
+      const dot = e.target.closest('.hp-dot');
+      if (!dot) return;
+      const note = dot.dataset.note;
+      if (!note || !HANDPAN_MAP[note]) return;
+      selectHpDot(note);
+    } else {
+      const dot = e.target.closest('.hp-dot');
+      if (!dot) return;
+      const note = dot.dataset.note;
+      if (!note) return;
+      playNoteByLabel(note, null);
+      highlightHandpan(note, null);
+      const selIdx = activeGrid.caretIndex;
+      if (selIdx !== null) {
+        const noAdvance = e.altKey;
+        writeToSelected(note, { advance: !noAdvance });
+      }
+    }
+  });
 
-        // Toggle: Only activate if it wasn't already active
-        if (!wasActive) {
-          btn.classList.add('active');
-          targetPane.classList.add('active');
+  handpanOverlay?.addEventListener('mousedown', (e) => {
+    if (!calibrating) return;
+    const dot = e.target.closest('.hp-dot');
+    if (!dot) return;
+    e.preventDefault();
+    const note = dot.dataset.note;
+    if (!HANDPAN_MAP[note]) return;
+    selectHpDot(note);
+    isHpDragging = true;
+    hpDragStart = { x: e.clientX, y: e.clientY };
+    hpNoteStart = { x: HANDPAN_MAP[note].x, y: HANDPAN_MAP[note].y };
+  });
+
+  window.addEventListener('mousemove', (e) => {
+    if (!isHpDragging || !calibrating || !selectedHpNote) return;
+    const overlay = handpanOverlay.getBoundingClientRect();
+    if (overlay.width === 0 || overlay.height === 0) return;
+    const dxPx = e.clientX - hpDragStart.x;
+    const dyPx = e.clientY - hpDragStart.y;
+    const dxPct = (dxPx / overlay.width) * 100;
+    const dyPct = (dyPx / overlay.height) * 100;
+    const p = HANDPAN_MAP[selectedHpNote];
+    p.x = clamp(hpNoteStart.x + dxPct, 0, 100);
+    p.y = clamp(hpNoteStart.y + dyPct, 0, 100);
+    const el = handpanDots.get(selectedHpNote);
+    if (el) {
+      el.style.left = `${p.x}%`;
+      el.style.top = `${p.y}%`;
+    }
+  });
+
+  window.addEventListener('mouseup', () => {
+    if (isHpDragging) {
+      isHpDragging = false;
+      if (hpMapSaveTimeout) clearTimeout(hpMapSaveTimeout);
+      hpMapSaveTimeout = setTimeout(saveHandpanPositions, 1000);
+    }
+  });
+
+  handpanOverlay?.addEventListener('touchstart', (e) => {
+    if (!calibrating) return;
+    const dot = e.target.closest('.hp-dot');
+    if (!dot) return;
+    e.preventDefault();
+    const note = dot.dataset.note;
+    if (!HANDPAN_MAP[note]) return;
+    selectHpDot(note);
+    isHpDragging = true;
+    const t = e.touches[0];
+    hpDragStart = { x: t.clientX, y: t.clientY };
+    hpNoteStart = { x: HANDPAN_MAP[note].x, y: HANDPAN_MAP[note].y };
+  }, { passive: false });
+
+  window.addEventListener('touchmove', (e) => {
+    if (!isHpDragging || !calibrating || !selectedHpNote) return;
+    e.preventDefault();
+    const t = e.touches[0];
+    const overlay = handpanOverlay.getBoundingClientRect();
+    const dxPx = t.clientX - hpDragStart.x;
+    const dyPx = t.clientY - hpDragStart.y;
+    const dxPct = (dxPx / overlay.width) * 100;
+    const dyPct = (dyPx / overlay.height) * 100;
+    const p = HANDPAN_MAP[selectedHpNote];
+    p.x = clamp(hpNoteStart.x + dxPct, 0, 100);
+    p.y = clamp(hpNoteStart.y + dyPct, 0, 100);
+    const el = handpanDots.get(selectedHpNote);
+    if (el) {
+      el.style.left = `${p.x}%`;
+      el.style.top = `${p.y}%`;
+    }
+  }, { passive: false });
+
+  window.addEventListener('touchend', () => {
+    if (isHpDragging) {
+      isHpDragging = false;
+      if (hpMapSaveTimeout) clearTimeout(hpMapSaveTimeout);
+      hpMapSaveTimeout = setTimeout(saveHandpanPositions, 1000);
+    }
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (!calibrating) return;
+    if (e.key === 'Escape') {
+      setCalibrating(false);
+      return;
+    }
+    if (e.key.toLowerCase() === 'c') {
+      e.preventDefault();
+      console.log('HANDPAN_MAP =', JSON.parse(JSON.stringify(HANDPAN_MAP)));
+      console.log('Copy/paste version:\n' + stringifyHandpanMap(HANDPAN_MAP));
+      return;
+    }
+    if (!selectedHpNote) return;
+    const step = e.shiftKey ? 0.5 : 0.2;
+    let dx = 0, dy = 0;
+    if (e.key === 'ArrowLeft') dx = -step;
+    if (e.key === 'ArrowRight') dx = step;
+    if (e.key === 'ArrowUp') dy = -step;
+    if (e.key === 'ArrowDown') dy = step;
+    if (!dx && !dy) return;
+    e.preventDefault();
+    const p = HANDPAN_MAP[selectedHpNote];
+    p.x = clamp(p.x + dx, 0, 100);
+    p.y = clamp(p.y + dy, 0, 100);
+    const el = handpanDots.get(selectedHpNote);
+    if (el) {
+      el.style.left = `${p.x}%`;
+      el.style.top = `${p.y}%`;
+    }
+    if (hpMapSaveTimeout) clearTimeout(hpMapSaveTimeout);
+    hpMapSaveTimeout = setTimeout(saveHandpanPositions, 1000);
+  });
+
+  calBtn?.addEventListener('click', () => setCalibrating(!calibrating));
+
+  scaleSelect?.addEventListener('change', async () => {
+    const val = scaleSelect.value;
+    setSelectedScaleName(val);
+    saveScaleLocal(val);
+    if (isAuthed() && saveScaleRemote) saveScaleRemote(val);
+
+    if (val.startsWith('custom:')) {
+      const id = val.split(':')[1];
+      const customHp = customHandpansCache.find(hp => hp.id === id);
+      if (customHp) {
+        applyCustomHandpan(customHp);
+        if (currentUser) {
+          await supabase.from('user_handpans').update({ is_active: false }).eq('user_id', currentUser.id);
+          await supabase.from('user_handpans').update({ is_active: true }).eq('id', id);
         }
-      });
-    });
-  };
+      }
+      return;
+    }
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', run);
-  } else {
-    run();
+    scaleStatus.textContent = `Scale: ${val}`;
+    let currentModel = handpanSelect.value;
+    const row = handpanSelect.closest('.setting-row');
+    if (row) row.style.display = 'flex';
+
+    if (currentModel.startsWith('custom:') || currentModel === 'Custom') {
+      currentModel = lastStandardModel;
+      handpanSelect.value = currentModel;
+    }
+
+    if (currentModel === 'Bronze') {
+      handpanImg.src = `./assets/images/${HANDPAN_IMG_BRONZE}`;
+      handpanImg.style.transform = '';
+      HANDPAN_MAP = HANDPAN_MAP_BRONZE;
+    } else if (currentModel === 'Sketch') {
+      handpanImg.src = `./assets/images/${HANDPAN_IMG_SKETCH_EMPTY}`;
+      handpanImg.style.transform = '';
+      HANDPAN_MAP = HANDPAN_MAP_SKETCH;
+    }
+
+    if (setCurrentScale && SCALES) setCurrentScale(SCALES[val]);
+    await preloadScaleSamples();
+    if (currentUser) await saveScaleRemote(val);
+    checkNumberPitchSelection();
+    buildHandpanOverlay();
+  });
+
+  handpanSelect?.addEventListener('change', async () => {
+    const val = handpanSelect.value;
+    if (val.startsWith('custom:')) {
+      const id = val.split(':')[1];
+      const customHp = customHandpansCache.find(hp => hp.id === id);
+      if (customHp) {
+        applyCustomHandpan(customHp);
+        if (currentUser) {
+          await supabase.from('user_handpans').update({ is_active: false }).eq('user_id', currentUser.id);
+          await supabase.from('user_handpans').update({ is_active: true }).eq('id', id);
+        }
+      }
+      return;
+    }
+    if (val === 'Bronze') {
+      lastStandardModel = 'Bronze';
+      handpanImg.src = `./assets/images/${HANDPAN_IMG_BRONZE}`;
+      handpanImg.style.transform = '';
+      HANDPAN_MAP = HANDPAN_MAP_BRONZE;
+    } else if (val === 'Sketch') {
+      lastStandardModel = 'Sketch';
+      handpanImg.src = `./assets/images/${HANDPAN_IMG_SKETCH_EMPTY}`;
+      handpanImg.style.transform = '';
+      HANDPAN_MAP = HANDPAN_MAP_SKETCH;
+    }
+    checkNumberPitchSelection();
+    buildHandpanOverlay();
+  });
+
+  numberPitchSelect?.addEventListener('change', async () => {
+    const val = numberPitchSelect.value;
+    localStorage.setItem('handpanLabelPref', val);
+    if (typeof updateUserLabelPreference === 'function') updateUserLabelPreference(val);
+    checkNumberPitchSelection();
+    buildHandpanOverlay();
+    if (typeof renderAllMeasures === 'function') renderAllMeasures();
+  });
+
+  ghostBtn?.addEventListener('click', () => {
+    const idx = activeGrid.caretIndex;
+    if (idx === null) return;
+    setBeatToGhost(idx);
+    if (getComposeOn && getComposeOn()) {
+      setCaret(clampIndex(idx + 1));
+    }
+  });
+
+  lockBtn?.addEventListener('click', () => composeBtn?.click());
+
+  hpSettingsToggle?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const isHidden = hpSettingsPanel.style.display === 'none';
+    hpSettingsPanel.style.display = isHidden ? 'block' : 'none';
+    hpSettingsToggle.classList.toggle('active', isHidden);
+  });
+
+  buildScaleBtn?.addEventListener('click', () => {
+    hpSettingsInitial.style.display = 'none';
+    hpCreationForm.style.display = 'flex';
+  });
+
+  cancelBuildBtn?.addEventListener('click', () => {
+    hpCreationForm.style.display = 'none';
+    hpSettingsInitial.style.display = 'block';
+  });
+
+  // Tab Manager logic
+  const tabs = document.querySelectorAll('.tab-btn');
+  const panes = document.querySelectorAll('.tab-pane');
+  tabs.forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      const targetId = btn.getAttribute('data-tab');
+      const targetPane = document.getElementById(targetId);
+      if (!targetPane) return;
+      const wasActive = btn.classList.contains('active');
+      tabs.forEach(t => t.classList.remove('active'));
+      panes.forEach(p => p.classList.remove('active'));
+      if (!wasActive) {
+        btn.classList.add('active');
+        targetPane.classList.add('active');
+      }
+    });
+  });
+
+  // Final initial calls
+  registerHighlighter(highlightHandpan);
+  buildHandpanOverlay();
+  loadAllUserHandpans();
+
+  const savedLabelPref = localStorage.getItem('handpanLabelPref');
+  if (savedLabelPref && numberPitchSelect) {
+    numberPitchSelect.value = savedLabelPref;
+    checkNumberPitchSelection();
   }
-})();
+
+  if (loadScaleLocal && scaleSelect) {
+    let saved = loadScaleLocal();
+    if (saved) {
+      const exists = Array.from(scaleSelect.options).some(o => o.value === saved);
+      if (exists || saved.startsWith('custom:')) {
+        scaleSelect.value = saved;
+        scaleSelect.dispatchEvent(new Event('change'));
+      }
+    }
+  }
+
+  window.dispatchEvent(new Event('handpan-loaded'));
+}

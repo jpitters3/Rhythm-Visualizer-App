@@ -21,6 +21,7 @@ import { initMeasureActions } from './measure-actions.js';
 import { HistoryManager } from './history.js';
 import ChordUI from './chord-ui.js';
 import { initPOTW } from './pattern-of-the-week.js';
+import { initHandpanMap } from './handpanmap.js';
 
 // Initialize Logic
 initMobileMenu();
@@ -29,6 +30,7 @@ initPresentation();
 initPOTW();
 HistoryManager.init();
 ChordUI.init();
+initHandpanMap();
 initCourseCreator();
 initControls();
 initShortcuts();
