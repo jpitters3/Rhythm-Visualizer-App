@@ -24,7 +24,7 @@ function updateMetroUI() {
   const ctx = activeGrid || gridA;
   if (TransportRegistry) TransportRegistry.updateAll(ctx);
 }
-// window.updateMetroUI = updateMetroUI;
+
 
 export function restorePrefs() {
   if (localStorage.getItem('theme') === 'dark') {

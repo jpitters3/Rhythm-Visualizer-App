@@ -207,25 +207,38 @@ metroBtn?.addEventListener('click', () => {
   if (ctx.metronomeOn) ensureAudio();
 });
 
+import { labelNotation, setLabelNotation } from './state.js';
+
 function updateNotationUI() {
   const btn = document.getElementById('labelNotationBtn');
   if (!btn) return;
-  btn.textContent = (window.labelNotation === 'musical') ? '1 2 3' : '1 & 2';
-  btn.title = (window.labelNotation === 'musical') ? 'Switch to Numeric Notation' : 'Switch to Musical Notation';
+  btn.textContent = (labelNotation === 'musical') ? '1 2 3' : '1 & 2';
+  btn.title = (labelNotation === 'musical') ? 'Switch to Numeric Notation' : 'Switch to Musical Notation';
 }
 updateNotationUI();
 
+// Toggle Button
 document.getElementById('labelNotationBtn')?.addEventListener('click', () => {
-  window.labelNotation = (window.labelNotation === 'musical') ? 'numeric' : 'musical';
-  localStorage.setItem('labelNotation', window.labelNotation);
-  updateNotationUI();
+  const newVal = (labelNotation === 'musical') ? 'numeric' : 'musical';
+  setLabelNotation(newVal);
   updateNotationUI();
   renderAllMeasures(gridA);
   renderAllMeasures(gridB);
 
   // Persist to profile if signed in
   if (typeof updateUserGridLabelNotation === 'function') {
-    updateUserGridLabelNotation(window.labelNotation);
+    updateUserGridLabelNotation(newVal);
+  }
+});
+
+// Event Listener for External Updates (e.g. Profile)
+window.addEventListener('labelNotationChanged', (e) => {
+  const newVal = e.detail;
+  if (newVal && newVal !== labelNotation) {
+    setLabelNotation(newVal);
+    updateNotationUI();
+    renderAllMeasures(gridA);
+    renderAllMeasures(gridB);
   }
 });
 

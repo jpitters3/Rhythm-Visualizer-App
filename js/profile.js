@@ -48,8 +48,9 @@ export async function loadCurrentProfile() {
 
       // Sync Grid Label Notation Preference
       if (currentProfile.grid_label_notation) {
-        window.labelNotation = currentProfile.grid_label_notation;
-        localStorage.setItem('labelNotation', window.labelNotation);
+        // Dispatch event to update controls.js
+        window.dispatchEvent(new CustomEvent('labelNotationChanged', { detail: currentProfile.grid_label_notation }));
+        localStorage.setItem('labelNotation', currentProfile.grid_label_notation);
 
         // Trigger UI update if functions are available
         // Assumption: controls.js handles logic based on global/localstorage.

@@ -28,3 +28,9 @@ export function setIsEditMulti(v) { isEditMulti = v; }
 
 export let longPressFired = false;
 export function setLongPressFired(v) { longPressFired = v; }
+
+export let labelNotation = localStorage.getItem('labelNotation') || 'musical';
+export function setLabelNotation(v) {
+  labelNotation = v;
+  localStorage.setItem('labelNotation', v);
+}

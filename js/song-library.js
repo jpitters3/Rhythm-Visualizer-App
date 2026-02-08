@@ -14,7 +14,7 @@ let librarySongs = [];
 // Import renderAllMeasures dynamically or assume check?
 // Better to import it if it is a module.
 // But this file has no imports at the top. It seems to be treated as a module by the bundler/browser if type="module".
-import { renderAllMeasures } from './notegrid.js';
+import { renderAllMeasures, checkCellIsMultiMode } from './notegrid.js';
 import { setTimeSignature } from './noteplayer.js';
 import { innerLabels } from './state.js'; // This seems wrong, innerLabels is a getter/state
 import { activeGrid } from './grid-context.js'; // We need activeGrid to set innerLabels
@@ -46,7 +46,7 @@ function openSongLibrary() {
   fetchSongs();
 }
 
-async function fetchSongs() {
+export async function fetchSongs() {
   songLibraryList.innerHTML = '<div class="loading-spinner">Loading songs...</div>';
 
   const { data, error } = await supabase1
@@ -91,7 +91,7 @@ function renderLibrary() {
     if (pattern.labels) {
       pattern.labels.forEach(cell => {
         if (!cell) return;
-        if (window.checkCellIsMultiMode(cell)) {
+        if (checkCellIsMultiMode(cell)) {
           cell.forEach(n => notesInSong.add(n));
         } else {
           notesInSong.add(cell);

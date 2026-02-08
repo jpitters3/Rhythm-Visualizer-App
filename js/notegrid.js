@@ -3,7 +3,7 @@ import { getTimeSignature, calculateSteps } from './rhythm-core.js';
 import { getScale, stop } from './noteplayer.js';
 import { setCaret, setRange, clearRange, getRange, updateDragSelectionOver, startLongPress, cancelLongPress } from './range-selection.js';
 import { HistoryManager } from './history.js';
-import { editHandsMode, isEditMulti, longPressFired, setLongPressFired, setIsEditMulti } from './state.js';
+import { editHandsMode, isEditMulti, longPressFired, setLongPressFired, setIsEditMulti, labelNotation } from './state.js';
 import { TransportRegistry } from './transport-ui.js';
 
 export const cells = (ctx) => (ctx || activeGrid).cells;
@@ -82,8 +82,7 @@ export function labelForStep(i, ctx = activeGrid) {
   const base = (ctx.mode === '16') ? 16 : 8;
   const stride = base / den;
 
-  if (window.labelNotation === 'numeric') { // Global pref still attached to window? Assuming yes or moved to state
-    // We should probably check localStorage or a module pref
+  if (labelNotation === 'numeric') {
     return String(i + 1);
   }
 

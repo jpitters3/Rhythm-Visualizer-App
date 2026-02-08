@@ -113,13 +113,4 @@ export const TransportRegistry = {
 };
 
 
-window.TransportRegistry = TransportRegistry;
-window.TransportUI = TransportUI;
 
-// Legacy global found in init.js assertion
-window.metroClick = function (ctx) {
-  const c = ctx || (window.activeGrid || window.gridA);
-  if (!c) return;
-  c.metronomeOn = !c.metronomeOn;
-  TransportRegistry.updateAll(c);
-};

@@ -4,6 +4,7 @@
 
 import { supabase } from './supabase-client.js';
 import { currentUser } from './auth.js';
+import { fetchSongs } from './song-library.js';
 
 const midiFileInput = document.getElementById('midiFileInput');
 const importMidiBtn = document.getElementById('importMidiBtn');
@@ -220,6 +221,6 @@ async function uploadSongToDB(name, patternData) {
   } else {
     alert("Song uploaded successfully!");
     // Refresh library if open?
-    if (typeof window.fetchSongs === 'function') window.fetchSongs();
+    if (typeof fetchSongs === 'function') fetchSongs();
   }
 }

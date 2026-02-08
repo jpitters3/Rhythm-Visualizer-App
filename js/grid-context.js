@@ -94,11 +94,4 @@ setGridA(gridA);
 setGridB(gridB);
 setActiveGrid(activeGrid);
 
-// Legacy: Exposed for backward compatibility with non-ESM scripts (init.js, controls.js)
-window.gridA = gridA;
-window.gridB = gridB;
-window.activeGrid = activeGrid;
-window.GridContext = GridContext; // Also might be used? Maybe not, but safer.
-window.setActiveGridGlobal = setActiveGridGlobal;
-
 
