@@ -35,7 +35,7 @@ function totalSteps(ctx) {
   return (ctx || activeGrid).innerLabels.length;
 }
 
-function clampIndex(i, ctx) {
+export function clampIndex(i, ctx) {
   const c = ctx || activeGrid;
   const n = totalSteps(c);
   if (n <= 0) return 0;

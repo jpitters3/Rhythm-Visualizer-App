@@ -1,14 +1,26 @@
-import { getComposeOn } from './compose-mode.js';
-import { saveScaleLocal, saveScaleRemote, preloadScaleSamples, noteForLabel, isDownbeatStep, registerHighlighter, loadScaleLocal, playNoteByLabel } from './noteplayer.js';
+import { isAuthed, currentUser } from './auth.js';
+import { setCaret } from './range-selection.js';
+import { updateUserLabelPreference } from './profile.js';
+import { writeToSelected, clampIndex, getComposeOn } from './compose-mode.js';
+import { saveScaleLocal, saveScaleRemote, preloadScaleSamples, noteForLabel, isDownbeatStep, registerHighlighter, loadScaleLocal, playNoteByLabel, intervalMs } from './noteplayer.js';
 import { SCALES } from './config.js';
 import { getScale, getSelectedScaleName, setSelectedScaleName, setCurrentScale } from './state.js';
 import { supabase } from './supabase-client.js';
 import { enterCalibrationMode } from './calibration.js';
 import { activeGrid } from './grid-context.js';
-import { currentUser } from './auth.js';
-import { intervalMs } from './noteplayer.js';
 import { setBeatToGhost, renderAllMeasures } from './notegrid.js';
-import { isAuthed } from './auth.js';
+
+// DOM Elements (previously globals)
+const scaleSelect = document.getElementById('scaleSelect');
+const handpanImg = document.getElementById('handpanImg');
+const scaleStatus = document.getElementById('scaleStatus');
+const handpanSelect = document.getElementById('handpanSelect');
+const numberPitchSelect = document.getElementById('numberPitchSelect');
+const ghostBtn = document.getElementById('ghostBtn');
+const lockBtn = document.getElementById('lockBtn');
+const composeBtn = document.getElementById('composeBtn');
+const handpanSection = document.getElementById('handpanSection');
+const handpanOverlay = document.getElementById('handpanOverlay');
 
 /* Mapped to nine-note-handpan-numbered.png */
 const HANDPAN_MAP_SKETCH = {
@@ -45,7 +57,7 @@ export let HANDPAN_MAP = HANDPAN_MAP_BRONZE;
 const HANDPAN_IMG_SKETCH_EMPTY = 'handpan-empty-notes.png';
 const HANDPAN_IMG_BRONZE = 'handpan-for-groovepan.png';
 
-const handpanOverlay = document.getElementById('handpanOverlay');
+
 const handpanDots = new Map();
 
 let overlayPitches = false;
@@ -199,7 +211,7 @@ function applyCustomHandpan(handpanData) {
   if (customOpt) customOpt.remove();
 
   buildHandpanOverlay();
-  window.dispatchEvent(new Event('handpan-loaded'));
+  dispatchEvent(new Event('handpan-loaded'));
 }
 
 // === MY SCALES MANAGEMENT ===
@@ -449,11 +461,32 @@ export function buildHandpanOverlay() {
     overlayNumberPitchNotes(); else removeNoteLabels();
 }
 
-// Register with Note Player and Build Overlay
-document.addEventListener('DOMContentLoaded', () => {
+// Consolidated Initialization
+function runHandpanInit() {
   registerHighlighter(highlightHandpan);
   buildHandpanOverlay();
-});
+
+  // Initialize Scale from previous session
+  if (loadScaleLocal && scaleSelect) {
+    let saved = loadScaleLocal();
+    if (saved) {
+      const exists = Array.from(scaleSelect.options).some(o => o.value === saved);
+      if (exists || saved.startsWith('custom:')) {
+        scaleSelect.value = saved;
+        // Manually trigger change to apply it
+        scaleSelect.dispatchEvent(new Event('change'));
+      }
+    }
+  }
+
+  window.dispatchEvent(new Event('handpan-loaded'));
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', runHandpanInit);
+} else {
+  runHandpanInit();
+}
 
 let hpPulseTimers = new Map();
 
@@ -974,13 +1007,13 @@ if (savedLabelPref) {
 }
 
 ghostBtn.addEventListener('click', (e) => {
-  const idx = window.activeGrid.caretIndex;
+  const idx = activeGrid.caretIndex;
   if (idx === null) return;
 
   setBeatToGhost(idx);
 
   // If your "compose/tracking" is enabled, advance:
-  if (window.getComposeOn && window.getComposeOn()) { // rename to your actual flag
+  if (getComposeOn && getComposeOn()) { // rename to your actual flag
     const next = clampIndex(idx + 1);
     setCaret(next);
   }
@@ -1088,23 +1121,7 @@ saveNewHandpanBtn?.addEventListener('click', async () => {
   }
 });
 
-// Initialize Scale from previous session
-setTimeout(async () => {
-  if (loadScaleLocal && scaleSelect) {
-    let saved = loadScaleLocal();
-    // If logged in, remote check logic exists but is async. 
-    // We trust local for immediate UI feedback.
-
-    if (saved) {
-      const exists = Array.from(scaleSelect.options).some(o => o.value === saved);
-      if (exists || saved.startsWith('custom:')) {
-        scaleSelect.value = saved;
-        // Manually trigger change to apply it
-        scaleSelect.dispatchEvent(new Event('change'));
-      }
-    }
-  }
-}, 500);
+// Scale initialization moved to unified runHandpanInit
 
 // === DRAWER MANAGER ===
 // === TAB MANAGER ===
