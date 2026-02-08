@@ -1,7 +1,7 @@
-import { currentUser } from './auth.js';
+import { Bus, BUS_EVENT } from './bus.js';
+import { currentUser } from './state.js';
 import { supabase } from './supabase-client.js';
 import { applyPattern } from './pattern-crud.js';
-import { loadLesson } from './courses.js'; // Fallback / check if we can import directly or use event
 
 // State
 let practiceItems = [];
@@ -43,6 +43,12 @@ export function initPractice() {
   document.getElementById('closePracticeSidebar')?.addEventListener('click', closePracticeSidebar);
   document.getElementById('refreshPracticeBtn')?.addEventListener('click', fetchPracticeItems);
   document.getElementById('startPracticeBtn')?.addEventListener('click', startPractice);
+
+  Bus.on(BUS_EVENT.AUTH_LOGOUT, () => {
+    practiceItems = [];
+    if (container) container.innerHTML = '<p style="padding:20px; text-align:center;">Please sign in to view practice plan.</p>';
+    closePracticeSidebar();
+  });
 }
 
 // Call init immediately? Or let init.js call it. 
@@ -283,14 +289,7 @@ export async function removeFromPractice(recordId) {
 
 async function loadPracticeItem(type, id) {
   if (type === 'lesson') {
-    // Dispatch Event to Courses Module
-    // We do NOT call loadLesson directly to avoid tight coupling if possible,
-    // OR we can just import loadLesson from courses.js if we accept the dependency.
-    // The implementation plan said: use Event Bus.
-
-    const event = new CustomEvent('request-load-lesson', { detail: { lessonId: id } });
-    window.dispatchEvent(event);
-
+    Bus.emit(BUS_EVENT.REQUEST_LOAD_LESSON, { lessonId: id });
   } else if (type === 'pattern') {
     const { data, error } = await supabase
       .from('shared_patterns')

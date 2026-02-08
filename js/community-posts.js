@@ -1,6 +1,6 @@
 import { escapeHtml } from './utils.js';
 import { loadPatternFromFeed } from './feed.js';
-import { currentUser } from './auth.js';
+import { currentUser } from './state.js';
 import { supabase } from './supabase-client.js';
 import { serializePattern } from './pattern-crud.js';
 

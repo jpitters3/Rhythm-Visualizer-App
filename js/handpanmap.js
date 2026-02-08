@@ -1,4 +1,4 @@
-import { isAuthed, currentUser } from './auth.js';
+import { currentUser } from './state.js';
 import { setCaret } from './range-selection.js';
 import { updateUserLabelPreference } from './profile.js';
 import { writeToSelected, clampIndex, getComposeOn } from './compose-mode.js';

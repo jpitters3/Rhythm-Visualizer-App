@@ -95,8 +95,6 @@ test.describe('Course Marketplace', () => {
     // Give it a moment for the sidebar to refresh
     await page.waitForTimeout(2000);
 
-    await page.pause();
-
     // 7. Re-open Marketplace to verify "Owned" status
     await openMarketBtn.click();
     await expect(marketModal).toHaveClass(/open/);

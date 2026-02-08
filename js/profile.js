@@ -1,4 +1,4 @@
-import { currentUser } from './auth.js';
+import { currentUser } from './state.js';
 import { supabase } from './supabase-client.js';
 import { buildHandpanOverlay } from './handpanmap.js';
 import { renderAllMeasures } from './notegrid.js';

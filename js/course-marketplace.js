@@ -1,7 +1,6 @@
-// ===== COURSE MARKETPLACE LOGIC =====
 import { supabase } from './supabase-client.js';
-import { currentUser, isAdminUser } from './auth.js';
-import { setActiveCourse, fetchCourses } from './courses.js';
+import { Bus, BUS_EVENT } from './bus.js';
+import { currentUser, isAdminUser } from './state.js';
 
 let marketplaceModal = null;
 let closeMarketBtn = null;
@@ -229,13 +228,10 @@ export async function unlockCourse(courseId, isPaid) {
     if (error) throw error;
 
     // Success!
-    // 1. Auto-set as active course in profile
-    await setActiveCourse(courseId);
+    Bus.emit(BUS_EVENT.COURSE_UNLOCKED, { courseId });
 
     alert("Course unlocked! It has been added to your library.");
     closeMarketplace();
-
-    fetchCourses();
 
   } catch (err) {
     console.error("Unlock failed:", err);

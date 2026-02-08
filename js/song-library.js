@@ -17,7 +17,7 @@ let librarySongs = [];
 import { renderAllMeasures, checkCellIsMultiMode } from './notegrid.js';
 import { setTimeSignature } from './noteplayer.js';
 import { getScale } from './state.js';
-import { currentUser, isAdminUser } from './auth.js';
+import { currentUser, isAdminUser } from './state.js';
 import { innerLabels } from './state.js'; // This seems wrong, innerLabels is a getter/state
 import { activeGrid } from './grid-context.js'; // We need activeGrid to set innerLabels
 

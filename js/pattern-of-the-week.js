@@ -1,5 +1,5 @@
 import { supabase } from './supabase-client.js';
-import { currentUser } from './auth.js';
+import { currentUser } from './state.js';
 
 /* POTW Dashboard Logic */
 // State

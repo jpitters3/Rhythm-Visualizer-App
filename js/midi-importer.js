@@ -3,7 +3,7 @@
 // Handles reading MIDI files, parsing them, quantizing to grid, and uploading to DB (Admin only)
 
 import { supabase } from './supabase-client.js';
-import { currentUser } from './auth.js';
+import { currentUser } from './state.js';
 import { fetchSongs } from './song-library.js';
 
 const midiFileInput = document.getElementById('midiFileInput');

@@ -1,14 +1,8 @@
 import { ADMIN_EMAILS, SCALES } from './config.js';
 import { loadScaleRemote, loadScaleLocal, preloadScaleSamples } from './noteplayer.js';
-import { setSelectedScaleName } from './state.js';
 import { supabase } from './supabase-client.js';
-import { closeSidebar } from './courses.js';
-
-export let currentUser = null;
-
-export function getCurrentUser() {
-  return currentUser;
-}
+import { Bus, BUS_EVENT } from './bus.js';
+import { currentUser, setCurrentUser, setSelectedScaleName, isAdminUser } from './state.js';
 
 export async function isAuthed() {
   if (typeof supabase === 'undefined' || !supabase.auth) return false;
@@ -20,13 +14,6 @@ export async function isAuthed() {
     console.warn('Auth check failed:', e);
     return false;
   }
-}
-
-// Admin functionality
-export function isAdminUser(user) {
-  const email = user?.email?.toLowerCase?.() || "";
-  const isMetadataAdmin = user?.user_metadata?.is_admin === true;
-  return ADMIN_EMAILS.has(email) || email.startsWith('test.user.') || isMetadataAdmin;
 }
 
 export function updateAdminUI() {
@@ -88,7 +75,7 @@ export function openAuthModal() {
     const { data } = await supabase.auth.getUser();
     if (data?.user) {
       const oldEmail = currentUser?.email;
-      currentUser = data.user;
+      setCurrentUser(data.user);
 
       if (oldEmail !== currentUser.email) {
         updateAccountUI();
@@ -240,10 +227,17 @@ export async function initAuthSession() {
   // Subscribe ONCE
   supabase.auth.onAuthStateChange(async (event, session) => {
     // Ensure accurate global state
-    currentUser = session?.user ?? null;
+    setCurrentUser(session?.user ?? null);
+    setCurrentUser(currentUser);
 
     updateAccountUI();
     updateAdminUI();
+
+    if (currentUser) {
+      Bus.emit(BUS_EVENT.AUTH_LOGIN, { user: currentUser });
+    } else {
+      Bus.emit(BUS_EVENT.AUTH_LOGOUT);
+    }
 
     // IMPORTANT: never await Supabase calls inside this callback directly to avoid blocking.
     setTimeout(async () => {
@@ -351,7 +345,7 @@ export async function initAuth() {
 
   authLogoutDropdown?.addEventListener('click', async () => {
     await supabase.auth.signOut();
-    window.location.reload();
+    Bus.emit(BUS_EVENT.AUTH_LOGOUT);
   });
 
   authUpdatePasswordBtn?.addEventListener('click', async () => {
@@ -401,11 +395,14 @@ export async function initAuth() {
     authHint.textContent = 'Signing in...';
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) { authHint.textContent = error.message; return; }
-    currentUser = data.user;
+    setCurrentUser(data.user);
     authHint.textContent = 'Signed in!';
     updateAccountUI();
     updateAdminUI();
     closeAuthModal();
+
+    Bus.emit(BUS_EVENT.AUTH_LOGIN, { user: currentUser });
+
     const { refreshPatternSelect } = await import('./pattern-crud.js');
     await refreshPatternSelect();
     initScale();
@@ -512,7 +509,7 @@ export async function initAuth() {
 
   authLogout?.addEventListener('click', async () => {
     await supabase.auth.signOut();
-    window.location.reload();
+    Bus.emit(BUS_EVENT.AUTH_LOGOUT);
   });
 
   // Initialization calls

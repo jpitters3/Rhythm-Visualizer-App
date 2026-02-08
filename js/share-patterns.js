@@ -1,5 +1,5 @@
 import { supabase } from './supabase-client.js';
-import { currentUser } from './auth.js';
+import { currentUser } from './state.js';
 import { getProfileById } from './profile.js';
 import { saveCurrentPatternAs } from './controls.js';
 import { serializePattern, applyPattern, updatePatternButtons, getSelectedPatternName } from './pattern-crud.js';

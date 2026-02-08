@@ -1,4 +1,5 @@
-import { currentUser, isAdminUser } from './auth.js';
+import { currentUser, isAdminUser } from './state.js';
+import { Bus, BUS_EVENT } from './bus.js';
 import { dbListPatternNames, dbLoadPatternByName, getSavedPatterns, serializePattern } from './pattern-crud.js';
 import { supabase } from './supabase-client.js';
 
@@ -793,7 +794,7 @@ async function handleCourseSave(shouldClose = true) {
     }
 
     // Dispatch event to notify other modules (like courses.js) to refresh
-    window.dispatchEvent(new CustomEvent('course-data-changed'));
+    Bus.emit(BUS_EVENT.COURSE_DATA_CHANGED);
 
   } catch (err) {
     console.error("Error saving course (catch block):", err);

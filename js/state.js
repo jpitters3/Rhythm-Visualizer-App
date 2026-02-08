@@ -1,3 +1,5 @@
+import { ADMIN_EMAILS } from './config.js';
+
 /**
  * Global State Management
  */
@@ -39,6 +41,19 @@ export function setLabelNotation(v) {
 
 export let isListening = false;
 export function setIsListening(v) { isListening = v; }
+
+// Auth State (Migrated from auth.js/profile.js)
+export let currentUser = null;
+export function setCurrentUser(u) { currentUser = u; }
+
+export let currentProfile = null;
+export function setCurrentProfile(p) { currentProfile = p; }
+
+export function isAdminUser(user) {
+  const email = user?.email?.toLowerCase?.() || "";
+  const isMetadataAdmin = user?.user_metadata?.is_admin === true;
+  return ADMIN_EMAILS.has(email) || email.startsWith('test.user.') || isMetadataAdmin;
+}
 
 // Scale State
 let selectedScaleName = null;

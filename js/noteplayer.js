@@ -2,7 +2,7 @@
 import { activeGrid, gridA, gridB } from './grid-context.js';
 import { setTimeSignatureState } from './rhythm-core.js';
 import { supabase } from './supabase-client.js';
-import { getCurrentUser } from './auth.js';
+import { currentUser } from './state.js';
 import { HistoryManager } from './history.js';
 import { TransportRegistry } from './transport-ui.js';
 import { isListening, getSelectedScaleName, setSelectedScaleName, getScale, setCurrentScale } from './state.js';
@@ -79,25 +79,23 @@ export function loadScaleLocal() {
 }
 
 export async function saveScaleRemote(name) {
-  const user = getCurrentUser();
-  if (!user) return;
+  if (!currentUser) return;
   if (!supabase) return;
 
   await supabase.from('profiles').upsert(
-    { user_id: user.id, handpan_scale: name },
+    { user_id: currentUser.id, handpan_scale: name },
     { onConflict: 'user_id' }
   );
 }
 
 export async function loadScaleRemote() {
-  const user = getCurrentUser();
-  if (!user) return null;
+  if (!currentUser) return null;
   if (!supabase) return null;
 
   const { data, error } = await supabase
     .from('profiles')
     .select('handpan_scale')
-    .eq('user_id', user.id)
+    .eq('user_id', currentUser.id)
     .maybeSingle();
   if (error) return null;
   return data?.handpan_scale || null;

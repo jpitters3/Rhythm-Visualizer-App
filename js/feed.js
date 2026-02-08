@@ -1,5 +1,5 @@
 import { escapeHtml } from './utils.js';
-import { currentUser } from './auth.js';
+import { currentUser } from './state.js';
 import { supabase } from './supabase-client.js';
 import { addToPractice } from './practice.js';
 import { applyPattern } from './pattern-crud.js';

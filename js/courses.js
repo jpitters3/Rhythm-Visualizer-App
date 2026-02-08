@@ -1,10 +1,10 @@
-import { supabase } from './supabase-client.js';
-import { currentUser, isAdminUser, updateAdminUI } from './auth.js';
+import { Bus, BUS_EVENT } from './bus.js';
+import { currentUser, isAdminUser } from './state.js';
 import { applyPattern, serializePattern, dbSavePattern, refreshPatternSelect, hasUnsavedChanges, snapshotCurrentState } from './pattern-crud.js';
 import { stop } from './noteplayer.js';
-import { isItemInPractice, togglePracticeItem } from './practice.js';
-import { loadCourseToEdit } from './course-creator.js';
-import { openMarketplace } from './course-marketplace.js';
+import { supabase } from './supabase-client.js';
+import { updateAdminUI } from './auth.js';
+import { isItemInPractice } from './practice.js';
 
 // ===== SIDEBAR LOGIC (OWNED COURSES) =====
 
@@ -147,6 +147,16 @@ export function renderCourseSidebar(courses) {
 
     if (isActive) {
       // === EXPANDED (ACTIVE) ===
+      let adminActions = '';
+      if (isAdminUser(currentUser)) {
+        adminActions = `
+          <div class="lesson-admin-actions" style="display:flex; gap:10px; margin-top:10px;">
+            <button class="lesson-edit-btn btn-secondary" data-course-id="${course.id}">Edit Course</button>
+            <button class="lesson-delete-btn btn-danger" data-course-id="${course.id}">Delete Course</button>
+          </div>
+        `;
+      }
+
       return `
         <div class="course-item active" data-id="${course.id}">
           <div class="course-header">
@@ -177,6 +187,7 @@ export function renderCourseSidebar(courses) {
                 </div>
               `}).join('')}
             `).join('')}
+            ${adminActions}
           </div>
         </div>
       `;
@@ -458,9 +469,10 @@ export function loadLesson(lessonId) {
   }
 }
 
-export function editCourse(courseId) {
+export async function editCourse(courseId) {
   const course = allCourses.find(c => c.id === courseId);
   if (!course) return;
+  const { loadCourseToEdit } = await import('./course-creator.js');
   loadCourseToEdit(course);
   if (window.innerWidth < 768) closeSidebar();
 }
@@ -771,15 +783,12 @@ if (closeLessonBtn) {
 }
 
 // Cross-module Events
-window.addEventListener('course-data-changed', () => {
+Bus.on(BUS_EVENT.COURSE_DATA_CHANGED, () => {
   fetchCourses();
 });
 
-window.addEventListener('request-load-lesson', (e) => {
+Bus.on(BUS_EVENT.REQUEST_LOAD_LESSON, (e) => {
   if (e.detail && e.detail.lessonId) {
-    // Ensure courses are loaded?
-    // If we are here, likely courses are loaded or we should await them?
-    // But loadLesson handles "finding" the lesson in allLessons.
     if (allLessons.length === 0) {
       fetchCourses().then(() => {
         loadLesson(e.detail.lessonId);
@@ -790,36 +799,57 @@ window.addEventListener('request-load-lesson', (e) => {
   }
 });
 
-const searchInput = document.getElementById('courseSearchInput');
-if (searchInput) {
-  searchInput.addEventListener('input', (e) => {
-    const term = e.target.value.toLowerCase();
-    const lessonLinks = document.querySelectorAll('.lesson-link');
-    lessonLinks.forEach(link => {
-      const text = link.textContent.toLowerCase();
-      link.style.display = text.includes(term) ? 'flex' : 'none';
+export function initCourses() {
+  const toggleBtn = document.getElementById('toggleSidebarBtn');
+  toggleBtn?.addEventListener('click', toggleSidebar);
+
+  const closeBtn = document.getElementById('closeSidebarBtn');
+  closeBtn?.addEventListener('click', closeSidebar);
+
+  const refreshBtn = document.getElementById('refreshCoursesBtn');
+  refreshBtn?.addEventListener('click', fetchCourses);
+
+  const openMarketBtn = document.getElementById('openMarketBtn');
+  openMarketBtn?.addEventListener('click', async () => {
+    const { openMarketplace } = await import('./course-marketplace.js');
+    openMarketplace();
+  });
+
+  const searchInput = document.getElementById('courseSearchInput');
+  if (searchInput) {
+    searchInput.addEventListener('input', (e) => {
+      const term = e.target.value.toLowerCase();
+      const lessonLinks = document.querySelectorAll('.lesson-link');
+      lessonLinks.forEach(link => {
+        const text = link.textContent.toLowerCase();
+        link.style.display = text.includes(term) ? 'flex' : 'none';
+      });
     });
+  }
+
+  // BUS LISTENERS
+  Bus.on(BUS_EVENT.AUTH_LOGOUT, () => {
+    activeCourseId = null;
+    currentLesson = null;
+    allCourses = [];
+    allSections = [];
+    allLessons = [];
+    closeSidebar();
+    const list = document.getElementById('courseList');
+    if (list) list.innerHTML = '<p class="empty-state">Sign in to view your courses.</p>';
+  });
+
+  Bus.on(BUS_EVENT.AUTH_LOGIN, () => {
+    fetchCourses();
+  });
+
+  Bus.on(BUS_EVENT.COURSE_UNLOCKED, () => {
+    fetchCourses();
+  });
+
+  Bus.on(BUS_EVENT.REQUEST_LOAD_LESSON, (e) => {
+    if (e.detail?.lessonId) {
+      loadLesson(e.detail.lessonId);
+    }
   });
 }
-
-// Global Auth Listener to re-fetch if sidebar is open
-window.addEventListener('user-auth-state-changed', (e) => {
-  console.log("courses.js: user-auth-state-changed event received", e.detail);
-  // If user logged in/out, we should refresh IF the sidebar is open or just clear data
-  // For now, if user logs in, we can try to fetch if we have nothing.
-  if (e.detail && e.detail.user) {
-    // Logged In
-    const sidebarEl = document.getElementById('courseSidebar');
-    if (sidebarEl && sidebarEl.classList.contains('open')) {
-      console.log("courses.js: Sidebar open during auth change. Fetching courses...");
-      fetchCourses();
-    }
-  } else {
-    // Logged Out
-    activeCourseId = null;
-    allCourses.length = 0; // Clear array
-    // Optionally clear UI
-    const list = document.getElementById('courseList');
-    if (list) list.innerHTML = '';
-  }
-});

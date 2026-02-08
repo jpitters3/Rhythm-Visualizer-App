@@ -1,5 +1,5 @@
 import { SCALES } from './config.js';
-import { currentUser } from './auth.js';
+import { currentUser } from './state.js';
 import { innerLabels, setInnerLabels, measures, setMeasures } from './state.js';
 import { renderAllMeasures } from './notegrid.js';
 import { supabase } from './supabase-client.js';
