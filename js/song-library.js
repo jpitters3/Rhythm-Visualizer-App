@@ -15,7 +15,8 @@ let librarySongs = [];
 // Better to import it if it is a module.
 // But this file has no imports at the top. It seems to be treated as a module by the bundler/browser if type="module".
 import { renderAllMeasures, checkCellIsMultiMode } from './notegrid.js';
-import { setTimeSignature } from './noteplayer.js';
+import { setTimeSignature, getScale } from './noteplayer.js';
+import { currentUser, isAdminUser } from './auth.js';
 import { innerLabels } from './state.js'; // This seems wrong, innerLabels is a getter/state
 import { activeGrid } from './grid-context.js'; // We need activeGrid to set innerLabels
 
@@ -72,7 +73,7 @@ function renderLibrary() {
   }
 
   // Get current scale details for compatibility check
-  const scale = window.getScale ? window.getScale() : null;
+  const scale = getScale ? getScale() : null;
   const scaleNotes = new Set();
 
   if (scale) {
