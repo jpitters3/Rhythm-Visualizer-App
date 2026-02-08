@@ -1,6 +1,7 @@
 const { test, expect } = require('@playwright/test');
 const { createClient } = require('@supabase/supabase-js');
 const { createTestUser, deleteTestUser, supabaseAdmin } = require('./utils/auth-helper');
+const { waitForPageReady } = require('./utils/page-helper');
 
 // Supabase Setup
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || "";
@@ -25,8 +26,8 @@ test.describe('Community Features', () => {
       return;
     }
 
-    // 2. Navigate
-    await page.goto('/');
+    // 2. Navigate and wait for page to be fully loaded
+    await waitForPageReady(page);
 
     // 3. Login
     // Check Desktop vs Mobile login button
@@ -52,7 +53,8 @@ test.describe('Community Features', () => {
     await page.fill('#authPass', testUser.password);
     await page.click('#authLogin');
 
-    await expect(page.locator('#authHint')).toContainText('Signed in!');
+    // Wait for success with longer timeout
+    await expect(page.locator('#authHint')).toContainText('Signed in!', { timeout: 10000 });
     await expect(page.locator('#authModal')).not.toHaveClass(/open/);
 
     // 4. Seed Profile immediately to ensure it exists for all tests
@@ -69,7 +71,12 @@ test.describe('Community Features', () => {
     }
   });
 
-  test.afterEach(async () => {
+  test.afterEach(async ({ page }) => {
+    // Clear browser session to prevent test interference
+    await page.context().clearCookies();
+    await page.evaluate(() => localStorage.clear());
+
+    // Delete test user from Supabase
     if (testUser) {
       await deleteTestUser(testUser.user.id);
     }

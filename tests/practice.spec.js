@@ -12,6 +12,7 @@ async function clickAccountBtn(page) {
 }
 
 const { createTestUser, deleteTestUser } = require('./utils/auth-helper');
+const { waitForPageReady } = require('./utils/page-helper');
 
 test.describe('Practice Plan', () => {
   let testUser;
@@ -22,7 +23,9 @@ test.describe('Practice Plan', () => {
 
     // Enable Console Logs
     page.on('console', msg => console.log(`BROWSER LOG: ${msg.text()}`));
-    await page.goto('/');
+
+    // Navigate and wait for page to be fully loaded
+    await waitForPageReady(page);
 
     // Auth Check
     const accountBtn = page.locator('#accountBtn');
@@ -43,12 +46,18 @@ test.describe('Practice Plan', () => {
     const loginBtn = await authBtn.isVisible() ? page.locator('#authBtn') : page.locator('#accountBtn');
     if (await loginBtn.isVisible()) {
       await loginBtn.click();
+
+      console.log(`[PRACTICE-TEST] Logging in with:`, {
+        email: testUser.email,
+        password: testUser.password
+      });
+
       await page.fill('#authEmail', testUser.email);
       await page.fill('#authPass', testUser.password);
       await page.click('#authLogin');
 
-      // Explicitly wait for Auth to be settled
-      await expect(page.locator('#authHint')).toContainText('Signed in!', { timeout: 15000 });
+      // Explicitly wait for Auth to be settled with longer timeout
+      await expect(page.locator('#authHint')).toContainText('Signed in!', { timeout: 10000 });
 
       // DEBUG WAIT
       await page.waitForTimeout(2000);
@@ -57,7 +66,12 @@ test.describe('Practice Plan', () => {
     }
   });
 
-  test.afterEach(async () => {
+  test.afterEach(async ({ page }) => {
+    // Clear browser session to prevent test interference
+    await page.context().clearCookies();
+    await page.evaluate(() => localStorage.clear());
+
+    // Delete test user from Supabase
     if (testUser) {
       await deleteTestUser(testUser.user.id);
     }

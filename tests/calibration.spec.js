@@ -8,6 +8,7 @@ const SUPABASE_KEY = process.env.VITE_SUPABASE_ANON_KEY || "";
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const { createTestUser, deleteTestUser } = require('./utils/auth-helper');
+const { waitForPageReady } = require('./utils/page-helper');
 
 test.describe('Calibration Feature', () => {
   let testUser;
@@ -65,8 +66,8 @@ test.describe('Calibration Feature', () => {
     if (error) throw new Error(`Failed to seed handpan: ${error.message}`);
     testHandpanId = hp.id;
 
-    // 2. Login
-    await page.goto('/');
+    // 2. Navigate and wait for page to be fully loaded
+    await waitForPageReady(page);
 
     // Auth Logic (from course_crud.spec.js pattern)
     // Mobile/Desktop handling for Auth Button
@@ -80,22 +81,29 @@ test.describe('Calibration Feature', () => {
       await page.fill('#authEmail', testUser.email);
       await page.fill('#authPass', testUser.password);
 
-      // Wait for the handpans to be fetched upon login
-      const responsePromise = page.waitForResponse(resp =>
-        resp.url().includes('/rest/v1/user_handpans') && resp.status() === 200
+      // Set up listener for handpans fetch BEFORE clicking login
+      const responsePromise = page.waitForResponse(
+        resp => resp.url().includes('/rest/v1/user_handpans') && resp.status() === 200,
+        { timeout: 10000 }
       );
 
       await page.click('#authLogin');
 
+      // Wait for handpans to be fetched
       await responsePromise;
 
-      // Verify login success
-      await expect(page.locator('#authHint')).toContainText('Signed in');
+      // Verify login success with longer timeout
+      await expect(page.locator('#authHint')).toContainText('Signed in', { timeout: 10000 });
       await expect(page.locator('#authModal')).not.toHaveClass(/open/);
     }
   });
 
-  test.afterEach(async () => {
+  test.afterEach(async ({ page }) => {
+    // Clear browser session to prevent test interference
+    await page.context().clearCookies();
+    await page.evaluate(() => localStorage.clear());
+
+    // Clean up test data
     if (testHandpanId) {
       await supabase.from('user_handpans').delete().eq('id', testHandpanId);
     }

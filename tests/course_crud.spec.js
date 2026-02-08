@@ -8,6 +8,7 @@ const SUPABASE_KEY = process.env.VITE_SUPABASE_ANON_KEY || "";
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const { createTestUser, deleteTestUser } = require('./utils/auth-helper');
+const { waitForPageReady } = require('./utils/page-helper');
 
 test.describe('Course CRUD (Clean)', () => {
   let testUser;
@@ -16,8 +17,8 @@ test.describe('Course CRUD (Clean)', () => {
     // 0. Create unique test user
     testUser = await createTestUser();
 
-    // 1. Navigate
-    await page.goto('/');
+    // 1. Navigate and wait for page to be fully loaded
+    await waitForPageReady(page);
 
     // 2. Auth Check: If not signed in, sign in
     await ensureMenuOpen(page);
@@ -44,6 +45,8 @@ test.describe('Course CRUD (Clean)', () => {
         throw new Error('Failed to create test user credentials');
       }
 
+      console.log(`[COURSE-CRUD] Logging in with:`, { email, password });
+
       await page.fill('#authEmail', email);
 
       // Ensure we are on login tab if needed (default is usually register if fresh? or login?)
@@ -53,8 +56,8 @@ test.describe('Course CRUD (Clean)', () => {
       await page.fill('#authPass', password);
       await page.click('#authLogin');
 
-      // Wait for success
-      await expect(page.locator('#authHint')).toContainText('Signed in!');
+      // Wait for success with longer timeout
+      await expect(page.locator('#authHint')).toContainText('Signed in!', { timeout: 10000 });
       await expect(page.locator('#authModal')).not.toHaveClass(/open/);
 
       // Verify login button changed state
@@ -62,7 +65,12 @@ test.describe('Course CRUD (Clean)', () => {
     }
   });
 
-  test.afterEach(async () => {
+  test.afterEach(async ({ page }) => {
+    // Clear browser session to prevent test interference
+    await page.context().clearCookies();
+    await page.evaluate(() => localStorage.clear());
+
+    // Delete test user from Supabase
     if (testUser) {
       await deleteTestUser(testUser.user.id);
     }
