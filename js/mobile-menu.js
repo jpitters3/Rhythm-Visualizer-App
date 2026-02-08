@@ -1,6 +1,6 @@
 
 // Mobile Hamburger Menu Logic
-document.addEventListener('DOMContentLoaded', () => {
+export function initMobileMenu() {
   const mobileMenuBtn = document.getElementById('mobileMenuBtn');
   const headerMenu = document.getElementById('headerMenu');
 
@@ -25,4 +25,4 @@ document.addEventListener('DOMContentLoaded', () => {
       mobileMenuBtn.setAttribute('aria-expanded', 'false');
     }
   });
-});
+}

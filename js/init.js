@@ -15,10 +15,11 @@ import { STEPS } from './rhythm-core.js';
 import { supabase } from './supabase-client.js';
 import './courses.js'; // Initialize course sidebar and listeners
 import './practice.js'; // Initialize practice sidebar
-import './mobile-menu.js'; // Initialize mobile menu logic
+import { initMobileMenu } from './mobile-menu.js';
 import { initShortcuts } from './keyboard-shortcuts.js';
 
 // Initialize Logic
+initMobileMenu();
 initCourseCreator();
 initControls();
 initShortcuts();
