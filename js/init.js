@@ -23,6 +23,7 @@ import ChordUI from './chord-ui.js';
 import { initPOTW } from './pattern-of-the-week.js';
 import { initHandpanMap } from './handpanmap.js';
 import { initTranscription } from './transcription.js';
+import { initAiAssistant } from './ai-assistant.js';
 
 // Initialize Logic
 initMobileMenu();
@@ -33,6 +34,7 @@ HistoryManager.init();
 ChordUI.init();
 initHandpanMap();
 initTranscription();
+initAiAssistant();
 initCourseCreator();
 initControls();
 initShortcuts();

@@ -437,8 +437,7 @@ Output ONLY valid JSON. No markdown formatting.
 
 export let aiAssistant;
 
-// Initialize
-window.addEventListener('DOMContentLoaded', () => {
+export function initAiAssistant() {
   aiAssistant = new AiAssistant();
   window.aiAssistant = aiAssistant;
-});
+}
