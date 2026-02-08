@@ -3,6 +3,7 @@ import { currentUser } from './state.js';
 import { innerLabels, setInnerLabels, measures, setMeasures } from './state.js';
 import { renderAllMeasures } from './notegrid.js';
 import { supabase } from './supabase-client.js';
+import { gridA } from './grid-context.js';
 
 class AiAssistant {
   constructor() {
@@ -404,8 +405,8 @@ Output ONLY valid JSON. No markdown formatting.
     if (!pattern || !pattern.labels) return;
 
     // 1. Extend innerLabels
-    // Ensure innerLabels is defined globally
-    if (typeof innerLabels === 'undefined') window.innerLabels = [];
+    // Ensure innerLabels is defined in grid context
+    if (!gridA.innerLabels) gridA.innerLabels = [];
 
     // We append to the global innerLabels
     // pattern.labels should be an array.
@@ -439,5 +440,4 @@ export let aiAssistant;
 
 export function initAiAssistant() {
   aiAssistant = new AiAssistant();
-  window.aiAssistant = aiAssistant;
 }

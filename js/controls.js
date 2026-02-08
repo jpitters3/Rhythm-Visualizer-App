@@ -77,8 +77,6 @@ function setupGridControls(ctx) {
   if (pBtn) {
     pBtn.addEventListener('click', (e) => {
       e.stopPropagation();
-      // We don't generally change activeGrid on playback toggle unless clicked inside grid, but it's okay.
-      // window.activeGrid = ctx; // Removed global assignment
       if (ctx.playing) stop(ctx);
       else start(ctx);
     });
@@ -86,7 +84,6 @@ function setupGridControls(ctx) {
 
   if (bInput) {
     bInput.addEventListener('mousedown', () => {
-      // window.activeGrid = ctx;
       if (HistoryManager) HistoryManager.pushState();
     });
     bInput.addEventListener('input', () => {
@@ -100,7 +97,6 @@ function setupGridControls(ctx) {
   }
 
   document.getElementById(`clearBtn-${ctx.id}`)?.addEventListener('click', () => {
-    // window.activeGrid = ctx;
     if (HistoryManager) HistoryManager.pushState();
     const s = ctx.stepsPerMeasure;
     ctx.innerLabels = Array(ctx.measures * s).fill('');
@@ -111,7 +107,6 @@ function setupGridControls(ctx) {
 
   if (mBtn) {
     mBtn.addEventListener('click', () => {
-      // window.activeGrid = ctx;
       ctx.isMuted = !ctx.isMuted;
       mBtn.classList.toggle('muted', ctx.isMuted);
       mBtn.textContent = ctx.isMuted ? '🔇' : '🔊';

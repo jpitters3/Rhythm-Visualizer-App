@@ -122,15 +122,6 @@ function runSelfTests() {
   const before = STEPS;
   const currentMode = (activeGrid || gridA).mode;
   setMode(currentMode === '8' ? '16' : '8');
-  // Note: STEPS is imported from rhythm-core.js. It's a live binding, but calculating steps might not update the export unless logic calls calculateSteps to update it?
-  // rhythm-core.js top level code ran once.
-  // Actually, setMode updates the grid, but does it update 'STEPS' variable in rhythm-core.js? No.
-  // So this test might fail if it relies on imported STEPS changing.
-  // But removing window.STEPS means we rely on import.
-  // If setMode updates activeGrid.stepsPerMeasure, we should check THAT.
-  // console.assert((window.STEPS || STEPS) !== before, 'Mode toggle changes step count'); 
-  // Let's use activeGrid.cells.length
-  const newCount = cells().length;
   console.assert(newCount !== before, 'Mode toggle changes step count');
 
   console.assert(cells().length === newCount, 'Grid rebuilt to new step count');

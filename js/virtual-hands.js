@@ -223,4 +223,4 @@ class VirtualHands {
 
 // Global instance export
 export const virtualHands = new VirtualHands();
-// window.virtualHands = virtualHands; // Removing global
+

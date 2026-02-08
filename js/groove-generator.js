@@ -1,6 +1,5 @@
-// Table of Contents
-// + Helper Functions
-// + Event Listeners
+
+import { activeGrid } from './grid-context.js';
 
 // HELPER FUNTIONS
 
@@ -25,7 +24,7 @@ function randInt(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
-function clearAllBeatsAndLabels(ctx = window.activeGrid) {
+function clearAllBeatsAndLabels(ctx = activeGrid) {
   ctx.innerLabels.fill('');
   cells(ctx).forEach((c) => {
     c.classList.remove('label-d', 'label-t', 'label-s', 'label-n', 'selected', 'play');
@@ -103,7 +102,7 @@ function applyGroove({ D, T, S, placement = 'none', completelyRandom = false, en
     }
   }
 
-  const ctx = window.activeGrid;
+  const ctx = activeGrid;
   clearAllBeatsAndLabels(ctx);
 
   const all = cells(ctx);
@@ -164,7 +163,6 @@ export function closeGrooveModal() {
   grooveModal.setAttribute('aria-hidden', 'true');
 }
 
-window.closeGrooveModal = closeGrooveModal;
 
 function parseCount(inputEl) {
   const v = String(inputEl.value || '').trim();
@@ -261,7 +259,7 @@ function pickWithRules({ pool, n, slots, used, avoidAdjacency = true }) {
   return picks;
 }
 
-function generateGroove(dCount, tCount, sCount, ctx = window.activeGrid) {
+function generateGroove(dCount, tCount, sCount, ctx = activeGrid) {
   const s = getStepCountPerMeasure(ctx);
   const slots = Math.min(8, s);
   clearAllBeatsAndLabels(ctx);

@@ -38,11 +38,26 @@ export function initPOTW() {
     });
   });
 
-  // Expose Global Helper for List Actions
-  window.potwActions = {
-    editItem: editItem,
-    deleteItem: deleteItem
-  };
+  // Event delegation for dynamically generated buttons
+  document.addEventListener('click', (e) => {
+    const target = e.target;
+
+    // Edit button
+    if (target.classList.contains('edit-btn') && target.closest('.potw-list-item')) {
+      const itemData = target.dataset.item;
+      if (itemData) {
+        editItem(JSON.parse(itemData));
+      }
+    }
+
+    // Delete button
+    if (target.classList.contains('delete-btn') && target.closest('.potw-list-item')) {
+      const itemId = target.dataset.itemId;
+      if (itemId) {
+        deleteItem(itemId);
+      }
+    }
+  });
 }
 
 function switchTab(tabId) {
@@ -214,8 +229,8 @@ function renderList(container, items, emptyText) {
                  <div class="meta">${d}</div>
                </div>
                <div class="potw-actions">
-                 <button class="icon-btn edit-btn" onclick='window.potwActions.editItem(${itemJson})' title="Edit / Reschedule">✏️</button>
-                 <button class="icon-btn delete-btn" onclick="window.potwActions.deleteItem('${item.id}')" title="Unschedule / Delete">🗑️</button>
+                 <button class="icon-btn edit-btn" data-item='${itemJson}' title="Edit / Reschedule">✏️</button>
+                 <button class="icon-btn delete-btn" data-item-id="${item.id}" title="Unschedule / Delete">🗑️</button>
                </div>
             </div>
          `;

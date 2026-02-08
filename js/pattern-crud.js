@@ -255,9 +255,8 @@ export async function applyPattern(state, ctx = gridA) {
   ctx.innerLabels = state.labels;
   ctx.innerHands = Array.isArray(state.hands) ? state.hands : Array(ctx.innerLabels.length).fill(null);
 
-  // No Sync to window.innerLabels
-
   renderAllMeasures(ctx);
+
   clearSelection(ctx);
 
   if (wasPlaying) start(ctx);

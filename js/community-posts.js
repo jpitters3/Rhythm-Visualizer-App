@@ -188,11 +188,8 @@ function triggerMediaUpload(type) {
 function attachCurrentPattern() {
   if (!currentUser) return alert('Please sign in.');
 
-  // Attach current loaded pattern
-  // Assuming serializePattern is global or we need to import it? 
-  // It seems to be global currently. If it fails, we need to find it source (pattern-crud.js?)
-  // For now, let's assume it's available or window.serializePattern
   const pattern = serializePattern();
+
 
   if (!pattern) {
     console.warn("serializePattern failed or returned null");
