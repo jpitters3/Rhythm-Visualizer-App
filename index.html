@@ -30,6 +30,7 @@
   <link rel="stylesheet" href="css/feed.css">
   <link rel="stylesheet" href="css/course-marketplace.css">
   <link rel="stylesheet" href="./css/calibration.css">
+  <link rel="stylesheet" href="./css/coaching-mode.css">
   <link rel="stylesheet" href="./css/error.css">
   <link rel="stylesheet" href="./css/pattern-of-the-week.css">
 </head>
@@ -224,6 +225,7 @@
       <div id="calibrationStatus" class="calibration-overlay" style="display:none;">
         <span>Tap Note: </span><span id="targetNoteName">D</span>
       </div>
+      <button id="coachModeBtn" class="secondary-btn" title="Practice with real-time feedback">🎯 Coach</button>
       <button id="presentBtn" title="Toggle presentation mode (Esc exits)">⛶</button>
     </div>
 
@@ -454,6 +456,19 @@
 
   <div id="countdownOverlay" class="countdown-overlay" style="display: none;">
     <span id="countdownNumber">4</span>
+  </div>
+
+  <!-- Coaching HUD -->
+  <div id="coachingHUD" class="coaching-hud" style="display:none;">
+    <div class="hud-score">
+      <span class="hud-label">Accuracy</span>
+      <span id="hudAccuracy" class="hud-value">0%</span>
+    </div>
+    <div class="hud-notes">
+      <span id="hudCorrect" class="hud-correct">0</span> /
+      <span id="hudTotal" class="hud-total">0</span>
+    </div>
+    <button id="stopCoachingBtn" class="hud-stop">Stop</button>
   </div>
 
   <div class="footer"></div>
@@ -786,6 +801,44 @@
         <div class="profile-actions">
           <button id="saveProfileBtn">Save Profile</button>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Coaching Results Modal -->
+  <div id="coachingResultsModal" class="modal-overlay" aria-hidden="true">
+    <div class="modal coaching-results-modal">
+      <div class="modal-header">
+        <h2>Practice Session Complete!</h2>
+        <button id="closeCoachingResults" class="close-btn">&times;</button>
+      </div>
+
+      <div class="results-summary">
+        <div class="score-circle">
+          <span id="overallScore" class="score-value">0%</span>
+          <span class="score-label">Overall</span>
+        </div>
+
+        <div class="score-breakdown">
+          <div class="score-item">
+            <span class="score-label">Note Accuracy</span>
+            <span id="noteAccuracy" class="score-value">0%</span>
+          </div>
+          <div class="score-item">
+            <span class="score-label">Timing Accuracy</span>
+            <span id="timingAccuracy" class="score-value">0%</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="problem-areas">
+        <h3>Areas to Practice</h3>
+        <div id="problemMeasuresList"></div>
+      </div>
+
+      <div class="modal-actions">
+        <button id="practiceAgainBtn" class="primary-btn">Practice Again</button>
+        <button id="saveSessionBtn" class="secondary-btn">Save Session</button>
       </div>
     </div>
   </div>

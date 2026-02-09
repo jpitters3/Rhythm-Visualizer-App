@@ -1,4 +1,5 @@
-import { activeGrid, gridA, gridB, setActiveGridGlobal } from './grid-context.js';
+import { gridA, gridB } from './grid-context.js';
+import { activeGrid, setActiveGrid } from './state.js';
 import { getTimeSignature, calculateSteps } from './rhythm-core.js';
 import { stop } from './noteplayer.js';
 import { getScale } from './state.js';
@@ -438,7 +439,7 @@ function attachCellListeners(cell, ctx = activeGrid) {
     ev.stopPropagation();
 
     // Set activeGrid on click
-    setActiveGridGlobal(ctx);
+    setActiveGrid(ctx);
 
     const x = ev.clientX;
     const y = ev.clientY;

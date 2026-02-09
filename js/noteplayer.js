@@ -1,8 +1,8 @@
 /* ==== Audio and musical functionality including scales ==== */
-import { activeGrid, gridA, gridB } from './grid-context.js';
+import { gridA, gridB } from './grid-context.js';
 import { setTimeSignatureState } from './rhythm-core.js';
 import { supabase } from './supabase-client.js';
-import { currentUser } from './state.js';
+import { currentUser, activeGrid, setActiveGrid } from './state.js';
 import { HistoryManager } from './history.js';
 import { TransportRegistry } from './transport-ui.js';
 import { isListening, getSelectedScaleName, setSelectedScaleName, getScale, setCurrentScale } from './state.js';

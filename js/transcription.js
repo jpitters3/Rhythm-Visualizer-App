@@ -4,6 +4,7 @@ import { activeGrid } from './grid-context.js';
 import { cells, setInnerLabel, renderAllMeasures } from './notegrid.js';
 import { loadPatternByName } from './controls.js';
 import { isListening, setIsListening } from './state.js';
+import { isCoaching, evaluateDetectedNote } from './coaching-mode.js';
 
 export let micStream = null, audioAnalyser = null;
 const BUFSIZE = 2048, buf = new Float32Array(BUFSIZE);
@@ -136,6 +137,16 @@ function transcriptionLoop() {
         const detected = findClosestScaleNote(pitch); // Returns label string directly
 
         if (detected) {
+            // Check if coaching mode is active
+            if (isCoaching()) {
+                // Send to coaching mode for evaluation
+                evaluateDetectedNote(detected, currentIndex, now);
+                // Don't record to grid in coaching mode
+                stepWasRecorded = true;
+                tally = {};
+                return;
+            }
+
             // Use the note-specific multiplier from Guided Calibration
             const multiplier = noteMultipliers[detected] || 0.5;
 

@@ -81,16 +81,11 @@ export class GridContext {
 export const gridA = new GridContext('A', 'measures');
 export const gridB = new GridContext('B', 'measures-B');
 
-// Current active grid for keyboard shortcuts and general focus
-export let activeGrid = gridA; // Default to A
-
-export function setActiveGridGlobal(grid) {
-  activeGrid = grid;
-  setActiveGrid(grid); // Update state.js too
-}
+// Re-export activeGrid from state.js to maintain compatibility
+export { activeGrid } from './state.js';
 
 // Sync with central state
 setGridA(gridA);
 setGridB(gridB);
-setActiveGrid(activeGrid);
+setActiveGrid(gridA); // Initialize activeGrid to gridA
 

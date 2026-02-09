@@ -10,7 +10,8 @@ export const BUS_EVENT = {
   PLAYBACK_STOP: 'playback:stop',
   PATTERN_REFRESH_NEEDED: 'pattern:refresh-needed',
   PROFILE_LOAD_NEEDED: 'profile:load-needed',
-  HANDPANS_LOAD_NEEDED: 'handpans:load-needed'
+  HANDPANS_LOAD_NEEDED: 'handpans:load-needed',
+  COACHING_EVALUATE: 'coaching:evaluate'
 };
 
 /**

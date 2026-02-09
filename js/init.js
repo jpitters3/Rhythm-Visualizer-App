@@ -1,5 +1,6 @@
 // ===== INIT =====
-import { gridA, activeGrid } from './grid-context.js';
+import { gridA } from './grid-context.js';
+import { activeGrid, setActiveGrid } from './state.js';
 import { activeSubIndex, cells, renderAllMeasures, initNoteGrid } from './notegrid.js';
 import { ADMIN_EMAILS } from './config.js';
 import { TransportRegistry } from './transport-ui.js';
@@ -28,6 +29,7 @@ import { initAiAssistant } from './ai-assistant.js';
 import { initCalibration } from './calibration.js';
 import { initFeed } from './feed.js';
 import { initCourseMarketplace } from './course-marketplace.js';
+import { initCoachingMode } from './coaching-mode.js';
 
 /**
  * Main application initializer
@@ -48,6 +50,7 @@ async function init() {
     ChordUI.init();
     initHandpanMap();
     initTranscription();
+    initCoachingMode();
     initAiAssistant();
     initCalibration();
     initFeed();

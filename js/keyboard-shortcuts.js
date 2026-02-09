@@ -1,5 +1,6 @@
 // ===== KEYBOARD LABELING + SHORTCUTS =====
-import { activeGrid, gridA } from './grid-context.js';
+import { gridA } from './grid-context.js';
+import { activeGrid } from './state.js';
 import { start, stop, ensureAudio, getAudioCtx } from './noteplayer.js';
 import { clearSelection, deleteSelection, copySelection, pasteSelection, clearGridDom } from './notegrid.js';
 import { getRange, clearRange } from './range-selection.js';
