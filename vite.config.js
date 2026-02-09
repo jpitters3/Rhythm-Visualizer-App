@@ -2,8 +2,8 @@ import { defineConfig } from 'vite';
 
 export default defineConfig({
   server: {
-    port: 3000, // Change port to avoid cache/conflict on 8000
-    open: true, // Auto-open browser
+    port: 3000,
+    open: false, // Disable auto-open so it doesn't conflict with VS Code debugger
   },
   build: {
     outDir: 'dist',
