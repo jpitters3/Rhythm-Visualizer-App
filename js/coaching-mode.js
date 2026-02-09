@@ -209,9 +209,9 @@ function evaluateNote(detectedNote, expectedNotes, timing) {
   const noteMatch = expectedNotes.includes(detectedNote);
   const noteScore = noteMatch ? 100 : 0;
 
-  // Timing accuracy (±100ms tolerance)
+  // Timing accuracy (±200ms tolerance, normalized to 0-100 scale)
   const timingError = Math.abs(timing.actual - timing.expected);
-  const timingScore = Math.max(0, 200 - timingError);
+  const timingScore = Math.max(0, 100 - (timingError / 2));
 
   // Combined score (70% note, 30% timing)
   const overallScore = (noteScore * 0.7) + (timingScore * 0.3);
