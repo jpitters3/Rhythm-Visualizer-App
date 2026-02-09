@@ -6,8 +6,9 @@ import { currentUser, activeGrid, setActiveGrid } from './state.js';
 import { HistoryManager } from './history.js';
 import { TransportRegistry } from './transport-ui.js';
 import { isListening, getSelectedScaleName, setSelectedScaleName, getScale, setCurrentScale } from './state.js';
-import { SCALE_KEY_LOCAL, SCALE_KEY_REMOTE, SCALES } from './config.js';
+import { SCALE_KEY_LOCAL, SCALE_KEY_REMOTE, SCALES, AUDIO_DELAY } from './config.js';
 import { renderAllMeasures } from './notegrid.js';
+import { coachingSession, isCoaching } from './coaching-mode.js';
 
 const SOUND_TAK = 'Tak';
 const SOUND_SLAP = 'Slap';
@@ -38,9 +39,6 @@ function buildScaleSelect() {
     scaleSelect.appendChild(opt);
   }
 }
-
-// export function setCurrentScale(scaleObj) { ... } // Moved to state.js
-// export function getScale() { ... } // Moved to state.js
 
 export function noteForLabel(label) {
   // 1. Common Sounds
@@ -110,9 +108,29 @@ let audioCtx = null;
 let audioUnlocked = false;
 let samplesPreloaded = false;
 
-// const AUDIO_DELAY = 0.3; // 300ms delay to sync audio with visual pulse expansion
+// Volume State (persisted)
+let volInstrument = parseFloat(localStorage.getItem('gp_vol_inst') || '1.0');
+let volMetronome = parseFloat(localStorage.getItem('gp_vol_metro') || '1.0');
+
+export function getVolume(type) {
+  if (type === 'metronome') return volMetronome;
+  return volInstrument;
+}
+
+export function setVolume(type, val) {
+  if (type === 'metronome') {
+    volMetronome = Math.max(0, Math.min(1, val));
+    localStorage.setItem('gp_vol_metro', volMetronome);
+    console.log('[Audio] Metronome volume set to:', volMetronome);
+  } else {
+    volInstrument = Math.max(0, Math.min(1, val));
+    localStorage.setItem('gp_vol_inst', volInstrument);
+    console.log('[Audio] Instrument volume set to:', volInstrument);
+  }
+}
 
 export function unlockAudio() {
+  console.log('[Audio] unlockAudio called');
   audioUnlocked = true;
   ensureAudio();
   preloadAudioSamples();
@@ -130,14 +148,26 @@ export function intervalMs(ctx) {
 
 export function ensureAudio() {
   // Don’t create/resume AudioContext until a real user gesture has happened
-  if (!audioUnlocked) return;
+  if (!audioUnlocked) {
+    console.warn('[Audio] ensureAudio called but audioUnlocked is false - returning early');
+    return;
+  }
 
   if (!audioCtx) {
+    console.log('[Audio] Creating new AudioContext');
     const Ctx = window.AudioContext || window.webkitAudioContext;
-    if (Ctx) audioCtx = new Ctx();
+    if (Ctx) {
+      audioCtx = new Ctx();
+      console.log('[Audio] AudioContext created:', audioCtx?.state);
+    }
   }
+
+  // Resume if suspended (including newly created contexts)
   if (audioCtx && audioCtx.state === 'suspended') {
-    audioCtx.resume().catch(() => { });
+    console.log('[Audio] Resuming suspended AudioContext');
+    audioCtx.resume()
+      .then(() => console.log('[Audio] AudioContext resumed successfully, state:', audioCtx.state))
+      .catch((err) => console.error('[Audio] Failed to resume AudioContext:', err));
   }
 }
 
@@ -186,8 +216,11 @@ function metroClick(kind, delay = 0) {
 
   osc.frequency.setValueAtTime(freq, t);
 
+  // Click Envelope (with volume control)
+  // Note: exponentialRampToValueAtTime cannot use 0, must use small positive value
+  const targetLevel = Math.max(0.0001, level * volMetronome);
   gain.gain.setValueAtTime(0.0001, t);
-  gain.gain.exponentialRampToValueAtTime(level, t + 0.001);
+  gain.gain.exponentialRampToValueAtTime(targetLevel, t + 0.002);
   gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.03);
 
   osc.connect(gain);
@@ -253,8 +286,6 @@ export function tick(ctx) {
   const stepNotes = [];
   const stepHands = [];
 
-  const AUDIO_DELAY = 0.05;
-
   // CALIBRATION COUNTDOWN LOGIC //
 
   if (countdownRemaining > 0) {
@@ -262,6 +293,9 @@ export function tick(ctx) {
     if (c.metronomeOn) metroClick(getMetroClickKind('beat', c), AUDIO_DELAY);
     countdownRemaining--;
     return;
+  }
+  else if (isCoaching() && !coachingSession.actualStartTime) {
+    coachingSession.actualStartTime = Date.now();
   }
 
   if (document.getElementById('countdownOverlay').style.display !== 'none') {
@@ -320,6 +354,7 @@ export function tick(ctx) {
     metroClick(getMetroClickKind(c), AUDIO_DELAY);
   }
 
+  c.transcriptionIndex = c.step;
   c.step = (c.step + 1) % c.cells.length;
 }
 
@@ -399,13 +434,16 @@ export function playSample(key) {
   src.buffer = buffer;
 
   // Tiny fade-in only (prevents click)
+  // Note: exponentialRampToValueAtTime cannot use 0, must use small positive value
   const t = audioCtx.currentTime;
+  const targetVol = Math.max(0.0001, volInstrument);
+  console.log('[Audio] playSample using volInstrument:', volInstrument, 'targetVol:', targetVol);
   gain.gain.setValueAtTime(0.0001, t);
-  gain.gain.exponentialRampToValueAtTime(1.0, t + 0.005);
+  gain.gain.exponentialRampToValueAtTime(targetVol, t + 0.005);
 
   // Tiny fade out (prevents click)
   const dur = src.buffer.duration;
-  gain.gain.setValueAtTime(1.0, t + Math.max(0, dur - 0.02));
+  gain.gain.setValueAtTime(targetVol, t + Math.max(0, dur - 0.02));
   gain.gain.exponentialRampToValueAtTime(0.0001, t + dur);
 
   src.connect(gain);
@@ -453,10 +491,10 @@ export function playSlap() {
   hp.type = 'highpass';
   hp.frequency.setValueAtTime(800, t);
 
-  const gain = audioCtx.createGain();
+  const gain = audioCtx.createGain();  // Click Envelope
   gain.gain.setValueAtTime(0.0001, t);
-  gain.gain.exponentialRampToValueAtTime(0.20, t + 0.002);
-  gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.06);
+  gain.gain.exponentialRampToValueAtTime(1.0 * volMetronome, t + 0.002);
+  gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.03);
 
   noise.connect(hp);
   hp.connect(gain);
@@ -479,19 +517,28 @@ export function playNoteSample(n, delay = 0) {
   if (!audioCtx || !buffer) return;
 
   const src = audioCtx.createBufferSource();
+  const gain = audioCtx.createGain();
+
   src.buffer = buffer;
-  src.connect(audioCtx.destination);
-  src.start(audioCtx.currentTime + delay);
+
+  // Apply instrument volume
+  const targetVol = Math.max(0.0001, volInstrument);
+  const t = audioCtx.currentTime + delay;
+  gain.gain.setValueAtTime(targetVol, t);
+
+  src.connect(gain);
+  gain.connect(audioCtx.destination);
+  src.start(t);
 }
 
 
-export function start(ctx, isSync = true) {
+export function start(ctx, isSync = true, skipCountdown = false) {
   const c = ctx || activeGrid;
   unlockAudio();
   if (c.playing || c.timers.length) return;
 
   // Use imported isListening state
-  if (isListening) {
+  if (isListening && !skipCountdown) {
     countdownRemaining = COUNTDOWN_LENGTH;
   } else {
     countdownRemaining = 0;
@@ -532,6 +579,7 @@ export function stop(ctx, isSync = true) {
 
   c.playing = false;
   c.step = 0;
+  c.transcriptionIndex = 0;
   if (c.playBtn) {
     c.playBtn.textContent = '►';
     c.playBtn.classList.remove('active');

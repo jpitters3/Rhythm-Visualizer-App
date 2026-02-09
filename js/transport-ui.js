@@ -33,6 +33,7 @@ export class TransportUI {
       this.metroBtn.onclick = (e) => {
         e.stopPropagation();
         this.ctx.metronomeOn = !this.ctx.metronomeOn;
+        localStorage.setItem('groovepan_metro' + '-' + this.ctx.id, this.ctx.metronomeOn ? 'on' : 'off');
         TransportRegistry.updateAll(this.ctx);
       };
     }

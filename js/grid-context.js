@@ -19,6 +19,7 @@ export class GridContext {
     this.metronomeOn = false;
     this.isMuted = false;
     this.mode = '8'; // Default mode matching index.html
+    this.transcriptionIndex = 0;
 
     // Playback timers
     this.timers = [];
@@ -74,6 +75,7 @@ export class GridContext {
     this.innerHands = Array(m * s).fill(null);
     this.step = 0;
     this.playing = false;
+    this.transcriptionIndex = 0;
   }
 }
 

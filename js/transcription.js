@@ -1,4 +1,4 @@
-import { ensureAudio, getAudioCtx, addTickObserver, stop, start } from './noteplayer.js';
+import { unlockAudio, getAudioCtx, addTickObserver, stop, start } from './noteplayer.js';
 import { getScale } from './state.js';
 import { activeGrid } from './grid-context.js';
 import { cells, setInnerLabel, renderAllMeasures } from './notegrid.js';
@@ -7,6 +7,7 @@ import { isListening, setIsListening } from './state.js';
 import { isCoaching, evaluateDetectedNote } from './coaching-mode.js';
 
 export let micStream = null, audioAnalyser = null;
+let lastActiveElement = null;
 const BUFSIZE = 2048, buf = new Float32Array(BUFSIZE);
 
 // --- Settings & State ---
@@ -35,11 +36,13 @@ let noteMultipliers = JSON.parse(localStorage.getItem('gp_multipliers')) || {
     'D': 0.85, '1': 0.5, '2': 0.5, '3': 0.5, '4': 0.5, '5': 0.5, '6': 0.5, '7': 0.5, '8': 0.5
 };
 
-// Note frequencies (C0 to B8)
+// Note frequencies (Octaves 2-6)
 const NOTE_FREQS = {
-    "D3": 146.83, "Eb3": 155.56, "E3": 164.81, "F3": 174.61, "Fs3": 185.00, "G3": 196.00, "Gs3": 207.65, "A3": 220.00, "Bb3": 233.08, "B3": 246.94,
+    "C2": 65.41, "Cs2": 69.30, "D2": 73.42, "Eb2": 77.78, "E2": 82.41, "F2": 87.31, "Fs2": 92.50, "G2": 98.00, "Gs2": 103.83, "A2": 110.00, "Bb2": 116.54, "B2": 123.47,
+    "C3": 130.81, "Cs3": 138.59, "D3": 146.83, "Eb3": 155.56, "E3": 164.81, "F3": 174.61, "Fs3": 185.00, "G3": 196.00, "Gs3": 207.65, "A3": 220.00, "Bb3": 233.08, "B3": 246.94,
     "C4": 261.63, "Cs4": 277.18, "D4": 293.66, "Eb4": 311.13, "E4": 329.63, "F4": 349.23, "Fs4": 369.99, "G4": 392.00, "Gs4": 415.30, "A4": 440.00, "Bb4": 466.16, "B4": 493.88,
-    "C5": 523.25 // Add more as needed based on your scales
+    "C5": 523.25, "Cs5": 554.37, "D5": 587.33, "Eb5": 622.25, "E5": 659.25, "F5": 698.46, "Fs5": 739.99, "G5": 783.99, "Gs5": 830.61, "A5": 880.00, "Bb5": 932.33, "B5": 987.77,
+    "C6": 1046.50
 };
 
 // --- UI References ---
@@ -60,15 +63,45 @@ async function toggleListening() {
     }
 
     try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        micStream = stream;
-        ensureAudio();
-
+        // 1. Initialize Audio Context (User Gesture)
+        unlockAudio();
         const audioCtx = getAudioCtx();
-        if (!audioCtx) return;
 
+        if (!audioCtx) {
+            console.error("Audio Context not available");
+            return;
+        }
+
+        // 2. Resume if suspended
+        if (audioCtx.state === 'suspended') {
+            await audioCtx.resume();
+        }
+
+        // 3. Get Microphone Stream
+        // Request sample rate matching the context to avoid errors
+        const constraints = {
+            audio: {
+                sampleRate: audioCtx.sampleRate,
+                echoCancellation: false,
+                autoGainControl: false,
+                noiseSuppression: false
+            }
+        };
+
+        let stream;
+        try {
+            stream = await navigator.mediaDevices.getUserMedia(constraints);
+        } catch (e) {
+            console.warn("Could not get matching sample rate, trying default", e);
+            stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        }
+
+        micStream = stream;
+
+        // 4. Connect Stream to Analyser
         const source = audioCtx.createMediaStreamSource(stream);
         audioAnalyser = audioCtx.createAnalyser();
+        // Use a power of 2 for FFT size (e.g., 2048)
         audioAnalyser.fftSize = BUFSIZE;
         source.connect(audioAnalyser);
 
@@ -79,8 +112,8 @@ async function toggleListening() {
 
         requestAnimationFrame(transcriptionLoop);
     } catch (err) {
-        console.error(err);
-        alert("Microphone access denied or not supported.");
+        console.error("Microphone/Audio Error:", err);
+        alert("Microphone access denied or audio device error.\nPlease check your settings.");
     }
 }
 
@@ -110,6 +143,11 @@ function transcriptionLoop() {
     // Use local sync variable
     const currentIndex = transcriptionIndex;
 
+    // DEBUG: Heartbeat to ensure loop is alive and see state
+    // if (Math.random() < 0.02) {
+    //     console.log(`[Transcription Heartbeat] Listening: ${isListening}, Index: ${currentIndex}, RMS: ${rms.toFixed(4)}, Floor: ${roomNoiseFloor.toFixed(4)}, Pitch: ${pitch}`);
+    // }
+
     // Update Guided Calibration display
     if (isGuidedCalibrating) {
         updateGuidedUI(currentIndex);
@@ -133,51 +171,53 @@ function transcriptionLoop() {
 
     if (isCalibrating) {
         handleCalibration(pitch, rms);
-    } else if (activeGrid.playing && !stepWasRecorded && rms > (roomNoiseFloor)) {
-        const detected = findClosestScaleNote(pitch); // Returns label string directly
+    } else if (activeGrid.playing) {
+        // Debug every potential hit (loud enough)
+        // if (rms > roomNoiseFloor) {
+        //     console.log(`[Check] Pitch: ${pitch}, RMS: ${rms}, Floor: ${roomNoiseFloor}, StepRecorded: ${stepWasRecorded}`);
+        // }
 
-        if (detected) {
-            // Check if coaching mode is active
-            if (isCoaching()) {
-                // Send to coaching mode for evaluation
-                evaluateDetectedNote(detected, currentIndex, now);
-                // Don't record to grid in coaching mode
-                stepWasRecorded = true;
-                tally = {};
-                return;
-            }
+        if (!stepWasRecorded && rms > roomNoiseFloor) {
+            const detected = findClosestScaleNote(pitch); // Returns label string directly
 
-            // Use the note-specific multiplier from Guided Calibration
-            const multiplier = noteMultipliers[detected] || 0.5;
+            if (detected) {
+                console.log("Detected Note:", detected);
 
-            // Calculate specific threshold
-            let noteSpecificThreshold = baseSensitivity * multiplier;
-            if (noteSensitivities[detected]) {
-                noteSpecificThreshold = noteSensitivities[detected] * multiplier;
-            }
+                // Use the note-specific multiplier from Guided Calibration
+                const multiplier = noteMultipliers[detected] || 0.5;
 
-            const dynamicGate = getDynamicGate();
-            const isGateOpen = (now - lastNoteTime > dynamicGate);
-            const isNewStrike = rms > prevRMS * 1.3; // Spectral Flux
+                // Calculate specific threshold
+                let noteSpecificThreshold = baseSensitivity * multiplier;
+                if (noteSensitivities[detected]) {
+                    noteSpecificThreshold = noteSensitivities[detected] * multiplier;
+                }
 
-            if ((isGateOpen || isNewStrike) && rms > noteSpecificThreshold) {
-                tally[detected] = (tally[detected] || 0) + 1;
+                const dynamicGate = getDynamicGate();
+                const isGateOpen = (now - lastNoteTime > dynamicGate);
+                const isNewStrike = rms > prevRMS * 1.3; // Spectral Flux
 
-                if (tally[detected] >= CONFIDENCE_THRESHOLD) {
-                    recordNoteToGrid(detected, currentIndex, activeGrid);
-                    lastNoteTime = now;
-                    stepWasRecorded = true;
-                    tally = {};
+                if ((isGateOpen || isNewStrike) && rms > noteSpecificThreshold) {
+                    tally[detected] = (tally[detected] || 0) + 1;
 
-                    // Auto-finish Guided Calibration
-                    if (isGuidedCalibrating && detected === '8' && currentIndex >= 16) {
-                        setTimeout(analyzeGuidedResults, 1000);
+                    if (tally[detected] >= CONFIDENCE_THRESHOLD) {
+                        if (isCoaching()) {
+                            evaluateDetectedNote(detected, transcriptionIndex, now);
+                        } else {
+                            recordNoteToGrid(detected, currentIndex, activeGrid);
+                        }
+                        lastNoteTime = now;
+                        stepWasRecorded = true;
+                        tally = {};
+
+                        // Auto-finish Guided Calibration
+                        if (isGuidedCalibrating && detected === '8' && currentIndex >= 16) {
+                            setTimeout(analyzeGuidedResults, 1000);
+                        }
                     }
                 }
             }
         }
     }
-
     prevRMS = rms;
     requestAnimationFrame(transcriptionLoop);
 }
@@ -306,7 +346,10 @@ function autoCorrelate(buffer, sampleRate) {
         let val = buffer[i];
         rms += val * val;
     }
-    if (Math.sqrt(rms / SIZE) < 0.01) return -1;
+    if (Math.sqrt(rms / SIZE) < 0.01) {
+        // console.log("Signal too quiet", Math.sqrt(rms / SIZE));
+        return -1;
+    }
 
     let r1 = 0, r2 = SIZE - 1, thres = 0.2;
     for (let i = 0; i < SIZE / 2; i++) if (Math.abs(buffer[i]) < thres) { r1 = i; break; }
@@ -388,9 +431,22 @@ export function initTranscription() {
     });
 
     // Listeners
-    micBtn.addEventListener('click', toggleListening);
+    micBtn.addEventListener('click', (e) => {
+        toggleListening();
+    });
 
-    micCalBtn?.addEventListener('click', () => {
+    micBtn?.addEventListener('mouseover', (e) => {
+        const menu = document.getElementById('micDropdownMenu');
+        if (menu) {
+            if (menu.classList.contains('show'))
+                menu.classList.remove('show');
+            else
+                menu.classList.add('show');
+        }
+    });
+
+    micCalBtn?.addEventListener('click', (e) => {
+        if (e) e.stopPropagation();
         if (!isListening) return;
         isCalibrating = true;
         calIndex = 0;
@@ -398,16 +454,16 @@ export function initTranscription() {
         targetNoteDisplay.textContent = calQueue[0];
     });
 
-    guidedCalBtn?.addEventListener('click', () => {
-        if (!isListening) return alert("Please enable 'Listen Mode' first.");
+    guidedCalBtn?.addEventListener('click', (e) => {
+        if (e) e.stopPropagation();
+        if (!isListening) {
+            alert("Please enable 'Listen Mode' first.");
+            const menu = document.getElementById('micDropdownMenu');
+            if (menu) menu.classList.remove('show');
+            return;
+        }
 
-        const confirmCalibrateMsg = "Calibration will clear the grid without saving changes. Are you are ready to Calibrate?";
-        if (!confirm(confirmCalibrateMsg)) return;
-
-        const ctx = activeGrid;
-
-        // Clear the grid
-        if (ctx.muteBtn) ctx.muteBtn.click();
+        // Clear the grid (Direct state update)
         ctx.innerLabels = Array(ctx.innerLabels.length).fill('');
         ctx.innerHands = Array(ctx.innerHands.length).fill(null);
         renderAllMeasures(ctx);
@@ -426,6 +482,9 @@ export function initTranscription() {
         const modal = document.getElementById('guidedCalModal');
         modal.style.display = 'flex';
         modal.setAttribute('aria-hidden', false);
+
+        const menu = document.getElementById('micDropdownMenu');
+        if (menu) menu.classList.remove('show');
 
         setTimeout(() => {
             document.getElementById('startGuidedBtn')?.focus();

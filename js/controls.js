@@ -22,7 +22,6 @@ const handBtn = document.getElementById('handBtn');
 const themeBtn = document.getElementById('themeBtn');
 const presentBtn = document.getElementById('presentBtn');
 const exitPresent = document.getElementById('exitPresent');
-const metroBtn = document.getElementById('metroBtn');
 const micBtn = document.getElementById('micBtn');
 const saveBtn = document.getElementById('saveBtn');
 const loadBtn = document.getElementById('loadBtn');
@@ -56,7 +55,6 @@ function setupDropdown(btn, menu) {
 }
 
 setupDropdown(dropdownBtn, dropdownMenu);
-setupDropdown(micBtn, micDropdownMenu);
 
 // Close dropdown when clicking outside
 window.addEventListener('click', (e) => {
@@ -194,14 +192,6 @@ presentBtn?.addEventListener('click', () => {
 
 exitPresent?.addEventListener('click', () => setPresentation(false));
 
-metroBtn?.addEventListener('click', () => {
-  const ctx = activeGrid;
-  ctx.metronomeOn = !ctx.metronomeOn;
-  localStorage.setItem('groovepan_metro' + '-' + ctx.id, ctx.metronomeOn ? 'on' : 'off');
-  if (TransportRegistry) TransportRegistry.updateAll(ctx);
-  if (ctx.metronomeOn) ensureAudio();
-});
-
 import { labelNotation, setLabelNotation } from './state.js';
 
 function updateNotationUI() {
@@ -237,12 +227,15 @@ document.addEventListener('labelNotationChanged', (e) => {
   }
 });
 
-saveBtn?.addEventListener('click', async () => {
+saveBtn?.addEventListener('click', async (e) => {
+  if (e) e.stopPropagation();
   const defaultName = `Pattern ${new Date().toLocaleString()}`;
-  window.focus();
   const name = prompt('Save pattern as:', getSelectedPatternName() || defaultName);
-  if (!name) return;
 
+  const menu = document.getElementById('fileDropdownMenu');
+  if (menu) menu.classList.remove('show');
+
+  if (!name) return;
   saveCurrentPatternAs(name);
 });
 
@@ -319,18 +312,26 @@ export async function loadPatternByName(pattern) {
   }
 }
 
-loadBtn?.addEventListener('click', async () => {
+loadBtn?.addEventListener('click', async (e) => {
+  if (e) e.stopPropagation();
   const selected = getSelectedPatternName();
-  loadPatternByName(selected);
+  await loadPatternByName(selected);
+
+  const menu = document.getElementById('fileDropdownMenu');
+  if (menu) menu.classList.remove('show');
 });
 
-renameBtn?.addEventListener('click', async () => {
+renameBtn?.addEventListener('click', async (e) => {
+  if (e) e.stopPropagation();
   if (!ensureHasSelection()) return;
 
   const oldName = getSelectedPatternName();
   const nextName = prompt('Rename pattern to:', oldName);
-  if (!nextName) return;
 
+  const menu = document.getElementById('fileDropdownMenu');
+  if (menu) menu.classList.remove('show');
+
+  if (!nextName) return;
   const trimmed = nextName.trim();
   if (!trimmed || trimmed === oldName) return;
 
@@ -446,7 +447,8 @@ deleteBtn?.addEventListener('click', (e) => {
 });
 
 
-exportBtn?.addEventListener('click', async () => {
+exportBtn?.addEventListener('click', async (e) => {
+  if (e) e.stopPropagation();
   const data = JSON.stringify(serializePattern(), null, 2);
   try {
     await navigator.clipboard.writeText(data);
@@ -454,14 +456,22 @@ exportBtn?.addEventListener('click', async () => {
   } catch {
     prompt('Copy this JSON:', data);
   }
+
+  const menu = document.getElementById('fileDropdownMenu');
+  if (menu) menu.classList.remove('show');
 });
 
-importBtn?.addEventListener('click', async () => {
+importBtn?.addEventListener('click', async (e) => {
+  if (e) e.stopPropagation();
   if (hasUnsavedChanges()) {
     if (!confirm('You have unsaved changes. Discard them?')) return;
   }
 
   const raw = prompt('Paste pattern JSON here:');
+
+  const menu = document.getElementById('fileDropdownMenu');
+  if (menu) menu.classList.remove('show');
+
   if (!raw) return;
   try {
     const obj = JSON.parse(raw);

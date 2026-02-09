@@ -5,17 +5,20 @@
 
 import { activeGrid } from './grid-context.js';
 import { cells } from './notegrid.js';
-import { start, stop } from './noteplayer.js';
+import { start, stop, getVolume, setVolume, intervalMs, addTickObserver } from './noteplayer.js';
 import { setIsListening } from './state.js';
 import { supabase } from './supabase-client.js';
 import { currentUser } from './state.js';
 import { Bus, BUS_EVENT } from './bus.js';
+import { AUDIO_DELAY } from './config.js';
+import { TransportRegistry } from './transport-ui.js';
 
 // Session state
 let coachingSession = null;
 let isCoachingActive = false;
 let expectedNotes = []; // Array of { index, labels } from pattern
 let sessionResults = []; // Array of evaluation results per step
+let isLoopingEnabled = false; // Whether pattern should loop
 
 // UI elements
 let coachingHUD = null;
@@ -23,7 +26,10 @@ let hudAccuracy = null;
 let hudCorrect = null;
 let hudTotal = null;
 let stopCoachingBtn = null;
+let loopToggleBtn = null;
 let resultsModal = null;
+
+export { coachingSession, isCoachingActive };
 
 /**
  * Start a new coaching session
@@ -61,7 +67,8 @@ export async function startCoachingSession(ctx = activeGrid) {
     overallScore: 0,
     noteResults: [],
     problemMeasures: [],
-    actualStartTime: null // Will be set when playback starts
+    actualStartTime: null, // Will be set when playback starts
+    loopCount: 0 // Track number of loops completed
   };
 
   // Build expected notes array
@@ -77,11 +84,44 @@ export async function startCoachingSession(ctx = activeGrid) {
   sessionResults = [];
   isCoachingActive = true;
 
+  // Turn on metronome programmatically
+  if (!ctx.metronomeOn) {
+    ctx.metronomeOn = true;
+    localStorage.setItem('groovepan_metro' + '-' + ctx.id, 'on');
+    if (TransportRegistry) TransportRegistry.updateAll(ctx);
+  }
+
   // Show HUD
   showCoachingHUD();
 
   // Clear any existing cell highlights
   clearCellHighlights(ctx);
+
+  // Register tick observer to detect loops
+  const loopObserver = (grid, stepNotes, stepHands) => {
+    // Detect when pattern loops back to start (step 0)
+    if (grid.step === 0 && grid.transcriptionIndex === grid.cells.length - 1) {
+      console.log('Coaching Mode: Pattern loop detected');
+
+      if (isLoopingEnabled) {
+        // Reset timing for new loop
+        coachingSession.loopCount++;
+        coachingSession.actualStartTime = Date.now();
+        console.log(`Coaching Mode: Starting loop ${coachingSession.loopCount + 1}, timing reset`);
+      } else {
+        // Auto-stop when looping is disabled
+        console.log('Coaching Mode: Pattern complete, auto-stopping (looping disabled)');
+        // Use setTimeout to avoid stopping mid-tick
+        setTimeout(() => endCoachingSession(), 100);
+      }
+    }
+  };
+
+  // Store observer reference for cleanup
+  coachingSession._loopObserver = loopObserver;
+
+  // Register the observer
+  addTickObserver(loopObserver);
 
   // Enable microphone if not already
   const micBtn = document.getElementById('micBtn');
@@ -91,11 +131,11 @@ export async function startCoachingSession(ctx = activeGrid) {
     await new Promise(resolve => setTimeout(resolve, 500));
   }
 
-  // Start playback with countdown
-  showCountdown(() => {
-    coachingSession.actualStartTime = Date.now();
-    start(ctx);
-  });
+  // Ensure isListening is true for countdown
+  setIsListening(true);
+
+  // Start playback
+  start(ctx, true, false);
 }
 
 /**
@@ -121,9 +161,15 @@ export function evaluateDetectedNote(detectedNote, stepIndex, actualTime) {
   }
 
   // Calculate expected time
+  // User noted that loop logic was causing issues on first note.
+  // We will trust the straightforward calculation for now, as transcriptionIndex should align it.
   const subdivisions = (ctx.mode === '16') ? 4 : 2;
-  const msPerStep = 60000 / (ctx.bpm * subdivisions);
-  const expectedTime = coachingSession.actualStartTime + (stepIndex * msPerStep);
+  // Calculate expected timing
+  // Note: Add 200ms to account for AUDIO_DELAY in tick() function
+  // The audio actually plays 200ms after the logical beat time
+  const AUDIO_DELAY_MS = AUDIO_DELAY * 1000
+  const msPerStep = intervalMs(ctx);
+  const expectedTime = coachingSession.actualStartTime + (stepIndex * msPerStep) + AUDIO_DELAY_MS;
 
   // Evaluate note
   const result = evaluateNote(detectedNote, expected.labels, {
@@ -165,13 +211,16 @@ function evaluateNote(detectedNote, expectedNotes, timing) {
 
   // Timing accuracy (±100ms tolerance)
   const timingError = Math.abs(timing.actual - timing.expected);
-  const timingScore = Math.max(0, 100 - timingError);
+  const timingScore = Math.max(0, 200 - timingError);
 
   // Combined score (70% note, 30% timing)
   const overallScore = (noteScore * 0.7) + (timingScore * 0.3);
 
-  // Determine correctness (note must match AND timing within 100ms)
-  const correct = noteMatch && timingError < 100;
+  // Determine correctness (note must match AND timing within 200ms)
+  const correct = noteMatch && timingError < 200;
+
+  console.log(`Coaching Mode: Evaluation result - note: ${detectedNote}, expected: ${expectedNotes}, 
+    correct: ${correct}, timingError: ${timingError}, timingScore: ${timingScore}`);
 
   return {
     correct,
@@ -242,6 +291,72 @@ function showCoachingHUD() {
     if (stopCoachingBtn && !stopCoachingBtn._hasListener) {
       stopCoachingBtn.addEventListener('click', endCoachingSession);
       stopCoachingBtn._hasListener = true;
+    }
+
+    // Inject Loop Toggle if missing
+    if (coachingHUD && !coachingHUD.querySelector('.hud-loop-toggle')) {
+      const loopToggle = document.createElement('div');
+      loopToggle.className = 'hud-loop-toggle';
+      loopToggle.innerHTML = `
+        <button id="loopToggleBtn" class="hud-loop-btn" title="Toggle looping">
+          <span class="loop-icon">🔁</span>
+          <span class="loop-text">Loop: Off</span>
+        </button>
+      `;
+      // Insert before stop button
+      if (stopCoachingBtn) {
+        coachingHUD.insertBefore(loopToggle, stopCoachingBtn);
+      } else {
+        coachingHUD.appendChild(loopToggle);
+      }
+
+      // Add listener
+      setTimeout(() => {
+        loopToggleBtn = document.getElementById('loopToggleBtn');
+        if (loopToggleBtn) {
+          loopToggleBtn.addEventListener('click', () => {
+            isLoopingEnabled = !isLoopingEnabled;
+            loopToggleBtn.classList.toggle('active', isLoopingEnabled);
+            const loopText = loopToggleBtn.querySelector('.loop-text');
+            if (loopText) {
+              loopText.textContent = isLoopingEnabled ? 'Loop: On' : 'Loop: Off';
+            }
+          });
+        }
+      }, 0);
+    }
+
+    // Inject Mixer Controls if missing
+    if (coachingHUD && !coachingHUD.querySelector('.hud-mix-controls')) {
+      const mixControls = document.createElement('div');
+      mixControls.className = 'hud-mix-controls';
+      mixControls.innerHTML = `
+        <div class="mix-slider">
+          <span class="mix-icon" title="Instrument Volume">🎵</span>
+          <input type="range" min="0" max="1" step="0.1" value="${getVolume('instrument')}" id="hud-vol-inst">
+        </div>
+        <div class="mix-slider">
+          <span class="mix-icon" title="Metronome Volume">⏱️</span>
+          <input type="range" min="0" max="1" step="0.1" value="${getVolume('metronome')}" id="hud-vol-metro">
+        </div>
+      `;
+      // Insert before loop toggle or stop button
+      const loopToggle = coachingHUD.querySelector('.hud-loop-toggle');
+      if (loopToggle) {
+        coachingHUD.insertBefore(mixControls, loopToggle);
+      } else if (stopCoachingBtn) {
+        coachingHUD.insertBefore(mixControls, stopCoachingBtn);
+      } else {
+        coachingHUD.appendChild(mixControls);
+      }
+
+      // Add listeners
+      setTimeout(() => {
+        const iVol = document.getElementById('hud-vol-inst');
+        const mVol = document.getElementById('hud-vol-metro');
+        if (iVol) iVol.addEventListener('input', (e) => setVolume('instrument', parseFloat(e.target.value)));
+        if (mVol) mVol.addEventListener('input', (e) => setVolume('metronome', parseFloat(e.target.value)));
+      }, 0);
     }
   }
 
@@ -387,13 +502,12 @@ function showResultsModal() {
     if (!currentUser) {
       saveSessionBtn.style.display = 'none';
       // Optionally show a "Login to Save" hint
-      const hint = document.createElement('p');
+      const hint = document.createElement('div');
       hint.id = 'saveHint';
       hint.className = 'save-hint';
       hint.textContent = '💡 Sign in to save your progress!';
       hint.style.fontSize = '12px';
       hint.style.marginTop = '10px';
-      hint.style.color = 'var(--text-secondary)';
       if (!document.getElementById('saveHint')) {
         saveSessionBtn.parentNode.appendChild(hint);
       }
@@ -403,6 +517,53 @@ function showResultsModal() {
       if (hint) hint.remove();
     }
   }
+
+  // Add celebration animation based on score
+  const score = coachingSession.overallScore;
+  const resultsContainer = resultsModal.querySelector('.results-summary');
+  resultsContainer.classList.remove('score-excellent', 'score-good', 'score-decent', 'score-needs-work');
+
+  // Remove any existing celebration elements
+  const existingCelebration = resultsContainer.querySelector('.celebration-container');
+  if (existingCelebration) existingCelebration.remove();
+
+  // Create celebration element
+  const celebration = document.createElement('div');
+  celebration.className = 'celebration-container';
+
+  if (score >= 90) {
+    celebration.innerHTML = '<div class="celebration-emoji">🎉</div>';
+    celebration.classList.add('celebration-excellent');
+    resultsContainer.classList.add('score-excellent');
+  } else if (score >= 80) {
+    celebration.innerHTML = '<div class="thumbs-up-emoji">👍</div>';
+    celebration.classList.add('celebration-good');
+    resultsContainer.classList.add('score-good');
+  } else if (score >= 60) {
+    celebration.innerHTML = '<div class="encouragement-emoji">💪</div>';
+    celebration.classList.add('celebration-keep-trying');
+    resultsContainer.classList.add('score-decent');
+  } else {
+    celebration.innerHTML = '<div class="try-again-emoji">🔄</div>';
+    celebration.classList.add('celebration-try-again');
+    resultsContainer.classList.add('score-needs-work');
+  }
+
+  // Insert before score circle
+  const scoreCircle = resultsContainer.querySelector('.score-circle');
+  if (scoreCircle) {
+    resultsContainer.insertBefore(celebration, scoreCircle);
+  }
+
+  // // Apply score-based background color class to modal
+  // resultsModal.classList.remove('score-excellent', 'score-good', 'score-needs-work');
+  // if (score >= 80) {
+  //   resultsModal.classList.add('score-excellent');
+  // } else if (score >= 60) {
+  //   resultsModal.classList.add('score-good');
+  // } else {
+  //   resultsModal.classList.add('score-needs-work');
+  // }
 
   // Show modal
   resultsModal.style.display = 'flex';
@@ -451,30 +612,30 @@ export async function saveCoachingSession() {
 /**
  * Show countdown before starting
  */
-function showCountdown(callback) {
-  const overlay = document.getElementById('countdownOverlay');
-  const numberEl = document.getElementById('countdownNumber');
+// function showCountdown(callback) {
+//   const overlay = document.getElementById('countdownOverlay');
+//   const numberEl = document.getElementById('countdownNumber');
 
-  if (!overlay || !numberEl) {
-    callback();
-    return;
-  }
+//   if (!overlay || !numberEl) {
+//     callback();
+//     return;
+//   }
 
-  let count = 4;
-  overlay.style.display = 'flex';
-  numberEl.textContent = count;
+//   let count = 4;
+//   overlay.style.display = 'flex';
+//   numberEl.textContent = count;
 
-  const interval = setInterval(() => {
-    count--;
-    if (count > 0) {
-      numberEl.textContent = count;
-    } else {
-      clearInterval(interval);
-      overlay.style.display = 'none';
-      callback();
-    }
-  }, 1000);
-}
+//   const interval = setInterval(() => {
+//     count--;
+//     if (count > 0) {
+//       numberEl.textContent = count;
+//     } else {
+//       clearInterval(interval);
+//       overlay.style.display = 'none';
+//       callback();
+//     }
+//   }, 1000);
+// }
 
 /**
  * Initialize coaching mode UI
@@ -514,7 +675,8 @@ export function initCoachingMode() {
 
   // Listen for bus evaluation (for testing or other integrations)
   Bus.on(BUS_EVENT.COACHING_EVALUATE, (e) => {
-    const { note, step, time } = e.detail || {};
+    let { note, step, time } = e.detail || {};
+    step = activeGrid.transcriptionIndex;
     if (note !== undefined && step !== undefined) {
       evaluateDetectedNote(note, step, time || Date.now());
     }

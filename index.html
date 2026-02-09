@@ -143,18 +143,8 @@
 
     <!-- Control buttons -->
     <div class="controls pattern-row">
-      <button id="themeBtn" title="Toggle light / dark mode">☀︎ / ☾</button>
+      <button id="themeBtn" title="Toggle light / dark mode" style="display:none;">☀︎ / ☾</button>
       <button id="grooveBtn" style="display:none;" title="Generate a random groove">Give me a groove!</button>
-      <button id="metroBtn" title="Toggle metronome click"
-        style="display:flex; align-items:center; justify-content:center;">
-        <svg xmlns="http://www.w3.org/2000/svg" width="25" height="25" viewBox="0 0 24 24" fill="none"
-          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M12 18v-8" />
-          <path d="M7 21h10" />
-          <path d="M6 21l5-16 5 16" />
-          <path d="M12 18a2 2 0 1 0 0 4 2 2 0 0 0 0-4Z" />
-        </svg>
-      </button>
       <button id="labelNotationBtn" title="Toggle label notation (Musical vs Numeric)">1 2 3</button>
       <button id="composeBtn"
         title="Compose mode: writing advances to the next beat (Alt = write without advance)">🎼</button>
@@ -202,8 +192,9 @@
       </div>
       <button id="clearBtn-A">Clear</button>
       <div class="control-sep"></div>
-      <button id="undoBtn" title="Undo (Cmd+Z)" style="display:none;" disabled>↩️</button>
+      <button id="undoBtn" title="Undo (Cmd+Z)" disabled>↩️</button>
       <button id="redoBtn" title="Redo (Cmd+Shift+Z)" style="display:none;" disabled>↪️</button>
+      <button id="presentBtn" title="Toggle presentation mode (Esc exits)">⛶</button>
       <!-- Microphone -->
       <div class="dropdown mic-dropdown">
         <button id="micBtn" class="secondary-btn" title="Toggle mic (Click) / Settings (Auto-open)">🎤</button>
@@ -226,7 +217,6 @@
         <span>Tap Note: </span><span id="targetNoteName">D</span>
       </div>
       <button id="coachModeBtn" class="secondary-btn" title="Practice with real-time feedback">🎯 Coach</button>
-      <button id="presentBtn" title="Toggle presentation mode (Esc exits)">⛶</button>
     </div>
 
     <!-- Selection Action Bar (shows when a range is selected) -->

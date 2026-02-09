@@ -27,3 +27,4 @@ export const SCALES = {
 
 export const SCALE_KEY_LOCAL = 'groovepan_scale';
 export const SCALE_KEY_REMOTE = 'handpan_scale';
+export const AUDIO_DELAY = 0.2;

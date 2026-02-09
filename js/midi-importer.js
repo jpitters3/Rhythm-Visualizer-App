@@ -11,8 +11,11 @@ const importMidiBtn = document.getElementById('importMidiBtn');
 
 // Initialize Listener
 if (importMidiBtn && midiFileInput) {
-  importMidiBtn.addEventListener('click', () => {
+  importMidiBtn.addEventListener('click', (e) => {
+    if (e) e.stopPropagation();
     midiFileInput.click();
+    const menu = document.getElementById('fileDropdownMenu');
+    if (menu) menu.classList.remove('show');
   });
 
   midiFileInput.addEventListener('change', handleMidiFileSelect);

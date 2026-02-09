@@ -23,7 +23,12 @@ import { activeGrid } from './grid-context.js'; // We need activeGrid to set inn
 
 // Init Listeners
 if (songLibraryBtn) {
-  songLibraryBtn.addEventListener('click', openSongLibrary);
+  songLibraryBtn.addEventListener('click', (e) => {
+    if (e) e.stopPropagation();
+    openSongLibrary();
+    const menu = document.getElementById('fileDropdownMenu');
+    if (menu) menu.classList.remove('show');
+  });
 }
 if (closeSongLibBtn) {
   closeSongLibBtn.addEventListener('click', () => {

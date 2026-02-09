@@ -4,7 +4,7 @@ import { activeGrid, setActiveGrid } from './state.js';
 import { activeSubIndex, cells, renderAllMeasures, initNoteGrid } from './notegrid.js';
 import { ADMIN_EMAILS } from './config.js';
 import { TransportRegistry } from './transport-ui.js';
-import { stop, setMode, initNotePlayer } from './noteplayer.js';
+import { stop, setMode, initNotePlayer, unlockAudio } from './noteplayer.js';
 import { loadSharedFromURL } from './share-patterns.js';
 import { refreshPatternSelect, serializePattern, updatePatternButtons, snapshotCurrentState } from './pattern-crud.js';
 import { initCourseCreator } from './course-creator.js';
@@ -58,6 +58,7 @@ async function init() {
     initCourseCreator();
     initControls();
     initShortcuts();
+    setupAudioUnlock();
     initNotePlayer();
     initNoteGrid();
 
@@ -97,6 +98,21 @@ export function restorePrefs() {
   if (gridA) gridA.metronomeOn = isMetroOn;
 
   updateMetroUI();
+}
+
+function setupAudioUnlock() {
+  console.log('[Init] setupAudioUnlock called - attaching listeners');
+  const unlock = () => {
+    console.log('[Init] Global audio unlock triggered');
+    unlockAudio();
+    document.removeEventListener('click', unlock);
+    document.removeEventListener('keydown', unlock);
+    document.removeEventListener('touchstart', unlock);
+  };
+  document.addEventListener('click', unlock);
+  document.addEventListener('keydown', unlock);
+  document.addEventListener('touchstart', unlock);
+  console.log('[Init] Audio unlock listeners attached');
 }
 
 function runSelfTests() {
