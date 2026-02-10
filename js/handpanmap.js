@@ -10,6 +10,7 @@ import { enterCalibrationMode } from './calibration.js';
 import { activeGrid } from './grid-context.js';
 import { Bus, BUS_EVENT } from './bus.js';
 import { setBeatToGhost, renderAllMeasures } from './notegrid.js';
+import { isAuthed } from './auth.js';
 
 // DOM Elements (previously globals)
 let scaleSelect, handpanImg, scaleStatus, handpanSelect, numberPitchSelect, ghostBtn, lockBtn, composeBtn, handpanSection, handpanOverlay;
@@ -92,6 +93,9 @@ function renderCustomOptions() {
   // Fix: SCALES is global const, not on window
   if (typeof SCALES === 'undefined') return;
 
+  if (!scaleSelect || scaleSelect === 'undefined') {
+    scaleSelect = document.getElementById('scaleSelect');
+  }
   const currentVal = scaleSelect.value;
   scaleSelect.innerHTML = '';
 

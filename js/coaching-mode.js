@@ -12,6 +12,7 @@ import { currentUser } from './state.js';
 import { Bus, BUS_EVENT } from './bus.js';
 import { AUDIO_DELAY } from './config.js';
 import { TransportRegistry } from './transport-ui.js';
+import { CoachingDiagnostics } from './coaching-diagnostics.js';
 
 // Session state
 let coachingSession = null;
@@ -68,7 +69,8 @@ export async function startCoachingSession(ctx = activeGrid) {
     noteResults: [],
     problemMeasures: [],
     actualStartTime: null, // Will be set when playback starts
-    loopCount: 0 // Track number of loops completed
+    loopCount: 0, // Track number of loops completed
+    diagnostics: new CoachingDiagnostics()
   };
 
   // Build expected notes array
@@ -232,6 +234,17 @@ function performEvaluation(detectedNote, stepIndex, actualTime, expected) {
   // Update session stats
   if (result.correct) {
     coachingSession.correctNotes++;
+  }
+
+  // Record for Diagnostics
+  if (coachingSession.diagnostics) {
+    coachingSession.diagnostics.record({
+      stepIndex,
+      expected: expected.labels,
+      detected: detectedNote,
+      correct: result.correct,
+      timingError: result.timingError
+    });
   }
 
   // Visual feedback
@@ -546,6 +559,45 @@ function showResultsModal() {
         .join('');
     } else {
       problemList.innerHTML = '<div class="no-problems">Great job! No problem areas detected.</div>';
+    }
+  }
+
+  // --- COACH'S TIPS (Diagnostics) ---
+  // We need to inject a container for tips if it doesn't represent
+  // Ideally, valid HTML structure should be present, or we create it.
+
+  // Let's assume we modify the modal HTML structure or inject it here.
+  // We'll inspect the modal structure first or just append it to results-summary
+
+  let tipsContainer = document.getElementById('coachingTipsContainer');
+  if (!tipsContainer) {
+    // Create it if missing, insert after problem list
+    const resultsContent = resultsModal.querySelector('.results-summary');
+    if (resultsContent) {
+      tipsContainer = document.createElement('div');
+      tipsContainer.id = 'coachingTipsContainer';
+      tipsContainer.className = 'coaching-tips-container';
+      tipsContainer.style.marginTop = '20px';
+      tipsContainer.style.padding = '15px';
+      tipsContainer.style.background = 'rgba(255, 255, 255, 0.05)';
+      tipsContainer.style.borderRadius = '12px';
+      resultsContent.appendChild(tipsContainer);
+    }
+  }
+
+  if (tipsContainer) {
+    const suggestions = coachingSession.diagnostics ? coachingSession.diagnostics.analyze() : [];
+
+    if (suggestions.length > 0) {
+      tipsContainer.style.display = 'block';
+      tipsContainer.innerHTML = `
+              <h4 style="margin-top:0; margin-bottom:10px; color:var(--text-secondary); font-size:0.9em; text-transform:uppercase; letter-spacing:1px;">💡 Coach's Tips</h4>
+              <ul style="margin:0; padding-left:20px; color:var(--text-primary);">
+                  ${suggestions.map(s => `<li style="margin-bottom:5px;">${s}</li>`).join('')}
+              </ul>
+          `;
+    } else {
+      tipsContainer.style.display = 'none';
     }
   }
 
