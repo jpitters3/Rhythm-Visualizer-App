@@ -17,6 +17,7 @@ import { CoachingDiagnostics } from './coaching-diagnostics.js';
 // Session state
 let coachingSession = null;
 let isCoachingActive = false;
+let isCoachingUIOpen = false; // New: Tracks if HUD is open but maybe not running
 let expectedNotes = []; // Array of { index, labels } from pattern
 let sessionResults = []; // Array of evaluation results per step
 let isLoopingEnabled = false; // Whether pattern should loop
@@ -33,24 +34,35 @@ let resultsModal = null;
 export { coachingSession, isCoachingActive };
 
 /**
- * Start a new coaching session
+ * Enter Coaching Mode (Show HUD, Ready State)
+ * @param {Object} ctx - Grid context
+ */
+export function enterCoachingMode(ctx = activeGrid) {
+  console.log('Coaching Mode: Entering UI');
+
+  if (isCoachingUIOpen) return;
+
+  // Validate pattern has notes
+  const hasNotes = ctx?.innerLabels?.some(label => label && label.length > 0);
+  if (!hasNotes) {
+    alert('Please add some notes to the pattern before starting coaching mode.');
+    return;
+  }
+
+  isCoachingUIOpen = true;
+  showCoachingHUD(true); // show as "Ready"
+}
+
+/**
+ * Start the actual coaching session (Playback + Recording)
  * @param {Object} ctx - Grid context (activeGrid)
  */
 export async function startCoachingSession(ctx = activeGrid) {
   console.log('Coaching Mode: Starting session');
   console.log('Coaching Mode: Context ID:', ctx?.id);
-  console.log('Coaching Mode: innerLabels:', JSON.stringify(ctx?.innerLabels));
 
   if (isCoachingActive) {
     console.warn('Coaching session already active');
-    return;
-  }
-
-  // Validate pattern has notes
-  const hasNotes = ctx?.innerLabels?.some(label => label && label.length > 0);
-  console.log('Coaching Mode: Pattern has notes?', hasNotes);
-  if (!hasNotes) {
-    alert('Please add some notes to the pattern before starting coaching mode.');
     return;
   }
 
@@ -93,8 +105,8 @@ export async function startCoachingSession(ctx = activeGrid) {
     if (TransportRegistry) TransportRegistry.updateAll(ctx);
   }
 
-  // Show HUD
-  showCoachingHUD();
+  // Update HUD to "Running" state
+  showCoachingHUD(false);
 
   // Clear any existing cell highlights
   clearCellHighlights(ctx);
@@ -178,6 +190,24 @@ export function evaluateDetectedNote(detectedNote, stepIndex, actualTime) {
 
       // Proceed to evaluate with the correct note and the accurate attack time
       performEvaluation(detectedNote, stepIndex, attackTime, expected);
+      return;
+    }
+  }
+
+  // --- PREVENT OVERWRITE OF SUCCESSFUL EVALUATIONS ---
+  // If we already marked this step as CORRECT, ignore subsequent inputs 
+  // (unless we are refining ACCENT -> Pitch, which is handled above or here if pending cleared)
+  const existingResult = sessionResults.find(r => r.stepIndex === stepIndex);
+  if (existingResult && existingResult.correct) {
+    // Step already passed!
+
+    // EXCEPTION: Refinement
+    // If we passed with 'ACCENT' but now have the actual 'NOTE', we might want to update it 
+    // just for display accuracy, but we definitely shouldn't fail it.
+    const isRefinement = (existingResult.detectedNote === 'ACCENT' && detectedNote !== 'ACCENT' && expected.labels.includes(detectedNote));
+
+    if (!isRefinement) {
+      console.log(`Coaching Mode: Step ${stepIndex} already correct (${existingResult.detectedNote}). Ignoring subsequent detection (${detectedNote}).`);
       return;
     }
   }
@@ -345,8 +375,9 @@ function clearCellHighlights(ctx) {
 
 /**
  * Show coaching HUD
+ * @param {boolean} isReady - If true, show "Start" button. If false, show "Stop".
  */
-function showCoachingHUD() {
+function showCoachingHUD(isReady = false) {
   if (!coachingHUD) {
     coachingHUD = document.getElementById('coachingHUD');
     hudAccuracy = document.getElementById('hudAccuracy');
@@ -354,49 +385,66 @@ function showCoachingHUD() {
     hudTotal = document.getElementById('hudTotal');
     stopCoachingBtn = document.getElementById('stopCoachingBtn');
 
-    if (stopCoachingBtn && !stopCoachingBtn._hasListener) {
-      stopCoachingBtn.addEventListener('click', endCoachingSession);
-      stopCoachingBtn._hasListener = true;
+    // Create the button if it doesn't exist (it should)
+    // We will dynamically change its text and onclick
+  }
+
+  // Update Button Logic
+  if (stopCoachingBtn) {
+    // Remove old listeners to be safe (by cloning)
+    const newBtn = stopCoachingBtn.cloneNode(true);
+    stopCoachingBtn.parentNode.replaceChild(newBtn, stopCoachingBtn);
+    stopCoachingBtn = newBtn;
+
+    if (isReady) {
+      stopCoachingBtn.textContent = "Start";
+      stopCoachingBtn.style.backgroundColor = "var(--success)"; // Green
+      stopCoachingBtn.onclick = () => startCoachingSession(activeGrid);
+    } else {
+      stopCoachingBtn.textContent = "Stop";
+      stopCoachingBtn.style.backgroundColor = ""; // Default (usually red/warn)
+      stopCoachingBtn.onclick = endCoachingSession;
+    }
+  }
+
+  // Inject Loop Toggle if missing
+  if (coachingHUD && !coachingHUD.querySelector('.hud-loop-toggle')) {
+    const loopToggle = document.createElement('div');
+    loopToggle.className = 'hud-loop-toggle';
+    loopToggle.innerHTML = `
+      <button id="loopToggleBtn" class="hud-loop-btn" title="Toggle looping">
+        <span class="loop-icon">🔁</span>
+        <span class="loop-text">Loop: Off</span>
+      </button>
+    `;
+    // Insert before stop button
+    if (stopCoachingBtn) {
+      coachingHUD.insertBefore(loopToggle, stopCoachingBtn);
+    } else {
+      coachingHUD.appendChild(loopToggle);
     }
 
-    // Inject Loop Toggle if missing
-    if (coachingHUD && !coachingHUD.querySelector('.hud-loop-toggle')) {
-      const loopToggle = document.createElement('div');
-      loopToggle.className = 'hud-loop-toggle';
-      loopToggle.innerHTML = `
-        <button id="loopToggleBtn" class="hud-loop-btn" title="Toggle looping">
-          <span class="loop-icon">🔁</span>
-          <span class="loop-text">Loop: Off</span>
-        </button>
-      `;
-      // Insert before stop button
-      if (stopCoachingBtn) {
-        coachingHUD.insertBefore(loopToggle, stopCoachingBtn);
-      } else {
-        coachingHUD.appendChild(loopToggle);
+    // Add listener
+    setTimeout(() => {
+      loopToggleBtn = document.getElementById('loopToggleBtn');
+      if (loopToggleBtn) {
+        loopToggleBtn.addEventListener('click', () => {
+          isLoopingEnabled = !isLoopingEnabled;
+          loopToggleBtn.classList.toggle('active', isLoopingEnabled);
+          const loopText = loopToggleBtn.querySelector('.loop-text');
+          if (loopText) {
+            loopText.textContent = isLoopingEnabled ? 'Loop: On' : 'Loop: Off';
+          }
+        });
       }
+    }, 0);
+  }
 
-      // Add listener
-      setTimeout(() => {
-        loopToggleBtn = document.getElementById('loopToggleBtn');
-        if (loopToggleBtn) {
-          loopToggleBtn.addEventListener('click', () => {
-            isLoopingEnabled = !isLoopingEnabled;
-            loopToggleBtn.classList.toggle('active', isLoopingEnabled);
-            const loopText = loopToggleBtn.querySelector('.loop-text');
-            if (loopText) {
-              loopText.textContent = isLoopingEnabled ? 'Loop: On' : 'Loop: Off';
-            }
-          });
-        }
-      }, 0);
-    }
-
-    // Inject Mixer Controls if missing
-    if (coachingHUD && !coachingHUD.querySelector('.hud-mix-controls')) {
-      const mixControls = document.createElement('div');
-      mixControls.className = 'hud-mix-controls';
-      mixControls.innerHTML = `
+  // Inject Mixer Controls if missing
+  if (coachingHUD && !coachingHUD.querySelector('.hud-mix-controls')) {
+    const mixControls = document.createElement('div');
+    mixControls.className = 'hud-mix-controls';
+    mixControls.innerHTML = `
         <div class="mix-slider">
           <span class="mix-icon" title="Instrument Volume">🎵</span>
           <input type="range" min="0" max="1" step="0.1" value="${getVolume('instrument')}" id="hud-vol-inst">
@@ -406,24 +454,24 @@ function showCoachingHUD() {
           <input type="range" min="0" max="1" step="0.1" value="${getVolume('metronome')}" id="hud-vol-metro">
         </div>
       `;
-      // Insert before loop toggle or stop button
-      const loopToggle = coachingHUD.querySelector('.hud-loop-toggle');
-      if (loopToggle) {
-        coachingHUD.insertBefore(mixControls, loopToggle);
-      } else if (stopCoachingBtn) {
-        coachingHUD.insertBefore(mixControls, stopCoachingBtn);
-      } else {
-        coachingHUD.appendChild(mixControls);
-      }
-
-      // Add listeners
-      setTimeout(() => {
-        const iVol = document.getElementById('hud-vol-inst');
-        const mVol = document.getElementById('hud-vol-metro');
-        if (iVol) iVol.addEventListener('input', (e) => setVolume('instrument', parseFloat(e.target.value)));
-        if (mVol) mVol.addEventListener('input', (e) => setVolume('metronome', parseFloat(e.target.value)));
-      }, 0);
+    // Insert before loop toggle or stop button
+    const loopToggle = coachingHUD.querySelector('.hud-loop-toggle');
+    if (loopToggle) {
+      coachingHUD.insertBefore(mixControls, loopToggle);
+    } else if (stopCoachingBtn) {
+      coachingHUD.insertBefore(mixControls, stopCoachingBtn);
+    } else {
+      coachingHUD.appendChild(mixControls);
     }
+
+    // Add listeners
+    // Add listeners
+    setTimeout(() => {
+      const iVol = document.getElementById('hud-vol-inst');
+      const mVol = document.getElementById('hud-vol-metro');
+      if (iVol) iVol.addEventListener('input', (e) => setVolume('instrument', parseFloat(e.target.value)));
+      if (mVol) mVol.addEventListener('input', (e) => setVolume('metronome', parseFloat(e.target.value)));
+    }, 0);
   }
 
   if (coachingHUD) {
@@ -473,6 +521,7 @@ export function endCoachingSession() {
 
   // Reset state
   isCoachingActive = false;
+  isCoachingUIOpen = false;
 }
 
 /**
@@ -752,7 +801,8 @@ export function initCoachingMode() {
   console.log('Coaching Mode: Button found?', !!coachModeBtn);
   coachModeBtn?.addEventListener('click', () => {
     console.log('Coaching Mode: Button clicked');
-    startCoachingSession(activeGrid);
+    // enterCoachingMode(activeGrid);
+    enterCoachingMode(activeGrid);
   });
 
   // Results modal buttons
