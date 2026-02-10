@@ -5,6 +5,7 @@ import { cells, setInnerLabel, renderAllMeasures } from './notegrid.js';
 import { loadPatternByName } from './controls.js';
 import { isListening, setIsListening } from './state.js';
 import { isCoaching, evaluateDetectedNote } from './coaching-mode.js';
+import { ACCENT_RMS_MULTIPLIER } from './config.js';
 
 export let micStream = null, audioAnalyser = null;
 let lastActiveElement = null;
@@ -14,10 +15,14 @@ const BUFSIZE = 2048, buf = new Float32Array(BUFSIZE);
 let baseSensitivity = 0.05;
 let roomNoiseFloor = 0.01;
 let prevRMS = 0;
+// Transcription State
 let lastNoteTime = 0;
+let currentIndex = 0;
 let lastFrameTranscriptionIndex = -1;
 let stepWasRecorded = false;
 let tally = {};
+let lastDetectedType = null;
+let accentCandidate = null; // New: For delaying accent decision by 1 frame
 const CONFIDENCE_THRESHOLD = 2;
 
 // --- Calibration State ---
@@ -133,15 +138,20 @@ function transcriptionLoop() {
     if (!audioAnalyser) return;
     audioAnalyser.getFloatTimeDomainData(buf);
     const audioCtx = getAudioCtx();
-    const pitch = autoCorrelate(buf, audioCtx.sampleRate);
+
+    // Get pitch AND clarity
+    const pitchObj = autoCorrelate(buf, audioCtx.sampleRate);
+    const pitch = (pitchObj && pitchObj.freq) ? pitchObj.freq : -1;
+    const clarity = (pitchObj && pitchObj.clarity) ? pitchObj.clarity : 0;
 
     let sum = 0;
     for (let i = 0; i < buf.length; i++) sum += buf[i] * buf[i];
     const rms = Math.sqrt(sum / buf.length);
     const now = Date.now();
 
-    // Use local sync variable
-    const currentIndex = transcriptionIndex;
+    // Update current index from grid (User confirmed transcriptionIndex is correct)
+    currentIndex = activeGrid.transcriptionIndex;
+    transcriptionIndex = currentIndex; // Sync local global variable
 
     // DEBUG: Heartbeat to ensure loop is alive and see state
     // if (Math.random() < 0.02) {
@@ -165,7 +175,9 @@ function transcriptionLoop() {
     // Step Boundary Detection
     if (currentIndex !== lastFrameTranscriptionIndex) {
         tally = {};
+        accentCandidate = null;
         stepWasRecorded = false;
+        lastDetectedType = null;
         lastFrameTranscriptionIndex = currentIndex;
     }
 
@@ -177,41 +189,107 @@ function transcriptionLoop() {
         //     console.log(`[Check] Pitch: ${pitch}, RMS: ${rms}, Floor: ${roomNoiseFloor}, StepRecorded: ${stepWasRecorded}`);
         // }
 
-        if (!stepWasRecorded && rms > roomNoiseFloor) {
-            const detected = findClosestScaleNote(pitch); // Returns label string directly
+        // In Coaching Mode, if we detected an ACCENT, we allow continuing to listen 
+        // for a specific pitch to "refine" the detection.
+        const canRefine = isCoaching() && stepWasRecorded && lastDetectedType === 'ACCENT';
 
-            if (detected) {
-                console.log("Detected Note:", detected);
+        if ((!stepWasRecorded || canRefine) && rms > roomNoiseFloor) {
 
-                // Use the note-specific multiplier from Guided Calibration
-                const multiplier = noteMultipliers[detected] || 0.5;
+            // 0. Pre-calculate Clarity info
+            const detectedNoteLabel = findClosestScaleNote(pitch);
+            const CLARITY_THRESHOLD = 0.5;
+            const isClearNote = detectedNoteLabel && clarity > 0.55;
 
-                // Calculate specific threshold
-                let noteSpecificThreshold = baseSensitivity * multiplier;
-                if (noteSensitivities[detected]) {
-                    noteSpecificThreshold = noteSensitivities[detected] * multiplier;
-                }
+            // 1. Check for NOTES first (Priority)
+            if (isClearNote) {
+                // If it's a clear note, we trust it over any accent/strike logic
+                // We let the standard pitch detection logic below handle it
+                // (fall through to 'else' or just proceed?)
+                // Actually, the original logic had 'if (isAccent) ... else { checkNote }'
+                // flagging 'isAccent' as FALSE here ensures we go to the Pitch Check.
+            }
+
+            // 2. Check for ACCENTS (Secondary)
+            const flux = rms / prevRMS;
+            const isStrike = flux > 1.3 || rms > (baseSensitivity * 2);
+            const MIN_ACCENT_RMS = 0.02;
+
+            // It is an accent only if:
+            // - It is a strike
+            // - It is NOT a clear note (Clarity < 0.55) -> This filters note attacks
+            // - It has low clarity (< 0.5) OR extreme pitch
+            // - It has min energy
+            const isAccent = !isClearNote && isStrike && rms > MIN_ACCENT_RMS && (clarity < CLARITY_THRESHOLD || pitch < 100 || pitch > 2000);
+
+            if (isAccent) {
+                console.log("Detected Accent: RMS:", rms, "Clarity:", clarity.toFixed(3));
 
                 const dynamicGate = getDynamicGate();
                 const isGateOpen = (now - lastNoteTime > dynamicGate);
                 const isNewStrike = rms > prevRMS * 1.3; // Spectral Flux
 
-                if ((isGateOpen || isNewStrike) && rms > noteSpecificThreshold) {
-                    tally[detected] = (tally[detected] || 0) + 1;
+                if (isGateOpen || isNewStrike) {
+                    // Fast Trigger for Slaps (1 Frame)
+                    tally['ACCENT'] = (tally['ACCENT'] || 0) + 1;
 
-                    if (tally[detected] >= CONFIDENCE_THRESHOLD) {
-                        if (isCoaching()) {
-                            evaluateDetectedNote(detected, transcriptionIndex, now);
-                        } else {
-                            recordNoteToGrid(detected, currentIndex, activeGrid);
+                    if (tally['ACCENT'] >= 1) { // Immediate
+                        // If we are refining (already recorded an accent), don't send another accent
+                        if (!stepWasRecorded) {
+                            if (isCoaching()) {
+                                evaluateDetectedNote('ACCENT', transcriptionIndex, now);
+                            } else {
+                                recordNoteToGrid('T', currentIndex, activeGrid);
+                            }
+                            lastNoteTime = now;
+                            stepWasRecorded = true;
+                            lastDetectedType = 'ACCENT';
+                            tally = {};
                         }
-                        lastNoteTime = now;
-                        stepWasRecorded = true;
-                        tally = {};
+                    }
+                }
+            } else {
+                // Regular Note Logic
 
-                        // Auto-finish Guided Calibration
-                        if (isGuidedCalibrating && detected === '8' && currentIndex >= 16) {
-                            setTimeout(analyzeGuidedResults, 1000);
+                // Pitch-based detection for regular notes
+                const detected = findClosestScaleNote(pitch); // Returns label string directly
+
+                if (detected) {
+                    console.log("Detected Note:", detected, "Pitch:", pitch.toFixed(3), "Clarity:", clarity.toFixed(3));
+
+                    // Use the note-specific multiplier from Guided Calibration
+                    const multiplier = noteMultipliers[detected] || 0.5;
+                    // ... rest of logic
+
+
+                    // Calculate specific threshold
+                    let noteSpecificThreshold = baseSensitivity * multiplier;
+                    if (noteSensitivities[detected]) {
+                        noteSpecificThreshold = noteSensitivities[detected] * multiplier;
+                    }
+
+                    const dynamicGate = getDynamicGate();
+                    const isGateOpen = (now - lastNoteTime > dynamicGate);
+                    const isNewStrike = rms > prevRMS * 1.3; // Spectral Flux
+
+                    // Allow bypass of gate if we are refining an accent
+                    if ((isGateOpen || isNewStrike || canRefine) && rms > noteSpecificThreshold) {
+                        tally[detected] = (tally[detected] || 0) + 1;
+
+                        if (tally[detected] >= CONFIDENCE_THRESHOLD) {
+                            if (isCoaching()) {
+                                evaluateDetectedNote(detected, transcriptionIndex, now);
+                            } else {
+                                recordNoteToGrid(detected, currentIndex, activeGrid);
+                            }
+                            lastNoteTime = now;
+                            stepWasRecorded = true;
+                            lastDetectedType = detected;
+                            tally = {};
+
+                            // Auto-finish Guided Calibration
+                            if (isGuidedCalibrating && detected === '8' && currentIndex >= 16) {
+                                setTimeout(analyzeGuidedResults, 1000);
+                            }
                         }
                     }
                 }
@@ -371,7 +449,18 @@ function autoCorrelate(buffer, sampleRate) {
         }
     }
     let T0 = maxpos;
-    return sampleRate / T0;
+    // return sampleRate / T0;
+
+    // Calculate Clarity (Normalized Correlation Coefficient)
+    // c[0] is the total energy (autocorrelation at lag 0)
+    // clarity = c[T0] / c[0]
+    let clarity = (c[0] > 0) ? (maxval / c[0]) : 0;
+
+    return {
+        freq: sampleRate / T0,
+        clarity: clarity,
+        rms: Math.sqrt(rms / SIZE)
+    };
 }
 
 // Guided Calibration Modal
@@ -413,6 +502,8 @@ function resetGuideUI() {
 
 
 export function initTranscription() {
+    const ctx = activeGrid;
+
     micBtn = document.getElementById('micBtn');
     micCalBtn = document.getElementById('micCalBtn');
     guidedCalBtn = document.getElementById('guidedCalBtn');
@@ -456,12 +547,7 @@ export function initTranscription() {
 
     guidedCalBtn?.addEventListener('click', (e) => {
         if (e) e.stopPropagation();
-        if (!isListening) {
-            alert("Please enable 'Listen Mode' first.");
-            const menu = document.getElementById('micDropdownMenu');
-            if (menu) menu.classList.remove('show');
-            return;
-        }
+        if (!isListening) toggleListening();
 
         // Clear the grid (Direct state update)
         ctx.innerLabels = Array(ctx.innerLabels.length).fill('');

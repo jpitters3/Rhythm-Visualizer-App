@@ -138,6 +138,9 @@ export async function startCoachingSession(ctx = activeGrid) {
   start(ctx, true, false);
 }
 
+const PENDING_EVAL_WINDOW = 100; // ms to wait for a pitch after an accent
+let pendingEvaluation = null; // { timeoutId, timestamp, type: 'ACCENT', stepIndex }
+
 /**
  * Evaluate a detected note against expected note
  * Called from transcription loop
@@ -160,14 +163,55 @@ export function evaluateDetectedNote(detectedNote, stepIndex, actualTime) {
     return;
   }
 
-  // Calculate expected time
-  // User noted that loop logic was causing issues on first note.
-  // We will trust the straightforward calculation for now, as transcriptionIndex should align it.
-  const subdivisions = (ctx.mode === '16') ? 4 : 2;
-  // Calculate expected timing
-  // Note: Add 200ms to account for AUDIO_DELAY in tick() function
-  // The audio actually plays 200ms after the logical beat time
-  const AUDIO_DELAY_MS = AUDIO_DELAY * 1000
+  // Check if we have a pending ACCENT evaluation for this step
+  if (pendingEvaluation && pendingEvaluation.stepIndex === stepIndex) {
+    if (detectedNote !== 'ACCENT' && expected.labels.includes(detectedNote)) {
+      // SUCCESS! We found the pitch we were looking for.
+      console.log(`Coaching Mode: Resolved Pending Accent -> Found Note ${detectedNote}`);
+      clearTimeout(pendingEvaluation.timeoutId);
+
+      // Use the timestamp of the ORIGINAL Accent (the attack) for timing accuracy
+      const attackTime = pendingEvaluation.timestamp;
+      pendingEvaluation = null;
+
+      // Proceed to evaluate with the correct note and the accurate attack time
+      performEvaluation(detectedNote, stepIndex, attackTime, expected);
+      return;
+    }
+  }
+
+  // Normal Flow
+  if (detectedNote === 'ACCENT') {
+    const expectsPitch = expected.labels.some(l => l !== 'T' && l !== 'S' && l !== 'ACCENT');
+
+    if (expectsPitch) {
+      // We expect a pitch, but got an accent. 
+      // This might be the attack of the note. Wait briefly.
+      console.log("Coaching Mode: Detected ACCENT but expecting Pitch. Buffering...");
+
+      if (pendingEvaluation) clearTimeout(pendingEvaluation.timeoutId);
+
+      pendingEvaluation = {
+        stepIndex,
+        timestamp: actualTime,
+        type: 'ACCENT',
+        timeoutId: setTimeout(() => {
+          console.log("Coaching Mode: Pending Accent Timed Out. Committing Accent.");
+          pendingEvaluation = null;
+          performEvaluation('ACCENT', stepIndex, actualTime, expected);
+        }, PENDING_EVAL_WINDOW)
+      };
+      return; // Wait for timeout or new note
+    }
+  }
+
+  // If we aren't buffering, just evaluate
+  performEvaluation(detectedNote, stepIndex, actualTime, expected);
+}
+
+function performEvaluation(detectedNote, stepIndex, actualTime, expected) {
+  const ctx = activeGrid;
+  const AUDIO_DELAY_MS = AUDIO_DELAY * 1000;
   const msPerStep = intervalMs(ctx);
   const expectedTime = coachingSession.actualStartTime + (stepIndex * msPerStep) + AUDIO_DELAY_MS;
 
@@ -205,8 +249,17 @@ export function evaluateDetectedNote(detectedNote, stepIndex, actualTime) {
  * @returns {Object} Evaluation result
  */
 function evaluateNote(detectedNote, expectedNotes, timing) {
-  // Note accuracy
-  const noteMatch = expectedNotes.includes(detectedNote);
+  // Note accuracy - handle accent notes specially
+  let noteMatch = false;
+
+  if (detectedNote === 'ACCENT') {
+    // If user played an accent, check if T or S was expected
+    noteMatch = expectedNotes.includes('T') || expectedNotes.includes('S');
+  } else {
+    // Normal pitch-based note matching
+    noteMatch = expectedNotes.includes(detectedNote);
+  }
+
   const noteScore = noteMatch ? 100 : 0;
 
   // Timing accuracy (±200ms tolerance, normalized to 0-100 scale)
