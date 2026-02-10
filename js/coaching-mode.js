@@ -536,17 +536,15 @@ export function endCoachingSession() {
   // Calculate final scores
   calculateFinalScores();
 
-  // Hide HUD
-  if (coachingHUD) {
-    coachingHUD.style.display = 'none';
-  }
+  // Reset state BUT keep UI open
+  isCoachingActive = false;
+  isCoachingUIOpen = true;
+
+  // Show HUD in "Ready" state (Start button)
+  showCoachingHUD(true);
 
   // Show results modal
   showResultsModal();
-
-  // Reset state
-  isCoachingActive = false;
-  isCoachingUIOpen = false;
 }
 
 /**

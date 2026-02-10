@@ -182,7 +182,7 @@
   grid-template-columns: 1fr;
   /* Stack items */
   gap: 8px;
-  padding: 10px 0;
+  padding: 0px 10px 10px 10px;
 }
 
 .coaching-results-modal.sidebar-mode .score-item {
@@ -240,7 +240,8 @@
 
 .results-summary {
   margin-bottom: 32px;
-  padding-top: 24px;
+  padding-top: 2px;
+  border-radius: 8px;
 }
 
 .score-circle {
@@ -276,10 +277,6 @@
   gap: 16px;
   margin-top: 24px;
   padding: 24px;
-}
-
-.sidebar-mode .score-breakdown {
-  padding: 0px 10px 10px 10px;
 }
 
 .score-item {
