@@ -12,6 +12,12 @@
   z-index: 1000;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
   min-width: 150px;
+  width: 320px;
+}
+
+.coaching-hud button,
+.coaching-hud span {
+  font-size: 16px;
 }
 
 .hud-score {
@@ -112,8 +118,107 @@
 /* Results Modal */
 .coaching-results-modal {
   max-width: 600px;
+  max-height: 90vh;
+  /* Prevent overflow on small screens */
+  overflow-y: auto;
+  /* Allow scrolling content */
   padding: 32px;
-  transition: background-color 0.3s ease;
+  transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+  /* Ensure it's centered by default (handled by .modal) */
+  transform-origin: top right;
+}
+
+/* Sidebar Mode (Minimized) */
+.coaching-results-modal.sidebar-mode {
+  position: fixed;
+  top: 35vh;
+  right: 20px;
+  bottom: 20px;
+  left: auto;
+  transform: none;
+  overflow-y: hidden;
+  /* Override centering transform */
+  width: 320px;
+  max-width: 90vw;
+  height: auto;
+  max-height: 80vh;
+  margin: 0;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: -4px 0 16px rgba(0, 0, 0, 0.35);
+  z-index: 1005;
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+}
+
+/* Hide the overlay background when in sidebar mode */
+#coachingResultsModal.sidebar-active {
+  background-color: transparent;
+  pointer-events: none;
+  /* Let clicks pass through to grid */
+}
+
+/* Re-enable pointer events on the modal itself */
+#coachingResultsModal.sidebar-active .coaching-results-modal {
+  pointer-events: auto;
+}
+
+/* Adjust content for sidebar */
+.coaching-results-modal.sidebar-mode .score-circle {
+  width: 120px;
+  height: 120px;
+  margin: 10px auto;
+}
+
+.coaching-results-modal.sidebar-mode .score-circle .score-value {
+  font-size: 40px;
+}
+
+.coaching-results-modal.sidebar-mode .score-circle .score-label {
+  font-size: 14px;
+}
+
+.coaching-results-modal.sidebar-mode .score-breakdown {
+  grid-template-columns: 1fr;
+  /* Stack items */
+  gap: 8px;
+  padding: 10px 0;
+}
+
+.coaching-results-modal.sidebar-mode .score-item {
+  padding: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.coaching-results-modal.sidebar-mode .score-item .score-label {
+  margin-bottom: 0;
+}
+
+.coaching-results-modal.sidebar-mode .score-item .score-value {
+  font-size: 18px;
+}
+
+/* Adjust celebrations for sidebar */
+.coaching-results-modal.sidebar-mode .celebration-emoji {
+  font-size: 40px;
+}
+
+/* Sidebar Header Controls */
+.results-header-actions {
+  top: 10px;
+  right: 10px;
+  display: flex;
+  gap: 8px;
+}
+
+.sidebar-minimize-btn {
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  color: var(--text-secondary);
 }
 
 /* Score-based background colors */
@@ -171,6 +276,10 @@
   gap: 16px;
   margin-top: 24px;
   padding: 24px;
+}
+
+.sidebar-mode .score-breakdown {
+  padding: 0px 10px 10px 10px;
 }
 
 .score-item {

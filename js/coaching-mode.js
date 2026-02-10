@@ -465,13 +465,26 @@ function showCoachingHUD(isReady = false) {
     }
 
     // Add listeners
-    // Add listeners
     setTimeout(() => {
       const iVol = document.getElementById('hud-vol-inst');
       const mVol = document.getElementById('hud-vol-metro');
       if (iVol) iVol.addEventListener('input', (e) => setVolume('instrument', parseFloat(e.target.value)));
       if (mVol) mVol.addEventListener('input', (e) => setVolume('metronome', parseFloat(e.target.value)));
     }, 0);
+  }
+
+  // Inject "Results" button (hidden by default)
+  if (coachingHUD && !coachingHUD.querySelector('#hudResultsBtn')) {
+    const resultsBtn = document.createElement('button');
+    resultsBtn.id = 'hudResultsBtn';
+    resultsBtn.className = 'hud-stop'; // Re-use style
+    resultsBtn.style.marginTop = '8px';
+    resultsBtn.style.backgroundColor = 'var(--primary)';
+    resultsBtn.style.color = 'black';
+    resultsBtn.style.display = 'none';
+    resultsBtn.innerHTML = '📓 Results';
+    resultsBtn.onclick = () => showResultsModal();
+    coachingHUD.appendChild(resultsBtn);
   }
 
   if (coachingHUD) {
@@ -494,6 +507,18 @@ function updateHUD() {
   if (hudAccuracy) hudAccuracy.textContent = accuracy + '%';
   if (hudCorrect) hudCorrect.textContent = coachingSession.correctNotes;
   if (hudTotal) hudTotal.textContent = evaluated;
+
+  // Toggle Results Button
+  const resultsBtn = document.getElementById('hudResultsBtn');
+  if (resultsBtn) {
+    // Show if we have a session but it's not currently running (i.e. finished)
+    // AND we have results to show
+    if (!isCoachingActive && coachingSession.overallScore !== undefined) {
+      resultsBtn.style.display = 'block';
+    } else {
+      resultsBtn.style.display = 'none';
+    }
+  }
 }
 
 /**
@@ -584,11 +609,34 @@ function identifyProblemMeasures() {
 }
 
 /**
- * Show results modal
+ * Show results modal (Centered initially)
  */
 function showResultsModal() {
   resultsModal = document.getElementById('coachingResultsModal');
   if (!resultsModal) return;
+
+  const modalHeader = resultsModal.querySelector('.modal-header');
+  const modalCloseBtn = resultsModal.querySelector('#closeCoachingResults');
+
+  // Reset to centered mode if opening fresh
+  resultsModal.classList.remove('sidebar-active');
+  const modalContent = resultsModal.querySelector('.coaching-results-modal');
+  if (modalContent) {
+    modalContent.classList.remove('sidebar-mode');
+
+    // Inject Close/Minimize buttons if not present
+    if (!modalContent.querySelector('.results-header-actions')) {
+      const actions = document.createElement('div');
+      actions.className = 'results-header-actions';
+      actions.innerHTML = `
+            <button class="sidebar-minimize-btn close-btn" title="Minimize to Sidebar">↘</button>
+          `;
+      if (modalHeader) {
+        modalCloseBtn.parentNode.insertBefore(actions, modalCloseBtn);
+      }
+      actions.querySelector('.sidebar-minimize-btn').onclick = minimizeResults;
+    }
+  }
 
   // Populate scores
   const overallScoreEl = document.getElementById('overallScore');
@@ -640,15 +688,28 @@ function showResultsModal() {
     if (suggestions.length > 0) {
       tipsContainer.style.display = 'block';
       tipsContainer.innerHTML = `
-              <h4 style="margin-top:0; margin-bottom:10px; color:var(--text-secondary); font-size:0.9em; text-transform:uppercase; letter-spacing:1px;">💡 Coach's Tips</h4>
-              <ul style="margin:0; padding-left:20px; color:var(--text-primary);">
-                  ${suggestions.map(s => `<li style="margin-bottom:5px;">${s}</li>`).join('')}
-              </ul>
-          `;
+          <h4 style="margin-top:0; margin-bottom:10px; color:var(--text-secondary); font-size:0.9em; text-transform:uppercase; letter-spacing:1px;">💡 Coach's Tips</h4>
+          <ul style="margin:0; padding-left:20px; color:var(--text-primary);">
+              ${suggestions.map(s => `<li style="margin-bottom:5px;">${s}</li>`).join('')}
+          </ul>
+      `;
     } else {
       tipsContainer.style.display = 'none';
     }
   }
+
+  // Show
+  resultsModal.style.display = 'flex';
+
+  // Setup overlay click to minimize (not close)
+  resultsModal.onclick = (e) => {
+    if (e.target === resultsModal) {
+      minimizeResults();
+    }
+  };
+
+  // --- COACH'S TIPS (Diagnostics) ---
+  // (Already handled above)
 
   // Show/Hide save button based on auth
   const saveSessionBtn = document.getElementById('saveSessionBtn');
@@ -709,20 +770,51 @@ function showResultsModal() {
     resultsContainer.insertBefore(celebration, scoreCircle);
   }
 
-  // // Apply score-based background color class to modal
-  // resultsModal.classList.remove('score-excellent', 'score-good', 'score-needs-work');
-  // if (score >= 80) {
-  //   resultsModal.classList.add('score-excellent');
-  // } else if (score >= 60) {
-  //   resultsModal.classList.add('score-good');
-  // } else {
-  //   resultsModal.classList.add('score-needs-work');
-  // }
-
-  // Show modal
+  // Show
   resultsModal.style.display = 'flex';
-  resultsModal.setAttribute('aria-hidden', 'false');
+
+  // Setup overlay click to minimize (not close)
+  resultsModal.onclick = (e) => {
+    if (e.target === resultsModal) {
+      minimizeResults();
+    }
+  };
 }
+
+/**
+* Close results modal (Minimize to sidebar)
+*/
+export function closeResultsModal() {
+  minimizeResults();
+}
+
+/**
+* Minimize results to sidebar
+*/
+function minimizeResults() {
+  if (!resultsModal) return;
+
+  // Add classes for sidebar mode
+  resultsModal.classList.add('sidebar-active'); // Removes overlay background
+
+  const modalContent = resultsModal.querySelector('.coaching-results-modal');
+  if (modalContent) {
+    modalContent.classList.add('sidebar-mode');
+  }
+}
+
+/**
+* Fully dismiss results
+*/
+function dismissResults() {
+  if (resultsModal) {
+    resultsModal.style.display = 'none';
+    resultsModal.classList.remove('sidebar-active');
+    const modalContent = resultsModal.querySelector('.coaching-results-modal');
+    if (modalContent) modalContent.classList.remove('sidebar-mode');
+  }
+}
+
 
 /**
  * Save session to database
