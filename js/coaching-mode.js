@@ -755,6 +755,15 @@ function showResultsModal() {
                 Adjust if notes consistently feel early or late.
             </p>
             
+            <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 12px; text-align: center; margin-bottom: 15px;">
+                <div style="font-size: 0.85em; color: var(--text-secondary); margin-bottom: 10px;">Note vs. Accent Strictness</div>
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px;">
+                    <span style="font-size:0.8em; opacity:0.7;">Forgiving</span>
+                    <input type="range" id="clarityThresholdSlider" min="0.3" max="0.7" step="0.05" style="flex:1">
+                    <span style="font-size:0.8em; opacity:0.7;">Strict</span>
+                </div>
+            </div>
+
             <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 12px; text-align: center;">
                 <div style="font-size: 0.85em; color: var(--text-secondary); margin-bottom: 10px;">Current Offset</div>
                 <div id="timingOffsetDisplay" style="font-size: 2em; font-weight: bold; color: var(--primary); margin-bottom: 15px;">${userTimingOffset}ms</div>
@@ -778,7 +787,7 @@ function showResultsModal() {
 
       // Attach Event Listeners for Settings
       setTimeout(() => {
-        // Use timeout or just direct attachment since we appended
+        // Calibration Buttons
         const updateDisplay = () => {
           const disp = document.getElementById('timingOffsetDisplay');
           if (disp) disp.textContent = getTimingOffset() + 'ms';
@@ -792,6 +801,18 @@ function showResultsModal() {
 
         const btnReset = settingsTabContent.querySelector('#btn-cal-reset');
         if (btnReset) btnReset.onclick = () => { resetCalibration(); updateDisplay(); };
+
+        // Accent Sensitivity Slider
+        const slider = settingsTabContent.querySelector('#clarityThresholdSlider');
+        if (slider) {
+          // Read current value from localStorage (shared with transcription.js)
+          slider.value = localStorage.getItem('gp_clarity_threshold') || 0.5;
+
+          slider.oninput = (e) => {
+            const val = parseFloat(e.target.value);
+            Bus.emit(BUS_EVENT.SET_ACCENT_SENSITIVITY, { threshold: val });
+          };
+        }
       }, 0);
 
       // Tab Logic

@@ -6,6 +6,7 @@ import { loadPatternByName } from './controls.js';
 import { isListening, setIsListening } from './state.js';
 import { isCoaching, evaluateDetectedNote } from './coaching-mode.js';
 import { ACCENT_RMS_MULTIPLIER } from './config.js';
+import { Bus, BUS_EVENT } from './bus.js';
 
 export let micStream = null, audioAnalyser = null;
 let lastActiveElement = null;
@@ -198,16 +199,26 @@ function transcriptionLoop() {
 
             // 0. Pre-calculate Clarity info
             const detectedNoteLabel = findClosestScaleNote(pitch);
-            const CLARITY_THRESHOLD = 0.5;
-            const isClearNote = detectedNoteLabel && clarity > 0.55;
+            let CLARITY_THRESHOLD = userClarityThreshold;
+
+            // Get Ding Frequency for dynamic protection
+            const currentScale = getScale();
+            const dingFreq = (currentScale && NOTE_FREQS[currentScale.ding]) ? NOTE_FREQS[currentScale.ding] : 0;
+            // Allow some headroom (e.g. +30Hz) for the Ding's resonance or slightly sharp attacks
+            const dingProtectionLimit = dingFreq ? (dingFreq + 40) : 150;
+
+            // Dings (Low notes) often have lower clarity. Relax threshold for them.
+            if (detectedNoteLabel === 'D' || pitch < dingProtectionLimit) {
+                // dynamic adjustment relative to user setting
+                CLARITY_THRESHOLD = Math.max(0.3, userClarityThreshold - 0.08);
+            }
+
+            const isClearNote = detectedNoteLabel && clarity > CLARITY_THRESHOLD;
 
             // 1. Check for NOTES first (Priority)
             if (isClearNote) {
                 // If it's a clear note, we trust it over any accent/strike logic
                 // We let the standard pitch detection logic below handle it
-                // (fall through to 'else' or just proceed?)
-                // Actually, the original logic had 'if (isAccent) ... else { checkNote }'
-                // flagging 'isAccent' as FALSE here ensures we go to the Pitch Check.
             }
 
             // 2. Check for ACCENTS (Secondary)
@@ -217,10 +228,10 @@ function transcriptionLoop() {
 
             // It is an accent only if:
             // - It is a strike
-            // - It is NOT a clear note (Clarity < 0.55) -> This filters note attacks
-            // - It has low clarity (< 0.5) OR extreme pitch
-            // - It has min energy
-            const isAccent = !isClearNote && isStrike && rms > MIN_ACCENT_RMS && (clarity < CLARITY_THRESHOLD || pitch < 100 || pitch > 2000);
+            // - It is NOT a clear note
+            // - It has low clarity OR extreme pitch (Very low thumps or high clicks)
+            // * Changed pitch < 100 to pitch < 50 to protect D2 (approx 73Hz)
+            const isAccent = !isClearNote && isStrike && rms > MIN_ACCENT_RMS && (clarity < CLARITY_THRESHOLD || pitch < 50 || pitch > 3000);
             const dynamicGate = getDynamicGate();
             const isGateOpen = (now - lastNoteTime > dynamicGate);
             const isNewStrike = rms > prevRMS * 1.3; // Spectral Flux
@@ -398,12 +409,27 @@ function analyzeGuidedResults() {
     // UI Cleanup
     alert("Calibration Complete!\n" + (adjustments.length ? adjustments.join('\n') : "Perfect recording. No changes needed."));
     guidedCalModal.style.display = 'none';
+
     isGuidedCalibrating = false;
     resetGuideUI();
 
     localStorage.setItem('gp_multipliers', JSON.stringify(noteMultipliers));
-    isGuidedCalibrating = false;
     stop(activeGrid);
+}
+
+// Module-level Clarity Threshold (User Configurable)
+// default 0.5. Higher = Harder to trigger Note (Easier to trigger Accent)
+// Lower = Easier to trigger Note (Harder to trigger Accent)
+let userClarityThreshold = parseFloat(localStorage.getItem('gp_clarity_threshold') || '0.5');
+
+export function setClarityThreshold(val) {
+    userClarityThreshold = val;
+    localStorage.setItem('gp_clarity_threshold', val);
+    console.log("Clarity Threshold set to:", val);
+}
+
+export function getClarityThreshold() {
+    return userClarityThreshold;
 }
 
 // --- 4. Logic Fix: findClosestScaleNote returns label ---
@@ -429,6 +455,13 @@ function findClosestScaleNote(freq) {
 
     return closest;
 }
+
+// Listen for sensitivity changes from UI
+Bus.on(BUS_EVENT.SET_ACCENT_SENSITIVITY, (e) => {
+    if (e.detail && typeof e.detail.threshold === 'number') {
+        setClarityThreshold(e.detail.threshold);
+    }
+});
 
 // Standard Autocorrelation Algorithm
 function autoCorrelate(buffer, sampleRate) {
