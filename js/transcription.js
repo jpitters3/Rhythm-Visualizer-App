@@ -22,6 +22,7 @@ let lastFrameTranscriptionIndex = -1;
 let stepWasRecorded = false;
 let tally = {};
 let lastDetectedType = null;
+let lastGlobalDetectedNote = null; // Track across steps to prevent sustain re-triggers
 let accentCandidate = null; // New: For delaying accent decision by 1 frame
 const CONFIDENCE_THRESHOLD = 2;
 
@@ -220,13 +221,12 @@ function transcriptionLoop() {
             // - It has low clarity (< 0.5) OR extreme pitch
             // - It has min energy
             const isAccent = !isClearNote && isStrike && rms > MIN_ACCENT_RMS && (clarity < CLARITY_THRESHOLD || pitch < 100 || pitch > 2000);
+            const dynamicGate = getDynamicGate();
+            const isGateOpen = (now - lastNoteTime > dynamicGate);
+            const isNewStrike = rms > prevRMS * 1.3; // Spectral Flux
 
             if (isAccent) {
                 console.log("Detected Accent: RMS:", rms, "Clarity:", clarity.toFixed(3));
-
-                const dynamicGate = getDynamicGate();
-                const isGateOpen = (now - lastNoteTime > dynamicGate);
-                const isNewStrike = rms > prevRMS * 1.3; // Spectral Flux
 
                 if (isGateOpen || isNewStrike) {
                     // Fast Trigger for Slaps (1 Frame)
@@ -267,15 +267,29 @@ function transcriptionLoop() {
                         noteSpecificThreshold = noteSensitivities[detected] * multiplier;
                     }
 
-                    const dynamicGate = getDynamicGate();
-                    const isGateOpen = (now - lastNoteTime > dynamicGate);
-                    const isNewStrike = rms > prevRMS * 1.3; // Spectral Flux
+                    // ... (previous code)
+
+                    // Global State for Sustain Prevention
+                    let lastGlobalDetectedNote = null;
 
                     // Allow bypass of gate if we are refining an accent
                     if ((isGateOpen || isNewStrike || canRefine) && rms > noteSpecificThreshold) {
+
+                        // SUSTAIN FIX: If we are detecting the SAME note as before,
+                        // we MUST have a new strike (flux) to record it.
+                        // This prevents the tail of a valid note from triggering the next step's gate.
+                        if (detected === lastGlobalDetectedNote && !isNewStrike && !canRefine) {
+                            console.log(`Ignoring Sustain: ${detected} (No new strike)`);
+                            return;
+                        }
+
                         tally[detected] = (tally[detected] || 0) + 1;
 
                         if (tally[detected] >= CONFIDENCE_THRESHOLD) {
+
+                            // Update global tracker
+                            lastGlobalDetectedNote = detected;
+
                             if (isCoaching()) {
                                 evaluateDetectedNote(detected, transcriptionIndex, now);
                             } else {
