@@ -13,11 +13,15 @@ import { Bus, BUS_EVENT } from './bus.js';
 import { AUDIO_DELAY } from './config.js';
 import { TransportRegistry } from './transport-ui.js';
 import { CoachingDiagnostics } from './coaching-diagnostics.js';
+import { setInnerLabel, renderAllMeasures } from './notegrid.js';
+import { CoachingSession } from './coaching-session.js';
+import { getSelectedPatternName } from './pattern-crud.js';
 
 // Session state
 let coachingSession = null;
 let isCoachingActive = false;
 let isCoachingUIOpen = false; // New: Tracks if HUD is open but maybe not running
+let isReviewActive = false; // New: Tracks if we are in review mode
 let expectedNotes = []; // Array of { index, labels } from pattern
 let sessionResults = []; // Array of evaluation results per step
 let isLoopingEnabled = false; // Whether pattern should loop
@@ -31,7 +35,14 @@ let stopCoachingBtn = null;
 let loopToggleBtn = null;
 let resultsModal = null;
 
-export { coachingSession, isCoachingActive };
+export { coachingSession, isCoachingActive, isReviewActive };
+
+/**
+ * Check if we are currently reviewing a session
+ */
+export function isReviewing() {
+  return isReviewActive;
+}
 
 /**
  * Enter Coaching Mode (Show HUD, Ready State)
@@ -66,24 +77,18 @@ export async function startCoachingSession(ctx = activeGrid) {
     return;
   }
 
+  // Disable review mode when starting new session
+  isReviewActive = false;
+
+  // Clear any existing cell highlights (including review highlights)
+  clearCellHighlights(ctx);
+
+  // Restore original grid state just in case (though clearCellHighlights helps)
+  // We don't want to carry over red/blue/etc from previous review if any
+  renderAllMeasures(ctx);
+
   // Initialize session
-  coachingSession = {
-    id: Date.now(),
-    patternName: ctx.patternName || 'Untitled Pattern',
-    startTime: Date.now(),
-    endTime: null,
-    bpm: ctx.bpm,
-    totalNotes: 0,
-    correctNotes: 0,
-    noteAccuracy: 0,
-    timingAccuracy: 0,
-    overallScore: 0,
-    noteResults: [],
-    problemMeasures: [],
-    actualStartTime: null, // Will be set when playback starts
-    loopCount: 0, // Track number of loops completed
-    diagnostics: new CoachingDiagnostics()
-  };
+  coachingSession = new CoachingSession();
 
   // Build expected notes array
   expectedNotes = ctx.innerLabels.map((label, index) => ({
@@ -107,9 +112,6 @@ export async function startCoachingSession(ctx = activeGrid) {
 
   // Update HUD to "Running" state
   showCoachingHUD(false);
-
-  // Clear any existing cell highlights
-  clearCellHighlights(ctx);
 
   // Register tick observer to detect loops
   const loopObserver = (grid, stepNotes, stepHands) => {
@@ -306,7 +308,8 @@ function evaluateNote(detectedNote, expectedNotes, timing) {
   const noteScore = noteMatch ? 100 : 0;
 
   // Timing accuracy (±200ms tolerance, normalized to 0-100 scale)
-  const timingError = Math.abs(timing.actual - timing.expected);
+  const timingDeviation = timing.actual - timing.expected; // Signed deviation
+  const timingError = Math.abs(timingDeviation);
   const timingScore = Math.max(0, 100 - (timingError / 2));
 
   // Combined score (70% note, 30% timing)
@@ -316,13 +319,14 @@ function evaluateNote(detectedNote, expectedNotes, timing) {
   const correct = noteMatch && timingError < 200;
 
   console.log(`Coaching Mode: Evaluation result - note: ${detectedNote}, expected: ${expectedNotes}, 
-    correct: ${correct}, timingError: ${timingError}, timingScore: ${timingScore}`);
+    correct: ${correct}, timingError: ${timingError}, deviation: ${timingDeviation}, timingScore: ${timingScore}`);
 
   return {
     correct,
     noteScore,
     timingScore,
     timingError,
+    timingDeviation,
     overallScore,
     feedback: getFeedback(noteMatch, timingError)
   };
@@ -481,9 +485,11 @@ function showCoachingHUD(isReady = false) {
     resultsBtn.style.marginTop = '8px';
     resultsBtn.style.backgroundColor = 'var(--primary)';
     resultsBtn.style.color = 'black';
-    resultsBtn.style.display = 'none';
-    resultsBtn.innerHTML = '📓 Results';
-    resultsBtn.onclick = () => showResultsModal();
+    resultsBtn.style.display = 'block'; // Always show
+    resultsBtn.textContent = '📓 Results';
+    resultsBtn.onclick = () => {
+      showResultsModal();
+    };
     coachingHUD.appendChild(resultsBtn);
   }
 
@@ -507,18 +513,6 @@ function updateHUD() {
   if (hudAccuracy) hudAccuracy.textContent = accuracy + '%';
   if (hudCorrect) hudCorrect.textContent = coachingSession.correctNotes;
   if (hudTotal) hudTotal.textContent = evaluated;
-
-  // Toggle Results Button
-  const resultsBtn = document.getElementById('hudResultsBtn');
-  if (resultsBtn) {
-    // Show if we have a session but it's not currently running (i.e. finished)
-    // AND we have results to show
-    if (!isCoachingActive && coachingSession.overallScore !== undefined) {
-      resultsBtn.style.display = 'block';
-    } else {
-      resultsBtn.style.display = 'none';
-    }
-  }
 }
 
 /**
@@ -540,27 +534,75 @@ export function endCoachingSession() {
   isCoachingActive = false;
   isCoachingUIOpen = true;
 
+  // AUTO-ENTER REVIEW MODE
+  isReviewActive = true;
+
   // Show HUD in "Ready" state (Start button)
   showCoachingHUD(true);
 
+  // Load results to grid immediately (Review Mode)
+  loadSessionToGrid(coachingSession);
+
   // Show results modal
   showResultsModal();
+
+  // Auto-save if it's a real session
+  if (coachingSession && coachingSession.isRealSession) {
+    saveCoachingSession();
+  }
 }
 
 /**
  * Calculate final session scores
  */
 function calculateFinalScores() {
-  if (!coachingSession || sessionResults.length === 0) return;
+  if (!coachingSession) return;
+
+  // 1. Backfill Missed Notes
+  // Iterate through all expected notes to see if we have a result for them
+  expectedNotes.forEach(expected => {
+    // Check if we have a result for this step
+    const hasResult = sessionResults.some(r => r.stepIndex === expected.index);
+
+    if (!hasResult) {
+      // No detection happened for this step -> MISS
+      sessionResults.push({
+        stepIndex: expected.index,
+        detectedNote: 'MISS',
+        expectedNotes: expected.labels,
+        correct: false,
+        timingScore: 0,
+        overallScore: 0,
+        timingError: null
+      });
+
+      if (coachingSession.diagnostics) {
+        coachingSession.diagnostics.record({
+          stepIndex: expected.index,
+          expected: expected.labels,
+          detected: 'MISS',
+          correct: false,
+          timingError: null
+        });
+      }
+    }
+  });
+
+  // Sort results by step index for easier reading
+  sessionResults.sort((a, b) => a.stepIndex - b.stepIndex);
 
   const totalEvaluated = sessionResults.length;
 
+  if (totalEvaluated === 0) return;
+
   // Note accuracy
+  coachingSession.correctNotes = sessionResults.filter(r => r.correct).length;
   coachingSession.noteAccuracy = Math.round(
     (coachingSession.correctNotes / totalEvaluated) * 100
   );
 
   // Timing accuracy (average of all timing scores)
+  // Missed notes have 0 timing score, which correctly penalizes the average
   const avgTimingScore = sessionResults.reduce((sum, r) => sum + r.timingScore, 0) / totalEvaluated;
   coachingSession.timingAccuracy = Math.round(avgTimingScore);
 
@@ -573,6 +615,7 @@ function calculateFinalScores() {
 
   // Store results in session
   coachingSession.noteResults = sessionResults;
+  coachingSession.totalNotes = totalEvaluated; // Should match expectedNotes.length now
 }
 
 /**
@@ -614,7 +657,6 @@ function showResultsModal() {
   if (!resultsModal) return;
 
   const modalHeader = resultsModal.querySelector('.modal-header');
-  const modalCloseBtn = resultsModal.querySelector('#closeCoachingResults');
 
   // Reset to centered mode if opening fresh
   resultsModal.classList.remove('sidebar-active');
@@ -627,13 +669,68 @@ function showResultsModal() {
       const actions = document.createElement('div');
       actions.className = 'results-header-actions';
       actions.innerHTML = `
-            <button class="sidebar-minimize-btn close-btn" title="Minimize to Sidebar">↘</button>
+            <button class="sidebar-minimize-btn" title="Minimize to Sidebar">↘</button>
+            <button class="sidebar-close-btn" title="Close">✕</button>
           `;
-      if (modalHeader) {
-        modalCloseBtn.parentNode.insertBefore(actions, modalCloseBtn);
-      }
+      modalContent.prepend(actions);
+
       actions.querySelector('.sidebar-minimize-btn').onclick = minimizeResults;
+      actions.querySelector('.sidebar-close-btn').onclick = dismissResults;
     }
+
+    // Inject Sidebar Tabs if not present
+    if (!modalContent.querySelector('.sidebar-tabs')) {
+      const tabs = document.createElement('div');
+      tabs.className = 'sidebar-tabs';
+      tabs.innerHTML = `
+            <button class="sidebar-tab active" data-tab="result">Current Result</button>
+            <button class="sidebar-tab" data-tab="history">History</button>
+          `;
+      // Strategies:
+      // 1. Create .sidebar-content#tab-result wrapping existing children
+      // 2. Create .sidebar-content#tab-history
+
+      const existingChildren = Array.from(modalContent.children).filter(c => !c.classList.contains('results-header-actions'));
+
+      const resultTabContent = document.createElement('div');
+      resultTabContent.id = 'tab-result';
+      resultTabContent.className = 'sidebar-content active';
+
+      existingChildren.forEach(child => resultTabContent.appendChild(child));
+
+      const historyTabContent = document.createElement('div');
+      historyTabContent.id = 'tab-history';
+      historyTabContent.className = 'sidebar-content';
+      historyTabContent.innerHTML = `<div id="historyList" class="history-list"></div>`;
+
+      modalContent.appendChild(tabs);
+      modalContent.appendChild(resultTabContent);
+      modalContent.appendChild(historyTabContent);
+
+      // Tab Logic
+      tabs.querySelectorAll('.sidebar-tab').forEach(tab => {
+        tab.onclick = () => {
+          // Remove active
+          tabs.querySelectorAll('.sidebar-tab').forEach(t => t.classList.remove('active'));
+          modalContent.querySelectorAll('.sidebar-content').forEach(c => c.classList.remove('active'));
+
+          // Set active
+          tab.classList.add('active');
+          const target = tab.dataset.tab;
+          document.getElementById(`tab-${target}`).classList.add('active');
+
+          if (target === 'history') {
+            renderHistoryList();
+          }
+        };
+      });
+    }
+  }
+
+  if (!coachingSession) {
+    coachingSession = new CoachingSession();
+    endCoachingSession();
+    coachingSession.isRealSession = false;
   }
 
   // Populate scores
@@ -811,6 +908,14 @@ function dismissResults() {
     const modalContent = resultsModal.querySelector('.coaching-results-modal');
     if (modalContent) modalContent.classList.remove('sidebar-mode');
   }
+
+  // EXIT REVIEW MODE
+  if (isReviewActive) {
+    isReviewActive = false;
+    clearCellHighlights(activeGrid);
+    // Restore original colors/state
+    renderAllMeasures(activeGrid);
+  }
 }
 
 
@@ -823,12 +928,19 @@ export async function saveCoachingSession() {
     return;
   }
 
+  // Visual Feedback immediately
+  const saveBtn = document.getElementById('saveSessionBtn');
+  if (saveBtn) {
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Saving...';
+  }
+
   try {
     const { error } = await supabase
-      .from('coaching_sessions')
+      .from('practice_history')
       .insert({
         user_id: currentUser.id,
-        pattern_name: coachingSession.patternName,
+        pattern_name: getSelectedPatternName() || 'Unknown Pattern',
         bpm: coachingSession.bpm,
         total_notes: coachingSession.totalNotes,
         correct_notes: coachingSession.correctNotes,
@@ -841,45 +953,163 @@ export async function saveCoachingSession() {
 
     if (error) throw error;
 
-    alert('Session saved to your profile!');
-    const saveBtn = document.getElementById('saveSessionBtn');
     if (saveBtn) {
       saveBtn.disabled = true;
-      saveBtn.textContent = '✓ Saved';
+      saveBtn.textContent = 'Saved ✓';
+      saveBtn.classList.add('saved'); // For styling
     }
+
+    // Refresh history list if open
+    renderHistoryList();
+
   } catch (err) {
     console.error('Error saving session:', err);
-    alert('Failed to save session. Please try again.');
+    if (saveBtn) {
+      saveBtn.disabled = false;
+      saveBtn.textContent = 'Save Session';
+      alert('Failed to save session. Please try again.');
+    }
   }
 }
 
 /**
- * Show countdown before starting
+ * Fetch practice history for current user
  */
-// function showCountdown(callback) {
-//   const overlay = document.getElementById('countdownOverlay');
-//   const numberEl = document.getElementById('countdownNumber');
+export async function fetchHistory() {
+  if (!currentUser) return [];
 
-//   if (!overlay || !numberEl) {
-//     callback();
-//     return;
-//   }
+  try {
+    const { data, error } = await supabase
+      .from('practice_history')
+      .select('*')
+      .eq('user_id', currentUser.id)
+      .order('created_at', { ascending: false })
+      .limit(50);
 
-//   let count = 4;
-//   overlay.style.display = 'flex';
-//   numberEl.textContent = count;
+    if (error) throw error;
+    return data;
+  } catch (err) {
+    console.error('Error fetching history:', err);
+    return [];
+  }
+}
 
-//   const interval = setInterval(() => {
-//     count--;
-//     if (count > 0) {
-//       numberEl.textContent = count;
-//     } else {
-//       clearInterval(interval);
-//       overlay.style.display = 'none';
-//       callback();
-//     }
-//   }, 1000);
-// }
+/**
+ * Render history list in sidebar
+ */
+export async function renderHistoryList() {
+  const listContainer = document.getElementById('historyList');
+  if (!listContainer) return;
+
+  listContainer.innerHTML = '<div class="loading-spinner">Loading...</div>';
+
+  const history = await fetchHistory();
+  listContainer.innerHTML = '';
+
+  if (history.length === 0) {
+    listContainer.innerHTML = '<div class="no-history">No sessions recorded yet.</div>';
+    return;
+  }
+
+  history.forEach(data => {
+    // Convert raw DB data to CoachingSession object
+    const session = new CoachingSession(data);
+
+    const date = new Date(session.createdAt).toLocaleDateString();
+    const scoreClass = session.overallScore >= 90 ? 'score-excellent' :
+      session.overallScore >= 80 ? 'score-good' :
+        session.overallScore >= 60 ? 'score-decent' : 'score-needs-work';
+
+    const item = document.createElement('div');
+    item.className = 'history-item';
+    item.innerHTML = `
+            <div class="history-score ${scoreClass}">${session.overallScore}%</div>
+            <div class="history-details">
+                <div class="history-pattern">${session.patternName}</div>
+                <div class="history-meta">${date} • ${session.bpm} BPM</div>
+            </div>
+            <button class="history-load-btn" title="Load Results">▶</button>
+        `;
+
+    item.onclick = () => loadSessionToGrid(session);
+    listContainer.appendChild(item);
+  });
+}
+
+/**
+ * Load a past session to the grid
+ */
+export function loadSessionToGrid(session) {
+  if (!activeGrid) return;
+
+  // 1. Clear current visuals
+  clearCellHighlights(activeGrid);
+
+  // 2. Clear content (We are rebuilding the 'Review View')
+  // We want the grid to show what happened in THIS session
+  isReviewActive = true; // Enable Review Mode restrictions
+
+  // const cellsLength = activeGrid.cells.length;
+  // for (let i = 0; i < cellsLength; i++) {
+  //   setInnerLabel(i, '', activeGrid); // Clear labels
+  // }
+
+  // 3. Rebuild from Results
+  // We iterate through the results (which now cover ALL expected notes including misses)
+  const results = session.noteResults;
+  if (results && Array.isArray(results)) {
+    results.forEach(r => {
+      const idx = r.stepIndex;
+      const cell = activeGrid.cells[idx]; // Use direct access assuming cells is populated
+
+      // Restore the label (Expected Note)
+      // If it was a miss, we still show what SHOULD have been there
+      const labels = r.expectedNotes;
+      if (labels && labels.length > 0) {
+        // Use the first label if multiple (simplification for now)
+        // Or use the full array if your grid supports it
+        setInnerLabel(idx, labels.length === 1 ? labels[0] : labels, activeGrid);
+      }
+
+      if (cell) {
+        // Apply Scoring Class
+        cell.classList.remove('coach-correct', 'coach-timing', 'coach-wrong', 'coach-missed');
+
+        if (r.detectedNote === 'MISS') {
+          cell.classList.add('coach-missed');
+        } else if (r.correct) {
+          cell.classList.add('coach-correct');
+        } else if (r.timingScore > 70 && !r.correct) { // Close timing but wrong note?
+          // Actually our scoring logic separates these. 
+          // If !correct, it's a wrong note or timing was WAY off (accents)
+          cell.classList.add('coach-wrong');
+        } else {
+          cell.classList.add('coach-wrong');
+        }
+
+        // Timing specific override (yellow)
+        if (r.correct && r.timingScore < 100 && r.timingScore > 50) {
+          cell.classList.remove('coach-correct');
+          cell.classList.add('coach-timing');
+        }
+      }
+    });
+  }
+
+  // Update Coaching Session State to match this historical session
+  // This allows the "Result" tab to show the details of THIS session
+  coachingSession = new CoachingSession(session);
+
+  // Switch to Results Tab
+  showResultsModal();
+  // Ensure we are in sidebar mode if not already
+  minimizeResults();
+
+  // Update HUD Results to match
+  updateHUD();
+}
+
+
 
 /**
  * Initialize coaching mode UI
@@ -893,16 +1123,6 @@ export function initCoachingMode() {
     console.log('Coaching Mode: Button clicked');
     // enterCoachingMode(activeGrid);
     enterCoachingMode(activeGrid);
-  });
-
-  // Results modal buttons
-  const closeResultsBtn = document.getElementById('closeCoachingResults');
-  closeResultsBtn?.addEventListener('click', () => {
-    if (resultsModal) {
-      resultsModal.style.display = 'none';
-      resultsModal.setAttribute('aria-hidden', 'true');
-    }
-    clearCellHighlights(activeGrid);
   });
 
   const practiceAgainBtn = document.getElementById('practiceAgainBtn');
@@ -933,5 +1153,88 @@ export function initCoachingMode() {
  */
 export function isCoaching() {
   return isCoachingActive;
+}
+
+/**
+ * Get feedback reason for a specific step index
+ * @param {number} stepIndex 
+ * @returns {string|null} Feedback text or null if no issue
+ */
+export function getFeedbackForStep(stepIndex) {
+  if (!coachingSession || !coachingSession.noteResults) return null;
+
+  // Find result for this step
+  const result = coachingSession.noteResults.find(r => r.stepIndex === stepIndex);
+
+  if (!result) return "No Data";
+
+  if (result.detectedNote === 'MISS') {
+    return "Missed Note";
+  }
+
+  if (!result.correct) {
+    if (result.timingScore > 0 && result.noteScore === 0) {
+      return `Wrong Note (Played: ${result.detectedNote})`;
+    } else if (result.timingScore === 0 && result.noteScore > 0) {
+      // Fallback, though usually handled by timing deviation logic below
+      return "Timing too off";
+    } else {
+      return "Wrong Note & Timing";
+    }
+  }
+
+  // If correct but timing specific (Yellow)
+  if (result.correct && result.timingScore < 100) {
+    const deviation = result.timingDeviation;
+    if (deviation !== undefined) {
+      if (deviation < 0) return `Too Early (${Math.abs(deviation)}ms)`;
+      return `Too Late (${deviation}ms)`;
+    }
+    return "Timing Slightly Off";
+  }
+
+  return "Perfect!";
+}
+
+/**
+ * Show feedback tooltip on a cell
+ * @param {HTMLElement} element - The cell element
+ * @param {string} text - Feedback text
+ */
+export function showFeedbackTooltip(element, text) {
+  if (!element || !text) return;
+
+  // Remove existing tooltips
+  document.querySelectorAll('.coaching-feedback-tooltip').forEach(el => el.remove());
+
+  const tooltip = document.createElement('div');
+  tooltip.className = 'coaching-feedback-tooltip';
+  tooltip.textContent = text;
+
+  document.body.appendChild(tooltip);
+
+  const rect = element.getBoundingClientRect();
+  const tooltipRect = tooltip.getBoundingClientRect();
+
+  // Position above the cell
+  let top = rect.top - tooltipRect.height - 10;
+  let left = rect.left + (rect.width / 2) - (tooltipRect.width / 2);
+
+  // Keep on screen
+  if (top < 10) top = rect.bottom + 10;
+  if (left < 10) left = 10;
+  if (left + tooltipRect.width > window.innerWidth) left = window.innerWidth - tooltipRect.width - 10;
+
+  // Position
+  tooltip.style.position = 'fixed';
+  tooltip.style.top = `${top}px`;
+  tooltip.style.left = `${left}px`;
+  tooltip.style.zIndex = '10000';
+
+  // Auto-remove after 2 seconds or click elsewhere (handled by body click normally, but here just timer)
+  setTimeout(() => {
+    tooltip.classList.add('fade-out');
+    setTimeout(() => tooltip.remove(), 300);
+  }, 2000);
 }
 

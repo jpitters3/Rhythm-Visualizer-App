@@ -7,6 +7,7 @@ import { setCaret, setRange, clearRange, getRange, updateDragSelectionOver, star
 import { HistoryManager } from './history.js';
 import { editHandsMode, isEditMulti, longPressFired, setLongPressFired, setIsEditMulti, labelNotation } from './state.js';
 import { TransportRegistry } from './transport-ui.js';
+import { isReviewing, getFeedbackForStep, showFeedbackTooltip } from './coaching-mode.js';
 
 export const cells = (ctx) => (ctx || activeGrid).cells;
 export let activeSubIndex = null;
@@ -440,6 +441,18 @@ function attachCellListeners(cell, ctx = activeGrid) {
 
     // Set activeGrid on click
     setActiveGrid(ctx);
+
+    // --- REVIEW MODE INTERCEPTION ---
+    if (isReviewing && isReviewing()) {
+      const gIndex = parseInt(cell.dataset.index);
+      if (!isNaN(gIndex)) {
+        const feedback = getFeedbackForStep(gIndex);
+        if (feedback) {
+          showFeedbackTooltip(cell, feedback);
+        }
+      }
+      return; // BLOCK EDITING
+    }
 
     const x = ev.clientX;
     const y = ev.clientY;

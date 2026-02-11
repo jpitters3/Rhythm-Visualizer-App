@@ -87,6 +87,13 @@
   animation: shake 0.3s ease;
 }
 
+.coach-missed {
+  opacity: 0.5 !important;
+  border: 2px dashed #e74c3c !important;
+  background-color: rgba(231, 76, 60, 0.1) !important;
+  filter: grayscale(0.5);
+}
+
 @keyframes pulse-correct {
 
   0%,
@@ -525,4 +532,161 @@
 
 .loop-text {
   font-weight: 500;
+}
+
+/* History Sidebar */
+.history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 400px;
+  overflow-y: auto;
+  padding: 4px;
+}
+
+.history-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  /* Slight contrast */
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.history-item:hover {
+  background: rgba(255, 255, 255, 0.1);
+  transform: translateX(2px);
+}
+
+.history-score {
+  font-size: 18px;
+  font-weight: 700;
+  width: 50px;
+  text-align: center;
+}
+
+.history-score.score-excellent {
+  color: var(--success);
+}
+
+.history-score.score-good {
+  color: var(--success);
+  opacity: 0.8;
+}
+
+.history-score.score-decent {
+  color: var(--warning);
+}
+
+.history-score.score-needs-work {
+  color: var(--error);
+}
+
+.history-details {
+  flex: 1;
+}
+
+.history-pattern {
+  font-weight: 600;
+  font-size: 14px;
+  margin-bottom: 2px;
+  color: var(--text);
+}
+
+.history-meta {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.history-load-btn {
+  background: none;
+  border: none;
+  color: var(--primary);
+  opacity: 0.5;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 4px;
+}
+
+.history-item:hover .history-load-btn {
+  opacity: 1;
+}
+
+.no-history {
+  text-align: center;
+  color: var(--text-secondary);
+  font-style: italic;
+  padding: 20px;
+}
+
+.loading-spinner {
+  text-align: center;
+  padding: 20px;
+  color: var(--text-secondary);
+}
+
+/* Tabs for Sidebar */
+.sidebar-tabs {
+  display: flex;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--panel-border);
+}
+
+.sidebar-tab {
+  flex: 1;
+  padding: 8px;
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-weight: 600;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+}
+
+.sidebar-tab.active {
+  color: var(--primary);
+  border-bottom-color: var(--primary);
+}
+
+.sidebar-content {
+  display: none;
+}
+
+.sidebar-content.active {
+  display: block;
+}
+
+
+/* Coaching Mode Feedback Tooltip */
+.coaching-feedback-tooltip {
+  position: fixed;
+  background-color: rgba(0, 0, 0, 0.9);
+  color: white;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-family: 'Inter', sans-serif;
+  pointer-events: none;
+  /* Don't block clicks */
+  z-index: 10000;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  opacity: 1;
+  transition: opacity 0.3s ease;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  white-space: nowrap;
+}
+
+.coaching-feedback-tooltip.fade-out {
+  opacity: 0;
+}
+
+/* Ensure dashed outline for missed notes (if not already present) */
+.coach-missed {
+  outline: 2px dashed rgba(255, 255, 255, 0.5) !important;
+  outline-offset: -2px;
+  background-color: rgba(255, 0, 0, 0.1) !important;
 }
