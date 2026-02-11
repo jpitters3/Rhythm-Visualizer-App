@@ -561,6 +561,11 @@ function calculateFinalScores() {
   // 1. Backfill Missed Notes
   // Iterate through all expected notes to see if we have a result for them
   expectedNotes.forEach(expected => {
+    // Skip ghost notes / unlabelled steps
+    if (!expected.labels || expected.labels.length === 0 || (expected.labels.length === 1 && expected.labels[0] === '')) {
+      return;
+    }
+
     // Check if we have a result for this step
     const hasResult = sessionResults.some(r => r.stepIndex === expected.index);
 
