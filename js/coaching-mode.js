@@ -25,6 +25,7 @@ let isReviewActive = false; // New: Tracks if we are in review mode
 let expectedNotes = []; // Array of { index, labels } from pattern
 let sessionResults = []; // Array of evaluation results per step
 let isLoopingEnabled = false; // Whether pattern should loop
+let userTimingOffset = parseInt(localStorage.getItem('gp_timing_offset') || '0', 10); // User's timing calibration (ms)
 
 // UI elements
 let coachingHUD = null;
@@ -35,6 +36,9 @@ let stopCoachingBtn = null;
 let loopToggleBtn = null;
 let resultsModal = null;
 
+const TIMING_SCORE_GREAT = 70;
+const TIMING_SCORE_GOOD = 50;
+
 export { coachingSession, isCoachingActive, isReviewActive };
 
 /**
@@ -43,6 +47,34 @@ export { coachingSession, isCoachingActive, isReviewActive };
 export function isReviewing() {
   return isReviewActive;
 }
+
+/**
+ * Apply a manual or auto-detected timing calibration
+ * @param {number} offsetMs - Milliseconds to adjust (Positive = User is late)
+ */
+export function applyCalibration(offsetMs) {
+  userTimingOffset += offsetMs;
+  localStorage.setItem('gp_timing_offset', userTimingOffset);
+  console.log(`Coaching Mode: Applied timing offset ${offsetMs}ms. Total: ${userTimingOffset}ms`);
+  return userTimingOffset;
+}
+
+/**
+ * Get current timing offset
+ */
+export function getTimingOffset() {
+  return userTimingOffset;
+}
+
+/**
+ * Reset timing calibration
+ */
+export function resetCalibration() {
+  userTimingOffset = 0;
+  localStorage.setItem('gp_timing_offset', 0);
+  return 0;
+}
+
 
 /**
  * Enter Coaching Mode (Show HUD, Ready State)
@@ -247,7 +279,12 @@ function performEvaluation(detectedNote, stepIndex, actualTime, expected) {
   const ctx = activeGrid;
   const AUDIO_DELAY_MS = AUDIO_DELAY * 1000;
   const msPerStep = intervalMs(ctx);
-  const expectedTime = coachingSession.actualStartTime + (stepIndex * msPerStep) + AUDIO_DELAY_MS;
+
+  // Apply User Timing Offset (Calibration)
+  // If user is consistently late (e.g. +50ms), we add 50ms to expected time to match them.
+  const expectedTime = coachingSession.actualStartTime + (stepIndex * msPerStep) + AUDIO_DELAY_MS + userTimingOffset;
+  console.log("Expected Time:", expectedTime);
+  console.log("Actual Time:", actualTime, "Audio Delay", AUDIO_DELAY_MS, "User Timing Offset:", userTimingOffset);
 
   // Evaluate note
   const result = evaluateNote(detectedNote, expected.labels, {
@@ -275,7 +312,8 @@ function performEvaluation(detectedNote, stepIndex, actualTime, expected) {
       expected: expected.labels,
       detected: detectedNote,
       correct: result.correct,
-      timingError: result.timingError
+      timingError: result.timingError,
+      timingDeviation: result.timingDeviation // Signed deviation
     });
   }
 
@@ -317,6 +355,7 @@ function evaluateNote(detectedNote, expectedNotes, timing) {
 
   // Determine correctness (note must match AND timing within 200ms)
   const correct = noteMatch && timingError < 200;
+  // const correct = noteMatch && timingScore > 50;
 
   console.log(`Coaching Mode: Evaluation result - note: ${detectedNote}, expected: ${expectedNotes}, 
     correct: ${correct}, timingError: ${timingError}, deviation: ${timingDeviation}, timingScore: ${timingScore}`);
@@ -690,10 +729,8 @@ function showResultsModal() {
       tabs.innerHTML = `
             <button class="sidebar-tab active" data-tab="result">Current Result</button>
             <button class="sidebar-tab" data-tab="history">History</button>
+            <button class="sidebar-tab" data-tab="settings">Settings</button>
           `;
-      // Strategies:
-      // 1. Create .sidebar-content#tab-result wrapping existing children
-      // 2. Create .sidebar-content#tab-history
 
       const existingChildren = Array.from(modalContent.children).filter(c => !c.classList.contains('results-header-actions'));
 
@@ -708,9 +745,54 @@ function showResultsModal() {
       historyTabContent.className = 'sidebar-content';
       historyTabContent.innerHTML = `<div id="historyList" class="history-list"></div>`;
 
+      const settingsTabContent = document.createElement('div');
+      settingsTabContent.id = 'tab-settings';
+      settingsTabContent.className = 'sidebar-content';
+      settingsTabContent.innerHTML = `
+        <div class="settings-panel" style="padding: 15px; color: var(--text-primary);">
+            <h3 style="margin-top: 0; color: var(--text-secondary); text-transform: uppercase; font-size: 0.9em; letter-spacing: 1px;">Timing Calibration</h3>
+            <p style="font-size: 0.9em; color: var(--text-secondary); margin-bottom: 15px;">
+                Adjust if notes consistently feel early or late.
+            </p>
+            
+            <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 12px; text-align: center;">
+                <div style="font-size: 0.85em; color: var(--text-secondary); margin-bottom: 10px;">Current Offset</div>
+                <div id="timingOffsetDisplay" style="font-size: 2em; font-weight: bold; color: var(--primary); margin-bottom: 15px;">${userTimingOffset}ms</div>
+                
+                <div style="display: flex; justify-content: center; gap: 10px; margin-bottom: 15px;">
+                    <button id="btn-cal-minus" style="padding: 8px 16px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: var(--text-primary); border-radius: 8px; cursor: pointer;">-10ms</button>
+                    <button id="btn-cal-plus" style="padding: 8px 16px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: var(--text-primary); border-radius: 8px; cursor: pointer;">+10ms</button>
+                </div>
+
+                <button id="btn-cal-reset" style="width: 100%; padding: 10px; background: transparent; border: 1px solid var(--error-color, #ff4444); color: var(--error-color, #ff4444); border-radius: 8px; cursor: pointer; transition: all 0.2s;">
+                    Reset Calibration
+                </button>
+            </div>
+        </div>
+      `;
+
       modalContent.appendChild(tabs);
       modalContent.appendChild(resultTabContent);
       modalContent.appendChild(historyTabContent);
+      modalContent.appendChild(settingsTabContent);
+
+      // Attach Event Listeners for Settings
+      setTimeout(() => {
+        // Use timeout or just direct attachment since we appended
+        const updateDisplay = () => {
+          const disp = document.getElementById('timingOffsetDisplay');
+          if (disp) disp.textContent = getTimingOffset() + 'ms';
+        };
+
+        const btnMinus = settingsTabContent.querySelector('#btn-cal-minus');
+        if (btnMinus) btnMinus.onclick = () => { applyCalibration(-10); updateDisplay(); };
+
+        const btnPlus = settingsTabContent.querySelector('#btn-cal-plus');
+        if (btnPlus) btnPlus.onclick = () => { applyCalibration(10); updateDisplay(); };
+
+        const btnReset = settingsTabContent.querySelector('#btn-cal-reset');
+        if (btnReset) btnReset.onclick = () => { resetCalibration(); updateDisplay(); };
+      }, 0);
 
       // Tab Logic
       tabs.querySelectorAll('.sidebar-tab').forEach(tab => {
@@ -726,6 +808,10 @@ function showResultsModal() {
 
           if (target === 'history') {
             renderHistoryList();
+          } else if (target === 'settings') {
+            // Refresh display on tab switch
+            const disp = document.getElementById('timingOffsetDisplay');
+            if (disp) disp.textContent = getTimingOffset() + 'ms';
           }
         };
       });
@@ -767,18 +853,28 @@ function showResultsModal() {
   // We'll inspect the modal structure first or just append it to results-summary
 
   let tipsContainer = document.getElementById('coachingTipsContainer');
+
   if (!tipsContainer) {
-    // Create it if missing, insert after problem list
     const resultsContent = resultsModal.querySelector('.results-summary');
     if (resultsContent) {
-      tipsContainer = document.createElement('div');
-      tipsContainer.id = 'coachingTipsContainer';
-      tipsContainer.className = 'coaching-tips-container';
-      tipsContainer.style.marginTop = '20px';
-      tipsContainer.style.padding = '15px';
-      tipsContainer.style.background = 'rgba(255, 255, 255, 0.05)';
-      tipsContainer.style.borderRadius = '12px';
-      resultsContent.appendChild(tipsContainer);
+      // Use innerHTML/insertAdjacentHTML for consistency
+      const containerHTML = `
+        <div id="coachingTipsContainer" class="coaching-tips-container" 
+             style="margin-top: 20px; padding: 15px; background: rgba(255, 255, 255, 0.05); border-radius: 12px; display: none;">
+        </div>
+      `;
+      resultsContent.insertAdjacentHTML('beforeend', containerHTML);
+      tipsContainer = document.getElementById('coachingTipsContainer');
+
+      // Event Delegation
+      tipsContainer.addEventListener('click', (e) => {
+        if (e.target.matches('button[data-action="CALIBRATE"]')) {
+          const val = parseInt(e.target.dataset.value, 10);
+          applyCalibration(val);
+          e.target.disabled = true;
+          e.target.textContent = 'Fixed!';
+        }
+      });
     }
   }
 
@@ -787,12 +883,30 @@ function showResultsModal() {
 
     if (suggestions.length > 0) {
       tipsContainer.style.display = 'block';
-      tipsContainer.innerHTML = `
-          <h4 style="margin-top:0; margin-bottom:10px; color:var(--text-secondary); font-size:0.9em; text-transform:uppercase; letter-spacing:1px;">💡 Coach's Tips</h4>
-          <ul style="margin:0; padding-left:20px; color:var(--text-primary);">
-              ${suggestions.map(s => `<li style="margin-bottom:5px;">${s}</li>`).join('')}
-          </ul>
-      `;
+
+      let listHTML = `<h4 style="margin-top:0; margin-bottom:10px; color:var(--text-secondary); font-size:0.9em; text-transform:uppercase; letter-spacing:1px;">💡 Coach's Tips</h4>
+                      <ul class="coaching-tips-list" style="margin:0; padding-left:20px; color:var(--text-primary);">`;
+
+      suggestions.forEach(s => {
+        const text = typeof s === 'string' ? s : s.text;
+        const action = typeof s === 'object' ? s.action : null;
+
+        listHTML += `<li style="margin-bottom:5px; display: flex; align-items: center; justify-content: space-between;">
+                        <span>${text}</span>`;
+
+        if (action && action.type === 'CALIBRATE') {
+          listHTML += `<button data-action="CALIBRATE" data-value="${action.value}"
+                          style="margin-left: 10px; background: var(--primary); border: none; color: white; padding: 2px 8px; border-radius: 4px; cursor: pointer; font-size: 0.8em;">
+                          ${action.label}
+                        </button>`;
+        }
+
+        listHTML += `</li>`;
+      });
+
+      listHTML += `</ul>`;
+      tipsContainer.innerHTML = listHTML;
+
     } else {
       tipsContainer.style.display = 'none';
     }
@@ -1084,8 +1198,7 @@ export function loadSessionToGrid(session) {
           cell.classList.add('coach-missed');
         } else if (r.correct) {
           cell.classList.add('coach-correct');
-        } else if (r.timingScore > 70 && !r.correct) { // Close timing but wrong note?
-          // Actually our scoring logic separates these. 
+        } else if (r.timingScore > 70 && !r.correct) {
           // If !correct, it's a wrong note or timing was WAY off (accents)
           cell.classList.add('coach-wrong');
         } else {
@@ -1093,7 +1206,7 @@ export function loadSessionToGrid(session) {
         }
 
         // Timing specific override (yellow)
-        if (r.correct && r.timingScore < 100 && r.timingScore > 50) {
+        if (r.correct && r.timingScore < TIMING_SCORE_GREAT) {
           cell.classList.remove('coach-correct');
           cell.classList.add('coach-timing');
         }
@@ -1188,17 +1301,24 @@ export function getFeedbackForStep(stepIndex) {
     }
   }
 
+  let feedback = "";
+
   // If correct but timing specific (Yellow)
-  if (result.correct && result.timingScore < 100) {
-    const deviation = result.timingDeviation;
-    if (deviation !== undefined) {
-      if (deviation < 0) return `Too Early (${Math.abs(deviation)}ms)`;
-      return `Too Late (${deviation}ms)`;
-    }
-    return "Timing Slightly Off";
+  if (result.correct && result.timingScore >= TIMING_SCORE_GREAT) {
+    feedback = "Great!";
+  } else if (result.correct && result.timingScore >= TIMING_SCORE_GOOD) {
+    feedback = "Good! ";
+  } else if (result.correct && result.timingScore < TIMING_SCORE_GOOD) {
+    feedback = "Try to be more accurate! ";
   }
 
-  return "Perfect!";
+  const deviation = result.timingDeviation;
+  // if (deviation !== undefined && deviation > 20 && deviation < -20) {
+  if (deviation !== undefined && deviation !== 0 && result.timingScore < TIMING_SCORE_GREAT) {
+    if (deviation < 0) feedback += `Early by (${Math.abs(deviation)}ms)`;
+    else if (deviation > 0) feedback += `Late by (${deviation}ms)`;
+  }
+  return feedback;
 }
 
 /**

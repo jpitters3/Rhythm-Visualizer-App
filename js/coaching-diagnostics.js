@@ -9,6 +9,7 @@ export class CoachingDiagnostics {
     this.events = [];
     this.noteStats = {}; // { 'D': { hits: 0, total: 0 }, ... }
     this.timingDiffs = [];
+    this.signedTimingDiffs = []; // Signed deviations for calibration sensing
     this.recentLoudNotes = []; // Track recent loud inputs for masking detection
   }
 
@@ -23,7 +24,7 @@ export class CoachingDiagnostics {
       detected,    // string detected
       correct,
       timingError, // absolute error
-      timingOffset, // signed error (actual - expected), if available
+      timingDeviation, // signed error (actual - expected)
       previousNote // { label: 'D', time: 12345 } 
     } = data;
 
@@ -44,55 +45,57 @@ export class CoachingDiagnostics {
     });
 
     // Store signed timing offset if we can derive it
-    // The coaching mode currently calculates absolute error, let's assume valid timing for now
-    // or we need to update coaching-mode to pass signed offset.
-    if (correct && timingError !== undefined) {
-      // We'll trust the error magnitude for consistency checks
-      this.timingDiffs.push(timingError);
+    if (correct && timingDeviation !== undefined) {
+      this.timingDiffs.push(Math.abs(timingDeviation));
+      this.signedTimingDiffs.push(timingDeviation);
     }
   }
 
   /**
    * Analyze session data and return suggestions
-   * @returns {Array} Array of strings (suggestions)
+   * @returns {Array} Array of suggestions { text: string, action?: { label: string, handler: string, value: any } }
+   * Note: Returning objects now instead of just strings, handled by UI
    */
   analyze() {
     const suggestions = [];
 
     // 1. Check for Dead Zones / Calibration Issues
-    // Rule: Note has < 30% accuracy while overall accuracy > 50%
-    // Or: Note missed 3 times in a row consistently
     Object.entries(this.noteStats).forEach(([label, stats]) => {
       if (stats.total >= 3) {
         const accuracy = stats.hits / stats.total;
         if (accuracy < 0.3) {
-          suggestions.push(`I'm having trouble hearing your '${label}'. Try rotating your handpan or recalibrating that note.`);
+          suggestions.push({ text: `I'm having trouble hearing your '${label}'. Try rotating your handpan or recalibrating that note.` });
         }
       }
     });
 
-    // 2. Check for "Sustain Masking" (The "Close Note" issue)
-    // This is harder to detect post-hoc without signal data, but we can infer:
-    // If we consistently miss a note that follows a SPECIFIC other note.
-    // e.g. every time we expect '1' after 'D', we miss '1'.
+    // 2. Check for "Sustain Masking"
     const transitionMisses = this.analyzeTransitions();
     if (transitionMisses.length > 0) {
       const worst = transitionMisses[0];
       if (worst.from == worst.to) {
-        suggestions.push(`The note '${worst.from}' is being missed many times in a row. Try recalibrating that note.`);
+        suggestions.push({ text: `The note '${worst.from}' is being missed many times in a row. Try recalibrating that note.` });
       } else {
-        suggestions.push(`The sustain from '${worst.from}' might be hiding '${worst.to}'. Try moving your microphone further away or more central.`);
+        suggestions.push({ text: `The sustain from '${worst.from}' might be hiding '${worst.to}'. Try moving your microphone further away or more central.` });
       }
     }
 
     // 3. Timing Drift (Consistency)
-    // If timing error is consistently large even on "correct" notes
-    // (Note: we need signed offset to detect 'Early' vs 'Late'. 
-    // For now, if avg error is > 80ms, we suggest calibration)
-    if (this.timingDiffs.length > 5) {
-      const avgError = this.timingDiffs.reduce((a, b) => a + b, 0) / this.timingDiffs.length;
-      if (avgError > 80) {
-        suggestions.push(`Your timing is consistently a bit off (${Math.round(avgError)}ms). Try running the Audio Latency calibration in Settings.`);
+    // Check if consistent bias exists (> 30ms avg) with low jitter
+    if (this.signedTimingDiffs.length > 5) {
+      const avgOffset = this.signedTimingDiffs.reduce((a, b) => a + b, 0) / this.signedTimingDiffs.length;
+
+      // If consistently late or early (more than 30ms)
+      if (Math.abs(avgOffset) > 20) {
+        const direction = avgOffset > 0 ? "late" : "early";
+        suggestions.push({
+          text: `You are playing consistently ${direction} (by ~${Math.round(Math.abs(avgOffset))}ms).`,
+          action: {
+            label: "Fix Timing",
+            type: "CALIBRATE",
+            value: Math.round(avgOffset)
+          }
+        });
       }
     }
 
