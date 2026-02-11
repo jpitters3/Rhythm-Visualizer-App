@@ -176,6 +176,7 @@ function transcriptionLoop() {
 
     // Step Boundary Detection
     if (currentIndex !== lastFrameTranscriptionIndex) {
+        console.log(`[Step Change] ${lastFrameTranscriptionIndex} -> ${currentIndex}`);
         tally = {};
         accentCandidate = null;
         stepWasRecorded = false;
@@ -234,7 +235,7 @@ function transcriptionLoop() {
             const isAccent = !isClearNote && isStrike && rms > MIN_ACCENT_RMS && (clarity < CLARITY_THRESHOLD || pitch < 50 || pitch > 3000);
             const dynamicGate = getDynamicGate();
             const isGateOpen = (now - lastNoteTime > dynamicGate);
-            const isNewStrike = rms > prevRMS * 1.3; // Spectral Flux
+            const isNewStrike = flux > 1.35;
 
             if (isAccent) {
                 console.log("Detected Accent: RMS:", rms, "Clarity:", clarity.toFixed(3));
@@ -278,42 +279,44 @@ function transcriptionLoop() {
                         noteSpecificThreshold = noteSensitivities[detected] * multiplier;
                     }
 
-                    // ... (previous code)
-
-                    // Global State for Sustain Prevention
-                    let lastGlobalDetectedNote = null;
-
                     // Allow bypass of gate if we are refining an accent
                     if ((isGateOpen || isNewStrike || canRefine) && rms > noteSpecificThreshold) {
+                        console.log(`[Check] Note: ${detected}, Flux: ${flux.toFixed(2)}, NewStrike: ${isNewStrike}, Gate: ${isGateOpen}, RMS: ${rms.toFixed(4)}`);
 
                         // SUSTAIN FIX: If we are detecting the SAME note as before,
-                        // we MUST have a new strike (flux) to record it.
-                        // This prevents the tail of a valid note from triggering the next step's gate.
-                        if (detected === lastGlobalDetectedNote && !isNewStrike && !canRefine) {
-                            console.log(`Ignoring Sustain: ${detected} (No new strike)`);
-                            return;
+                        // we MUST have a confirmed new strike (higher flux) to record it.
+                        let isSustainBlocked = false;
+                        if (detected === lastGlobalDetectedNote && !canRefine) {
+                            if (flux < 1.35) {
+                                console.log(`[Block] Sustain Blocked: ${detected} (Flux ${flux.toFixed(2)} < 1.35)`);
+                                isSustainBlocked = true;
+                            } else {
+                                console.log(`[Pass] Sustain Allowed: ${detected} (Flux ${flux.toFixed(2)} > 1.35)`);
+                            }
                         }
 
-                        tally[detected] = (tally[detected] || 0) + 1;
+                        if (!isSustainBlocked) {
+                            tally[detected] = (tally[detected] || 0) + 1;
 
-                        if (tally[detected] >= CONFIDENCE_THRESHOLD) {
+                            if (tally[detected] >= CONFIDENCE_THRESHOLD) {
 
-                            // Update global tracker
-                            lastGlobalDetectedNote = detected;
+                                // Update global tracker
+                                lastGlobalDetectedNote = detected;
 
-                            if (isCoaching()) {
-                                evaluateDetectedNote(detected, transcriptionIndex, now);
-                            } else {
-                                recordNoteToGrid(detected, currentIndex, activeGrid);
-                            }
-                            lastNoteTime = now;
-                            stepWasRecorded = true;
-                            lastDetectedType = detected;
-                            tally = {};
+                                if (isCoaching()) {
+                                    evaluateDetectedNote(detected, transcriptionIndex, now);
+                                } else {
+                                    recordNoteToGrid(detected, currentIndex, activeGrid);
+                                }
+                                lastNoteTime = now;
+                                stepWasRecorded = true;
+                                lastDetectedType = detected;
+                                tally = {};
 
-                            // Auto-finish Guided Calibration
-                            if (isGuidedCalibrating && detected === '8' && currentIndex >= 16) {
-                                setTimeout(analyzeGuidedResults, 1000);
+                                // Auto-finish Guided Calibration
+                                if (isGuidedCalibrating && detected === '8' && currentIndex >= 16) {
+                                    setTimeout(analyzeGuidedResults, 1000);
+                                }
                             }
                         }
                     }
@@ -447,7 +450,11 @@ function findClosestScaleNote(freq) {
 
     targets.forEach(t => {
         const diff = Math.abs(t.freq - freq);
-        if (diff < minDiff && diff < (t.freq * 0.05)) {
+        // Widen tolerance for Ding: Low freq extraction can be less precise, 
+        // and Dings often have pitch bends/overtones that shift fundamentals.
+        const tolerance = (t.label === 'D') ? 0.08 : 0.05;
+
+        if (diff < minDiff && diff < (t.freq * tolerance)) {
             minDiff = diff;
             closest = t.label; // Return the label string directly
         }
