@@ -669,13 +669,13 @@ function showResultsModal() {
       const actions = document.createElement('div');
       actions.className = 'results-header-actions';
       actions.innerHTML = `
-            <button class="sidebar-minimize-btn" title="Minimize to Sidebar">↘</button>
-            <button class="sidebar-close-btn" title="Close">✕</button>
+            <button class="result-header-action" data-action="minimize" title="Minimize to Sidebar">↘</button>
+            <button class="result-header-action" data-action="close" title="Close">✕</button>
           `;
       modalContent.prepend(actions);
 
-      actions.querySelector('.sidebar-minimize-btn').onclick = minimizeResults;
-      actions.querySelector('.sidebar-close-btn').onclick = dismissResults;
+      actions.querySelector('.result-header-action[data-action="minimize"]').onclick = minimizeResults;
+      actions.querySelector('.result-header-action[data-action="close"]').onclick = dismissResults;
     }
 
     // Inject Sidebar Tabs if not present
