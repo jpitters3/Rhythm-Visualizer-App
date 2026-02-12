@@ -70,7 +70,9 @@ function animatePresentation() {
 
   if (presentationViewMode === 'stream') {
     const streamContainer = document.getElementById('stream-view');
-    if (streamContainer && gridA.playing && gridA.lastTickTime) {
+    const track = streamContainer ? streamContainer.querySelector('.stream-track') : null;
+
+    if (streamContainer && track && gridA.playing && gridA.lastTickTime) {
       const now = performance.now();
       const timeSinceTick = now - gridA.lastTickTime;
 
@@ -100,6 +102,48 @@ function animatePresentation() {
       // If we don't duplicate, we loop.
       // Let's just use the calculated smooth step for now.
       // If baseStep is length-1, we show (length-1) + fraction.
+
+      // Let's just use the calculated smooth step for now.
+      // If baseStep is length-1, we show (length-1) + fraction.
+
+      // Sync Coaching Classes (Feedback)
+      if (track && gridA.cells) {
+        // Optimization: Only scan visible range or all? 
+        // Stream track has exact same number of cells as gridA.cells
+        // We can just iterate all, or just the ones likely to have changed (current/previous).
+        // Since feedback happens on the fly, we should probably check all or a window around current.
+        // For 16-32 cells, checking all is fine.
+
+        const total = gridA.cells.length;
+        for (let i = 0; i < total; i++) {
+          const original = gridA.cells[i];
+          const clone = track.children[i];
+          if (original && clone) {
+            // Success
+            if (original.classList.contains('coach-correct') && !clone.classList.contains('coach-correct')) {
+              clone.classList.add('coach-correct');
+            }
+            // Timing
+            if (original.classList.contains('coach-timing') && !clone.classList.contains('coach-timing')) {
+              clone.classList.add('coach-timing');
+            }
+            // Wrong
+            if (original.classList.contains('coach-wrong') && !clone.classList.contains('coach-wrong')) {
+              clone.classList.add('coach-wrong');
+            }
+            // Missed
+            if (original.classList.contains('coach-missed') && !clone.classList.contains('coach-missed')) {
+              clone.classList.add('coach-missed');
+            }
+
+            // Cleanup if removed (e.g. reset)
+            if (!original.classList.contains('coach-correct')) clone.classList.remove('coach-correct');
+            if (!original.classList.contains('coach-timing')) clone.classList.remove('coach-timing');
+            if (!original.classList.contains('coach-wrong')) clone.classList.remove('coach-wrong');
+            if (!original.classList.contains('coach-missed')) clone.classList.remove('coach-missed');
+          }
+        }
+      }
 
       const smoothStep = baseStep + fraction;
       streamContainer.style.setProperty('--current-step', smoothStep);

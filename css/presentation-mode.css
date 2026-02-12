@@ -600,7 +600,32 @@ body.present.mode-stream .labels {
   /* Hide handpan in stream mode for now, or position it differently */
 }
 
+/* Coaching Feedback in Stream */
+.stream-track .cell.coach-correct {
+  background-color: rgba(46, 204, 113, 0.4) !important;
+  box-shadow: 0 0 15px rgba(46, 204, 113, 0.6) !important;
+  border-color: #2ecc71 !important;
+}
+
+.stream-track .cell.coach-timing {
+  background-color: rgba(241, 196, 15, 0.4) !important;
+  box-shadow: 0 0 15px rgba(241, 196, 15, 0.6) !important;
+  border-color: #f1c40f !important;
+}
+
+.stream-track .cell.coach-wrong {
+  background-color: rgba(231, 76, 60, 0.4) !important;
+  box-shadow: 0 0 15px rgba(231, 76, 60, 0.6) !important;
+  border-color: #e74c3c !important;
+}
+
+.stream-track .cell.coach-missed {
+  opacity: 0.3 !important;
+  background-color: rgba(231, 76, 60, 0.1) !important;
+  border: 1px dashed #e74c3c !important;
+}
+
 /* Show handpan in stream mode? Maybe small at bottom? */
 body.present.mode-stream .stream-view {
-  background: radial-gradient(circle at center, #2a2a2a 0%, #1a1a1a 100%);
+  background: var(--btn-bg);
 }
