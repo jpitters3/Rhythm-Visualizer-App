@@ -270,8 +270,6 @@ function transcriptionLoop() {
 
                     // Use the note-specific multiplier from Guided Calibration
                     const multiplier = noteMultipliers[detected] || 0.5;
-                    // ... rest of logic
-
 
                     // Calculate specific threshold
                     let noteSpecificThreshold = baseSensitivity * multiplier;
@@ -281,17 +279,17 @@ function transcriptionLoop() {
 
                     // Allow bypass of gate if we are refining an accent
                     if ((isGateOpen || isNewStrike || canRefine) && rms > noteSpecificThreshold) {
-                        console.log(`[Check] Note: ${detected}, Flux: ${flux.toFixed(2)}, NewStrike: ${isNewStrike}, Gate: ${isGateOpen}, RMS: ${rms.toFixed(4)}`);
+                        // console.log(`[Check] Note: ${detected}, Flux: ${flux.toFixed(2)}, NewStrike: ${isNewStrike}, Gate: ${isGateOpen}, RMS: ${rms.toFixed(4)}`);
 
                         // SUSTAIN FIX: If we are detecting the SAME note as before,
                         // we MUST have a confirmed new strike (higher flux) to record it.
                         let isSustainBlocked = false;
                         if (detected === lastGlobalDetectedNote && !canRefine) {
                             if (flux < 1.35) {
-                                console.log(`[Block] Sustain Blocked: ${detected} (Flux ${flux.toFixed(2)} < 1.35)`);
+                                // console.log(`[Block] Sustain Blocked: ${detected} (Flux ${flux.toFixed(2)} < 1.35)`);
                                 isSustainBlocked = true;
                             } else {
-                                console.log(`[Pass] Sustain Allowed: ${detected} (Flux ${flux.toFixed(2)} > 1.35)`);
+                                // console.log(`[Pass] Sustain Allowed: ${detected} (Flux ${flux.toFixed(2)} > 1.35)`);
                             }
                         }
 
