@@ -321,6 +321,45 @@ body.present div.present-controls {
   transform: translateX(-50%);
 }
 
+/* Styled Mode Selector */
+.presentation-mode-select {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  background: var(--panel);
+  padding: 4px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--panel-border);
+  height: 50px;
+  box-sizing: border-box;
+  margin-right: 16px;
+  /* Space between selector and other controls */
+}
+
+.presentation-mode-select label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.presentation-mode-select select {
+  background: transparent;
+  border: none;
+  color: var(--text);
+  font-weight: 500;
+  font-size: 14px;
+  padding: 0 4px;
+  /* Tighter padding since container has padding */
+  cursor: pointer;
+  outline: none;
+}
+
+.presentation-mode-select select:focus {
+  color: #6366f1;
+}
+
 body.present #presentationControls {
   display: flex !important;
   /* Force show when in present mode */
@@ -329,6 +368,17 @@ body.present #presentationControls {
   left: 50%;
   transform: translateX(-50%);
   z-index: 1000;
+}
+
+.transport-container {
+  /* Glassmorphic Container Style */
+  background: rgba(var(--panel-rgb), 0.65);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  padding: 12px 20px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
 }
 
 body.present #presentationControls .bpm-control {
@@ -437,4 +487,116 @@ body.present .transport-container:not(#presentationControls) {
   body.present #lockBtn {
     display: none;
   }
+}
+
+/* ===== STREAM VIEW (Highway) ===== */
+.stream-view {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background: var(--bg);
+  display: none;
+  /* Driven by JS */
+  z-index: 0;
+}
+
+.stream-now-line {
+  position: absolute;
+  left: 50vw;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: rgb(255 237 0 / 78%);
+  z-index: 10;
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+  pointer-events: none;
+}
+
+.stream-track {
+  display: flex;
+  align-items: center;
+  height: 100%;
+  position: absolute;
+  left: 50vw;
+  /* Start at center */
+  top: 0;
+  padding-left: calc(var(--stream-cell-width) / 2);
+  /* Offset to center of first cell */
+  /* Smooth tick update */
+  /* Remove transition for JS animation control */
+  /* transition: transform 0.1s linear; */
+  will-change: transform;
+  transform: translateX(calc(var(--current-step) * -1 * var(--stream-cell-width)));
+  --stream-cell-width: 120px;
+}
+
+/* Stream Cell Styles */
+.stream-track .cell {
+  flex-shrink: 0;
+  width: var(--stream-cell-width);
+  height: 60vh;
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+}
+
+.stream-track .cell.measure-start {
+  border-left: 2px solid rgba(255, 255, 255, 0.3);
+}
+
+.stream-track .cell.measure-start::before {
+  content: attr(data-measure-num);
+  position: absolute;
+  top: 10vh;
+  left: 10px;
+  font-size: 24px;
+  opacity: 0.5;
+  color: var(--text);
+}
+
+.stream-track .inner {
+  font-size: 48px;
+  font-weight: bold;
+}
+
+.stream-track .sub-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  margin: 4px;
+}
+
+/* Hand Colors */
+.stream-track .hand-l {
+  color: var(--hand-l);
+}
+
+.stream-track .hand-r {
+  color: var(--hand-r);
+}
+
+/* Stream Mode overrides */
+body.present.mode-stream .measure-row {
+  display: none !important;
+}
+
+body.present.mode-stream .static-labels {
+  display: none !important;
+}
+
+body.present.mode-stream .handpan-panel,
+body.present.mode-stream .labels {
+  display: none !important;
+  /* Hide handpan in stream mode for now, or position it differently */
+}
+
+/* Show handpan in stream mode? Maybe small at bottom? */
+body.present.mode-stream .stream-view {
+  background: radial-gradient(circle at center, #2a2a2a 0%, #1a1a1a 100%);
 }

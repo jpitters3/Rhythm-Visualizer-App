@@ -505,9 +505,13 @@ export function setupAllTransports() {
   if (!template) return;
 
   containers.forEach(container => {
-    container.innerHTML = '';
+    // Check if we already have transport controls to avoid duplication
+    if (container.querySelector('.t-play-btn')) return;
+
+    // Append, don't clear (preserves Mode Selector)
     const clone = template.content.cloneNode(true);
     container.appendChild(clone);
+
     const gridId = container.dataset.grid || 'A';
     const ctx = (gridId === 'B') ? gridB : gridA;
     new TransportUI(ctx, container);

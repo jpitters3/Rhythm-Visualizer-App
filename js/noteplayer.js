@@ -279,6 +279,7 @@ export function resolveHand(stepIdx, handData, subIdx = 0, isChord = false, mode
 
 export function tick(ctx) {
   const c = ctx || activeGrid;
+  c.lastTickTime = performance.now(); // Track time for smooth animations
   if (!c.playing || c.isMuted) return;
 
   const currentData = c.innerLabels[c.step];
@@ -550,16 +551,17 @@ export function start(ctx, isSync = true, skipCountdown = false) {
     c.step = c.caretIndex;
   }
 
-  tick(c);
-  const id = setInterval(() => tick(c), intervalMs(c));
-  c.timers.push(id);
-
   c.playing = true;
   if (c.playBtn) {
     c.playBtn.textContent = '⏹';
     c.playBtn.classList.add('active');
     c.playBtn.classList.add('playing');
   }
+
+  c.lastTickTime = performance.now();
+  tick(c);
+  const id = setInterval(() => tick(c), intervalMs(c));
+  c.timers.push(id);
 
   // A -> B Sync
   if (isSync && c === gridA && gridB) {

@@ -47,6 +47,7 @@ h2 {
   /* LIGHT MODE */
   --bg: #f7f6f2;
   --panel: #f0f0f0;
+  --panel-rgb: 240, 240, 240;
   --panel-border: #e2ded3;
   --offwhite: #f8f8f8;
   --text: #2f2f2f;
@@ -62,6 +63,7 @@ body.dark {
   /* DARK MODE */
   --bg: #0f0f14;
   --panel: #16161f;
+  --panel-rgb: 22, 22, 31;
   --panel-border: #2f2f45;
   --text: #eaeaf0;
   --cell-bg: #222233;

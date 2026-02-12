@@ -410,13 +410,7 @@
     </div>
 
 
-    <!-- PRESENTATION MODE PLAYBACK MENU -->
-    <div id="presentationControls" class="transport-container" data-grid="A">
-      <!-- Will be populated by TransportUI -->
-    </div>
-    <!-- END PRESENTATION MODE PLAYBACK MENU -->
-
-  </div>
+  </div> <!-- End Container -->
 
   <!-- Legend -->
   <div class="legend" aria-label="Legend">
@@ -468,6 +462,21 @@
   <div id="static-measure-labels" class="static-labels" style="display: none;"></div>
 
   <button id="exitPresent" class="present-exit" title="Exit presentation mode (Esc)">Exit</button>
+
+  <!-- PRESENTATION MODE PLAYBACK MENU -->
+  <div id="presentationControls" class="transport-container" data-grid="A">
+    <!-- Mode Selector -->
+    <div class="presentation-mode-select">
+      <label for="presentModeSelect">View:</label>
+      <select id="presentModeSelect">
+        <option value="stream">Stream</option>
+        <option value="measure">Measure</option>
+        <option value="gravity" disabled>Gravity (Coming Soon)</option>
+      </select>
+    </div>
+    <!-- Will be populated by TransportUI -->
+  </div>
+  <!-- END PRESENTATION MODE PLAYBACK MENU -->
 
   <!-- Groove Generator Modal -->
   <div id="grooveModal" class="modal-overlay" aria-hidden="true">
