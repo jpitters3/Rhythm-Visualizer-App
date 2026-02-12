@@ -83,7 +83,11 @@ export function resetCalibration() {
 export function enterCoachingMode(ctx = activeGrid) {
   console.log('Coaching Mode: Entering UI');
 
-  if (isCoachingUIOpen) return;
+  // Toggle behavior
+  if (isCoachingUIOpen) {
+    exitCoachingMode();
+    return;
+  }
 
   // Validate pattern has notes
   const hasNotes = ctx?.innerLabels?.some(label => label && label.length > 0);
@@ -94,6 +98,34 @@ export function enterCoachingMode(ctx = activeGrid) {
 
   isCoachingUIOpen = true;
   showCoachingHUD(true); // show as "Ready"
+}
+
+/**
+ * Exit Coaching Mode (Hide HUD, Reset State)
+ */
+export function exitCoachingMode() {
+  console.log('Coaching Mode: Exiting UI');
+
+  // Stop if running
+  if (isCoachingActive) {
+    stop(activeGrid);
+    isCoachingActive = false;
+  }
+
+  // Reset state
+  coachingSession = null;
+  isCoachingUIOpen = false;
+  isReviewActive = false;
+
+  // Hide UI
+  if (coachingHUD) coachingHUD.style.display = 'none';
+  if (resultsModal) {
+    resultsModal.style.display = 'none';
+    resultsModal.setAttribute('aria-hidden', 'true');
+  }
+
+  // Clear Grid
+  clearCellHighlights(activeGrid);
 }
 
 /**
@@ -1257,12 +1289,13 @@ export function initCoachingMode() {
   console.log('Coaching Mode: Initializing UI listeners');
   // Coach Mode button
   const coachModeBtn = document.getElementById('coachModeBtn');
-  console.log('Coaching Mode: Button found?', !!coachModeBtn);
   coachModeBtn?.addEventListener('click', () => {
-    console.log('Coaching Mode: Button clicked');
-    // enterCoachingMode(activeGrid);
     enterCoachingMode(activeGrid);
   });
+
+  // Close HUD Button
+  const closeHudBtn = document.getElementById('closeCoachingHUDBtn');
+  closeHudBtn?.addEventListener('click', exitCoachingMode);
 
   const practiceAgainBtn = document.getElementById('practiceAgainBtn');
   practiceAgainBtn?.addEventListener('click', () => {
