@@ -12,7 +12,8 @@ export const BUS_EVENT = {
   PROFILE_LOAD_NEEDED: 'profile:load-needed',
   HANDPANS_LOAD_NEEDED: 'handpans:load-needed',
   COACHING_EVALUATE: 'coaching:evaluate',
-  SET_ACCENT_SENSITIVITY: 'transcription:set-accent-sensitivity'
+  SET_ACCENT_SENSITIVITY: 'transcription:set-accent-sensitivity',
+  GRID_RENDERED: 'grid:rendered'
 };
 
 /**

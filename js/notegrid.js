@@ -8,6 +8,7 @@ import { HistoryManager } from './history.js';
 import { editHandsMode, isEditMulti, longPressFired, setLongPressFired, setIsEditMulti, labelNotation } from './state.js';
 import { TransportRegistry } from './transport-ui.js';
 import { isReviewing, getFeedbackForStep, showFeedbackTooltip } from './coaching-mode.js';
+import { Bus, BUS_EVENT } from './bus.js';
 
 export const cells = (ctx) => (ctx || activeGrid).cells;
 export let activeSubIndex = null;
@@ -288,10 +289,8 @@ export function renderAllMeasures(ctx = activeGrid) {
     measuresEl.appendChild(hr);
   }
 
-  // After re-render, update selection visuals
-  // if (typeof updateRangeUI === 'function') updateRangeUI(ctx);
-  // It's imported from range-selection.js but that module might not export it yet. 
-  // TODO: Fix range-selection.js exports
+  // Notify listeners (e.g. Presentation Mode) that DOM was rebuilt
+  Bus.emit(BUS_EVENT.GRID_RENDERED, { gridId: ctx.id });
 }
 
 // ===== SELECTION ACTIONS ===== //

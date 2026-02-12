@@ -3,6 +3,7 @@ import { gridA, activeGrid } from './grid-context.js';
 import { labelForStep } from './notegrid.js';
 import { addTickObserver } from './noteplayer.js';
 import { TransportRegistry } from './transport-ui.js';
+import { Bus, BUS_EVENT } from './bus.js';
 
 export const PRESENT_KEY = 'groovepan_presentation_mode';
 
@@ -159,6 +160,17 @@ export function initPresentation() {
   document.addEventListener('fullscreenchange', handleFullscreenChange);
   document.addEventListener('mozfullscreenchange', handleFullscreenChange);
   document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+
+  // Re-sync view when grid is rebuilt (e.g. by Coach Mode or Load)
+  Bus.on(BUS_EVENT.GRID_RENDERED, (e) => {
+    if (document.body.classList.contains('present')) {
+      lastMeasureIndex = -1; // Force update
+      const gridId = e.detail?.gridId || 'A';
+      if (gridId === 'A') {
+        updatePresentationView(gridA.step, gridA);
+      }
+    }
+  });
 }
 
 // Detect externally triggered Fullscreen exit (e.g. Esc key by user)
