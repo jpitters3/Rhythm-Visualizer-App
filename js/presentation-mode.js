@@ -6,6 +6,7 @@ import { TransportRegistry } from './transport-ui.js';
 import { Bus, BUS_EVENT } from './bus.js';
 
 export const PRESENT_KEY = 'groovepan_presentation_mode';
+export const PRESENT_MODE_KEY = 'groovepan_presentation_mode_view';
 
 let lastMeasureIndex = -1;
 
@@ -17,6 +18,7 @@ let presentationViewMode = 'stream'; // 'measure' | 'stream'
 export function setPresentationMode(mode) {
   if (['measure', 'stream'].includes(mode)) {
     presentationViewMode = mode;
+    localStorage.setItem(PRESENT_MODE_KEY, mode);
 
     // Refresh view if active
     if (document.body.classList.contains('present')) {
@@ -109,6 +111,9 @@ function animatePresentation() {
 
 export async function setPresentation(on) {
   document.body.classList.toggle('present', on);
+  // Get the default mode view from local storage
+  const defaultMode = localStorage.getItem(PRESENT_MODE_KEY || 'measure');
+  setPresentationMode(defaultMode);
   localStorage.setItem(PRESENT_KEY, on ? 'on' : 'off');
 
   if (presentBtn) {
@@ -190,7 +195,7 @@ export function initPresentation() {
   const modeSelect = document.getElementById('presentModeSelect');
   if (modeSelect) {
     // Set initial value
-    modeSelect.value = presentationViewMode;
+    modeSelect.value = localStorage.getItem(PRESENT_MODE_KEY) || 'measure';
 
     modeSelect.addEventListener('change', (e) => {
       setPresentationMode(e.target.value);

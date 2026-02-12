@@ -425,6 +425,10 @@ body.present .transport-container:not(#presentationControls) {
     transform: translateX(-50%) !important;
   }
 
+  body.stream .static-labels {
+    display: none !important;
+  }
+
   body.present .measure-row.next-measure-2 {
     transform: translateX(-50%) scale(0.65) !important;
     top: calc(30% - 160px) !important;
