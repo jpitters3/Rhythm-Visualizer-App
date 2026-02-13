@@ -79,11 +79,11 @@ export function setVolume(type, val) {
   }
 }
 
-export function unlockAudio() {
+export async function unlockAudio() {
   console.log('[Audio] unlockAudio called');
   audioUnlocked = true;
-  ensureAudio();
-  preloadAudioSamples();
+  await ensureAudio();
+  return preloadAudioSamples();
 }
 
 // ===== HANDPAN SAMPLE BUFFERS =====
@@ -96,11 +96,11 @@ export function intervalMs(ctx) {
   return (60000 / bpm) / (base / 4);
 }
 
-export function ensureAudio() {
+export async function ensureAudio() {
   // Don’t create/resume AudioContext until a real user gesture has happened
   if (!audioUnlocked) {
     console.warn('[Audio] ensureAudio called but audioUnlocked is false - returning early');
-    return;
+    return Promise.resolve();
   }
 
   if (!audioCtx) {
@@ -115,10 +115,12 @@ export function ensureAudio() {
   // Resume if suspended (including newly created contexts)
   if (audioCtx && audioCtx.state === 'suspended') {
     console.log('[Audio] Resuming suspended AudioContext');
-    audioCtx.resume()
+    return audioCtx.resume()
       .then(() => console.log('[Audio] AudioContext resumed successfully, state:', audioCtx.state))
       .catch((err) => console.error('[Audio] Failed to resume AudioContext:', err));
   }
+
+  return Promise.resolve();
 }
 
 // Preload note samples once audio is unlocked
@@ -134,14 +136,17 @@ export async function preloadScaleSamples() {
   }
 }
 
-// Preload all audio samples
-function preloadAudioSamples() {
+export async function preloadAudioSamples() {
   if (!samplesPreloaded && audioCtx) {
     samplesPreloaded = true;
-    loadSample(SOUND_TAK, `${BASE_PATH}assets/audio/dkurd_tak.wav`);
-    loadSample(SOUND_SLAP, `${BASE_PATH}assets/audio/dkurd_slap.wav`);
-    preloadScaleSamples();
+    const loads = [
+      loadSample(SOUND_TAK, `${BASE_PATH}assets/audio/dkurd_tak.wav`),
+      loadSample(SOUND_SLAP, `${BASE_PATH}assets/audio/dkurd_slap.wav`),
+      preloadScaleSamples()
+    ];
+    return Promise.all(loads);
   }
+  return Promise.resolve();
 }
 async function loadSample(key, url) {
   ensureAudio();
@@ -483,9 +488,9 @@ export function playNoteSample(n, delay = 0) {
 }
 
 
-export function start(ctx, isSync = true, skipCountdown = false) {
+export async function start(ctx, isSync = true, skipCountdown = false) {
   const c = ctx || activeGrid;
-  unlockAudio();
+
   if (c.playing || c.timers.length) return;
 
   // Use imported isListening state
@@ -495,7 +500,9 @@ export function start(ctx, isSync = true, skipCountdown = false) {
     countdownRemaining = 0;
   }
 
-  ensureAudio();
+  // WAIT for audio engine to be ready ensuring no stutter on first beat
+  // This waits for Resume + Sample Loading
+  await unlockAudio();
 
   if (c.caretIndex !== null && c.caretIndex >= 0) {
     c.step = c.caretIndex;
@@ -565,4 +572,13 @@ export function initNotePlayer() {
   // Attach time signature input listeners
   tsNumInput?.addEventListener('change', updateTimeSignatureFromInputs);
   tsDenInput?.addEventListener('change', updateTimeSignatureFromInputs);
+
+  // Attempt to unlock audio on ANY user interaction (Click, Key, Touch)
+  // This helps "prime" the AudioContext before they actually hit Play.
+  const unlockEvents = ['click', 'keydown', 'touchstart'];
+  function unlockHandler() {
+    unlockAudio();
+    unlockEvents.forEach(evt => document.removeEventListener(evt, unlockHandler));
+  }
+  unlockEvents.forEach(evt => document.addEventListener(evt, unlockHandler, { once: true }));
 }

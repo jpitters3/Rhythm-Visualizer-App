@@ -1,7 +1,7 @@
 // ==== EVENTS FOR BUTTONS / CONTROLS ====
 import { gridA, gridB, activeGrid } from './grid-context.js';
 import { isAuthed } from './auth.js';
-import { start, stop, ensureAudio, setMode, addTickObserver } from './noteplayer.js';
+import { start, stop, ensureAudio, unlockAudio, setMode, addTickObserver } from './noteplayer.js';
 import { renderAllMeasures, invertRange, invertFollowing, setDualGrid } from './notegrid.js';
 import { TransportRegistry, TransportUI } from './transport-ui.js';
 import {
@@ -65,6 +65,15 @@ window.addEventListener('click', (e) => {
     micDropdownMenu.classList.remove('show');
   }
 });
+
+// Warm up audio on controls hover
+const controlPanel = document.querySelector('.control-panel');
+if (controlPanel) {
+  controlPanel.addEventListener('mouseenter', () => {
+    unlockAudio();
+  }, { once: true });
+  controlPanel.addEventListener('touchstart', () => unlockAudio(), { once: true });
+}
 
 function setupGridControls(ctx) {
   const pBtn = ctx.playBtn;
