@@ -97,6 +97,8 @@ function toggleCalibrationSide() {
 function loadCalibrationImage(src) {
   if (calHandpanImage) {
     calHandpanImage.onload = function () {
+      if (!this.naturalWidth || !this.naturalHeight) return;
+
       const ratio = this.naturalHeight / this.naturalWidth;
       const container = document.getElementById('calCanvasContainer');
       if (!container) return;
@@ -115,6 +117,8 @@ function loadCalibrationImage(src) {
         h = 800 * ratio;
       }
 
+      if (!isFinite(w) || !isFinite(h)) return;
+
       container.style.width = `${w}px`;
       container.style.height = `${h}px`;
     };
@@ -132,7 +136,10 @@ function loadCalibrationImage(src) {
   renderTonefields();
 
   // Show Overlay
-  if (calOverlay) calOverlay.style.display = 'flex';
+  if (calOverlay) {
+    calOverlay.style.display = 'flex';
+    calOverlay.setAttribute('aria-hidden', 'false');
+  }
 
   // Reset selection (Show Global Props by default)
   selectTonefield(null);
@@ -164,7 +171,7 @@ function createTonefieldDOM(tf, index) {
   el.appendChild(label);
 
   // Events
-  el.addEventListener('mousedown', (e) => onTonefieldMouseDown(e, tf.id));
+  el.addEventListener('pointerdown', (e) => onTonefieldPointerDown(e, tf.id));
 
   calTonefieldsLayer.appendChild(el);
 }
@@ -186,8 +193,9 @@ function updateTonefieldVisuals(el, tf) {
 
 // === INTERACTION ===
 
-function onTonefieldMouseDown(e, id) {
+function onTonefieldPointerDown(e, id) {
   e.stopPropagation();
+  e.preventDefault();
   selectTonefield(id);
 
   const el = document.getElementById(`tf-${id}`);
@@ -203,22 +211,23 @@ function onTonefieldMouseDown(e, id) {
 
   el.classList.add('dragging');
 
-  function onMouseMove(ev) {
+  // Define handlers
+  function onMove(ev) {
     const dx = ev.clientX - startX;
     const dy = ev.clientY - startY;
 
-    // Convert px delta to percent
-    const dxPct = (dx / rect.width) * 100;
-    const dyPct = (dy / rect.height) * 100;
+    const w = rect.width > 0 ? rect.width : 1;
+    const h = rect.height > 0 ? rect.height : 1;
+
+    const dxPct = (dx / w) * 100;
+    const dyPct = (dy / h) * 100;
 
     const newX = Math.max(0, Math.min(100, startLeft + dxPct));
     const newY = Math.max(0, Math.min(100, startTop + dyPct));
 
-    // Update live only visuals first
     el.style.left = `${newX}%`;
     el.style.top = `${newY}%`;
 
-    // Update data model
     const tf = currentNoteMap.find(t => t.id === id);
     if (tf) {
       tf.x = newX;
@@ -226,15 +235,16 @@ function onTonefieldMouseDown(e, id) {
     }
   }
 
-  function onMouseUp() {
-    document.removeEventListener('mousemove', onMouseMove);
-    document.removeEventListener('mouseup', onMouseUp);
+  function onUp() {
+    document.removeEventListener('pointermove', onMove);
+    document.removeEventListener('pointerup', onUp);
     el.classList.remove('dragging');
     triggerAutoSave();
   }
 
-  document.addEventListener('mousemove', onMouseMove);
-  document.addEventListener('mouseup', onMouseUp);
+  // Attach to DOCUMENT to catch everything
+  document.addEventListener('pointermove', onMove);
+  document.addEventListener('pointerup', onUp);
 }
 
 function selectTonefield(id) {
@@ -318,9 +328,16 @@ function updateSelectedTf(prop, value) {
 }
 
 // === ACTIONS ===
+let isInitialized = false;
 
 export function initCalibration() {
+  if (isInitialized) return;
+
   calOverlay = document.getElementById('calibrationOverlay');
+  if (!calOverlay) return; // Guard if DOM not ready
+
+  isInitialized = true;
+
   calHandpanName = document.getElementById('calHandpanName');
   calHandpanImage = document.getElementById('calHandpanImage');
   calTonefieldsLayer = document.getElementById('calTonefieldsLayer');
@@ -340,7 +357,7 @@ export function initCalibration() {
   valShape = document.getElementById('valShape');
   calRotInput = document.getElementById('calRotInput');
   valRot = document.getElementById('valRot');
-  addTonefieldBtn = document.getElementById('addTonefieldBtn');
+  addTonefieldBtn = document.getElementById('headerAddTonefieldBtn');
   deleteTonefieldBtn = document.getElementById('deleteTonefieldBtn');
   calDoneBtn = document.getElementById('calDoneBtn');
 
@@ -465,7 +482,10 @@ export function initCalibration() {
 
   calDoneBtn?.addEventListener('click', () => {
     // Exit calibration
-    if (calOverlay) calOverlay.style.display = 'none';
+    if (calOverlay) {
+      calOverlay.style.display = 'none';
+      calOverlay.setAttribute('aria-hidden', 'true');
+    }
 
     if (onCalibrationDone) {
       onCalibrationDone(); // Custom exit (e.g. return to My Scales)

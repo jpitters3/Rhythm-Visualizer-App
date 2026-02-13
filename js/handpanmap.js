@@ -397,21 +397,112 @@ function closeMyScalesModal() {
   myScalesModal.setAttribute('aria-hidden', 'true');
 }
 
-function openMyScalesModal() {
+
+async function openMyScalesModal(view = 'list') {
   myScalesModal.style.display = 'flex';
-  setTimeout(() => myScalesModal.classList.add('open'), 10); // Small delay for transition
+  setTimeout(() => myScalesModal.classList.add('open'), 10);
   myScalesModal.setAttribute('aria-hidden', 'false');
-  renderMyScalesList();
-  // Close dropdown
+
+  // View Switching
+  if (view === 'form') {
+    // We assume openHandpanForm(null) is called separately or here
+    // But openHandpanForm handles form visibility now.
+    // Let's ensure list is hidden
+    if (myScalesList) myScalesList.style.display = 'none';
+    if (hpCreationForm) hpCreationForm.style.display = 'flex';
+  } else {
+    // List Mode
+    if (hpCreationForm) hpCreationForm.style.display = 'none';
+    if (myScalesList) myScalesList.style.display = 'block';
+
+    // Refresh Data
+    await loadAllUserCustomHandpans();
+    renderMyScalesList();
+  }
+
   document.getElementById('accountDropdownMenu')?.classList.remove('show');
 }
+
+
+let editingHandpanId = null;
+
+
+function openHandpanForm(data = null) {
+  // Switch to Form View within the Modal
+  openMyScalesModal('form');
+
+  // Reset or Fill
+  if (!data) {
+    // Create Mode
+    editingHandpanId = null;
+    document.getElementById('hpCreationTitle').textContent = 'Create New Handpan';
+    document.getElementById('hpBuilderName').value = '';
+    document.getElementById('hpScaleName').value = '';
+
+    // Clear file inputs and reset "Current" text
+    document.getElementById('hpTopImage').value = '';
+    document.getElementById('hpBottomImage').value = '';
+    document.getElementById('hpTopFileName').textContent = 'No file chosen';
+    document.getElementById('hpBottomFileName').textContent = 'No file chosen';
+    document.getElementById('hpTopCurrent').style.display = 'none';
+    document.getElementById('hpBottomCurrent').style.display = 'none';
+
+    saveNewHandpanBtn.textContent = 'Next: Calibrate';
+  } else {
+    // Edit Mode
+    editingHandpanId = data.id;
+    document.getElementById('hpCreationTitle').textContent = 'Edit Handpan Details';
+    document.getElementById('hpBuilderName').value = data.builder || '';
+    document.getElementById('hpScaleName').value = data.scale_name || '';
+
+    // Reset file inputs for edit mode
+    document.getElementById('hpTopImage').value = '';
+    document.getElementById('hpBottomImage').value = '';
+    document.getElementById('hpTopFileName').textContent = 'No file chosen';
+    document.getElementById('hpBottomFileName').textContent = 'No file chosen';
+
+    // Show current file indicators (simplified)
+    const topCurrent = document.getElementById('hpTopCurrent');
+    if (topCurrent) {
+      topCurrent.style.display = 'block';
+      topCurrent.textContent = data.top_image_url ? 'Current image set (Upload to change)' : 'No image set';
+    }
+    const bottomCurrent = document.getElementById('hpBottomCurrent');
+    if (bottomCurrent) {
+      bottomCurrent.style.display = 'block';
+      bottomCurrent.textContent = data.bottom_image_url ? 'Current image set (Upload to change)' : 'No image set';
+    }
+
+    saveNewHandpanBtn.textContent = 'Save Changes';
+  }
+}
+
 
 function renderMyScalesList() {
   console.log('Rendering scales list:', customHandpansCache);
   myScalesList.innerHTML = '';
 
+  // Add "Create New" button at the top
+  const createContainer = document.createElement('div');
+  createContainer.style.marginBottom = '10px';
+  createContainer.style.marginTop = '10px';
+  createContainer.style.textAlign = 'center';
+  const createBtn = document.createElement('button');
+  createBtn.id = 'createHandpanBtn';
+  createBtn.className = 'primary-btn small-btn';
+  createBtn.textContent = '+ Create New Handpan';
+  createBtn.onclick = () => {
+    openHandpanForm(null);
+  };
+  createContainer.appendChild(createBtn);
   if (customHandpansCache.length === 0) {
-    myScalesList.innerHTML = '<div style="padding:20px; text-align:center; color:#888;">No custom scales yet.</div>';
+    const emptyMsg = document.createElement('div');
+    emptyMsg.style.padding = '20px';
+    emptyMsg.style.textAlign = 'center';
+    emptyMsg.style.color = '#888';
+    emptyMsg.textContent = 'No custom handpans yet.';
+    myScalesList.appendChild(emptyMsg);
+    myScalesList.appendChild(createContainer);
     return;
   }
 
@@ -419,68 +510,54 @@ function renderMyScalesList() {
     const item = document.createElement('div');
     item.className = 'scale-list-item';
 
-    // --- Name Section (View/Edit) ---
+    // --- Name Section (View Only) ---
     const nameDiv = document.createElement('div');
     nameDiv.className = 'scale-info';
-
-    // View Mode
-    const viewMode = document.createElement('div');
-    viewMode.innerHTML = `
+    nameDiv.innerHTML = `
             <div class="scale-name-row">
                 <span class="scale-name-text">${hp.name}</span>
-                <button class="icon-btn edit-name-btn" title="Rename" style="font-size:12px;">✎</button>
             </div>
             <div class="scale-meta">${hp.builder} • ${hp.scale_name}</div>
         `;
 
-    // Edit Mode
-    const editMode = document.createElement('div');
-    editMode.className = 'edit-mode-container';
-    editMode.style.display = 'none';
-    editMode.innerHTML = `
-            <input type="text" class="rename-input" value="${hp.name}">
-            <div class="rename-actions">
-                <button class="small-action-btn save-btn-styles save-rename-btn">Save</button>
-                <button class="small-action-btn cancel-btn-styles cancel-rename-btn">Cancel</button>
-            </div>
-        `;
-
-    nameDiv.appendChild(viewMode);
-    nameDiv.appendChild(editMode);
-
     // --- Actions Section ---
     const actionsDiv = document.createElement('div');
     actionsDiv.className = 'scale-actions';
+
+    // Edit Details Button
+    const editBtn = document.createElement('button');
+    editBtn.textContent = 'Edit Details'; // or icon
+    editBtn.className = 'edit-map-btn'; // Reuse style or new 'edit-details-btn'
+    editBtn.style.marginRight = '5px';
+    editBtn.onclick = () => {
+      openHandpanForm(hp);
+    };
 
     // Reorder Buttons
     const isFirst = index === 0;
     const isLast = index === customHandpansCache.length - 1;
 
     const upBtn = document.createElement('button');
-    upBtn.innerHTML = '&#9650;'; // Up Arrow
+    upBtn.innerHTML = '&#9650;';
     upBtn.className = 'icon-btn';
     upBtn.disabled = isFirst;
     upBtn.onclick = () => swapHandpanOrder(index, index - 1);
 
     const downBtn = document.createElement('button');
-    downBtn.innerHTML = '&#9660;'; // Down Arrow
+    downBtn.innerHTML = '&#9660;';
     downBtn.className = 'icon-btn';
     downBtn.disabled = isLast;
     downBtn.onclick = () => swapHandpanOrder(index, index + 1);
 
-    // Edit Visuals Button (Calibration)
+    // Edit Map Button (Calibration)
     const mapBtn = document.createElement('button');
     mapBtn.textContent = 'Edit Map';
     mapBtn.className = 'edit-map-btn';
     mapBtn.onclick = () => {
-      // Close modal and enter calibration
       closeMyScalesModal();
-
       if (enterCalibrationMode) {
         enterCalibrationMode(hp, () => {
-          // On Done: Re-open My Scales
           openMyScalesModal();
-          // Reload list to reflect changes
           loadAllUserCustomHandpans().then(renderMyScalesList);
         });
       }
@@ -493,55 +570,15 @@ function renderMyScalesList() {
     delBtn.title = 'Delete';
     delBtn.onclick = () => deleteUserHandpan(hp.id);
 
-    actionsDiv.append(upBtn, downBtn, mapBtn, delBtn);
+    actionsDiv.append(editBtn, upBtn, downBtn, mapBtn, delBtn);
     item.append(nameDiv, actionsDiv);
     myScalesList.appendChild(item);
-
-    // Listeners for Rename
-    const editBtn = viewMode.querySelector('.edit-name-btn');
-    const saveRenameBtn = editMode.querySelector('.save-rename-btn');
-    const cancelRenameBtn = editMode.querySelector('.cancel-rename-btn');
-    const input = editMode.querySelector('.rename-input');
-
-    editBtn.onclick = () => {
-      viewMode.style.display = 'none';
-      editMode.style.display = 'block';
-      input.focus();
-    };
-
-    cancelRenameBtn.onclick = () => {
-      editMode.style.display = 'none';
-      viewMode.style.display = 'block';
-      input.value = hp.name; // reset
-    };
-
-    saveRenameBtn.onclick = async () => {
-      const newName = input.value.trim();
-      if (!newName || newName === hp.name) {
-        cancelRenameBtn.click();
-        return;
-      }
-
-      // Check local unique first
-      if (customHandpansCache.some(h => h.name === newName)) {
-        alert("A scale with this name already exists.");
-        return;
-      }
-
-      const { error } = await supabase
-        .from('user_handpans')
-        .update({ name: newName })
-        .eq('id', hp.id);
-
-      if (error) {
-        alert("Error: " + error.message);
-      } else {
-        await loadAllUserCustomHandpans(); // Reload to refresh list and dropdown
-        renderMyScalesList();
-      }
-    };
   });
+
+  // Append create button at the bottom
+  myScalesList.appendChild(createContainer);
 }
+
 
 async function swapHandpanOrder(indexA, indexB) {
   if (indexA < 0 || indexB < 0 || indexA >= customHandpansCache.length || indexB >= customHandpansCache.length) return;
@@ -664,6 +701,7 @@ export function highlightHandpan(note, stepIndex, forceHand = null) {
 
 /* Calibration */
 let calBtn;
+let calibrateHandpanBtn;
 let calibrating = false;
 let selectedHpNote = null;
 
@@ -859,6 +897,7 @@ let hpSettingsToggle, hpSettingsPanel, hpSettingsInitial, hpCreationForm, buildS
 
 // Settings Toggle
 
+
 function attachCreationListeners() {
   saveNewHandpanBtn?.addEventListener('click', async () => {
     const builder = document.getElementById('hpBuilderName').value.trim();
@@ -866,82 +905,113 @@ function attachCreationListeners() {
     const topImageFile = document.getElementById('hpTopImage').files[0];
     const bottomImageFile = document.getElementById('hpBottomImage').files[0];
 
-    if (!builder || !scaleName || !topImageFile) {
-      alert('Please fill in Builder, Scale Name, and select a Top Image.');
+    // Validation: 
+    // If creating new (no ID), need Top Image.
+    // If editing (has ID), Top Image is optional (keep existing).
+    if (!builder || !scaleName) {
+      alert('Please fill in Builder and Scale Name.');
+      return;
+    }
+    if (!editingHandpanId && !topImageFile) {
+      alert('Please select a Top Image for a new handpan.');
       return;
     }
 
     if (!currentUser) {
-      alert('You must be signed in to create a custom handpan.');
+      alert('You must be signed in.');
       return;
     }
 
-    saveNewHandpanBtn.textContent = 'Uploading...';
+    saveNewHandpanBtn.textContent = editingHandpanId ? 'Saving Changes...' : 'Uploading...';
     saveNewHandpanBtn.disabled = true;
 
     try {
-      // 1. Upload Top Image
-      const fileExt = topImageFile.name.split('.').pop();
-      const fileName = `${currentUser.id}_${Date.now()}_top.${fileExt}`;
-      const { data: uploadData, error: uploadError } = await supabase
-        .storage
-        .from('handpan-images')
-        .upload(fileName, topImageFile);
-
-      if (uploadError) throw uploadError;
-      const { data: { publicUrl: topUrl } } = supabase.storage.from('handpan-images').getPublicUrl(fileName);
-
-      // 2. Upload Bottom Image (Optional)
+      let topUrl = null;
       let bottomUrl = null;
+
+      // 1. Upload Top Image (if provided)
+      if (topImageFile) {
+        const fileExt = topImageFile.name.split('.').pop();
+        const fileName = `${currentUser.id}_${Date.now()}_top.${fileExt}`;
+        const { data: uploadData, error: uploadError } = await supabase.storage.from('handpan-images').upload(fileName, topImageFile);
+        if (uploadError) throw uploadError;
+        const { data: { publicUrl } } = supabase.storage.from('handpan-images').getPublicUrl(fileName);
+        topUrl = publicUrl;
+      }
+
+      // 2. Upload Bottom Image (if provided)
       if (bottomImageFile) {
         const bExt = bottomImageFile.name.split('.').pop();
         const bName = `${currentUser.id}_${Date.now()}_bottom.${bExt}`;
-        const { data: bData, error: bError } = await supabase
-          .storage
-          .from('handpan-images')
-          .upload(bName, bottomImageFile);
-
+        const { data: bData, error: bError } = await supabase.storage.from('handpan-images').upload(bName, bottomImageFile);
         if (bError) throw bError;
         const { data: { publicUrl: bPubUrl } } = supabase.storage.from('handpan-images').getPublicUrl(bName);
         bottomUrl = bPubUrl;
       }
 
-      // 3. Insert DB Record
-      const { data: insertData, error: insertError } = await supabase
-        .from('user_handpans')
-        .insert([{
-          user_id: currentUser.id,
+      if (editingHandpanId) {
+        // --- UPDATE ---
+        const updates = {
           name: `${builder} ${scaleName}`,
           builder: builder,
-          scale_name: scaleName,
-          top_image_url: topUrl,
-          bottom_image_url: bottomUrl,
-          note_map: [], // Empty init
-          is_active: true
-        }])
-        .select()
-        .single();
+          scale_name: scaleName
+        };
+        if (topUrl) updates.top_image_url = topUrl;
+        if (bottomUrl) updates.bottom_image_url = bottomUrl;
 
-      if (insertError) throw insertError;
+        const { error: updateError } = await supabase
+          .from('user_handpans')
+          .update(updates)
+          .eq('id', editingHandpanId);
 
-      // 4. Success -> Go to Calibration
-      alert('Saved! Entering calibration mode...');
-      if (enterCalibrationMode) {
-        enterCalibrationMode(insertData);
-        // Hide the creation form
-        hpCreationForm.style.display = 'none';
-        hpSettingsPanel.style.display = 'none';
-        hpSettingsToggle.classList.remove('active');
+        if (updateError) throw updateError;
+
+        alert('Handpan updated successfully!');
+        // Refresh list
+        await loadAllUserCustomHandpans();
+
+        // If this handpan was active, reload page to see changes
+        if (scaleSelect.value === `custom:${editingHandpanId}`) {
+          location.reload();
+        } else {
+          // Return to List View
+          openMyScalesModal('list');
+        }
+
       } else {
-        console.error('enterCalibrationMode not found');
-        location.reload(); // Fallback
+        // --- INSERT ---
+        const { data: insertData, error: insertError } = await supabase
+          .from('user_handpans')
+          .insert([{
+            user_id: currentUser.id,
+            name: `${builder} ${scaleName}`,
+            builder: builder,
+            scale_name: scaleName,
+            top_image_url: topUrl, // Must exist
+            bottom_image_url: bottomUrl,
+            note_map: [],
+            is_active: true
+          }])
+          .select()
+          .single();
+
+        if (insertError) throw insertError;
+
+        alert('Saved! Entering calibration mode...');
+        if (enterCalibrationMode) {
+          enterCalibrationMode(insertData);
+          // Hide modal completely for calibration
+          closeMyScalesModal();
+        } else {
+          location.reload();
+        }
       }
 
     } catch (err) {
-      console.error('Error creating handpan:', err);
-      alert('Error saving handpan: ' + err.message);
+      console.error('Error saving handpan:', err);
+      alert('Error: ' + err.message);
     } finally {
-      saveNewHandpanBtn.textContent = 'Next: Calibrate';
+      saveNewHandpanBtn.textContent = editingHandpanId ? 'Save Changes' : 'Next: Calibrate';
       saveNewHandpanBtn.disabled = false;
     }
   });
@@ -965,6 +1035,7 @@ export function initHandpanMap() {
   closeMyScalesBtn = document.getElementById('closeMyScalesBtn');
   myScalesList = document.getElementById('myScalesList');
   calBtn = document.getElementById('calBtn');
+  calibrateHandpanBtn = document.getElementById('calibrateHandpanBtn');
   hpSettingsToggle = document.getElementById('hpSettingsToggle');
   hpSettingsPanel = document.getElementById('hpSettingsPanel');
   hpSettingsInitial = document.getElementById('hpSettingsInitial') || document.getElementById('hpCustomizeControls');
@@ -1179,6 +1250,27 @@ export function initHandpanMap() {
 
   calBtn?.addEventListener('click', () => setCalibrating(!calibrating));
 
+  calibrateHandpanBtn?.addEventListener('click', () => {
+    const val = scaleSelect.value;
+    if (val.startsWith('custom:')) {
+      const id = val.split(':')[1];
+      const customHp = customHandpansCache.find(hp => hp.id === id);
+      if (customHp) {
+        if (hpSettingsPanel) hpSettingsPanel.style.display = 'none';
+        hpSettingsToggle?.classList.remove('active');
+        if (enterCalibrationMode) {
+          enterCalibrationMode(customHp, () => {
+            location.reload();
+          });
+        }
+      } else {
+        alert('Custom handpan not found in cache.');
+      }
+    } else {
+      alert("You can only calibrate your own custom handpans. Create a custom handpan to customize it.");
+    }
+  });
+
   scaleSelect?.addEventListener('change', async () => {
     const val = scaleSelect.value;
     setSelectedScaleName(val);
@@ -1268,13 +1360,19 @@ export function initHandpanMap() {
   });
 
   buildScaleBtn?.addEventListener('click', () => {
-    hpSettingsInitial.style.display = 'none';
-    hpCreationForm.style.display = 'flex';
+    // If user has scales, open list ("Manage My Handpans")
+    // If not, open creation form directly
+    if (customHandpansCache.length > 0) {
+      openMyScalesModal('list');
+    } else {
+      openMyScalesModal('form');
+      openHandpanForm(null); // Reset form
+    }
   });
 
   cancelBuildBtn?.addEventListener('click', () => {
-    hpCreationForm.style.display = 'none';
-    hpSettingsInitial.style.display = 'block';
+    // Return to list view within modal
+    openMyScalesModal('list');
   });
 
   attachCreationListeners();

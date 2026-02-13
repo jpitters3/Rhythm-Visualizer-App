@@ -1,5 +1,6 @@
 /* CALIBRATION MODE STYLES */
 
+
 .cal-overlay {
   position: fixed;
   top: 0;
@@ -12,7 +13,44 @@
   flex-direction: column;
   overflow: hidden;
   color: #fff;
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
 }
+
+/* ... existing styles ... */
+
+/* Custom Calibration Buttons to avoid Conflicts */
+.cal-btn {
+  padding: 8px 16px;
+  border-radius: 20px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 13px;
+  border: none;
+  transition: background 0.2s;
+}
+
+.cal-btn-primary {
+  background: #f1c40f;
+  color: #000;
+}
+
+.cal-btn-primary:hover {
+  background: #d4ac0d;
+}
+
+.cal-btn-secondary {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.cal-btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
 
 /* Header */
 .cal-header {
@@ -78,6 +116,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .cal-canvas-container {
@@ -122,6 +162,12 @@
   align-items: center;
   justify-content: center;
   transition: border-color 0.2s, background 0.2s;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+  will-change: transform, left, top;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
 }
 
 .tonefield:hover {
@@ -149,9 +195,7 @@
   pointer-events: none;
 }
 
-.tf-handle {
-  /* Resizing handle? MVP just dragging for now */
-}
+
 
 /* Properties Panel */
 .cal-properties {
@@ -195,16 +239,7 @@
   border-radius: 8px;
 }
 
-/* Secondary button inside calibration header */
-#calDoneBtn {
-  background: transparent;
-  border: 1px solid #f1c40f;
-  color: #f1c40f;
-}
 
-#calDoneBtn:hover {
-  background: rgba(241, 196, 15, 0.1);
-}
 
 .danger-btn {
   width: 100%;
