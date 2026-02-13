@@ -2,8 +2,8 @@ import { currentUser } from './state.js';
 import { setCaret } from './range-selection.js';
 import { updateUserLabelPreference } from './profile.js';
 import { writeToSelected, clampIndex, getComposeOn } from './compose-mode.js';
-import { saveScaleLocal, saveScaleRemote, preloadScaleSamples, noteForLabel, isDownbeatStep, registerHighlighter, loadScaleLocal, playNoteByLabel, intervalMs } from './noteplayer.js';
-import { SCALES } from './config.js';
+import { preloadScaleSamples, noteForLabel, isDownbeatStep, registerHighlighter, playNoteByLabel, intervalMs } from './noteplayer.js';
+import { SCALES, SCALE_KEY_LOCAL, BASE_PATH } from './config.js';
 import { getScale, getSelectedScaleName, setSelectedScaleName, setCurrentScale } from './state.js';
 import { supabase } from './supabase-client.js';
 import { enterCalibrationMode } from './calibration.js';
@@ -13,19 +13,20 @@ import { setBeatToGhost, renderAllMeasures } from './notegrid.js';
 import { isAuthed } from './auth.js';
 
 // DOM Elements (previously globals)
-let scaleSelect, handpanImg, scaleStatus, handpanSelect, numberPitchSelect, ghostBtn, lockBtn, composeBtn, handpanSection, handpanOverlay;
+let handpanImg, scaleSelect, scaleStatus, handpanColorSelect, numberPitchSelect, ghostBtn, lockBtn, composeBtn, handpanSection, handpanOverlay;
+let handpanWrapBottom, handpanImgBottom, handpanOverlayBottom;
 
 /* Mapped to nine-note-handpan-numbered.png */
 const HANDPAN_MAP_SKETCH = {
-  "D": { x: 50.3, y: 49.4, r: 12 },
-  "1": { x: 63, y: 81.7, r: 12 },
-  "2": { x: 33.9, y: 79.7, r: 12 },
-  "3": { x: 81, y: 60.7, r: 11 },
-  "4": { x: 18.6, y: 57.3, r: 11 },
-  "5": { x: 78.6, y: 35, r: 10 },
-  "6": { x: 21.9, y: 32.3, r: 10 },
-  "7": { x: 61.2, y: 17.4, r: 9 },
-  "8": { x: 38.6, y: 15.9, r: 9 },
+  "D": { x: 50.5, y: 47.8, r: 12 },
+  "1": { x: 62.1, y: 76.2, r: 12 },
+  "2": { x: 34.8, y: 74.5, r: 12 },
+  "3": { x: 78.7, y: 57.5, r: 11 },
+  "4": { x: 20.4, y: 54.8, r: 11 },
+  "5": { x: 76.6, y: 35, r: 10 },
+  "6": { x: 23.5, y: 32.3, r: 10 },
+  "7": { x: 60.5, y: 18.5, r: 9 },
+  "8": { x: 39.3, y: 18.2, r: 9 },
   "T": { x: 60.3, y: 56.9, r: 5 },
   "S": { x: 94.1, y: 45.7, r: 7 },
 };
@@ -56,11 +57,48 @@ const handpanDots = new Map();
 let overlayPitches = false;
 let overlayNumbers = false;
 let hpMapSaveTimeout = null;
+let currentHandpanSide = 'top'; // 'top' or 'bottom'
+let mountedHandpanData = null; // Store current handpan data for flipping
 
 // Custom Handpan Cache
 let customHandpansCache = [];
 
-export async function loadAllUserHandpans() {
+/* ==== Save and load scales locally and in db ==== */
+
+export function saveScaleLocal(name) {
+  if (!name || name === '') return;
+  localStorage.setItem(SCALE_KEY_LOCAL, name);
+}
+
+export function loadScaleLocal() {
+  return localStorage.getItem(SCALE_KEY_LOCAL);
+}
+
+export async function saveScaleRemote(name) {
+  if (!currentUser) return;
+  if (!supabase) return;
+
+  await supabase.from('profiles').upsert(
+    { user_id: currentUser.id, handpan_scale: name },
+    { onConflict: 'user_id' }
+  );
+}
+
+export async function loadScaleRemote() {
+  if (!currentUser) return null;
+  if (!supabase) return null;
+
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('handpan_scale')
+    .eq('user_id', currentUser.id)
+    .maybeSingle();
+  if (error) return null;
+  return data?.handpan_scale || null;
+}
+
+export async function loadAllUserCustomHandpans() {
+  console.log('LOADING CUSTOM HANDPANDS...');
   if (!currentUser) return;
 
   const { data, error } = await supabase
@@ -72,31 +110,31 @@ export async function loadAllUserHandpans() {
 
   if (data) {
     customHandpansCache = data;
+    console.log('Render custom handpan options:', customHandpansCache);
     renderCustomOptions();
 
     // Only apply if the currently selected scale (from init/profile) is a custom one we just loaded.
     // This prevents overriding the user's choice on background refreshes,
     // while ensuring Custom Scales load correctly on initial startup.
-    const currentSelection = scaleSelect.value;
+    const currentSelection = getSelectedScaleName();
     if (currentSelection && currentSelection.startsWith('custom:')) {
       const id = currentSelection.split(':')[1];
       const target = data.find(h => h.id === id);
-      if (target) {
+      if (target && currentSelection === `custom:${id}`) {
         applyCustomHandpan(target);
       }
     }
   }
 }
 
-function renderCustomOptions() {
+async function renderCustomOptions() {
   // REORDER: Custom Scales First, then System Scales
-  // Fix: SCALES is global const, not on window
   if (typeof SCALES === 'undefined') return;
 
   if (!scaleSelect || scaleSelect === 'undefined') {
     scaleSelect = document.getElementById('scaleSelect');
   }
-  const currentVal = scaleSelect.value;
+
   scaleSelect.innerHTML = '';
 
   // 1. My Scales
@@ -127,15 +165,37 @@ function renderCustomOptions() {
     scaleSelect.appendChild(opt);
   }
 
-  // Restore selection if possible
-  if (currentVal) {
-    scaleSelect.value = currentVal;
-  }
+  // Update scaleSelect with user's preference
+  scaleSelect.value = getSelectedScaleName();
+
+  // let handpanPrefRemote = await loadScaleRemote();
+  // let handpanPrefLocal = loadScaleLocal();
+
+  // if (handpanPrefRemote) {
+  //   if (handpanPrefRemote.includes('custom:')) {
+  //     scaleSelect.value = `custom:${handpanPrefRemote.split(':')[1]}`;
+  //   } else {
+  //     scaleSelect.value = handpanPrefRemote;
+  //   }
+  // } else if (handpanPrefLocal) {
+  //   scaleSelect.value = handpanPrefLocal;
+  // }
 }
 
 function applyCustomHandpan(handpanData) {
+  console.log('Applying custom handpan:', handpanData);
+  mountedHandpanData = handpanData; // Store for flipping
+  currentHandpanSide = 'top'; // Reset to top
+
   // Update Image
   handpanImg.src = handpanData.top_image_url;
+
+  // Show/Hide Flip Button
+  const flipBtn = document.getElementById('flipSideBtn');
+  if (flipBtn) {
+    flipBtn.style.display = handpanData.bottom_image_url ? 'block' : 'none';
+    flipBtn.onclick = () => toggleHandpanSide();
+  }
 
   // Apply Image Rotation
   const rot = handpanData.image_rotation || 0;
@@ -158,22 +218,30 @@ function applyCustomHandpan(handpanData) {
       label = key;
     }
 
-    // Visual Map (Label -> Visuals)
-    newMap[label] = {
-      x: (typeof tf.x === 'number') ? tf.x : 50,
-      y: (typeof tf.y === 'number') ? tf.y : 50,
-      r: r,
-      width: tf.width || (r * 2),
-      height: tf.height || (r * 2),
-      rotation: tf.rotation || 0,
-      id: tf.id, // Store ID for reverse lookup during save
-    };
+    // Visual Map (Label -> Visuals) -- FILTER BY SIDE
+    // Default side is 'top'
+    const side = tf.side || 'top';
 
-    // Musical Map (Label -> Pitch)
+    if (side === currentHandpanSide) {
+      newMap[label] = {
+        x: (typeof tf.x === 'number') ? tf.x : 50,
+        y: (typeof tf.y === 'number') ? tf.y : 50,
+        r: r,
+        width: tf.width || (r * 2),
+        height: tf.height || (r * 2),
+        rotation: tf.rotation || 0,
+        id: tf.id,
+        side: side
+      };
+
+      if (label === 'Ding' || label === 'D') {
+        newMap['D'] = newMap[label];
+      }
+    }
+
+    // Musical Map (Label -> Pitch) -- INCLUDE ALL
     if (label === 'Ding' || label === 'D') {
       dingPitch = key;
-      // Also add to map just in case? No, ding is special property
-      newMap['D'] = newMap[label]; // Ensure 'D' key exists visually if they named it 'Ding'
     } else {
       musicalMap[label] = key;
     }
@@ -197,17 +265,127 @@ function applyCustomHandpan(handpanData) {
   scaleStatus.textContent = `Custom Scale: ${handpanData.name}`;
 
   // Force Handpan Select to 'Custom' visual
-  // Force Handpan Select to 'Custom' visual
-  // User Request: Hide the entire Color/Image dropdown when using a custom scale
-  const row = handpanSelect.closest('.setting-row');
+  // Hide the entire Color/Image dropdown when using a custom scale
+  const row = handpanColorSelect.closest('.setting-row');
   if (row) row.style.display = 'none';
 
   // Ensure we don't leave a "Custom" option sticking around if we switch back
-  const customOpt = document.querySelector('#handpanSelect option[value="Custom"]');
+  const customOpt = document.querySelector('#handpanColorSelect option[value="Custom"]');
   if (customOpt) customOpt.remove();
 
+  if (handpanOverlay) handpanOverlay.dataset.model = 'Bronze';
   buildHandpanOverlay();
   dispatchEvent(new Event('handpan-loaded'));
+}
+
+export function toggleHandpanSide() {
+  if (!mountedHandpanData || !mountedHandpanData.bottom_image_url) return;
+
+  // Cycle: Top -> Bottom -> Dual -> Both -> Top
+  if (currentHandpanSide === 'top') {
+    currentHandpanSide = 'bottom';
+  } else if (currentHandpanSide === 'bottom') {
+    currentHandpanSide = 'dual';
+  } else if (currentHandpanSide === 'dual') {
+    currentHandpanSide = 'both';
+  } else {
+    currentHandpanSide = 'top';
+  }
+
+  localStorage.setItem('gp_handpanSide', currentHandpanSide);
+
+  // Update toggle button state
+  const flipBtn = document.getElementById('flipSideBtn');
+  if (flipBtn) {
+    flipBtn.classList.remove('flipped', 'both');
+    if (currentHandpanSide === 'bottom') flipBtn.classList.add('flipped');
+
+    if (currentHandpanSide === 'both') {
+      flipBtn.classList.add('both');
+      flipBtn.textContent = '∞';
+      flipBtn.title = "Showing All Notes (merged)";
+    } else if (currentHandpanSide === 'dual') {
+      flipBtn.textContent = '⩓';
+      flipBtn.title = "Dual View (Stacked)";
+    } else {
+      flipBtn.textContent = '🔄';
+      flipBtn.title = (currentHandpanSide === 'top') ? "Flip to Bottom" : "Flip to All";
+    }
+  }
+
+  // Visuals Logic
+  // Dual Mode: Show Bottom Wrap, Set Bottom Image
+  if (currentHandpanSide === 'dual') {
+    if (handpanWrapBottom) handpanWrapBottom.style.display = 'block';
+    if (handpanImgBottom) handpanImgBottom.src = mountedHandpanData.bottom_image_url;
+    // Top image stays as top
+    handpanImg.src = mountedHandpanData.top_image_url;
+  } else {
+    if (handpanWrapBottom) handpanWrapBottom.style.display = 'none';
+    if (handpanImgBottom) handpanImgBottom.src = ""; // Clear to save memory?
+
+    // Update Single Image (Both uses Top by default)
+    const imgSide = (currentHandpanSide === 'bottom') ? 'bottom' : 'top';
+    handpanImg.src = (imgSide === 'top') ? mountedHandpanData.top_image_url : mountedHandpanData.bottom_image_url;
+  }
+
+  // Re-run the visual map logic
+  // We need to re-parse the note map but only keep notes for this side
+  const newMap = {};
+
+  mountedHandpanData.note_map.forEach(tf => {
+    // Default to 'top' if undefined
+    const noteSide = tf.side || 'top';
+
+    // Filtering Logic
+    let include = false;
+    let isGhost = false;
+
+    if (currentHandpanSide === 'both') {
+      include = true;
+      if (noteSide !== 'top') isGhost = true;
+    } else if (currentHandpanSide === 'dual') {
+      include = true;
+      // No ghost flags for dual mode, they just go to different overlays
+      // But we can set isGhost false explicitly
+      isGhost = false;
+    } else {
+      // Normal strict side
+      if (noteSide === currentHandpanSide) include = true;
+    }
+
+    if (!include) return;
+
+    const key = `${tf.note}${tf.octave}`;
+    const r = tf.r || 8;
+
+    let label = tf.assignedNumber;
+    if (!label || label === "") label = key;
+
+    newMap[label] = {
+      x: (typeof tf.x === 'number') ? tf.x : 50,
+      y: (typeof tf.y === 'number') ? tf.y : 50,
+      r: r,
+      width: tf.width || (r * 2),
+      height: tf.height || (r * 2),
+      rotation: tf.rotation || 0,
+      id: tf.id,
+      side: noteSide,
+      isGhost: isGhost
+    };
+
+    // Ensure D exists if it's visible
+    if ((label === 'Ding' || label === 'D') && include) {
+      newMap['D'] = newMap[label];
+    }
+  });
+
+  // Update Visual Map ONLY. 
+  // We must NOT nuke the Musical Map in `currentScale` because notes on the other side should still make sound if triggered by MIDI/Keyboard.
+  // However, HANDPAN_MAP determines what is drawn.
+  HANDPAN_MAP = newMap;
+
+  buildHandpanOverlay();
 }
 
 // === MY SCALES MANAGEMENT ===
@@ -229,6 +407,7 @@ function openMyScalesModal() {
 }
 
 function renderMyScalesList() {
+  console.log('Rendering scales list:', customHandpansCache);
   myScalesList.innerHTML = '';
 
   if (customHandpansCache.length === 0) {
@@ -302,7 +481,7 @@ function renderMyScalesList() {
           // On Done: Re-open My Scales
           openMyScalesModal();
           // Reload list to reflect changes
-          loadAllUserHandpans().then(renderMyScalesList);
+          loadAllUserCustomHandpans().then(renderMyScalesList);
         });
       }
     };
@@ -357,17 +536,12 @@ function renderMyScalesList() {
       if (error) {
         alert("Error: " + error.message);
       } else {
-        await loadAllUserHandpans(); // Reload to refresh list and dropdown
+        await loadAllUserCustomHandpans(); // Reload to refresh list and dropdown
         renderMyScalesList();
       }
     };
   });
 }
-
-// Event Bus Listener: Handpans Load
-Bus.on(BUS_EVENT.HANDPANS_LOAD_NEEDED, async () => {
-  await loadAllUserHandpans();
-});
 
 async function swapHandpanOrder(indexA, indexB) {
   if (indexA < 0 || indexB < 0 || indexA >= customHandpansCache.length || indexB >= customHandpansCache.length) return;
@@ -398,7 +572,7 @@ async function deleteUserHandpan(id) {
     alert("Error deleting: " + error.message);
   } else {
     // Refresh
-    await loadAllUserHandpans(); // Reloads cache and selects
+    await loadAllUserCustomHandpans(); // Reloads cache and selects
     renderMyScalesList(); // Re-render modal list
 
     // Reset if we deleted the active one
@@ -410,10 +584,17 @@ async function deleteUserHandpan(id) {
 
 export function buildHandpanOverlay() {
   if (!handpanOverlay) return;
+
   handpanOverlay.innerHTML = '';
   handpanDots.clear();
 
+  if (handpanOverlayBottom) handpanOverlayBottom.innerHTML = '';
+
   for (const [note, p] of Object.entries(HANDPAN_MAP)) {
+    let targetOverlay = handpanOverlay;
+    if (currentHandpanSide === 'dual' && p.side === 'bottom' && handpanOverlayBottom) {
+      targetOverlay = handpanOverlayBottom;
+    }
     const dot = document.createElement('div');
     dot.className = 'hp-dot';
     dot.dataset.note = note; // This note key is used for playing sound
@@ -437,14 +618,16 @@ export function buildHandpanOverlay() {
     dot.style.height = `${h}%`;
     dot.style.transform = `translate(-50%, -50%) rotate(${rot}deg)`;
 
-    handpanOverlay.appendChild(dot);
+    if (p.isGhost) {
+      dot.classList.add('other-side');
+    }
+
+    targetOverlay.appendChild(dot);
     handpanDots.set(note, dot);
   }
   if (overlayPitches || overlayNumbers)
     overlayNumberPitchNotes(); else removeNoteLabels();
 }
-
-
 
 let hpPulseTimers = new Map();
 
@@ -581,8 +764,17 @@ function stringifyHandpanMap(map) {
 }
 
 
-function checkNumberPitchSelection() {
-  const val = numberPitchSelect.value;
+
+let currentLabelPref = 'default';
+
+export function syncStateFromStorage() {
+  const val = localStorage.getItem('handpanLabelPref') || 'default';
+  currentLabelPref = val;
+
+  // Sync UI if mapped
+  if (numberPitchSelect) numberPitchSelect.value = val;
+
+  // Update internal flags
   if (val === 'Numbers') {
     overlayNumbers = true;
     overlayPitches = false;
@@ -590,17 +782,19 @@ function checkNumberPitchSelection() {
     overlayNumbers = false;
     overlayPitches = true;
   } else {
-    // Default: Check handpan type?
-    // If Sketch (numbered), default to Numbers?
-    if (handpanSelect.value === 'Sketch') {
-      overlayNumbers = true;
-      overlayPitches = false;
-      numberPitchSelect.value = 'Numbers';
-    } else {
-      overlayNumbers = false;
-      overlayPitches = false;
-    }
+    // Reset or handle default behavior
+    overlayNumbers = true;
+    overlayPitches = false;
   }
+}
+
+function updateLabelStyles() {
+  if (!handpanOverlay) return;
+
+  // Set data attribute on parent to let CSS handle styles
+  // This avoids loop and setTimeout
+  const color = handpanColorSelect ? handpanColorSelect.value : 'Bronze';
+  handpanOverlay.dataset.model = color;
 }
 
 function removeNoteLabels() {
@@ -650,17 +844,6 @@ function overlayNumberPitchNotes() {
 
     label.textContent = text;
 
-    // Position center
-    label.style.position = 'absolute';
-    label.style.left = '50%';
-    label.style.top = '50%';
-    label.style.transform = 'translate(-50%, -50%)';
-    label.style.color = 'white';
-    label.style.fontWeight = 'bold';
-    label.style.pointerEvents = 'none';
-    label.style.textShadow = '0 1px 2px black';
-    label.style.zIndex = '10'; // Ensure above dot
-
     el.appendChild(label);
   }
 }
@@ -676,76 +859,93 @@ let hpSettingsToggle, hpSettingsPanel, hpSettingsInitial, hpCreationForm, buildS
 
 // Settings Toggle
 
-saveNewHandpanBtn?.addEventListener('click', async () => {
-  const builder = document.getElementById('hpBuilderName').value.trim();
-  const scaleName = document.getElementById('hpScaleName').value.trim();
-  const topImageFile = document.getElementById('hpTopImage').files[0];
+function attachCreationListeners() {
+  saveNewHandpanBtn?.addEventListener('click', async () => {
+    const builder = document.getElementById('hpBuilderName').value.trim();
+    const scaleName = document.getElementById('hpScaleName').value.trim();
+    const topImageFile = document.getElementById('hpTopImage').files[0];
+    const bottomImageFile = document.getElementById('hpBottomImage').files[0];
 
-  if (!builder || !scaleName || !topImageFile) {
-    alert('Please fill in Builder, Scale Name, and select a Top Image.');
-    return;
-  }
-
-  if (!currentUser) {
-    alert('You must be signed in to create a custom handpan.');
-    return;
-  }
-
-  saveNewHandpanBtn.textContent = 'Uploading...';
-  saveNewHandpanBtn.disabled = true;
-
-  try {
-    // 1. Upload Image
-    const fileExt = topImageFile.name.split('.').pop();
-    const fileName = `${currentUser.id}_${Date.now()}.${fileExt}`;
-    const { data: uploadData, error: uploadError } = await supabase
-      .storage
-      .from('handpan-images')
-      .upload(fileName, topImageFile);
-
-    if (uploadError) throw uploadError;
-
-    const { data: { publicUrl } } = supabase.storage.from('handpan-images').getPublicUrl(fileName);
-
-    // 2. Insert DB Record
-    const { data: insertData, error: insertError } = await supabase
-      .from('user_handpans')
-      .insert([{
-        user_id: currentUser.id,
-        name: `${builder} ${scaleName}`,
-        builder: builder,
-        scale_name: scaleName,
-        top_image_url: publicUrl,
-        note_map: [], // Empty init
-        is_active: true
-      }])
-      .select()
-      .single();
-
-    if (insertError) throw insertError;
-
-    // 3. Success -> Go to Calibration
-    alert('Saved! Entering calibration mode...');
-    if (enterCalibrationMode) {
-      enterCalibrationMode(insertData);
-      // Hide the creation form
-      hpCreationForm.style.display = 'none';
-      hpSettingsPanel.style.display = 'none';
-      hpSettingsToggle.classList.remove('active');
-    } else {
-      console.error('enterCalibrationMode not found');
-      location.reload(); // Fallback
+    if (!builder || !scaleName || !topImageFile) {
+      alert('Please fill in Builder, Scale Name, and select a Top Image.');
+      return;
     }
 
-  } catch (err) {
-    console.error('Error creating handpan:', err);
-    alert('Error saving handpan: ' + err.message);
-  } finally {
-    saveNewHandpanBtn.textContent = 'Next: Calibrate';
-    saveNewHandpanBtn.disabled = false;
-  }
-});
+    if (!currentUser) {
+      alert('You must be signed in to create a custom handpan.');
+      return;
+    }
 
+    saveNewHandpanBtn.textContent = 'Uploading...';
+    saveNewHandpanBtn.disabled = true;
+
+    try {
+      // 1. Upload Top Image
+      const fileExt = topImageFile.name.split('.').pop();
+      const fileName = `${currentUser.id}_${Date.now()}_top.${fileExt}`;
+      const { data: uploadData, error: uploadError } = await supabase
+        .storage
+        .from('handpan-images')
+        .upload(fileName, topImageFile);
+
+      if (uploadError) throw uploadError;
+      const { data: { publicUrl: topUrl } } = supabase.storage.from('handpan-images').getPublicUrl(fileName);
+
+      // 2. Upload Bottom Image (Optional)
+      let bottomUrl = null;
+      if (bottomImageFile) {
+        const bExt = bottomImageFile.name.split('.').pop();
+        const bName = `${currentUser.id}_${Date.now()}_bottom.${bExt}`;
+        const { data: bData, error: bError } = await supabase
+          .storage
+          .from('handpan-images')
+          .upload(bName, bottomImageFile);
+
+        if (bError) throw bError;
+        const { data: { publicUrl: bPubUrl } } = supabase.storage.from('handpan-images').getPublicUrl(bName);
+        bottomUrl = bPubUrl;
+      }
+
+      // 3. Insert DB Record
+      const { data: insertData, error: insertError } = await supabase
+        .from('user_handpans')
+        .insert([{
+          user_id: currentUser.id,
+          name: `${builder} ${scaleName}`,
+          builder: builder,
+          scale_name: scaleName,
+          top_image_url: topUrl,
+          bottom_image_url: bottomUrl,
+          note_map: [], // Empty init
+          is_active: true
+        }])
+        .select()
+        .single();
+
+      if (insertError) throw insertError;
+
+      // 4. Success -> Go to Calibration
+      alert('Saved! Entering calibration mode...');
+      if (enterCalibrationMode) {
+        enterCalibrationMode(insertData);
+        // Hide the creation form
+        hpCreationForm.style.display = 'none';
+        hpSettingsPanel.style.display = 'none';
+        hpSettingsToggle.classList.remove('active');
+      } else {
+        console.error('enterCalibrationMode not found');
+        location.reload(); // Fallback
+      }
+
+    } catch (err) {
+      console.error('Error creating handpan:', err);
+      alert('Error saving handpan: ' + err.message);
+    } finally {
+      saveNewHandpanBtn.textContent = 'Next: Calibrate';
+      saveNewHandpanBtn.disabled = false;
+    }
+  });
+}
 
 let lastStandardModel = 'Bronze';
 
@@ -753,7 +953,7 @@ export function initHandpanMap() {
   scaleSelect = document.getElementById('scaleSelect');
   handpanImg = document.getElementById('handpanImg');
   scaleStatus = document.getElementById('scaleStatus');
-  handpanSelect = document.getElementById('handpanSelect');
+  handpanColorSelect = document.getElementById('handpanColorSelect');
   numberPitchSelect = document.getElementById('numberPitchSelect');
   ghostBtn = document.getElementById('ghostBtn');
   lockBtn = document.getElementById('lockBtn');
@@ -772,6 +972,11 @@ export function initHandpanMap() {
   buildScaleBtn = document.getElementById('buildScaleBtn');
   cancelBuildBtn = document.getElementById('cancelBuildBtn');
   saveNewHandpanBtn = document.getElementById('saveNewHandpanBtn');
+
+  // Dual View Elements
+  handpanWrapBottom = document.getElementById('handpanWrapBottom');
+  handpanImgBottom = document.getElementById('handpanImgBottom');
+  handpanOverlayBottom = document.getElementById('handpanOverlayBottom');
 
   if (!handpanOverlay) return;
 
@@ -807,6 +1012,42 @@ export function initHandpanMap() {
         writeToSelected(note, { advance: !noAdvance });
       }
     }
+  });
+
+  handpanOverlayBottom?.addEventListener('click', (e) => {
+    // Same logic as handpanOverlay click
+    if (calibrating) {
+      const dot = e.target.closest('.hp-dot');
+      if (!dot) return;
+      const note = dot.dataset.note;
+      if (!note || !HANDPAN_MAP[note]) return;
+      selectHpDot(note);
+    } else {
+      const dot = e.target.closest('.hp-dot');
+      if (!dot) return;
+      const note = dot.dataset.note;
+      if (!note) return;
+      playNoteByLabel(note, null);
+      highlightHandpan(note, null);
+      const selIdx = activeGrid.caretIndex;
+      if (selIdx !== null) {
+        const noAdvance = e.altKey;
+        writeToSelected(note, { advance: !noAdvance });
+      }
+    }
+  });
+
+  handpanOverlayBottom?.addEventListener('mousedown', (e) => {
+    if (!calibrating) return;
+    const dot = e.target.closest('.hp-dot');
+    if (!dot) return;
+    e.preventDefault();
+    const note = dot.dataset.note;
+    if (!HANDPAN_MAP[note]) return;
+    selectHpDot(note);
+    isHpDragging = true;
+    hpDragStart = { x: e.clientX, y: e.clientY };
+    hpNoteStart = { x: HANDPAN_MAP[note].x, y: HANDPAN_MAP[note].y };
   });
 
   handpanOverlay?.addEventListener('mousedown', (e) => {
@@ -849,6 +1090,20 @@ export function initHandpanMap() {
   });
 
   handpanOverlay?.addEventListener('touchstart', (e) => {
+    if (!calibrating) return;
+    const dot = e.target.closest('.hp-dot');
+    if (!dot) return;
+    e.preventDefault();
+    const note = dot.dataset.note;
+    if (!HANDPAN_MAP[note]) return;
+    selectHpDot(note);
+    isHpDragging = true;
+    const t = e.touches[0];
+    hpDragStart = { x: t.clientX, y: t.clientY };
+    hpNoteStart = { x: HANDPAN_MAP[note].x, y: HANDPAN_MAP[note].y };
+  }, { passive: false });
+
+  handpanOverlayBottom?.addEventListener('touchstart', (e) => {
     if (!calibrating) return;
     const dot = e.target.closest('.hp-dot');
     if (!dot) return;
@@ -944,68 +1199,54 @@ export function initHandpanMap() {
     }
 
     scaleStatus.textContent = `Scale: ${val}`;
-    let currentModel = handpanSelect.value;
-    const row = handpanSelect.closest('.setting-row');
+    let currentModel = handpanColorSelect.value;
+    const row = handpanColorSelect.closest('.setting-row');
     if (row) row.style.display = 'flex';
 
     if (currentModel.startsWith('custom:') || currentModel === 'Custom') {
       currentModel = lastStandardModel;
-      handpanSelect.value = currentModel;
+      handpanColorSelect.value = currentModel;
     }
 
     if (currentModel === 'Bronze') {
-      handpanImg.src = `./assets/images/${HANDPAN_IMG_BRONZE}`;
+      handpanImg.src = `${BASE_PATH}assets/images/${HANDPAN_IMG_BRONZE}`;
       handpanImg.style.transform = '';
       HANDPAN_MAP = HANDPAN_MAP_BRONZE;
     } else if (currentModel === 'Sketch') {
-      handpanImg.src = `./assets/images/${HANDPAN_IMG_SKETCH_EMPTY}`;
+      handpanImg.src = `${BASE_PATH}assets/images/${HANDPAN_IMG_SKETCH_EMPTY}`;
       handpanImg.style.transform = '';
       HANDPAN_MAP = HANDPAN_MAP_SKETCH;
     }
 
     if (setCurrentScale && SCALES) setCurrentScale(SCALES[val]);
     await preloadScaleSamples();
-    if (currentUser) await saveScaleRemote(val);
-    checkNumberPitchSelection();
     buildHandpanOverlay();
   });
 
-  handpanSelect?.addEventListener('change', async () => {
-    const val = handpanSelect.value;
-    if (val.startsWith('custom:')) {
-      const id = val.split(':')[1];
-      const customHp = customHandpansCache.find(hp => hp.id === id);
-      if (customHp) {
-        applyCustomHandpan(customHp);
-        if (currentUser) {
-          await supabase.from('user_handpans').update({ is_active: false }).eq('user_id', currentUser.id);
-          await supabase.from('user_handpans').update({ is_active: true }).eq('id', id);
-        }
-      }
-      return;
-    }
+  handpanColorSelect?.addEventListener('change', async () => {
+    const val = handpanColorSelect.value;
     if (val === 'Bronze') {
       lastStandardModel = 'Bronze';
-      handpanImg.src = `./assets/images/${HANDPAN_IMG_BRONZE}`;
+      handpanImg.src = `${BASE_PATH}assets/images/${HANDPAN_IMG_BRONZE}`;
       handpanImg.style.transform = '';
       HANDPAN_MAP = HANDPAN_MAP_BRONZE;
     } else if (val === 'Sketch') {
       lastStandardModel = 'Sketch';
-      handpanImg.src = `./assets/images/${HANDPAN_IMG_SKETCH_EMPTY}`;
+      handpanImg.src = `${BASE_PATH}assets/images/${HANDPAN_IMG_SKETCH_EMPTY}`;
       handpanImg.style.transform = '';
       HANDPAN_MAP = HANDPAN_MAP_SKETCH;
     }
-    checkNumberPitchSelection();
+    updateLabelStyles();
     buildHandpanOverlay();
   });
 
   numberPitchSelect?.addEventListener('change', async () => {
     const val = numberPitchSelect.value;
     localStorage.setItem('handpanLabelPref', val);
-    if (typeof updateUserLabelPreference === 'function') updateUserLabelPreference(val);
-    checkNumberPitchSelection();
+    updateUserLabelPreference(val);
+    syncStateFromStorage();
     buildHandpanOverlay();
-    if (typeof renderAllMeasures === 'function') renderAllMeasures();
+    renderAllMeasures();
   });
 
   ghostBtn?.addEventListener('click', () => {
@@ -1036,6 +1277,8 @@ export function initHandpanMap() {
     hpSettingsInitial.style.display = 'block';
   });
 
+  attachCreationListeners();
+
   // Tab Manager logic
   const tabs = document.querySelectorAll('.tab-btn');
   const panes = document.querySelectorAll('.tab-pane');
@@ -1057,25 +1300,68 @@ export function initHandpanMap() {
 
   // Final initial calls
   registerHighlighter(highlightHandpan);
-  buildHandpanOverlay();
-  loadAllUserHandpans();
 
-  const savedLabelPref = localStorage.getItem('handpanLabelPref');
-  if (savedLabelPref && numberPitchSelect) {
-    numberPitchSelect.value = savedLabelPref;
-    checkNumberPitchSelection();
+  // Build scale selection dropdown
+  if (currentUser) {
+    loadAllUserCustomHandpans();
+  } else {
+    buildScaleSelect();
   }
+
+  buildHandpanOverlay();
+
+  // Load handpan side preference
+  const savedHandpanSide = localStorage.getItem('gp_handpanSide');
+  if (savedHandpanSide) {
+    currentHandpanSide = savedHandpanSide;
+    toggleHandpanSide();
+  }
+
+  // Load label preference
+  syncStateFromStorage();
 
   if (loadScaleLocal && scaleSelect) {
     let saved = loadScaleLocal();
     if (saved) {
       const exists = Array.from(scaleSelect.options).some(o => o.value === saved);
       if (exists || saved.startsWith('custom:')) {
+        if (saved.startsWith('custom:')) {
+          const id = saved.split(':')[1];
+          const customHp = customHandpansCache.find(hp => hp.id === id);
+          if (customHp) {
+            saved = customHp.name;
+          }
+        }
         scaleSelect.value = saved;
-        scaleSelect.dispatchEvent(new Event('change'));
+        // scaleSelect.dispatchEvent(new Event('change'));
+        console.log('Selected scale:', saved);
       }
     }
   }
 
   window.dispatchEvent(new Event('handpan-loaded'));
+}
+
+function buildScaleSelect() {
+  console.log('Building scale select');
+  if (!scaleSelect) return;
+  scaleSelect.innerHTML = '';
+  for (const name of Object.keys(SCALES)) {
+    const opt = document.createElement('option');
+    opt.value = name;
+    opt.textContent = name;
+    scaleSelect.appendChild(opt);
+  }
+}
+
+export async function initScale() {
+  let name = null;
+
+  if (currentUser) name = await loadScaleRemote();
+  if (!name) name = loadScaleLocal();
+  if (!name) name = Object.keys(SCALES)[0];
+
+  setSelectedScaleName(name);
+
+  await preloadScaleSamples();
 }

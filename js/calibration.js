@@ -60,12 +60,41 @@ export async function enterCalibrationMode(handpanData, onDone = null) {
 
   currentHandpanData = handpanData;
   currentHandpanId = handpanData.id;
+  currentHandpanId = handpanData.id;
   currentNoteMap = handpanData.note_map || [];
+  currentCalibrationSide = 'top'; // Reset
 
   // Reset UI
   if (calHandpanName) calHandpanName.textContent = `Calibrating: ${handpanData.name}`;
 
-  // Resize container to match image aspect ratio
+  // Helper to load image
+  loadCalibrationImage(handpanData.top_image_url);
+
+  // Show/Hide Flip Button
+  const flipBtn = document.getElementById('calFlipBtn');
+  if (flipBtn) {
+    flipBtn.style.display = handpanData.bottom_image_url ? 'block' : 'none';
+    flipBtn.onclick = () => toggleCalibrationSide();
+  }
+}
+
+let currentCalibrationSide = 'top';
+
+function toggleCalibrationSide() {
+  if (!currentHandpanData || !currentHandpanData.bottom_image_url) return;
+
+  // Save current selection before flip?
+  selectTonefield(null);
+
+  currentCalibrationSide = (currentCalibrationSide === 'top') ? 'bottom' : 'top';
+
+  const imgUrl = (currentCalibrationSide === 'top') ? currentHandpanData.top_image_url : currentHandpanData.bottom_image_url;
+  loadCalibrationImage(imgUrl);
+
+  renderTonefields();
+}
+
+function loadCalibrationImage(src) {
   if (calHandpanImage) {
     calHandpanImage.onload = function () {
       const ratio = this.naturalHeight / this.naturalWidth;
@@ -90,10 +119,10 @@ export async function enterCalibrationMode(handpanData, onDone = null) {
       container.style.height = `${h}px`;
     };
 
-    calHandpanImage.src = handpanData.top_image_url;
+    calHandpanImage.src = src;
 
     // Apply Image Rotation
-    const imgRot = handpanData.image_rotation || 0;
+    const imgRot = currentHandpanData.image_rotation || 0;
     calHandpanImage.style.transform = `rotate(${imgRot}deg)`;
     if (calImgRotInput) calImgRotInput.value = imgRot;
     if (valImgRot) valImgRot.textContent = imgRot + '°';
@@ -113,7 +142,10 @@ function renderTonefields() {
   if (!calTonefieldsLayer) return;
   calTonefieldsLayer.innerHTML = '';
   currentNoteMap.forEach((tf, index) => {
-    createTonefieldDOM(tf, index);
+    const side = tf.side || 'top';
+    if (side === currentCalibrationSide) {
+      createTonefieldDOM(tf, index);
+    }
   });
 }
 
@@ -357,7 +389,8 @@ export function initCalibration() {
       rotation: 0,
       note: CAL_PITCHES[nextPitchIndex],
       octave: nextOctave,
-      assignedNumber: nextNum
+      assignedNumber: nextNum,
+      side: currentCalibrationSide
     };
 
     currentNoteMap.push(newTf);

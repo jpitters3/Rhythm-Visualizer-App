@@ -23,7 +23,7 @@ import { initMeasureActions } from './measure-actions.js';
 import { HistoryManager } from './history.js';
 import ChordUI from './chord-ui.js';
 import { initPOTW } from './pattern-of-the-week.js';
-import { initHandpanMap } from './handpanmap.js';
+import { initHandpanMap, initScale } from './handpanmap.js';
 import { initTranscription } from './transcription.js';
 import { initAiAssistant } from './ai-assistant.js';
 import { initCalibration } from './calibration.js';
@@ -38,10 +38,11 @@ async function init() {
   console.log('--- APP INIT START ---');
 
   try {
-    // 1. Auth (Must be first for currentProfile/currentUser dependent modules)
+    // 1. Auth
     await initAuth();
 
     // 2. Core UI/Logic
+    await initScale();
     initMobileMenu();
     initMeasureActions();
     initPresentation();

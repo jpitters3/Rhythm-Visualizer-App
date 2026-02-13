@@ -72,6 +72,29 @@
     --upbeat-color: #7fa67a;
   } */
 
+.hp-label {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  color: white;
+  font-weight: bold;
+  pointer-events: none;
+  text-shadow: 4px 4px 4px black;
+  z-index: 10;
+  transition: color 0.2s, text-shadow 0.2s;
+}
+
+[data-model="Sketch"] .hp-label {
+  color: black;
+  text-shadow: none;
+}
+
+[data-model="Bronze"] .hp-label {
+  color: white;
+  text-shadow: 4px 4px 4px black;
+}
+
 .hp-dot {
   position: absolute;
   /* Visuals moved to ::after to isolate transform/scale */
@@ -80,6 +103,7 @@
   border-radius: 50%;
   pointer-events: auto;
   cursor: pointer;
+  font-size: 24px;
 }
 
 /* The visual representation */
@@ -163,6 +187,30 @@ span.note-label {
 
 span.note-label.light-text {
   color: white;
+}
+
+/* Other Side (Ghost) Notes */
+.hp-dot.other-side {
+  z-index: 10;
+  /* Ensure on top? Or below? Maybe below main notes if overlap */
+}
+
+.hp-dot.other-side::after {
+  border-style: dashed;
+  border-color: rgba(255, 255, 255, 0.4);
+  background: rgba(0, 0, 0, 0.2);
+  opacity: 0.6;
+}
+
+body:not(.dark) .hp-dot.other-side::after {
+  border-color: rgba(0, 0, 0, 0.3);
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.hp-dot.other-side.active::after {
+  /* Still light up but keep dashed? */
+  border-style: solid;
+  opacity: 1;
 }
 
 /* Calibration */

@@ -310,7 +310,7 @@
 
             <div class="setting-row">
               <label>Color:</label>
-              <select id="handpanSelect" title="Choose your handpan color">
+              <select id="handpanColorSelect" title="Choose your handpan color">
                 <option value="Bronze">Bronze</option>
                 <option value="Sketch">Sketch</option>
               </select>
@@ -357,7 +357,7 @@
               style="margin-top: 10px; border-top: 1px solid var(--panel-border); padding-top: 10px;">
               <button id="buildScaleBtn" class="primary-btn small-btn"
                 style="width:100%; background: linear-gradient(135deg, #6366f1, #8b5cf6); border:none; color:white;">Build
-                My Own Scale</button>
+                Custom Scale</button>
             </div>
           </div>
 
@@ -377,6 +377,11 @@
               <input type="file" id="hpTopImage" accept="image/*">
             </label>
 
+            <label class="file-upload-label">
+              <span>Bottom Image (Optional)</span>
+              <input type="file" id="hpBottomImage" accept="image/*">
+            </label>
+
             <button id="saveNewHandpanBtn" class="primary-btn small-btn" style="margin-top:5px;">Next:
               Calibrate</button>
           </div>
@@ -388,9 +393,16 @@
           <div id="lockBtn" class="lock-btn" style="display:none;">
             <img id="lockBtnImg" src="./assets/images/lock.png" alt="Lock handpan" />
           </div>
+          <button id="flipSideBtn" class="flip-btn" style="display:none;" title="Flip to Bottom">🔄</button>
           <img id="handpanImg" class="handpan-img" src="./assets/images/handpan-for-groovepan.png"
             alt="Handpan note layout" />
           <div class="handpan-overlay" id="handpanOverlay"></div>
+        </div>
+
+        <!-- DUAL VIEW: BOTTOM WRAP -->
+        <div class="handpan-wrap" id="handpanWrapBottom" style="display:none; margin-top: 5px;">
+          <img id="handpanImgBottom" class="handpan-img" src="" alt="Handpan Bottom" />
+          <div class="handpan-overlay" id="handpanOverlayBottom"></div>
         </div>
         <div id="ghostNoteSection" class="under-handpan">
           <button id="ghostBtn"><img src="./assets/images/ghost.png" /></button>
@@ -850,6 +862,7 @@
         <span class="cal-status" id="calSaveStatus">All changes saved</span>
       </div>
       <div class="cal-actions">
+        <button id="calFlipBtn" class="secondary-btn" style="margin-right:8px;">Flip View</button>
         <button id="addTonefieldBtn" class="primary-btn">＋ Add Tonefield</button>
         <button id="calDoneBtn" class="secondary-btn">Done</button>
       </div>

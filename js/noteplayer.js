@@ -6,7 +6,7 @@ import { currentUser, activeGrid, setActiveGrid } from './state.js';
 import { HistoryManager } from './history.js';
 import { TransportRegistry } from './transport-ui.js';
 import { isListening, getSelectedScaleName, setSelectedScaleName, getScale, setCurrentScale } from './state.js';
-import { SCALE_KEY_LOCAL, SCALE_KEY_REMOTE, SCALES, AUDIO_DELAY } from './config.js';
+import { SCALE_KEY_LOCAL, SCALE_KEY_REMOTE, AUDIO_DELAY, BASE_PATH } from './config.js';
 import { renderAllMeasures } from './notegrid.js';
 import { coachingSession, isCoaching } from './coaching-mode.js';
 
@@ -20,25 +20,8 @@ let tickObservers = [];
 export function registerHighlighter(fn) { highlighterFn = fn; }
 export function addTickObserver(fn) { tickObservers.push(fn); }
 
-// UNIFIED SCALE STATE - Moved to state.js
-// let currentScale = ...;
-
-const scaleSelect = document.getElementById('scaleSelect');
-const scaleStatus = document.getElementById('scaleStatus');
-
 let countdownRemaining = 0;
 const COUNTDOWN_LENGTH = 4; // 4 steps
-
-function buildScaleSelect() {
-  if (!scaleSelect) return;
-  scaleSelect.innerHTML = '';
-  for (const name of Object.keys(SCALES)) {
-    const opt = document.createElement('option');
-    opt.value = name;
-    opt.textContent = name;
-    scaleSelect.appendChild(opt);
-  }
-}
 
 export function noteForLabel(label) {
   // 1. Common Sounds
@@ -67,39 +50,6 @@ function noteToFile(note) {
   if (!note) return '';
   return note.replace('#', 's') + '.wav';
 }
-
-/* ==== Save and load scales locally and in db ==== */
-
-export function saveScaleLocal(name) {
-  localStorage.setItem(SCALE_KEY_LOCAL, name);
-}
-export function loadScaleLocal() {
-  return localStorage.getItem(SCALE_KEY_LOCAL);
-}
-
-export async function saveScaleRemote(name) {
-  if (!currentUser) return;
-  if (!supabase) return;
-
-  await supabase.from('profiles').upsert(
-    { user_id: currentUser.id, handpan_scale: name },
-    { onConflict: 'user_id' }
-  );
-}
-
-export async function loadScaleRemote() {
-  if (!currentUser) return null;
-  if (!supabase) return null;
-
-  const { data, error } = await supabase
-    .from('profiles')
-    .select('handpan_scale')
-    .eq('user_id', currentUser.id)
-    .maybeSingle();
-  if (error) return null;
-  return data?.handpan_scale || null;
-}
-
 
 /* Player Functionality */
 
@@ -177,7 +127,7 @@ export async function preloadScaleSamples() {
   const notes = new Set([(s.ding || 'D3') + '_ding', ...Object.values(s.map)]);
   for (const n of notes) {
     let note = noteToFile(n); // includes .wav extension
-    try { await loadSample(n, `./assets/audio/${note}`); }
+    try { await loadSample(n, `${BASE_PATH}assets/audio/${note}`); }
     catch (e) {
       // console.log(`Error loading sample [${note}]: ${e}`); 
     }
@@ -188,8 +138,8 @@ export async function preloadScaleSamples() {
 function preloadAudioSamples() {
   if (!samplesPreloaded && audioCtx) {
     samplesPreloaded = true;
-    loadSample(SOUND_TAK, './assets/audio/dkurd_tak.wav');
-    loadSample(SOUND_SLAP, './assets/audio/dkurd_slap.wav');
+    loadSample(SOUND_TAK, `${BASE_PATH}assets/audio/dkurd_tak.wav`);
+    loadSample(SOUND_SLAP, `${BASE_PATH}assets/audio/dkurd_slap.wav`);
     preloadScaleSamples();
   }
 }
@@ -612,9 +562,6 @@ export function getAudioCtx() { return audioCtx; }
 
 // ===== INITIALIZATION =====
 export function initNotePlayer() {
-  // Build scale selection dropdown
-  buildScaleSelect();
-
   // Attach time signature input listeners
   tsNumInput?.addEventListener('change', updateTimeSignatureFromInputs);
   tsDenInput?.addEventListener('change', updateTimeSignatureFromInputs);

@@ -1,8 +1,9 @@
-import { ADMIN_EMAILS, SCALES } from './config.js';
-import { loadScaleRemote, loadScaleLocal, preloadScaleSamples } from './noteplayer.js';
+import { ADMIN_EMAILS, SCALE_KEY_LOCAL, SCALES } from './config.js';
+import { preloadScaleSamples } from './noteplayer.js';
 import { supabase } from './supabase-client.js';
 import { Bus, BUS_EVENT } from './bus.js';
 import { currentUser, setCurrentUser, setSelectedScaleName, isAdminUser } from './state.js';
+import { loadScaleRemote, loadScaleLocal } from './handpanmap.js';
 
 export async function isAuthed() {
   if (typeof supabase === 'undefined' || !supabase.auth) return false;
@@ -213,8 +214,11 @@ export function updateAccountUI() {
   }
 }
 
-// ... (SKIP TO LISTENERS) ... until initScale() call
-// We need to add listener for authBtn
+async function logout() {
+  await supabase.auth.signOut();
+  Bus.emit(BUS_EVENT.AUTH_LOGOUT);
+  window.location.reload();
+}
 
 let authInitDone = false;
 
@@ -224,19 +228,29 @@ export async function initAuthSession() {
 
   if (!supabase) return;
 
-  // Subscribe ONCE
+  // 1. Initial Synchronous Check (to block init)
+  const { data } = await supabase.auth.getUser();
+  setCurrentUser(data?.user ?? null);
+  updateAccountUI();
+  updateAdminUI();
+
+  if (currentUser) {
+    Bus.emit(BUS_EVENT.AUTH_LOGIN, { user: currentUser });
+  }
+
+  // 2. Subscribe for future changes
   supabase.auth.onAuthStateChange(async (event, session) => {
     // Ensure accurate global state
+    const prevUser = currentUser;
     setCurrentUser(session?.user ?? null);
-    setCurrentUser(currentUser);
 
     updateAccountUI();
     updateAdminUI();
 
-    if (currentUser) {
+    if (currentUser && !prevUser) {
       Bus.emit(BUS_EVENT.AUTH_LOGIN, { user: currentUser });
-    } else {
-      Bus.emit(BUS_EVENT.AUTH_LOGOUT);
+    } else if (!currentUser && prevUser) {
+      logout();
     }
 
     // IMPORTANT: never await Supabase calls inside this callback directly to avoid blocking.
@@ -245,33 +259,12 @@ export async function initAuthSession() {
         // Emit events instead of dynamic imports
         Bus.emit(BUS_EVENT.PATTERN_REFRESH_NEEDED);
         Bus.emit(BUS_EVENT.PROFILE_LOAD_NEEDED);
-        Bus.emit(BUS_EVENT.HANDPANS_LOAD_NEEDED);
-
-        window.dispatchEvent(new Event('handpan-loaded'));
       } catch (e) {
         console.warn('Post-auth refresh failed:', e);
       }
     }, 500);
   });
 }
-
-
-async function initScale() {
-  let name = null;
-
-  if (currentUser) name = await loadScaleRemote();
-  if (!name) name = loadScaleLocal();
-  if (!name || !SCALES[name]) name = Object.keys(SCALES)[0];
-
-  setSelectedScaleName(name); // Use exported setter
-  const scaleSelect = document.getElementById('scaleSelect');
-  const scaleStatus = document.getElementById('scaleStatus');
-  if (scaleSelect) scaleSelect.value = name;
-  if (scaleStatus) scaleStatus.textContent = `Scale: ${name} `;
-
-  await preloadScaleSamples();
-}
-
 
 export async function initAuth() {
   // Elements
@@ -340,8 +333,7 @@ export async function initAuth() {
   });
 
   authLogoutDropdown?.addEventListener('click', async () => {
-    await supabase.auth.signOut();
-    Bus.emit(BUS_EVENT.AUTH_LOGOUT);
+    logout();
   });
 
   authUpdatePasswordBtn?.addEventListener('click', async () => {
@@ -398,9 +390,7 @@ export async function initAuth() {
     closeAuthModal();
 
     Bus.emit(BUS_EVENT.AUTH_LOGIN, { user: currentUser });
-
     Bus.emit(BUS_EVENT.PATTERN_REFRESH_NEEDED);
-    initScale();
   });
 
   authForgotPassword?.addEventListener('click', async () => {
@@ -503,11 +493,10 @@ export async function initAuth() {
   });
 
   authLogout?.addEventListener('click', async () => {
-    await supabase.auth.signOut();
-    Bus.emit(BUS_EVENT.AUTH_LOGOUT);
+    logout();
   });
 
   // Initialization calls
   await initAuthSession();
-  await initScale();
+
 }
