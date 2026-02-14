@@ -207,21 +207,6 @@ export function initPresentation() {
     });
   }
 
-  if (localStorage.getItem(PRESENT_KEY) === 'on') {
-    // Restore UI state immediately
-    document.body.classList.add('present');
-    const btn = document.getElementById('presentBtn');
-    if (btn) btn.classList.add('active');
-    const exit = document.getElementById('exitPresent');
-    if (exit) exit.style.display = 'inline-flex';
-
-    // Force initial render
-    document.body.classList.toggle('mode-stream', presentationViewMode === 'stream');
-    document.body.classList.toggle('mode-measure', presentationViewMode === 'measure');
-    updatePresentationView(0, gridA);
-    animatePresentation();
-  }
-
   // Subscribe to Tick to sync View (ONLY for Measure Mode)
   addTickObserver((ctx, notes, hands) => {
     if (ctx && ctx.id === 'A') {
@@ -641,6 +626,7 @@ function drawHighway(ctx) {
   const centerX = w / 2;
 
   const totalSteps = ctx.cells.length;
+  if (totalSteps === 0) return; // Defensive: DOM not ready
 
   streamCtx.save();
   streamCtx.clearRect(0, 0, w, h);
@@ -683,6 +669,8 @@ function drawHighway(ctx) {
     const x = centerX + (j * stepWidth) - (currentTotalStep * stepWidth);
 
     const cell = ctx.cells[i];
+    if (!cell) continue; // Defensive guard
+
     const isMeasureStart = (i % ctx.stepsPerMeasure === 0);
 
     // 4a. Lines (Measure/Step)
