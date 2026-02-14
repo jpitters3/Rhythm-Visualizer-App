@@ -522,10 +522,14 @@
             <button id="dashSparksBtn" class="dash-pill active">✨ Sparks</button>
             <button id="dashTrailsBtn" class="dash-pill active">☄️ Trails</button>
             <button id="dashGlowBtn" class="dash-pill active">🌟 Pulse</button>
-            <div class="dash-separator" style="width:1px; background:rgba(255,255,255,0.2); margin:0 4px;"></div>
-            <button id="dashTronBtn" class="dash-pill">💠 Tron</button>
-            <button id="dashNatureBtn" class="dash-pill">🌿 Nature</button>
+            <button id="dashTronBtn" class="dash-pill" title="Tron World">💠 Tron</button>
+            <button id="dashNatureBtn" class="dash-pill" title="Nature World">🌿 Nature</button>
+            <button id="dashSkyBtn" class="dash-pill" title="Sky World (Video)">☁️ Sky</button>
           </div>
+          <!-- Sky Video Selector (Hidden by default) -->
+          <select id="skyBackgroundSelect" class="dash-dropdown" style="display:none; margin-top:10px; width:100%;">
+            <option value="" disabled selected>Select Wallpaper...</option>
+          </select>
         </div>
       </div>
     </div>
@@ -1056,6 +1060,9 @@
   </script>
   <!-- External Dependencies (MIDI Parser) -->
   <script src="https://cdn.jsdelivr.net/npm/midi-parser-js@4.0.4/src/main.min.js"></script>
+
+  <!-- Background List (Auto-generated) -->
+  <script src="js/background-list.js"></script>
 
   <!-- Vite Entry Point -->
   <script type="module" src="/main.js"></script>

@@ -369,15 +369,50 @@ function initDashboard() {
     // 2. Update UI Buttons
     if (tronBtn) tronBtn.classList.toggle('active', world === 'tron');
     if (natureBtn) natureBtn.classList.toggle('active', world === 'nature');
+    const skyBtn = document.getElementById('dashSkyBtn');
+    if (skyBtn) skyBtn.classList.toggle('active', world === 'sky');
 
     // 3. Update DOM Classes
     const streamView = document.getElementById('stream-view');
     if (streamView) {
-      streamView.classList.remove('tron-mode', 'nature-mode');
+      streamView.classList.remove('tron-mode', 'nature-mode', 'sky-mode');
 
       // Cleanup old wave layers if existing
       const oldWave = streamView.querySelector('.wave-layer-2');
       if (oldWave) oldWave.remove();
+
+      // Video Background Management
+      let videoBg = document.getElementById('sky-video-bg');
+
+      if (world === 'sky') {
+        streamView.classList.add('sky-mode');
+
+        const lastBg = localStorage.getItem('rhythm_visualizer_last_bg');
+        const videoSrc = lastBg ? `assets/backgrounds/${lastBg}` : 'assets/backgrounds/sky.mp4';
+
+        if (!videoBg) {
+          videoBg = document.createElement('video');
+          videoBg.id = 'sky-video-bg';
+          videoBg.src = videoSrc;
+          videoBg.autoplay = true;
+          videoBg.loop = true;
+          videoBg.muted = true;
+          videoBg.playsInline = true;
+          streamView.insertBefore(videoBg, streamView.firstChild);
+        } else {
+          if (!videoBg.src.endsWith(videoSrc)) {
+            videoBg.src = videoSrc;
+          }
+          if (videoBg.paused) videoBg.play().catch(e => { });
+          videoBg.style.display = 'block';
+        }
+      } else {
+        // Pause and hide video if not in sky mode to save resources
+        if (videoBg) {
+          videoBg.pause();
+          videoBg.style.display = 'none';
+        }
+      }
 
       if (world === 'tron') {
         streamView.classList.add('tron-mode');
@@ -392,7 +427,10 @@ function initDashboard() {
 
   // Init
   const savedWorld = localStorage.getItem('aesthetic_world') || 'none';
-  setWorld(savedWorld);
+  // Delay slightly to ensure DOM is fully parsed and stream-view is ready
+  setTimeout(() => {
+    setWorld(savedWorld);
+  }, 100);
 
   // Bind Clicks to Toggle (Clicking active turns it off)
   if (tronBtn) {
@@ -400,6 +438,48 @@ function initDashboard() {
   }
   if (natureBtn) {
     natureBtn.onclick = () => setWorld(Aesthetics.world === 'nature' ? 'none' : 'nature');
+  }
+
+  const skyBtn = document.getElementById('dashSkyBtn');
+  if (skyBtn) {
+    skyBtn.onclick = () => setWorld(Aesthetics.world === 'sky' ? 'none' : 'sky');
+  }
+
+  // Populate Video Dropdown
+  const skySelect = document.getElementById('skyBackgroundSelect');
+  if (skySelect && window.VIDEO_BACKGROUNDS) {
+    skySelect.style.display = 'block'; // Make visible generic
+    skySelect.innerHTML = '<option value="" disabled selected>Select Wallpaper...</option>';
+
+    window.VIDEO_BACKGROUNDS.forEach(bg => {
+      const opt = document.createElement('option');
+      opt.value = bg.filename;
+      opt.textContent = bg.displayName;
+      skySelect.appendChild(opt);
+    });
+
+    // Handle Selection
+    skySelect.onchange = (e) => {
+      const filename = e.target.value;
+      if (filename) {
+        // Update the video source if element exists, or just set world
+        const videoBg = document.getElementById('sky-video-bg');
+        if (videoBg) {
+          videoBg.src = `assets/backgrounds/${filename}`;
+          videoBg.play().catch(e => console.log(e));
+        }
+        // Save preference
+        localStorage.setItem('rhythm_visualizer_last_bg', filename);
+        // Force switch to Sky mode
+        setWorld('sky');
+      }
+    };
+
+    // Restore last selected video
+    const lastBg = localStorage.getItem('rhythm_visualizer_last_bg');
+    if (lastBg) {
+      skySelect.value = lastBg;
+    }
   }
 
   // Periodic UI update (for state changes initiated elsewhere)
@@ -544,11 +624,11 @@ function drawHighway(ctx) {
   const handRCol = isDark ? '#fd0380' : '#610a42';
   const handLCol = isDark ? 'rgb(30, 121, 232)' : 'rgb(2, 68, 150)';
 
-  // Glassmorphism for Nature Mode
+  // Glassmorphism for Nature & Sky Mode
   let cellBgCol = isDark ? '#222233' : '#ffffff';
   let isGlass = false;
 
-  if (Aesthetics.world === 'nature') {
+  if (Aesthetics.world === 'nature' || Aesthetics.world === 'sky') {
     cellBgCol = 'rgba(255, 255, 255, 0.1)'; // Frosted glass base
     isGlass = true;
   }

@@ -704,6 +704,39 @@ body.present.mode-stream .stream-view {
 }
 
 /* =========================================
+   STREAM BACKGROUNDS (Sky Mode - Video)
+   ========================================= */
+#stream-view.sky-mode {
+  overflow: hidden;
+  /* Fallback Gradient if video fails */
+  background: linear-gradient(to bottom, #87CEEB, #E0F7FA);
+}
+
+#sky-video-bg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: -5;
+  opacity: 0.8;
+  /* Slight fade to keep UI readable */
+  pointer-events: none;
+}
+
+/* Atmosphere Overlay for Sky Mode */
+#stream-view.sky-mode::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -4;
+  /* Subtle vignetting to frame the center */
+  background: radial-gradient(circle at center, transparent 30%, rgba(255, 255, 255, 0.2) 100%);
+  pointer-events: none;
+}
+
+/* =========================================
    STREAM BACKGROUNDS (Nature Grid - Beach Theme)
    ========================================= */
 #stream-view.nature-mode {
