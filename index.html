@@ -517,18 +517,17 @@
 
         <!-- Aesthetics -->
         <div class="dashboard-section">
-          <label>Immersive Aesthetics</label>
-          <div class="dash-aesthetic-grid">
+          <label>Animations</label>
+          <div id="dashAtmosphereButtons" class="dash-aesthetic-grid">
             <button id="dashSparksBtn" class="dash-pill active">✨ Sparks</button>
             <button id="dashTrailsBtn" class="dash-pill active">☄️ Trails</button>
             <button id="dashGlowBtn" class="dash-pill active">🌟 Pulse</button>
-            <button id="dashTronBtn" class="dash-pill" title="Tron World">💠 Tron</button>
-            <button id="dashNatureBtn" class="dash-pill" title="Nature World">🌿 Nature</button>
-            <button id="dashSkyBtn" class="dash-pill" title="Sky World (Video)">☁️ Sky</button>
+            <!-- Dynamic Category Buttons will be injected here -->
           </div>
-          <!-- Sky Video Selector (Hidden by default) -->
-          <select id="skyBackgroundSelect" class="dash-dropdown" style="display:none; margin-top:10px; width:100%;">
-            <option value="" disabled selected>Select Wallpaper...</option>
+          <!-- Atmosphere Selector -->
+          <label>Atmosphere</label>
+          <select id="aestheticWorldSelect" class="dash-dropdown" style="display:none; margin-top:10px; width:100%;">
+            <option value="" disabled selected>Select Atmosphere...</option>
           </select>
         </div>
       </div>

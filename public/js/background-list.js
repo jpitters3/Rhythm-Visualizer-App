@@ -3,11 +3,18 @@
 
 window.VIDEO_BACKGROUNDS = [
   {
-    "filename": "aurora.mp4",
+    "filename": "nature-waterfall.mp4",
+    "category": "Nature",
+    "displayName": "Waterfall"
+  },
+  {
+    "filename": "sky-aurora.mp4",
+    "category": "Sky",
     "displayName": "Aurora"
   },
   {
-    "filename": "sky.mp4",
-    "displayName": "Sky"
+    "filename": "sky-plane.mp4",
+    "category": "Sky",
+    "displayName": "Plane"
   }
 ];

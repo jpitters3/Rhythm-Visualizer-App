@@ -13,7 +13,7 @@ let lastMeasureIndex = -1;
 let presentBtn, exitPresent;
 
 // View State
-let presentationViewMode = 'stream'; // 'measure' | 'stream'
+let presentationViewMode = localStorage.getItem(PRESENT_MODE_KEY) || 'measure'; // Default to measure for consistency
 let streamCanvas = null;
 let streamCtx = null;
 
@@ -117,7 +117,7 @@ function createBurst(x, y, color) {
 export async function setPresentation(on) {
   document.body.classList.toggle('present', on);
   // Get the default mode view from local storage
-  const defaultMode = localStorage.getItem(PRESENT_MODE_KEY || 'measure');
+  const defaultMode = localStorage.getItem(PRESENT_MODE_KEY) || 'measure';
   setPresentationMode(defaultMode);
   localStorage.setItem(PRESENT_KEY, on ? 'on' : 'off');
 
@@ -357,42 +357,68 @@ function initDashboard() {
   bindAesthetic('dashTrailsBtn', 'trails');
   bindAesthetic('dashGlowBtn', 'glow');
 
-  // === WORLD SELECTION (Mutually Exclusive) ===
-  const tronBtn = document.getElementById('dashTronBtn');
-  const natureBtn = document.getElementById('dashNatureBtn');
+  // === DYNAMIC WORLD & CATEGORY MANAGEMENT ===
+  const setWorld = (worldIdOrFilename) => {
+    // 1. Determine Category and Filename
+    let category = 'none';
+    let filename = null;
 
-  const setWorld = (world) => {
-    // 1. Update State
-    Aesthetics.world = world;
-    localStorage.setItem('aesthetic_world', world);
+    if (worldIdOrFilename === 'none') {
+      category = worldIdOrFilename;
+    } else if (worldIdOrFilename && worldIdOrFilename.endsWith('.mp4')) {
+      filename = worldIdOrFilename;
+      // Extract category from filename logic
+      const bg = window.VIDEO_BACKGROUNDS?.find(b => b.filename === filename);
+      category = bg ? bg.category.toLowerCase() : 'other';
+    } else {
+      // It's a category request (e.g. from a button)
+      category = worldIdOrFilename.toLowerCase();
+      // Load preference for this category or pick first
+      const prefFilename = localStorage.getItem(`gp_bg_${category}`);
+      if (prefFilename) {
+        filename = prefFilename;
+      } else {
+        const firstInCat = window.VIDEO_BACKGROUNDS?.find(b => b.category.toLowerCase() === category);
+        filename = firstInCat ? firstInCat.filename : null;
+      }
+    }
 
-    // 2. Update UI Buttons
-    if (tronBtn) tronBtn.classList.toggle('active', world === 'tron');
-    if (natureBtn) natureBtn.classList.toggle('active', world === 'nature');
-    const skyBtn = document.getElementById('dashSkyBtn');
-    if (skyBtn) skyBtn.classList.toggle('active', world === 'sky');
+    // 2. Update State
+    Aesthetics.world = category;
+    Aesthetics.filename = filename;
+    localStorage.setItem('aesthetic_world', category);
+    if (filename) localStorage.setItem(`gp_bg_${category}`, filename);
 
-    // 3. Update DOM Classes
+    // 3. Update UI Buttons & Dropdown Sync
+    const atmosphereBtnContainer = document.getElementById('dashAtmosphereButtons');
+    if (atmosphereBtnContainer) {
+      atmosphereBtnContainer.querySelectorAll('.dash-pill').forEach(btn => {
+        const btnId = btn.getAttribute('data-category');
+        if (btnId) btn.classList.toggle('active', btnId === category);
+      });
+    }
+
+    const worldSelect = document.getElementById('aestheticWorldSelect');
+    if (worldSelect) {
+      worldSelect.value = filename || category;
+    }
+
+    // 4. Update DOM Classes
     const streamView = document.getElementById('stream-view');
     if (streamView) {
-      streamView.classList.remove('tron-mode', 'nature-mode', 'sky-mode');
-
-      // Cleanup old wave layers if existing
-      const oldWave = streamView.querySelector('.wave-layer-2');
-      if (oldWave) oldWave.remove();
+      // CSS-generated worlds
+      streamView.classList.remove('css-tron-mode', 'css-nature-mode', 'css-sky-mode', 'css-beach-mode');
 
       // Video Background Management
-      let videoBg = document.getElementById('sky-video-bg');
+      let videoBg = document.getElementById('video-bg');
 
-      if (world === 'sky') {
-        streamView.classList.add('sky-mode');
-
-        const lastBg = localStorage.getItem('rhythm_visualizer_last_bg');
-        const videoSrc = lastBg ? `assets/backgrounds/${lastBg}` : 'assets/backgrounds/sky.mp4';
+      if (filename) {
+        streamView.classList.add('video-mode');
+        const videoSrc = `assets/backgrounds/${filename}`;
 
         if (!videoBg) {
           videoBg = document.createElement('video');
-          videoBg.id = 'sky-video-bg';
+          videoBg.id = 'video-bg';
           videoBg.src = videoSrc;
           videoBg.autoplay = true;
           videoBg.loop = true;
@@ -406,81 +432,91 @@ function initDashboard() {
           if (videoBg.paused) videoBg.play().catch(e => { });
           videoBg.style.display = 'block';
         }
-      } else {
-        // Pause and hide video if not in sky mode to save resources
-        if (videoBg) {
-          videoBg.pause();
-          videoBg.style.display = 'none';
-        }
+      } else if (videoBg) {
+        videoBg.pause();
+        videoBg.style.display = 'none';
       }
 
-      if (world === 'tron') {
-        streamView.classList.add('tron-mode');
-      }
-
-      if (world === 'nature') {
-        streamView.classList.add('nature-mode');
-        // Simplified: Single organic layer as requested
-      }
+      if (category === 'css-tron') streamView.classList.add('css-tron-mode');
+      if (category === 'css-beach') streamView.classList.add('css-beach-mode');
+      if (category === 'css-sky') streamView.classList.add('css-sky-mode');
     }
   };
 
-  // Init
-  const savedWorld = localStorage.getItem('aesthetic_world') || 'none';
-  // Delay slightly to ensure DOM is fully parsed and stream-view is ready
-  setTimeout(() => {
-    setWorld(savedWorld);
-  }, 100);
+  // Populate Dynamic Atmosphere UI
+  const atmosphereBtnContainer = document.getElementById('dashAtmosphereButtons');
+  const worldSelect = document.getElementById('aestheticWorldSelect');
 
-  // Bind Clicks to Toggle (Clicking active turns it off)
-  if (tronBtn) {
-    tronBtn.onclick = () => setWorld(Aesthetics.world === 'tron' ? 'none' : 'tron');
-  }
-  if (natureBtn) {
-    natureBtn.onclick = () => setWorld(Aesthetics.world === 'nature' ? 'none' : 'nature');
-  }
+  if (window.VIDEO_BACKGROUNDS) {
+    // 1. Identify Unique Categories
+    const categories = new Set();
+    window.VIDEO_BACKGROUNDS.forEach(bg => categories.add(bg.category));
 
-  const skyBtn = document.getElementById('dashSkyBtn');
-  if (skyBtn) {
-    skyBtn.onclick = () => setWorld(Aesthetics.world === 'sky' ? 'none' : 'sky');
-  }
+    // 2. Generate Buttons
+    if (atmosphereBtnContainer) {
+      // Static ones first
+      const createBtn = (cat, label, icon) => {
+        const btn = document.createElement('button');
+        btn.className = 'dash-pill';
+        btn.setAttribute('data-category', cat.toLowerCase());
+        btn.textContent = `${icon} ${label}`;
+        btn.onclick = () => setWorld(cat.toLowerCase());
+        atmosphereBtnContainer.appendChild(btn);
+        return btn;
+      };
 
-  // Populate Video Dropdown
-  const skySelect = document.getElementById('skyBackgroundSelect');
-  if (skySelect && window.VIDEO_BACKGROUNDS) {
-    skySelect.style.display = 'block'; // Make visible generic
-    skySelect.innerHTML = '<option value="" disabled selected>Select Wallpaper...</option>';
+      createBtn('none', 'None', '');
 
-    window.VIDEO_BACKGROUNDS.forEach(bg => {
-      const opt = document.createElement('option');
-      opt.value = bg.filename;
-      opt.textContent = bg.displayName;
-      skySelect.appendChild(opt);
-    });
-
-    // Handle Selection
-    skySelect.onchange = (e) => {
-      const filename = e.target.value;
-      if (filename) {
-        // Update the video source if element exists, or just set world
-        const videoBg = document.getElementById('sky-video-bg');
-        if (videoBg) {
-          videoBg.src = `assets/backgrounds/${filename}`;
-          videoBg.play().catch(e => console.log(e));
+      categories.forEach(cat => {
+        const lowerCat = cat.toLowerCase();
+        switch (lowerCat) {
+          case 'nature':
+            createBtn(cat, cat, '🌿');
+            break;
+          case 'sky':
+            createBtn(cat, cat, '☁️');
+            break;
+          default:
+            break;
         }
-        // Save preference
-        localStorage.setItem('rhythm_visualizer_last_bg', filename);
-        // Force switch to Sky mode
-        setWorld('sky');
-      }
-    };
+      });
+    }
 
-    // Restore last selected video
-    const lastBg = localStorage.getItem('rhythm_visualizer_last_bg');
-    if (lastBg) {
-      skySelect.value = lastBg;
+    // 3. Populate Dropdown (Grouped)
+    if (worldSelect) {
+      worldSelect.style.display = 'block';
+      let html = `<option value="none">None (Standard)</option>`;
+      html += `<optgroup label="Minimal">`;
+      html += `<option value="css-tron">Tron Grid</option>`;
+      html += `<option value="css-beach">Beach</option>`;
+      html += `<option value="css-sky">Sky</option>`;
+      html += `</optgroup>`;
+
+      // Grouped Video Backgrounds
+      categories.forEach(cat => {
+        html += `<optgroup label="${cat}">`;
+        window.VIDEO_BACKGROUNDS.filter(b => b.category === cat).forEach(bg => {
+          html += `<option value="${bg.filename}">${bg.displayName}</option>`;
+        });
+        html += `</optgroup>`;
+      });
+
+      worldSelect.innerHTML = html;
+      worldSelect.onchange = (e) => setWorld(e.target.value);
     }
   }
+
+  // Init
+  const savedWorld = localStorage.getItem('aesthetic_world') || 'none';
+  setTimeout(() => {
+    // Resolve initial filename if it's a category
+    if (savedWorld !== 'none' && savedWorld !== 'tron' && savedWorld !== 'nature') {
+      const pref = localStorage.getItem(`gp_bg_${savedWorld}`);
+      setWorld(pref || savedWorld);
+    } else {
+      setWorld(savedWorld);
+    }
+  }, 100);
 
   // Periodic UI update (for state changes initiated elsewhere)
   setInterval(() => {

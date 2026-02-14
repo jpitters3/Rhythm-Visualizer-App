@@ -591,6 +591,19 @@ body.present.mode-stream .stream-view {
   display: grid;
   grid-template-columns: 1fr;
   gap: 24px;
+  max-height: 80vh;
+  overflow-y: auto;
+  padding-right: 8px;
+}
+
+/* Custom Scrollbar for Dashboard */
+.dashboard-grid::-webkit-scrollbar {
+  width: 6px;
+}
+
+.dashboard-grid::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
 }
 
 .dashboard-section {
@@ -706,13 +719,13 @@ body.present.mode-stream .stream-view {
 /* =========================================
    STREAM BACKGROUNDS (Sky Mode - Video)
    ========================================= */
-#stream-view.sky-mode {
+#stream-view.css-sky-mode {
   overflow: hidden;
   /* Fallback Gradient if video fails */
   background: linear-gradient(to bottom, #87CEEB, #E0F7FA);
 }
 
-#sky-video-bg {
+#video-bg {
   position: absolute;
   top: 0;
   left: 0;
@@ -726,7 +739,7 @@ body.present.mode-stream .stream-view {
 }
 
 /* Atmosphere Overlay for Sky Mode */
-#stream-view.sky-mode::after {
+#stream-view.css-sky-mode::after {
   content: '';
   position: absolute;
   inset: 0;
@@ -739,14 +752,14 @@ body.present.mode-stream .stream-view {
 /* =========================================
    STREAM BACKGROUNDS (Nature Grid - Beach Theme)
    ========================================= */
-#stream-view.nature-mode {
+#stream-view.css-beach-mode {
   overflow: hidden;
   /* Ocean Gradient: Deep Blue (Far/Top) to Turquoise (Mid) */
   background: linear-gradient(to bottom, #054a91, #3E92CC, #a0dce4);
 }
 
 /* Single Smooth Organic Wave Layer */
-#stream-view.nature-mode::before {
+#stream-view.css-beach-mode::before {
   content: '';
   position: absolute;
   /* Reduced size to save GPU fill-rate (was 500%) */
@@ -777,8 +790,8 @@ body.present.mode-stream .stream-view {
 }
 
 /* Deprecated Layers (Removed from JS, creating CSS stubs to prevent errors if elements linger) */
-#stream-view.nature-mode .wave-layer-2,
-#stream-view.nature-mode .wave-layer-3 {
+#stream-view.css-beach-mode .wave-layer-2,
+#stream-view.css-beach-mode .wave-layer-3 {
   display: none;
 }
 
@@ -801,7 +814,7 @@ body.present.mode-stream .stream-view {
 }
 
 /* Sandy Shore + Atmosphere (Bottom Layer) */
-#stream-view.nature-mode::after {
+#stream-view.css-beach-mode::after {
   content: '';
   position: absolute;
   inset: 0;
