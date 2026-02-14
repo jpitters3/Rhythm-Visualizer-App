@@ -18,7 +18,7 @@ body {
 /* Comment this section to remove the background */
 body::after {
   content: "";
-  background-image: url('../assets/images/backgrounds/river_wallpaper.jpg');
+  background-image: url('../public/assets/images/backgrounds/river_wallpaper.jpg');
   background-repeat: repeat-y;
   background-attachment: scroll;
   /* Standard tiling within fixed container */
@@ -34,7 +34,7 @@ body::after {
 }
 
 body.dark::after {
-  background-image: url('../assets/images/backgrounds/starry-sky.jpg');
+  background-image: url('../public/assets/images/backgrounds/starry-sky.jpg');
 }
 
 h2 {
