@@ -184,10 +184,9 @@ export async function startCoachingSession(ctx = activeGrid) {
       console.log('Coaching Mode: Pattern loop detected');
 
       if (isLoopingEnabled) {
-        // Reset timing for new loop
+        // Timing stays synced via grid.audioStartTime (updated automatically by noteplayer)
         coachingSession.loopCount++;
-        coachingSession.actualStartTime = Date.now();
-        console.log(`Coaching Mode: Starting loop ${coachingSession.loopCount + 1}, timing reset`);
+        console.log(`Coaching Mode: Multi-loop active - Starting Loop ${coachingSession.loopCount + 1}`);
       } else {
         // Auto-stop when looping is disabled
         console.log('Coaching Mode: Pattern complete, auto-stopping (looping disabled)');
@@ -309,14 +308,15 @@ export function evaluateDetectedNote(detectedNote, stepIndex, actualTime) {
 
 function performEvaluation(detectedNote, stepIndex, actualTime, expected) {
   const ctx = activeGrid;
-  const AUDIO_DELAY_MS = AUDIO_DELAY * 1000;
   const msPerStep = intervalMs(ctx);
 
   // Apply User Timing Offset (Calibration)
-  // If user is consistently late (e.g. +50ms), we add 50ms to expected time to match them.
-  const expectedTime = coachingSession.actualStartTime + (stepIndex * msPerStep) + AUDIO_DELAY_MS + userTimingOffset;
-  console.log("Expected Time:", expectedTime);
-  console.log("Actual Time:", actualTime, "Audio Delay", AUDIO_DELAY_MS, "User Timing Offset:", userTimingOffset);
+  // Use the high-precision audio clock reference stored in the grid context
+  const audioStartMs = (ctx.audioStartTime || 0) * 1000;
+  const expectedTime = audioStartMs + (stepIndex * msPerStep) + userTimingOffset;
+
+  console.log("Expected Time (Audio Clock):", expectedTime);
+  console.log("Actual Time (Audio Clock):", actualTime, "User Timing Offset:", userTimingOffset);
 
   // Evaluate note
   const result = evaluateNote(detectedNote, expected.labels, {

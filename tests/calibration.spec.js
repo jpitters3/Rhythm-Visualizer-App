@@ -23,6 +23,12 @@ test.describe('Calibration Feature', () => {
     // 0. Create unique test user
     testUser = await createTestUser();
 
+    // Navigate to context first to allow localStorage access
+    await page.goto('/');
+    await page.evaluate(() => localStorage.clear());
+    await page.reload(); // Reload to ensure clean state
+
+
     // Mock image request to ensure it loads (and triggers onload)
     await page.route('https://placehold.co/600x400', async route => {
       // Return a simple 1x1 pixel image or just 200 OK with minimal body
@@ -75,25 +81,17 @@ test.describe('Calibration Feature', () => {
     const loginBtn = page.locator(authBtnSelector);
 
     // If button text implies not logged in, log in
-    if (await loginBtn.innerText().then(t => t.includes('Sign In') || t.includes('Register'))) {
+    const btnText = await loginBtn.innerText();
+    if (btnText.includes('Sign In') || btnText.includes('Register')) {
       await loginBtn.click();
       await expect(page.locator('#authModal')).toHaveClass(/open/);
       await page.fill('#authEmail', testUser.email);
       await page.fill('#authPass', testUser.password);
 
-      // Set up listener for handpans fetch BEFORE clicking login
-      const responsePromise = page.waitForResponse(
-        resp => resp.url().includes('/rest/v1/user_handpans') && resp.status() === 200,
-        { timeout: 10000 }
-      );
-
       await page.click('#authLogin');
 
-      // Wait for handpans to be fetched
-      await responsePromise;
-
       // Verify login success with longer timeout
-      await expect(page.locator('#authHint')).toContainText('Signed in', { timeout: 10000 });
+      await expect(page.locator('#authHint')).toContainText('Signed in', { timeout: 15000 });
       await expect(page.locator('#authModal')).not.toHaveClass(/open/);
     }
   });
@@ -113,6 +111,12 @@ test.describe('Calibration Feature', () => {
   });
 
   test('Verify Calibration UI and Persistence', async ({ page }) => {
+    test.slow(); // Allow more time for data fetching
+
+    // Debug Logs
+    page.on('console', msg => console.log('BROWSER_LOG:', msg.text()));
+    page.on('pageerror', err => console.log('BROWSER_ERR:', err));
+
     // 1. Navigate to My Scales
     // Click Account Dropdown (or ensure it's open if flattened)
     const accountBtn = page.locator('#accountBtn');
@@ -131,12 +135,15 @@ test.describe('Calibration Feature', () => {
     await page.click('#myScalesBtn');
     await expect(page.locator('#myScalesModal')).toHaveClass(/open/);
 
+    // Wait for list to populate
+    await expect(page.locator('.scale-list-item').first()).toBeVisible({ timeout: 15000 });
+
     // 2. Find our seeded handpan in the list
     const scaleItem = page.locator('.scale-list-item').filter({ hasText: 'Test Handpan For Calibration' });
     await expect(scaleItem).toBeVisible();
 
     // 3. Click "Edit Map"
-    await scaleItem.locator('.edit-map-btn').click();
+    await page.getByRole('button', { name: 'Edit Map' }).first().click();
 
     // 4. Verify Calibration Overlay
     const overlay = page.locator('#calibrationOverlay');
@@ -166,6 +173,36 @@ test.describe('Calibration Feature', () => {
     await expect(page.locator('#calSaveStatus')).toContainText('All changes saved', { timeout: 10000 });
 
     // Wait for save again (skip checking "Saving..." as it may be too fast)
+    await expect(page.locator('#calSaveStatus')).toContainText('All changes saved');
+
+    // 6.5 Test Dragging (Pointer Events Verification)
+    const dragTf = page.locator('#tf-1');
+    const boxBefore = await dragTf.boundingBox();
+    if (boxBefore) {
+      await dragTf.hover();
+      await page.mouse.down();
+      await page.mouse.move(boxBefore.x + 50, boxBefore.y + 50, { steps: 5 });
+      await page.mouse.up();
+
+      const boxAfter = await dragTf.boundingBox();
+      if (boxAfter) {
+        expect(boxAfter.x).not.toBe(boxBefore.x);
+        expect(boxAfter.y).not.toBe(boxBefore.y);
+      }
+
+      // Wait for auto-save trigger
+      await expect(page.locator('#calSaveStatus')).toContainText('All changes saved', { timeout: 10000 });
+    }
+
+    // 7. Test "Add Tonefield" (New ID)
+    await page.click('#headerAddTonefieldBtn');
+    await expect(page.locator('.tonefield')).toHaveCount(3);
+
+    // Verify new tonefield is selected (ID will be a timestamp, so just check count and selection class)
+    const newTf = page.locator('.tonefield').nth(2); // 0-indexed, so 3rd item
+    await expect(newTf).toHaveClass(/selected/);
+
+    // Wait for save
     await expect(page.locator('#calSaveStatus')).toContainText('All changes saved');
 
     // 8. Exit

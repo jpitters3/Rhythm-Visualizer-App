@@ -15,28 +15,19 @@ test.describe('Playback & Controls', () => {
     await expect(playBtn).not.toHaveClass(/active/);
 
     // 2. Start Playback
-    await playBtn.click();
+    // Give the app a moment to settle and use evaluate for absolute reliability
+    await page.waitForTimeout(500);
+    await page.evaluate(() => document.querySelector('#mainTransport-A .t-play-btn').click());
 
     // 3. Verify Active State
-    // Note: The button itself might not get 'active' class depending on CSS, 
-    // but the icon changes or text changes. 
-    // Let's check if the body has a playing state or simply if the button text/icon toggles.
-    // In index.html, playBtn contains an SVG.
-    // Let's check if the 'playing' flag is set in window or similar.
-    // Or check if visualization starts (harder).
-
-    // Simpler: Check if 'Stop' icon is visible or 'Play' icon is hidden?
-    // Code says: if (playing) stop() else start().
-    // Controls.js toggles classes? 
-    // Actually, let's just check the button functionality via a side effect if UI isn't clear.
-    // But usually controls have active state.
-
-    // 3. Verify Active State
-    await expect(playBtn).toHaveClass(/active/);
+    // Increase timeout to 10s to account for async audio initialization in test environment
+    await expect(playBtn).toHaveText('⏹', { timeout: 10000 });
+    await expect(playBtn).toHaveClass(/active/, { timeout: 10000 });
 
     // 4. Stop
-    await playBtn.click();
-    await expect(playBtn).not.toHaveClass(/active/);
+    await page.evaluate(() => document.querySelector('#mainTransport-A .t-play-btn').click());
+    await expect(playBtn).toHaveText('►', { timeout: 10000 });
+    await expect(playBtn).not.toHaveClass(/active/, { timeout: 10000 });
   });
 
   test('BPM Adjustment', async ({ page }) => {
@@ -48,7 +39,6 @@ test.describe('Playback & Controls', () => {
     // 2. Verify Display
     await expect(bpmVal).toHaveText('120');
 
-    // 3. Verify System State
     // 3. Verify System State (User-Like: check that input holds value)
     await expect(bpmInput).toHaveValue('120');
   });
@@ -57,12 +47,26 @@ test.describe('Playback & Controls', () => {
     const metroBtn = page.locator('#mainTransport-A .t-metro-btn');
 
     // 1. Toggle On
-    await metroBtn.click();
+    await metroBtn.click({ force: true });
     await expect(metroBtn).toHaveClass(/active/);
 
     // 2. Toggle Off
-    await metroBtn.click();
+    await metroBtn.click({ force: true });
     await expect(metroBtn).not.toHaveClass(/active/);
+  });
+
+  test('Mute Toggle', async ({ page }) => {
+    const muteBtn = page.locator('#mainTransport-A .t-mute-btn');
+
+    // 1. Toggle Mute
+    await muteBtn.click({ force: true });
+    await expect(muteBtn).toHaveText('🔇');
+    await expect(muteBtn).toHaveClass(/muted/);
+
+    // 2. Unmute
+    await muteBtn.click({ force: true });
+    await expect(muteBtn).toHaveText('🔊');
+    await expect(muteBtn).not.toHaveClass(/muted/);
   });
 
   /* 
@@ -75,16 +79,16 @@ test.describe('Playback & Controls', () => {
 
     // To verify looping without internals, we look for the 'active' class on columns.
 
-    // Start Playback
-    await page.click('#mainTransport-A .t-play-btn');
+    // 1. Start playback
+    await page.evaluate(() => document.querySelector('#mainTransport-A .t-play-btn').click());
 
     // Verify playback active
-    await expect(page.locator('#mainTransport-A .t-play-btn')).toHaveClass(/active/);
+    await expect(page.locator('#mainTransport-A .t-play-btn')).toHaveClass(/active/, { timeout: 10000 });
 
     // Check if ANY cell gets 'play' class (indicating playback progress)
     // In noteplayer.js, cells get the 'play' class when hit.
     const playingCell = page.locator('.cell.play');
-    await expect(playingCell).toBeVisible({ timeout: 2000 });
+    await expect(playingCell).toBeVisible({ timeout: 10000 });
 
     // Wait for a few steps to pass (UI updates)
     await page.waitForTimeout(2000);

@@ -150,6 +150,7 @@ function transcriptionLoop() {
     for (let i = 0; i < buf.length; i++) sum += buf[i] * buf[i];
     const rms = Math.sqrt(sum / buf.length);
     const now = Date.now();
+    const nowAudioMs = audioCtx.currentTime * 1000; // Unified Audio Clock (ms)
 
     // Update current index from grid (User confirmed transcriptionIndex is correct)
     currentIndex = activeGrid.transcriptionIndex;
@@ -248,7 +249,7 @@ function transcriptionLoop() {
                         // If we are refining (already recorded an accent), don't send another accent
                         if (!stepWasRecorded) {
                             if (isCoaching()) {
-                                evaluateDetectedNote('ACCENT', transcriptionIndex, now);
+                                evaluateDetectedNote('ACCENT', transcriptionIndex, nowAudioMs);
                             } else {
                                 recordNoteToGrid('T', currentIndex, activeGrid);
                             }
@@ -302,7 +303,7 @@ function transcriptionLoop() {
                                 lastGlobalDetectedNote = detected;
 
                                 if (isCoaching()) {
-                                    evaluateDetectedNote(detected, transcriptionIndex, now);
+                                    evaluateDetectedNote(detected, transcriptionIndex, nowAudioMs);
                                 } else {
                                     recordNoteToGrid(detected, currentIndex, activeGrid);
                                 }

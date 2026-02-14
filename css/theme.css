@@ -54,7 +54,7 @@ h2 {
   --cell-bg: #ffffff;
   --cell-border: #ddd8cc;
   --cell-on: #eaeaea;
-  --play-glow: rgba(255, 209, 102, 0.45);
+  --play-glow: rgb(231, 231, 231);
   --btn-bg: #e8e5dc;
   --btn-active: #ffd166;
 }

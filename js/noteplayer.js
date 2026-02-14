@@ -6,7 +6,7 @@ import { currentUser, activeGrid, setActiveGrid } from './state.js';
 import { HistoryManager } from './history.js';
 import { TransportRegistry } from './transport-ui.js';
 import { isListening, getSelectedScaleName, setSelectedScaleName, getScale, setCurrentScale } from './state.js';
-import { SCALE_KEY_LOCAL, SCALE_KEY_REMOTE, AUDIO_DELAY, BASE_PATH } from './config.js';
+import { SCALE_KEY_LOCAL, SCALE_KEY_REMOTE, AUDIO_DELAY, VISUAL_OFFSET, BASE_PATH } from './config.js';
 import { renderAllMeasures } from './notegrid.js';
 import { coachingSession, isCoaching } from './coaching-mode.js';
 
@@ -232,44 +232,154 @@ export function resolveHand(stepIdx, handData, subIdx = 0, isChord = false, mode
   return isDownbeatStep(stepIdx, mode) ? 'R' : 'L';
 }
 
-export function tick(ctx) {
+// === LOOKAHEAD SCHEDULER ===
+let nextNoteTime = 0.0;
+const scheduleAheadTime = 0.1; // 100ms looks ahead
+const visualQueue = []; // { time, step, ctx }
+
+function nextNote(c) {
+  const secondsPerBeat = intervalMs(c) / 1000;
+  nextNoteTime += secondsPerBeat;
+  c.audioStep++;
+
+  // Transition from Countdown end (-1 -> 0) to Start Step
+  // If we were counting down, audioStep just hit 0.
+  // If we have a target start (e.g. caret at 5), jump there now.
+  if (c.audioStep === 0 && typeof c.targetAudioStart === 'number') {
+    c.audioStep = c.targetAudioStart;
+    c.targetAudioStart = null;
+  }
+
+  // Wrap around for looping (only if positive)
+  if (c.audioStep >= c.cells.length) {
+    // Shifting audioStartTime forward by one full pattern length
+    // ensures getPlaybackPosition stays perfectly synced across loops.
+    const patternDuration = (c.cells.length * intervalMs(c)) / 1000;
+    c.audioStartTime += patternDuration;
+    c.audioStep = 0;
+    c.loopCount = (c.loopCount || 0) + 1;
+  }
+}
+
+function scheduleAudio(c, step, time) {
+  // Store the time and step of the note being scheduled for visual sync
+  c.lastScheduledTime = time;
+  c.lastScheduledStep = step;
+
+  // Push to visual queue
+  visualQueue.push({
+    time: time,
+    step: step,
+    ctx: c,
+    audioStartTime: c.audioStartTime
+  });
+
+  // Delay relative to AudioContext time
+  const delay = Math.max(0, time - audioCtx.currentTime);
+
+  // 1. COUNTDOWN
+  if (step < 0) {
+    const countNum = Math.abs(step);
+    // Audio Click for countdown
+    if (c.metronomeOn) metroClick('beat', delay);
+    return;
+  }
+
+  // 2. PATTERN
+  const realStep = step % c.cells.length;
+  const currentData = c.innerLabels[realStep];
+
+  if (Array.isArray(currentData)) {
+    currentData.forEach((label) => {
+      if (label) playNoteByLabel(label, realStep, delay);
+    });
+  } else if (currentData) {
+    playNoteByLabel(currentData, realStep, delay);
+  }
+
+  // 3. METRONOME
+  if (c.metronomeOn) {
+    const beatStride = (c.mode === '8') ? 2 : 4;
+    const isQuarter = (realStep % beatStride === 0);
+    const isDownbeat = (realStep === 0);
+    // On step 0, it's a downbeat
+    const kind = isDownbeat ? 'downbeat' : (isQuarter ? 'beat' : 'sub');
+    metroClick(kind, delay);
+  }
+}
+
+function scheduler(c) {
+  if (!c.playing) return;
+
+  // Schedule Audio
+  while (nextNoteTime < audioCtx.currentTime + scheduleAheadTime) {
+    scheduleAudio(c, c.audioStep, nextNoteTime);
+    nextNote(c);
+  }
+
+  // Visual Queue Processing
+  const currentTime = audioCtx.currentTime;
+  const visualTolerance = VISUAL_OFFSET || 0.025; // Matching lead time for visuals
+
+  while (visualQueue.length > 0 && visualQueue[0].time <= currentTime + visualTolerance) {
+    const job = visualQueue.shift();
+    tick(job.ctx, job.step, job.time, job.audioStartTime);
+  }
+
+  c.timerID = requestAnimationFrame(() => scheduler(c));
+}
+
+export function tick(ctx, overrideStep = null, audioTime = null, audioStartTime = null) {
   const c = ctx || activeGrid;
   c.lastTickTime = performance.now(); // Track time for smooth animations
-  if (!c.playing || c.isMuted) return;
+
+  if (audioTime !== null) {
+    c.lastTickAudioTime = audioTime;
+  } else if (audioCtx) {
+    c.lastTickAudioTime = audioCtx.currentTime;
+  }
+
+  if (audioStartTime !== null) {
+    c.audioStartTime = audioStartTime;
+  }
+
+  // If called by scheduler, overrideStep is passed.
+  // If called manually or by old code, use c.step (but likely deprecated usage)
+  const isScheduler = (overrideStep !== null);
+
+  // If scheduler sets step, use it. Otherwise use c.step
+  if (isScheduler) c.step = overrideStep;
+
+  if (!c.playing && !isScheduler) return; // Guard for manual calls
+  if (c.isMuted && !isScheduler) return;
+
+  // COUNTDOWN VISUALS
+  if (c.step < 0) {
+    showCountdown(Math.abs(c.step));
+    return;
+  } else {
+    // Hide if done
+    if (document.getElementById('countdownOverlay').style.display !== 'none') {
+      hideCountdown();
+      if (isCoaching() && !coachingSession.actualStartTime) {
+        coachingSession.actualStartTime = Date.now();
+      }
+    }
+  }
 
   const currentData = c.innerLabels[c.step];
   const currentHandsData = c.innerHands[c.step];
   const stepNotes = [];
   const stepHands = [];
 
-  // CALIBRATION COUNTDOWN LOGIC //
-
-  if (countdownRemaining > 0) {
-    showCountdown(countdownRemaining);
-    if (c.metronomeOn) metroClick(getMetroClickKind('beat', c), AUDIO_DELAY);
-    countdownRemaining--;
-    return;
-  }
-  else if (isCoaching() && !coachingSession.actualStartTime) {
-    coachingSession.actualStartTime = Date.now();
-  }
-
-  if (document.getElementById('countdownOverlay').style.display !== 'none') {
-    hideCountdown();
-  }
-
   // Only highlight handpan for Grid A
   const shouldHighlight = (c.id === 'A');
 
-  // Play and Highlight Multiple Notes
-  // Dynamic check or assume array
+  // Highlight Multiple Notes (Visual Only)
   if (Array.isArray(currentData)) {
     currentData.forEach((label, subIdx) => {
       if (label) {
-        // Resolve hand first
         const hand = resolveHand(c.step, currentHandsData, subIdx, true, c.mode);
-
-        playNoteByLabel(label, c.step, AUDIO_DELAY);
         if (shouldHighlight) {
           if (typeof highlighterFn === 'function') {
             highlighterFn(label, c.step, hand);
@@ -280,13 +390,10 @@ export function tick(ctx) {
       }
     });
   } else if (currentData) {
-    // Resolve hand first
     const hand = resolveHand(c.step, currentHandsData, 0, false, c.mode);
-
-    playNoteByLabel(currentData, c.step, AUDIO_DELAY);
     if (shouldHighlight) {
       if (typeof highlighterFn === 'function') {
-        highlighterFn(currentData, c.step, hand); // Pass resolved hand
+        highlighterFn(currentData, c.step, hand);
       }
     }
     stepNotes.push(currentData);
@@ -299,19 +406,19 @@ export function tick(ctx) {
   }
 
   // Update Visuals (Play Class)
-  try {
-    c.cells.forEach(el => el.classList.remove('play'));
-    const cell = c.cells[c.step];
-    if (cell) cell.classList.add('play');
-  } catch (e) { /* ignore reflow issues */ }
+  const allCells = c.cells;
+  const prev = c.container?.querySelector('.cell.play');
+  if (prev) prev.classList.remove('play');
 
-  // Metronome click
-  if (c.metronomeOn) {
-    metroClick(getMetroClickKind(c), AUDIO_DELAY);
-  }
+  const cell = allCells[c.step];
+  if (cell) cell.classList.add('play');
 
   c.transcriptionIndex = c.step;
-  c.step = (c.step + 1) % c.cells.length;
+
+  // If NOT scheduler (legacy), advance step manually??
+  // No, we assume scheduler drives this now. 
+  // If isScheduler is false, we might want to advance? 
+  // Let's assume tick is ONLY visual now.
 }
 
 function getMetroClickKind(ctx) {
@@ -491,34 +598,49 @@ export function playNoteSample(n, delay = 0) {
 export async function start(ctx, isSync = true, skipCountdown = false) {
   const c = ctx || activeGrid;
 
-  if (c.playing || c.timers.length) return;
+  if (c.playing) return;
 
-  // Use imported isListening state
-  if (isListening && !skipCountdown) {
-    countdownRemaining = COUNTDOWN_LENGTH;
-  } else {
-    countdownRemaining = 0;
-  }
-
-  // WAIT for audio engine to be ready ensuring no stutter on first beat
-  // This waits for Resume + Sample Loading
   await unlockAudio();
 
-  if (c.caretIndex !== null && c.caretIndex >= 0) {
-    c.step = c.caretIndex;
+  c.playing = true;
+  c.loopCount = 0; // Reset visual loop counter
+  const targetStart = (c.caretIndex !== null && c.caretIndex >= 0) ? c.caretIndex : 0;
+
+  // COUNTDOWN SETUP
+  const useCountdown = (isListening && !skipCountdown);
+  if (useCountdown) {
+    c.audioStep = -4;
+    c.targetAudioStart = targetStart;
+  } else {
+    c.audioStep = targetStart;
+    c.targetAudioStart = null;
   }
 
-  c.playing = true;
+  // Init Scheduler
+  const secondsPerBeat = intervalMs(c) / 1000;
+  const delay = AUDIO_DELAY;
+  nextNoteTime = audioCtx.currentTime + delay;
+
+  // If counting down, audioStartTime represents when the actual pattern (Step 0) starts.
+  // This ensures visuals (Highway) are synced to the audio pattern start.
+  if (useCountdown) {
+    c.audioStartTime = nextNoteTime + (4 * secondsPerBeat);
+  } else {
+    c.audioStartTime = nextNoteTime;
+  }
+
+  c.lastTickAudioTime = nextNoteTime;
+
+  visualQueue.length = 0;
+  c.cells.forEach(el => el.classList.remove('play'));
+
   if (c.playBtn) {
     c.playBtn.textContent = '⏹';
     c.playBtn.classList.add('active');
     c.playBtn.classList.add('playing');
   }
 
-  c.lastTickTime = performance.now();
-  tick(c);
-  const id = setInterval(() => tick(c), intervalMs(c));
-  c.timers.push(id);
+  scheduler(c);
 
   // A -> B Sync
   if (isSync && c === gridA && gridB) {
@@ -531,14 +653,43 @@ export async function start(ctx, isSync = true, skipCountdown = false) {
   }
 }
 
+export function getPlaybackPosition(ctx) {
+  const c = ctx || activeGrid;
+  if (!c.playing || !audioCtx || typeof c.audioStartTime === 'undefined') {
+    return { step: c.step || 0, fraction: 0 };
+  }
+
+  const now = audioCtx.currentTime;
+  const beatDuration = intervalMs(c) / 1000;
+
+  // Apply latency compensation (moves visuals ahead of audio engine)
+  const adjustedNow = now + (VISUAL_OFFSET || 0);
+
+  // Calculate total steps since playback start
+  const totalSteps = (adjustedNow - c.audioStartTime) / beatDuration;
+
+  // Return the continuous step index (including loops)
+  const step = Math.floor(totalSteps);
+  const fraction = totalSteps - step;
+  const loopOffset = (c.loopCount || 0) * c.cells.length;
+
+  return {
+    step: step + loopOffset,
+    fraction: fraction
+  };
+}
+
 export function stop(ctx, isSync = true) {
   const c = ctx || activeGrid;
-  for (const id of c.timers) clearInterval(id);
-  c.timers = [];
 
   c.playing = false;
+  if (c.timerID) cancelAnimationFrame(c.timerID);
+  c.timerID = null;
+  visualQueue.length = 0;
+
   c.step = 0;
   c.transcriptionIndex = 0;
+
   if (c.playBtn) {
     c.playBtn.textContent = '►';
     c.playBtn.classList.remove('active');
@@ -556,7 +707,6 @@ export function stop(ctx, isSync = true) {
   }
 }
 
-
 export function restartIfPlaying(ctx) {
   const c = ctx || activeGrid;
   if (c.playing) {
@@ -570,11 +720,13 @@ export function getAudioCtx() { return audioCtx; }
 // ===== INITIALIZATION =====
 export function initNotePlayer() {
   // Attach time signature input listeners
+  const tsNumInput = document.getElementById('tsNum');
+  const tsDenInput = document.getElementById('tsDen');
+
   tsNumInput?.addEventListener('change', updateTimeSignatureFromInputs);
   tsDenInput?.addEventListener('change', updateTimeSignatureFromInputs);
 
   // Attempt to unlock audio on ANY user interaction (Click, Key, Touch)
-  // This helps "prime" the AudioContext before they actually hit Play.
   const unlockEvents = ['click', 'keydown', 'touchstart'];
   function unlockHandler() {
     unlockAudio();

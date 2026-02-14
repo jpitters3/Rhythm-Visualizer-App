@@ -1,7 +1,7 @@
 /* ===== PRESENTATION MODE ===== */
 import { gridA, activeGrid } from './grid-context.js';
 import { labelForStep } from './notegrid.js';
-import { addTickObserver } from './noteplayer.js';
+import { addTickObserver, getPlaybackPosition } from './noteplayer.js';
 import { TransportRegistry } from './transport-ui.js';
 import { Bus, BUS_EVENT } from './bus.js';
 
@@ -14,6 +14,8 @@ let presentBtn, exitPresent;
 
 // View State
 let presentationViewMode = 'stream'; // 'measure' | 'stream'
+let streamCanvas = null;
+let streamCtx = null;
 
 export function setPresentationMode(mode) {
   if (['measure', 'stream'].includes(mode)) {
@@ -69,85 +71,9 @@ function animatePresentation() {
   if (!document.body.classList.contains('present')) return;
 
   if (presentationViewMode === 'stream') {
-    const streamContainer = document.getElementById('stream-view');
-    const track = streamContainer ? streamContainer.querySelector('.stream-track') : null;
-
-    if (streamContainer && track && gridA.playing && gridA.lastTickTime) {
-      const now = performance.now();
-      const timeSinceTick = now - gridA.lastTickTime;
-
-      // Calculate step duration based on BPM and grid mode
-      // 16th mode = 4 steps per beat. 8th mode = 2 steps per beat.
-      const stepsPerBeat = (gridA.mode === '8') ? 2 : 4;
-      const beatDuration = 60000 / gridA.bpm;
-      const stepDuration = beatDuration / stepsPerBeat;
-
-      const fraction = Math.min(1, Math.max(0, timeSinceTick / stepDuration));
-
-      // Handle wrap-around logic for smooth display
-      // If step is 0, we are transitioning from length-1 to 0.
-      // We want to display (length-1) + fraction.
-      let baseStep = gridA.step - 1;
-      if (baseStep < 0) baseStep = gridA.cells.length - 1;
-
-      // Special case: if we just wrapped to 0, gridA.step is 0.
-      // visual position should go from (length-1) -> (length).
-      // But our CSS transform uses --current-step.
-      // If --current-step jumps from 15.9 to 0, track jumps RIGHT.
-      // We need the visual to stay at 15.9... then 16.0... 
-      // But the track only has 16 cells (0-15).
-      // Ideally we render 2 copies of the track for infinite scroll.
-      // For now, let's accept the jump at 0 or clamp it?
-      // The user said "Highway", implying continuous.
-      // If we don't duplicate, we loop.
-      // Let's just use the calculated smooth step for now.
-      // If baseStep is length-1, we show (length-1) + fraction.
-
-      // Let's just use the calculated smooth step for now.
-      // If baseStep is length-1, we show (length-1) + fraction.
-
-      // Sync Coaching Classes (Feedback)
-      if (track && gridA.cells) {
-        // Optimization: Only scan visible range or all? 
-        // Stream track has exact same number of cells as gridA.cells
-        // We can just iterate all, or just the ones likely to have changed (current/previous).
-        // Since feedback happens on the fly, we should probably check all or a window around current.
-        // For 16-32 cells, checking all is fine.
-
-        const total = gridA.cells.length;
-        for (let i = 0; i < total; i++) {
-          const original = gridA.cells[i];
-          const clone = track.children[i];
-          if (original && clone) {
-            // Success
-            if (original.classList.contains('coach-correct') && !clone.classList.contains('coach-correct')) {
-              clone.classList.add('coach-correct');
-            }
-            // Timing
-            if (original.classList.contains('coach-timing') && !clone.classList.contains('coach-timing')) {
-              clone.classList.add('coach-timing');
-            }
-            // Wrong
-            if (original.classList.contains('coach-wrong') && !clone.classList.contains('coach-wrong')) {
-              clone.classList.add('coach-wrong');
-            }
-            // Missed
-            if (original.classList.contains('coach-missed') && !clone.classList.contains('coach-missed')) {
-              clone.classList.add('coach-missed');
-            }
-
-            // Cleanup if removed (e.g. reset)
-            if (!original.classList.contains('coach-correct')) clone.classList.remove('coach-correct');
-            if (!original.classList.contains('coach-timing')) clone.classList.remove('coach-timing');
-            if (!original.classList.contains('coach-wrong')) clone.classList.remove('coach-wrong');
-            if (!original.classList.contains('coach-missed')) clone.classList.remove('coach-missed');
-          }
-        }
-      }
-
-      const smoothStep = baseStep + fraction;
-      streamContainer.style.setProperty('--current-step', smoothStep);
-    }
+    ensureStreamCanvasReady();
+    handleStreamResize();
+    drawHighway(gridA);
   }
 
   animationFrameId = requestAnimationFrame(animatePresentation);
@@ -261,15 +187,15 @@ export function initPresentation() {
     animatePresentation();
   }
 
-  // Subscribe to Tick to sync View
+  // Subscribe to Tick to sync View (ONLY for Measure Mode)
   addTickObserver((ctx, notes, hands) => {
-    // Current step in ctx is updated at end of tick, or beginning? 
-    // noteplayer.js: "c.step++" happens at end of tick.
-    // Observer is called with "c, activeNotes, activeHands".
-    // We should use c.step.
     if (ctx && ctx.id === 'A') {
-      const step = ctx.step;
-      updatePresentationView(step, ctx);
+      // Highway (Stream Mode) runs on its own high-frequency rAF loop.
+      // We only use the rhythmic tick for the static Measure Mode.
+      if (presentationViewMode === 'measure') {
+        const step = ctx.step;
+        updatePresentationView(step, ctx);
+      }
     }
   });
 
@@ -334,90 +260,213 @@ function updateMeasureView(currentStep, ctx) {
 }
 
 // === STREAM VIEW (Highway) === //
-function updateStreamView(currentStep, ctx) {
+function ensureStreamCanvasReady() {
   const measuresEl = document.getElementById('measures');
   if (measuresEl) measuresEl.style.display = 'none';
 
   let streamContainer = document.getElementById('stream-view');
   if (!streamContainer) {
-    // Create Stream DOM Structure if missing
     streamContainer = document.createElement('div');
     streamContainer.id = 'stream-view';
     streamContainer.className = 'stream-view';
-
-    // The "Now" Line
-    const nowLine = document.createElement('div');
-    nowLine.className = 'stream-now-line';
-    streamContainer.appendChild(nowLine);
-
-    // The Moving Track
-    const track = document.createElement('div');
-    track.className = 'stream-track';
-    streamContainer.appendChild(track);
-
     document.body.appendChild(streamContainer);
   }
   streamContainer.style.display = 'block';
 
-  // Render Track Content (Only if cache invalid or empty)
-  const track = streamContainer.querySelector('.stream-track');
-
-  // Simple check: if track is empty or grid changed (we can use lastMeasureIndex as a dirty flag relative to ID)
-  // For now, let's just use a simple heuristic or checking children. 
-  // Ideally we listen to GRID_RENDERED to rebuild the track.
-  if (lastMeasureIndex === -1 && track) {
-    renderStreamTrack(track, ctx);
-    lastMeasureIndex = 0; // Mark as rendered
+  if (!streamCanvas) {
+    streamCanvas = document.createElement('canvas');
+    streamCanvas.id = 'stream-canvas';
+    streamContainer.appendChild(streamCanvas);
+    streamCtx = streamCanvas.getContext('2d');
   }
-
-  // Update Position
-  // We need to calculate the offset based on currentStep + micro-timing (offset)
-  // For smoothness, we might want to use the high-res time from NotePlayer if available, 
-  // but for now, step-based + CSS transition is a good start.
-
-  const stepWidth = 100; // px per step (defined in CSS)
-  const offset = currentStep * stepWidth; // Move track Left
-
-  // Center alignment: Screen Center - Offset
-  // Actually, we want the "Current Step" to be at the "Now Line" (Center of screen)
-  // So Track Transform = translateX(50vw - (currentStep * stepWidth) - (stepWidth/2))
-
-  // But wait, "Step 0" should be at the line.
-  // We can do this via CSS var
-  streamContainer.style.setProperty('--current-step', currentStep);
 }
 
-function renderStreamTrack(track, ctx) {
-  track.innerHTML = '';
-  // Clone cells from the main grid? Or rebuild?
-  // Rebuilding is safer to strip event listeners and extra classes.
+function handleStreamResize() {
+  if (!streamCanvas) return;
+  const streamContainer = document.getElementById('stream-view');
+  if (!streamContainer) return;
+
+  const dpr = window.devicePixelRatio || 1;
+  const rect = streamContainer.getBoundingClientRect();
+
+  // Only resize/reset if dimensions actually changed
+  if (streamCanvas.width !== rect.width * dpr || streamCanvas.height !== rect.height * dpr) {
+    streamCanvas.width = rect.width * dpr;
+    streamCanvas.height = rect.height * dpr;
+    streamCanvas.style.width = `${rect.width}px`;
+    streamCanvas.style.height = `${rect.height}px`;
+    streamCtx.scale(dpr, dpr);
+  }
+}
+
+function updateStreamView(currentStep, ctx) {
+  ensureStreamCanvasReady();
+  handleStreamResize();
+}
+
+function drawHighway(ctx) {
+  if (!streamCtx || !streamCanvas) return;
+
+  const dpr = window.devicePixelRatio || 1;
+  const w = streamCanvas.width / dpr;
+  const h = streamCanvas.height / dpr;
+  const pos = getPlaybackPosition(ctx);
+
+  const stepWidth = 120; // Matches CSS var --stream-cell-width
+  const centerY = h / 2;
+  const centerX = w / 2;
 
   const totalSteps = ctx.cells.length;
 
-  // Label Row
-  // track.appendChild(...)
+  streamCtx.save();
+  streamCtx.clearRect(0, 0, w, h);
 
-  ctx.cells.forEach((originalCell, i) => {
-    const clone = originalCell.cloneNode(true);
-    // Strip IDs to avoid duplicates
-    clone.id = '';
-    // Remove selection/interaction classes
-    clone.classList.remove('selected', 'caret', 'active');
+  // 1. Horizontal track line
+  streamCtx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+  streamCtx.lineWidth = 1;
+  streamCtx.beginPath();
+  streamCtx.moveTo(0, centerY);
+  streamCtx.lineTo(w, centerY);
+  streamCtx.stroke();
 
-    // Ensure accurate sizing
-    clone.style.width = 'var(--stream-cell-width)';
+  // Theme Detection (pull once)
+  const isDark = document.body.classList.contains('dark');
+  const handRCol = isDark ? '#fd0380' : '#610a42'; // Right/Ding
+  const handLCol = isDark ? 'rgb(30, 121, 232)' : 'rgb(2, 68, 150)'; // Left/Tak
+  const cellBgCol = isDark ? '#222233' : '#ffffff';
 
-    // Add Measure Markers
-    if (i % ctx.stepsPerMeasure === 0) {
-      clone.classList.add('measure-start');
-      const num = (i / ctx.stepsPerMeasure) + 1;
-      clone.setAttribute('data-measure-num', num);
+  // 4. Draw Components (Sliding Window for Seamless Looping)
+  const currentTotalStep = pos.step + pos.fraction;
+
+  // Calculate window of visible steps
+  const stepsOnScreen = Math.ceil(w / stepWidth);
+  const firstVisibleStep = Math.floor(currentTotalStep - (centerX / stepWidth)) - 1;
+  const lastVisibleStep = firstVisibleStep + stepsOnScreen + 2;
+
+  for (let j = firstVisibleStep; j <= lastVisibleStep; j++) {
+    if (j < 0) continue; // Don't draw before pattern start
+    const i = j % totalSteps;
+    const x = centerX + (j * stepWidth) - (currentTotalStep * stepWidth);
+
+    const cell = ctx.cells[i];
+    const isMeasureStart = (i % ctx.stepsPerMeasure === 0);
+
+    // 4a. Lines (Measure/Step)
+    streamCtx.beginPath();
+    if (isMeasureStart) {
+      streamCtx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+      streamCtx.lineWidth = 2;
+      streamCtx.moveTo(x, centerY - 100);
+      streamCtx.lineTo(x, centerY + 100);
+      streamCtx.stroke();
+
+      streamCtx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+      streamCtx.font = '24px Inter, system-ui';
+      streamCtx.textAlign = 'left';
+      streamCtx.fillText(`${(i / ctx.stepsPerMeasure) + 1}`, x + 10, centerY - 110);
+    } else {
+      streamCtx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+      streamCtx.lineWidth = 1;
+      streamCtx.moveTo(x, centerY - 40);
+      streamCtx.lineTo(x, centerY + 40);
+      streamCtx.stroke();
     }
 
-    track.appendChild(clone);
-  });
+    // 4b. Draw Note Cell
+    const rawLabel = ctx.innerLabels[i];
+    const hand = (ctx.innerHands && ctx.innerHands[i]) ? ctx.innerHands[i] : (i % 2 === 0 ? 'R' : 'L');
+    const baseCol = hand === 'L' ? handLCol : handRCol;
+
+    const isVisualDing = cell.classList.contains('visual-ding');
+
+    // BUTTERY EASING: Pulse note as it passes center
+    // stepProgress is 0 at hit, 1.0 one full beat later
+    const stepProgress = currentTotalStep - j;
+    let scale = 1.0;
+    if (stepProgress >= 0 && stepProgress < 1.0) {
+      const ease = Math.pow(1.0 - stepProgress, 3); // Cubic ease out
+      scale = 1.0 + (ease * 0.35);
+    } else if (isVisualDing) {
+      scale = 1.35; // Snappy highlight for user hits
+    }
+
+    const radius = 42 * scale;
+
+    // 4c. Background Circle
+    streamCtx.beginPath();
+    streamCtx.arc(x, centerY, radius, 0, Math.PI * 2);
+    streamCtx.fillStyle = cellBgCol;
+    streamCtx.fill();
+
+    if (rawLabel) {
+      // 4d. Labelled Note
+      const displayLabel = Array.isArray(rawLabel) ? rawLabel.join('') : String(rawLabel);
+      streamCtx.globalAlpha = 0.68;
+      streamCtx.fillStyle = baseCol;
+      streamCtx.fill();
+      streamCtx.globalAlpha = 1.0;
+
+      // Coaching Highlights
+      if (cell.classList.contains('coach-correct')) {
+        highlightCell(x, centerY, radius, '#2ecc71', true);
+      } else if (cell.classList.contains('coach-timing')) {
+        highlightCell(x, centerY, radius, '#f1c40f', false);
+      } else if (cell.classList.contains('coach-wrong')) {
+        highlightCell(x, centerY, radius, '#e74c3c', false);
+      } else if (cell.classList.contains('coach-missed')) {
+        streamCtx.globalAlpha = 0.3;
+        streamCtx.setLineDash([5, 5]);
+        streamCtx.strokeStyle = '#e74c3c';
+        streamCtx.lineWidth = 3;
+        streamCtx.stroke();
+        streamCtx.setLineDash([]);
+        streamCtx.globalAlpha = 1.0;
+      }
+
+      // 4e. Note Text
+      streamCtx.fillStyle = '#ffffff';
+      streamCtx.font = `bold ${Math.floor(40 * scale)}px Inter, system-ui`;
+      streamCtx.textAlign = 'center';
+      streamCtx.textBaseline = 'middle';
+      streamCtx.fillText(displayLabel, x, centerY + 2);
+    } else {
+      // 4f. Ghost Note Dot
+      streamCtx.beginPath();
+      streamCtx.arc(x, centerY, 6 * scale, 0, Math.PI * 2);
+      streamCtx.fillStyle = baseCol;
+      streamCtx.globalAlpha = 0.75;
+      streamCtx.fill();
+      streamCtx.globalAlpha = 1.0;
+    }
+  }
+
+  // 5. "Now" Line
+  const nowGlow = 15 + Math.pow(1.0 - pos.fraction, 2) * 20; // Pulsing glow
+  streamCtx.strokeStyle = 'rgba(255, 237, 0, 0.9)';
+  streamCtx.lineWidth = 4;
+  streamCtx.shadowBlur = nowGlow;
+  streamCtx.shadowColor = 'rgba(255, 237, 0, 0.6)';
+  streamCtx.beginPath();
+  streamCtx.moveTo(centerX, 0);
+  streamCtx.lineTo(centerX, h);
+  streamCtx.stroke();
+
+  streamCtx.restore();
 }
 
+function highlightCell(x, y, r, color, glow) {
+  streamCtx.save();
+  if (glow) {
+    streamCtx.shadowBlur = 15;
+    streamCtx.shadowColor = color;
+  }
+  streamCtx.strokeStyle = color;
+  streamCtx.lineWidth = 3;
+  streamCtx.beginPath();
+  streamCtx.arc(x, y, r, 0, Math.PI * 2);
+  streamCtx.stroke();
+  streamCtx.restore();
+}
 
 // Detect externally triggered Fullscreen exit (e.g. Esc key by user)
 const handleFullscreenChange = () => {
