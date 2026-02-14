@@ -702,3 +702,79 @@ body.present.mode-stream .stream-view {
   transform: rotate(45deg);
   transition: transform 0.3s ease, background 0.2s ease;
 }
+
+/* =========================================
+   STREAM BACKGROUNDS (Nature Grid - Beach Theme)
+   ========================================= */
+#stream-view.nature-mode {
+  overflow: hidden;
+  /* Ocean Gradient: Deep Blue (Far/Top) to Turquoise (Mid) */
+  background: linear-gradient(to bottom, #054a91, #3E92CC, #a0dce4);
+}
+
+/* Single Smooth Organic Wave Layer */
+#stream-view.nature-mode::before {
+  content: '';
+  position: absolute;
+  /* Reduced size to save GPU fill-rate (was 500%) */
+  top: -150%;
+  left: -150%;
+  width: 400%;
+  height: 400%;
+  opacity: 0.28;
+  /* Slightly more visible for white foam effect */
+  pointer-events: none;
+  z-index: -1;
+
+  /* Single Long-Period Smooth Wave (Bezier) */
+  background-image: url("data:image/svg+xml,%3Csvg width='400' height='100' viewBox='0 0 400 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 50 C 100 20, 200 80, 400 50' stroke='white' stroke-width='2' fill='none' stroke-opacity='0.6' /%3E%3C/svg%3E");
+  background-size: 350px 175px;
+  background-repeat: repeat;
+
+  transform-origin: center;
+  /* Straight flow towards viewer (0deg rotation) */
+  transform: perspective(600px) rotateX(60deg) rotateZ(0deg) translateZ(0);
+  /* translateZ forces GPU */
+
+  /* Smooth, continuous flow */
+  animation: natureFlowDirect 12s linear infinite;
+  will-change: transform;
+  backface-visibility: hidden;
+  /* Performance hint */
+}
+
+/* Deprecated Layers (Removed from JS, creating CSS stubs to prevent errors if elements linger) */
+#stream-view.nature-mode .wave-layer-2,
+#stream-view.nature-mode .wave-layer-3 {
+  display: none;
+}
+
+@keyframes natureFlowDirect {
+  0% {
+    background-position: 0 0;
+    /* Gentle breathing scale */
+    transform: perspective(600px) rotateX(60deg) rotateZ(0deg) scaleY(1) translateZ(0);
+  }
+
+  50% {
+    transform: perspective(600px) rotateX(60deg) rotateZ(0deg) scaleY(1.15) translateZ(0);
+  }
+
+  100% {
+    background-position: 0 175px;
+    /* Move one full cycle DOWN */
+    transform: perspective(600px) rotateX(60deg) rotateZ(0deg) scaleY(1) translateZ(0);
+  }
+}
+
+/* Sandy Shore + Atmosphere (Bottom Layer) */
+#stream-view.nature-mode::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  /* Optimized: Removed complex radial gradient overlap to save blending cost */
+  background: linear-gradient(to bottom, #023e8a 0%, #0096c7 40%, #48cae4 70%, #d4a373 95%);
+  /* Sandy bottom */
+  pointer-events: none;
+}

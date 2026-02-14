@@ -357,6 +357,51 @@ function initDashboard() {
   bindAesthetic('dashTrailsBtn', 'trails');
   bindAesthetic('dashGlowBtn', 'glow');
 
+  // === WORLD SELECTION (Mutually Exclusive) ===
+  const tronBtn = document.getElementById('dashTronBtn');
+  const natureBtn = document.getElementById('dashNatureBtn');
+
+  const setWorld = (world) => {
+    // 1. Update State
+    Aesthetics.world = world;
+    localStorage.setItem('aesthetic_world', world);
+
+    // 2. Update UI Buttons
+    if (tronBtn) tronBtn.classList.toggle('active', world === 'tron');
+    if (natureBtn) natureBtn.classList.toggle('active', world === 'nature');
+
+    // 3. Update DOM Classes
+    const streamView = document.getElementById('stream-view');
+    if (streamView) {
+      streamView.classList.remove('tron-mode', 'nature-mode');
+
+      // Cleanup old wave layers if existing
+      const oldWave = streamView.querySelector('.wave-layer-2');
+      if (oldWave) oldWave.remove();
+
+      if (world === 'tron') {
+        streamView.classList.add('tron-mode');
+      }
+
+      if (world === 'nature') {
+        streamView.classList.add('nature-mode');
+        // Simplified: Single organic layer as requested
+      }
+    }
+  };
+
+  // Init
+  const savedWorld = localStorage.getItem('aesthetic_world') || 'none';
+  setWorld(savedWorld);
+
+  // Bind Clicks to Toggle (Clicking active turns it off)
+  if (tronBtn) {
+    tronBtn.onclick = () => setWorld(Aesthetics.world === 'tron' ? 'none' : 'tron');
+  }
+  if (natureBtn) {
+    natureBtn.onclick = () => setWorld(Aesthetics.world === 'nature' ? 'none' : 'nature');
+  }
+
   // Periodic UI update (for state changes initiated elsewhere)
   setInterval(() => {
     if (isDashboardOpen) updateToggleUI();
@@ -484,19 +529,29 @@ function drawHighway(ctx) {
   streamCtx.save();
   streamCtx.clearRect(0, 0, w, h);
 
-  // 1. Horizontal track line
-  streamCtx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
-  streamCtx.lineWidth = 1;
-  streamCtx.beginPath();
-  streamCtx.moveTo(0, centerY);
-  streamCtx.lineTo(w, centerY);
-  streamCtx.stroke();
+  // 1. Horizontal track line (Only if NOT in Nature mode)
+  if (Aesthetics.world !== 'nature') {
+    streamCtx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+    streamCtx.lineWidth = 1;
+    streamCtx.beginPath();
+    streamCtx.moveTo(0, centerY);
+    streamCtx.lineTo(w, centerY);
+    streamCtx.stroke();
+  }
 
-  // Theme Detection (pull once)
+  // Theme Detection
   const isDark = document.body.classList.contains('dark');
-  const handRCol = isDark ? '#fd0380' : '#610a42'; // Right/Ding
-  const handLCol = isDark ? 'rgb(30, 121, 232)' : 'rgb(2, 68, 150)'; // Left/Tak
-  const cellBgCol = isDark ? '#222233' : '#ffffff';
+  const handRCol = isDark ? '#fd0380' : '#610a42';
+  const handLCol = isDark ? 'rgb(30, 121, 232)' : 'rgb(2, 68, 150)';
+
+  // Glassmorphism for Nature Mode
+  let cellBgCol = isDark ? '#222233' : '#ffffff';
+  let isGlass = false;
+
+  if (Aesthetics.world === 'nature') {
+    cellBgCol = 'rgba(255, 255, 255, 0.1)'; // Frosted glass base
+    isGlass = true;
+  }
 
   // 4. Draw Components (Sliding Window for Seamless Looping)
   const currentTotalStep = pos.step + pos.fraction;
@@ -582,6 +637,12 @@ function drawHighway(ctx) {
     streamCtx.arc(x, centerY, radius, 0, Math.PI * 2);
     streamCtx.fillStyle = cellBgCol;
     streamCtx.fill();
+
+    if (isGlass) {
+      streamCtx.lineWidth = 2;
+      streamCtx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+      streamCtx.stroke();
+    }
 
     if (rawLabel) {
       // 4d. Labelled Note
