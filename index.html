@@ -469,6 +469,47 @@
       </select>
     </div>
     <!-- Will be populated by TransportUI -->
+    <button id="dashboardBtn" class="icon-btn dashboard-toggle" title="Quick Settings">⚙️</button>
+  </div>
+
+  <!-- Immersive Dashboard -->
+  <div id="presentationDashboard" class="presentation-dashboard" style="display: none;">
+    <div class="dashboard-panel glass-panel">
+      <div class="dashboard-header">
+        <h3>Quick Settings</h3>
+        <button id="closeDashboardBtn" class="icon-btn">✕</button>
+      </div>
+
+      <div class="dashboard-grid">
+        <!-- Quick Toggles -->
+        <div class="dashboard-section">
+          <label>Live Interaction</label>
+          <div class="dash-row">
+            <button id="dashMicBtn" class="dash-pill">🎤 Listening</button>
+            <button id="dashCoachBtn" class="dash-pill">🎓 Coach</button>
+          </div>
+        </div>
+
+        <!-- Selectors -->
+        <div class="dashboard-section">
+          <label>Musical Controls</label>
+          <div class="dash-col">
+            <select id="dashPatternSelect" class="dash-select" title="Switch Pattern"></select>
+            <select id="dashScaleSelect" class="dash-select" title="Switch Scale"></select>
+          </div>
+        </div>
+
+        <!-- Aesthetics -->
+        <div class="dashboard-section">
+          <label>Immersive Aesthetics</label>
+          <div class="dash-aesthetic-grid">
+            <button id="dashSparksBtn" class="dash-pill active">✨ Sparks</button>
+            <button id="dashTrailsBtn" class="dash-pill active">☄️ Trails</button>
+            <button id="dashGlowBtn" class="dash-pill active">🌟 Pulse Glow</button>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
   <!-- END PRESENTATION MODE PLAYBACK MENU -->
 

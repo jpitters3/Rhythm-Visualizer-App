@@ -28,8 +28,7 @@ button {
   cursor: pointer;
   font-weight: 500;
   position: relative;
-  z-index: 10001;
-  /* Absolute top priority */
+  z-index: 10;
 }
 
 button.active {

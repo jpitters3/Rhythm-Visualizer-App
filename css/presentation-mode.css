@@ -531,3 +531,174 @@ body.present.mode-stream .labels {
 body.present.mode-stream .stream-view {
   background: var(--btn-bg);
 }
+
+/* ===== IMMERSIVE DASHBOARD ===== */
+#presentationDashboard {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(4px);
+  z-index: 10002;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.dashboard-panel {
+  width: 100%;
+  max-width: 600px;
+  background: rgba(var(--panel-rgb), 0.85);
+  backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 24px;
+  padding: 32px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+  animation: dashPop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes dashPop {
+  from {
+    opacity: 0;
+    transform: scale(0.9) translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.dashboard-header h3 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--text);
+}
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 24px;
+}
+
+.dashboard-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.dashboard-section label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  opacity: 0.6;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.dash-row {
+  display: flex;
+  gap: 12px;
+}
+
+.dash-col {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.dash-pill {
+  flex: 1;
+  height: 48px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.dash-pill:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.dash-pill.active {
+  /* background: var(--play-glow); */
+  background: rgba(150, 113, 236, 0.973);
+  color: #fff;
+  border-color: transparent;
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+}
+
+.dash-pill.loading::after {
+  content: "";
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: dashSpin 0.8s linear infinite;
+  margin-left: 8px;
+}
+
+@keyframes dashSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.dash-select {
+  width: 100%;
+  height: 48px;
+  border-radius: 12px;
+  background: rgba(var(--panel-rgb), 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--text);
+  padding: 0 16px;
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.dash-aesthetic-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+#presentationControls button.dashboard-toggle {
+  background: rgba(255, 255, 255, 0.1);
+  margin-left: 10px;
+  font-size: 18px;
+  padding: 0;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  color: var(--text);
+}
+
+#presentationControls button.dashboard-toggle:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: rotate(45deg);
+  transition: transform 0.3s ease, background 0.2s ease;
+}

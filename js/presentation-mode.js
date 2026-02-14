@@ -17,6 +17,17 @@ let presentationViewMode = 'stream'; // 'measure' | 'stream'
 let streamCanvas = null;
 let streamCtx = null;
 
+// Dashboard State & Aesthetics
+let isDashboardOpen = false;
+let isMicLoading = false;
+export const Aesthetics = {
+  sparks: true,
+  trails: true,
+  glow: true
+};
+
+const sparks = []; // { x, y, vx, vy, alpha, color }
+
 export function setPresentationMode(mode) {
   if (['measure', 'stream'].includes(mode)) {
     presentationViewMode = mode;
@@ -73,10 +84,34 @@ function animatePresentation() {
   if (presentationViewMode === 'stream') {
     ensureStreamCanvasReady();
     handleStreamResize();
+    updateSparks();
     drawHighway(gridA);
   }
 
   animationFrameId = requestAnimationFrame(animatePresentation);
+}
+
+function updateSparks() {
+  for (let i = sparks.length - 1; i >= 0; i--) {
+    const s = sparks[i];
+    s.x += s.vx;
+    s.y += s.vy;
+    s.alpha *= 0.92;
+    if (s.alpha < 0.01) sparks.splice(i, 1);
+  }
+}
+
+function createBurst(x, y, color) {
+  if (!Aesthetics.sparks) return;
+  for (let i = 0; i < 12; i++) {
+    sparks.push({
+      x, y,
+      vx: (Math.random() - 0.5) * 12,
+      vy: (Math.random() - 0.5) * 12,
+      alpha: 1.0,
+      color
+    });
+  }
 }
 
 export async function setPresentation(on) {
@@ -213,7 +248,135 @@ export function initPresentation() {
         updatePresentationView(gridA.step, gridA);
       }
     }
+    // Sync dashboard selectors if open
+    if (isDashboardOpen) syncDashboardSelectors();
   });
+
+  initDashboard();
+}
+
+/**
+ * Immersive Dashboard Logic
+ */
+function initDashboard() {
+  const dashBtn = document.getElementById('dashboardBtn');
+  const closeBtn = document.getElementById('closeDashboardBtn');
+  const dashOverlay = document.getElementById('presentationDashboard');
+
+  if (!dashBtn || !dashOverlay) return;
+
+  const toggleDash = (on) => {
+    isDashboardOpen = on;
+    dashOverlay.style.display = on ? 'flex' : 'none';
+    if (on) syncDashboardSelectors();
+  };
+
+  dashBtn.onclick = (e) => { e.stopPropagation(); toggleDash(true); };
+  closeBtn.onclick = (e) => { e.stopPropagation(); toggleDash(false); };
+  dashOverlay.onclick = (e) => { if (e.target === dashOverlay) toggleDash(false); };
+
+  // 1. Mic & Coach Toggles (Fire-and-forget triggers)
+  const dashMicBtn = document.getElementById('dashMicBtn');
+  const dashCoachBtn = document.getElementById('dashCoachBtn');
+
+  const updateToggleUI = () => {
+    const micActive = document.getElementById('micBtn')?.classList.contains('active');
+    const coachActive = document.getElementById('coachingHUD')?.style.display === 'block';
+
+    if (micActive) isMicLoading = false;
+
+    if (dashMicBtn) {
+      dashMicBtn.classList.toggle('active', micActive);
+      dashMicBtn.classList.toggle('loading', isMicLoading);
+
+      if (isMicLoading) {
+        dashMicBtn.textContent = '🎤 Waiting...';
+      } else {
+        dashMicBtn.textContent = micActive ? '🎤 Listening: On' : '🎤 Listening: Off';
+      }
+    }
+    if (dashCoachBtn) {
+      dashCoachBtn.classList.toggle('active', coachActive);
+      dashCoachBtn.textContent = coachActive ? '🎓 Coach: On' : '🎓 Coach: Off';
+    }
+  };
+
+  if (dashMicBtn) {
+    dashMicBtn.onclick = () => {
+      const micActive = document.getElementById('micBtn')?.classList.contains('active');
+      if (!micActive) isMicLoading = true;
+      document.getElementById('micBtn')?.click();
+      updateToggleUI();
+    };
+  }
+
+  if (dashCoachBtn) {
+    dashCoachBtn.onclick = () => {
+      document.getElementById('coachModeBtn')?.click();
+      // Small delay to let classes settle
+      // setTimeout(updateToggleUI, 100);
+      updateToggleUI();
+    };
+  }
+
+  // 2. Pattern & Scale Synchronization
+  const dashPSelect = document.getElementById('dashPatternSelect');
+  const dashSSelect = document.getElementById('dashScaleSelect');
+
+  if (dashPSelect) {
+    dashPSelect.onchange = () => {
+      const mainPSelect = document.getElementById('patternSelect');
+      if (mainPSelect) {
+        mainPSelect.value = dashPSelect.value;
+        mainPSelect.dispatchEvent(new Event('change'));
+      }
+    };
+  }
+
+  if (dashSSelect) {
+    dashSSelect.onchange = () => {
+      const mainSSelect = document.getElementById('scaleSelect');
+      if (mainSSelect) {
+        mainSSelect.value = dashSSelect.value;
+        mainSSelect.dispatchEvent(new Event('change'));
+      }
+    };
+  }
+
+  // 3. Aesthetics
+  const bindAesthetic = (id, key) => {
+    const btn = document.getElementById(id);
+    if (!btn) return;
+    btn.onclick = () => {
+      Aesthetics[key] = !Aesthetics[key];
+      btn.classList.toggle('active', Aesthetics[key]);
+    };
+  };
+
+  bindAesthetic('dashSparksBtn', 'sparks');
+  bindAesthetic('dashTrailsBtn', 'trails');
+  bindAesthetic('dashGlowBtn', 'glow');
+
+  // Periodic UI update (for state changes initiated elsewhere)
+  setInterval(() => {
+    if (isDashboardOpen) updateToggleUI();
+  }, 500);
+}
+
+function syncDashboardSelectors() {
+  const dashPSelect = document.getElementById('dashPatternSelect');
+  const dashSSelect = document.getElementById('dashScaleSelect');
+  const mainPSelect = document.getElementById('patternSelect');
+  const mainSSelect = document.getElementById('scaleSelect');
+
+  if (dashPSelect && mainPSelect) {
+    dashPSelect.innerHTML = mainPSelect.innerHTML;
+    dashPSelect.value = mainPSelect.value;
+  }
+  if (dashSSelect && mainSSelect) {
+    dashSSelect.innerHTML = mainSSelect.innerHTML;
+    dashSSelect.value = mainSSelect.value;
+  }
 }
 
 // === MEASURE VIEW (Classic Page Turn) === //
@@ -379,18 +542,40 @@ function drawHighway(ctx) {
 
     const isVisualDing = cell.classList.contains('visual-ding');
 
-    // BUTTERY EASING: Pulse note as it passes center
-    // stepProgress is 0 at hit, 1.0 one full beat later
+    // BUTTERY EASING & SPARKS: Pulse note as it passes center
     const stepProgress = currentTotalStep - j;
     let scale = 1.0;
+
     if (stepProgress >= 0 && stepProgress < 1.0) {
-      const ease = Math.pow(1.0 - stepProgress, 3); // Cubic ease out
-      scale = 1.0 + (ease * 0.35);
-    } else if (isVisualDing) {
-      scale = 1.35; // Snappy highlight for user hits
+      const ease = Math.pow(1.0 - stepProgress, 3);
+      scale = 1.0 + (ease * 0.35 * (Aesthetics.glow ? 1 : 0.5));
+
+      // Trigger Spark Burst on exact hit
+      if (stepProgress < 0.05 && rawLabel && !cell._hasSparked) {
+        createBurst(x, centerY, baseCol);
+        cell._hasSparked = true;
+      }
+    }
+
+    if (stepProgress > 0.5 || stepProgress < -0.5) {
+      cell._hasSparked = false; // Reset for next loop/pass
+    }
+
+    if (isVisualDing && !stepProgress) {
+      scale = 1.35;
     }
 
     const radius = 42 * scale;
+
+    // Optional Trail Effect
+    if (Aesthetics.trails && stepProgress > 0 && stepProgress < 0.3) {
+      streamCtx.beginPath();
+      streamCtx.arc(x - (stepProgress * 100), centerY, radius * 0.8, 0, Math.PI * 2);
+      streamCtx.fillStyle = baseCol;
+      streamCtx.globalAlpha = 0.2 * (1.0 - stepProgress / 0.3);
+      streamCtx.fill();
+      streamCtx.globalAlpha = 1.0;
+    }
 
     // 4c. Background Circle
     streamCtx.beginPath();
@@ -441,15 +626,28 @@ function drawHighway(ctx) {
   }
 
   // 5. "Now" Line
-  const nowGlow = 15 + Math.pow(1.0 - pos.fraction, 2) * 20; // Pulsing glow
+  const nowGlow = Aesthetics.glow ? (15 + Math.pow(1.0 - pos.fraction, 2) * 20) : 0;
   streamCtx.strokeStyle = 'rgba(255, 237, 0, 0.9)';
   streamCtx.lineWidth = 4;
-  streamCtx.shadowBlur = nowGlow;
-  streamCtx.shadowColor = 'rgba(255, 237, 0, 0.6)';
+  if (Aesthetics.glow) {
+    streamCtx.shadowBlur = nowGlow;
+    streamCtx.shadowColor = 'rgba(255, 237, 0, 0.6)';
+  }
   streamCtx.beginPath();
   streamCtx.moveTo(centerX, 0);
   streamCtx.lineTo(centerX, h);
   streamCtx.stroke();
+  streamCtx.shadowBlur = 0; // Reset for sparks
+
+  // 6. Draw Sparks
+  sparks.forEach(s => {
+    streamCtx.globalAlpha = s.alpha;
+    streamCtx.fillStyle = s.color;
+    streamCtx.beginPath();
+    streamCtx.arc(s.x, s.y, 3, 0, Math.PI * 2);
+    streamCtx.fill();
+  });
+  streamCtx.globalAlpha = 1.0;
 
   streamCtx.restore();
 }
