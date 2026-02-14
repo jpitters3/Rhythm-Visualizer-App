@@ -9,3 +9,4 @@ dist/
 .env
 .env.local
 *.local
+.env.test
