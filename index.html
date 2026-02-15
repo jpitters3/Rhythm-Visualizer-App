@@ -389,10 +389,16 @@
 
         <!-- HANDPAN WRAP -->
         <div class="handpan-wrap" id="handpanWrap">
+          <div id="handpanLoading" class="hp-loading-overlay">
+            <div class="hp-loader"></div>
+            <span>Loading Scale...</span>
+          </div>
           <div id="lockBtn" class="lock-btn" style="display:none;">
             <img id="lockBtnImg" src="./assets/images/lock.png" alt="Lock handpan" />
           </div>
-          <button id="flipSideBtn" class="flip-btn" style="display:none;" title="Flip to Bottom">🔄</button>
+          <div id="handpanFlipBtnContainer" style="position:absolute; width:100%;">
+            <button id="flipSideBtn" class="flip-btn" style="display:none;" title="Flip to Bottom">🔄</button>
+          </div>
           <img id="handpanImg" class="handpan-img" src="./assets/images/handpan-for-groovepan.png"
             alt="Handpan note layout" />
           <div class="handpan-overlay" id="handpanOverlay"></div>

@@ -63,6 +63,58 @@ let mountedHandpanData = null; // Store current handpan data for flipping
 // Custom Handpan Cache
 let customHandpansCache = [];
 
+let handpanLoadingOverlay = null;
+
+function setHandpanLoading(on) {
+  if (!handpanLoadingOverlay) handpanLoadingOverlay = document.getElementById('handpanLoading');
+  if (handpanLoadingOverlay) {
+    if (on) {
+      handpanLoadingOverlay.classList.add('active');
+      handpanImg?.classList.add('loading');
+      handpanOverlay?.classList.add('loading');
+    } else {
+      handpanLoadingOverlay.classList.remove('active');
+      handpanImg?.classList.remove('loading');
+      handpanOverlay?.classList.remove('loading');
+    }
+  }
+}
+
+/**
+ * Centralized helper to change handpan image with guaranteed synchronization.
+ */
+function changeHandpanImage(src, onDone) {
+  setHandpanLoading(true);
+
+  // Ensure we show the loading overlay for at least a brief moment for UX smoothness
+  const minLoadingTime = 400;
+  const startTime = Date.now();
+
+  const finalize = () => {
+    const elapsed = Date.now() - startTime;
+    const remaining = Math.max(0, minLoadingTime - elapsed);
+
+    // Double rAF to ensure browser has processed the layout of the new image
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        // Extra tiny timeout to be absolutely sure the layout engine has updated height
+        setTimeout(() => {
+          if (onDone) onDone();
+          buildHandpanOverlay();
+          setHandpanLoading(false);
+          handpanImg.onload = null;
+          handpanImg.onerror = null;
+        }, Math.max(remaining, 50));
+      });
+    });
+  };
+
+
+  handpanImg.onload = finalize;
+  handpanImg.onerror = finalize; // Fallback on error
+  handpanImg.src = src;
+}
+
 /* ==== Save and load scales locally and in db ==== */
 
 export function saveScaleLocal(name) {
@@ -187,19 +239,21 @@ function applyCustomHandpan(handpanData) {
   mountedHandpanData = handpanData; // Store for flipping
   currentHandpanSide = 'top'; // Reset to top
 
-  // Update Image
-  handpanImg.src = handpanData.top_image_url;
+  changeHandpanImage(handpanData.top_image_url, () => {
+    // Apply Image Rotation
+    const rot = handpanData.image_rotation || 0;
+    handpanImg.style.transform = `rotate(${rot}deg)`;
+  });
 
   // Show/Hide Flip Button
   const flipBtn = document.getElementById('flipSideBtn');
   if (flipBtn) {
-    flipBtn.style.display = handpanData.bottom_image_url ? 'block' : 'none';
+    flipBtn.style.display = handpanData.bottom_image_url ? '' : 'none';
+    flipBtn.style.marginLeft = handpanData.bottom_image_url ? 'auto' : '0';
+    flipBtn.style.position = handpanData.bottom_image_url ? 'relative' : '';
+    flipBtn.style.height = handpanData.bottom_image_url ? '50px' : '';
     flipBtn.onclick = () => toggleHandpanSide();
   }
-
-  // Apply Image Rotation
-  const rot = handpanData.image_rotation || 0;
-  handpanImg.style.transform = `rotate(${rot}deg)`;
 
   // Update Map
   const newMap = {};
@@ -274,7 +328,6 @@ function applyCustomHandpan(handpanData) {
   if (customOpt) customOpt.remove();
 
   if (handpanOverlay) handpanOverlay.dataset.model = 'Bronze';
-  buildHandpanOverlay();
   dispatchEvent(new Event('handpan-loaded'));
 }
 
@@ -319,14 +372,15 @@ export function toggleHandpanSide() {
     if (handpanWrapBottom) handpanWrapBottom.style.display = 'block';
     if (handpanImgBottom) handpanImgBottom.src = mountedHandpanData.bottom_image_url;
     // Top image stays as top
-    handpanImg.src = mountedHandpanData.top_image_url;
+    changeHandpanImage(mountedHandpanData.top_image_url);
   } else {
     if (handpanWrapBottom) handpanWrapBottom.style.display = 'none';
     if (handpanImgBottom) handpanImgBottom.src = ""; // Clear to save memory?
 
     // Update Single Image (Both uses Top by default)
     const imgSide = (currentHandpanSide === 'bottom') ? 'bottom' : 'top';
-    handpanImg.src = (imgSide === 'top') ? mountedHandpanData.top_image_url : mountedHandpanData.bottom_image_url;
+    const targetSrc = (imgSide === 'top') ? mountedHandpanData.top_image_url : mountedHandpanData.bottom_image_url;
+    changeHandpanImage(targetSrc);
   }
 
   // Re-run the visual map logic
@@ -384,8 +438,7 @@ export function toggleHandpanSide() {
   // We must NOT nuke the Musical Map in `currentScale` because notes on the other side should still make sound if triggered by MIDI/Keyboard.
   // However, HANDPAN_MAP determines what is drawn.
   HANDPAN_MAP = newMap;
-
-  buildHandpanOverlay();
+  // buildHandpanOverlay() is now handled by img.onload above
 }
 
 // === MY SCALES MANAGEMENT ===
@@ -1291,6 +1344,11 @@ export function initHandpanMap() {
     }
 
     scaleStatus.textContent = `Scale: ${val}`;
+
+    // Explicitly hide flip button when switching to standard scales
+    const flipBtn = document.getElementById('flipSideBtn');
+    if (flipBtn) flipBtn.style.display = 'none';
+
     let currentModel = handpanColorSelect.value;
     const row = handpanColorSelect.closest('.setting-row');
     if (row) row.style.display = 'flex';
@@ -1301,35 +1359,46 @@ export function initHandpanMap() {
     }
 
     if (currentModel === 'Bronze') {
-      handpanImg.src = `${BASE_PATH}assets/images/${HANDPAN_IMG_BRONZE}`;
-      handpanImg.style.transform = '';
+      changeHandpanImage(`${BASE_PATH}assets/images/${HANDPAN_IMG_BRONZE}`, () => {
+        handpanImg.style.transform = '';
+      });
       HANDPAN_MAP = HANDPAN_MAP_BRONZE;
     } else if (currentModel === 'Sketch') {
-      handpanImg.src = `${BASE_PATH}assets/images/${HANDPAN_IMG_SKETCH_EMPTY}`;
-      handpanImg.style.transform = '';
+      changeHandpanImage(`${BASE_PATH}assets/images/${HANDPAN_IMG_SKETCH_EMPTY}`, () => {
+        handpanImg.style.transform = '';
+      });
       HANDPAN_MAP = HANDPAN_MAP_SKETCH;
+    } else {
+      // Rebuild overlay to ensure alignment even if model/image didn't change
+      buildHandpanOverlay();
+      setHandpanLoading(true);
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          setTimeout(() => setHandpanLoading(false), 400);
+        });
+      });
     }
 
     if (setCurrentScale && SCALES) setCurrentScale(SCALES[val]);
     await preloadScaleSamples();
-    buildHandpanOverlay();
   });
 
   handpanColorSelect?.addEventListener('change', async () => {
     const val = handpanColorSelect.value;
     if (val === 'Bronze') {
       lastStandardModel = 'Bronze';
-      handpanImg.src = `${BASE_PATH}assets/images/${HANDPAN_IMG_BRONZE}`;
-      handpanImg.style.transform = '';
+      changeHandpanImage(`${BASE_PATH}assets/images/${HANDPAN_IMG_BRONZE}`, () => {
+        handpanImg.style.transform = '';
+      });
       HANDPAN_MAP = HANDPAN_MAP_BRONZE;
     } else if (val === 'Sketch') {
       lastStandardModel = 'Sketch';
-      handpanImg.src = `${BASE_PATH}assets/images/${HANDPAN_IMG_SKETCH_EMPTY}`;
-      handpanImg.style.transform = '';
+      changeHandpanImage(`${BASE_PATH}assets/images/${HANDPAN_IMG_SKETCH_EMPTY}`, () => {
+        handpanImg.style.transform = '';
+      });
       HANDPAN_MAP = HANDPAN_MAP_SKETCH;
     }
     updateLabelStyles();
-    buildHandpanOverlay();
   });
 
   numberPitchSelect?.addEventListener('change', async () => {
@@ -1406,7 +1475,11 @@ export function initHandpanMap() {
     buildScaleSelect();
   }
 
-  buildHandpanOverlay();
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      buildHandpanOverlay();
+    });
+  });
 
   // Load handpan side preference
   const savedHandpanSide = localStorage.getItem('gp_handpanSide');
@@ -1438,6 +1511,15 @@ export function initHandpanMap() {
   }
 
   window.dispatchEvent(new Event('handpan-loaded'));
+
+  // ResizeObserver for automatic realignment
+  const resizeObserver = new ResizeObserver(() => {
+    // Only rebuild if image is actually loaded/visible
+    if (handpanImg && handpanImg.complete && handpanImg.naturalHeight !== 0 && !handpanLoadingOverlay?.classList.contains('active')) {
+      buildHandpanOverlay();
+    }
+  });
+  if (handpanSection) resizeObserver.observe(handpanSection);
 }
 
 function buildScaleSelect() {

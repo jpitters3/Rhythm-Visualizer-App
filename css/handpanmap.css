@@ -38,6 +38,12 @@
   height: auto;
   display: block;
   border-radius: 14px;
+  opacity: 1;
+  transition: opacity 0.4s ease;
+}
+
+.handpan-img.loading {
+  opacity: 0;
 }
 
 .handpan-overlay {
@@ -45,6 +51,12 @@
   position: absolute;
   inset: 14px;
   pointer-events: none;
+  opacity: 1;
+  transition: opacity 0.4s ease;
+}
+
+.handpan-overlay.loading {
+  opacity: 0;
 }
 
 /* Mobile: stack */
@@ -265,6 +277,10 @@ div.under-handpan button img {
 /* Locked handpan and ghost note sections for mobile */
 div.lock-btn {
   display: none;
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 100;
 }
 
 .present-controls {
@@ -281,11 +297,11 @@ div.lock-btn {
   div.lock-btn {
     display: block;
     width: 30px;
-    height: 0;
-    top: 0px;
-    position: relative;
-    justify-self: right;
-    z-index: 1;
+    height: 30px;
+    top: 10px;
+    right: 10px;
+    position: absolute;
+    z-index: 100;
   }
 
   div.lock-btn img {
@@ -561,4 +577,73 @@ body.dark .chord-chip.minor .chord-root {
   box-shadow: 0 0 0 8px rgba(99, 102, 241, 0.4) !important;
   transform: scale(1.1);
   transition: all 0.1s;
+}
+
+/* Loading Overlay */
+.hp-loading-overlay {
+  position: absolute;
+  inset: 14px;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-radius: 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+  color: var(--text);
+  font-weight: 600;
+}
+
+.hp-loading-overlay.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.hp-loader {
+  width: 40px;
+  height: 40px;
+  border: 4px solid rgba(0, 0, 0, 0.1);
+  border-left-color: var(--primary);
+  border-radius: 50%;
+  animation: hp-spin 1s linear infinite;
+  margin-bottom: 12px;
+}
+
+body.dark .hp-loader {
+  border-color: rgba(255, 255, 255, 0.1);
+  border-left-color: #818cf8;
+}
+
+@keyframes hp-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.flip-btn {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 100;
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(5px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 18px;
+  transition: background 0.2s;
+}
+
+.flip-btn:hover {
+  background: rgba(255, 255, 255, 0.4);
 }
