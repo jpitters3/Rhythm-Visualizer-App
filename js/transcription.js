@@ -30,16 +30,18 @@ const CONFIDENCE_THRESHOLD = 2;
 // --- Calibration State ---
 let isCalibrating = false; // Standard note-by-note volume check
 let calIndex = 0;
-const calQueue = ['Ding', '1', '2', '3', '4', '5', '6', '7', '8'];
+const calQueue = ['Ding', '1', '2', '3', '4', '5', '6', '7', '8', 'Tak', 'Slap'];
 const CAL_SAMPLES_REQUIRED = 20;
 let noteSensitivities = JSON.parse(localStorage.getItem('gp_cal')) || {};
+let noteClarityAverages = JSON.parse(localStorage.getItem('gp_clarity_profiles')) || {};
 
 // --- Frequency Profiling ---
 let currentCalibratedFreqs = {}; // Map of { label: freq } for current scale
 let skipCalibrationCheck = {};   // Track if user clicked "Continue Anyway" for a scale
 
 // --- Guided Calibration State (Self-Correction) ---
-let isGuidedCalibrating = false
+let isGuidedCalibrating = false;
+let isFullCalWizard = false;
 
 const CALIBRATE_PATTERN_8_BEATS = 'Calibrate - 8 Beats Per Measure';
 
@@ -191,7 +193,7 @@ function transcriptionLoop() {
     }
 
     if (isCalibrating) {
-        handleCalibration(pitch, rms);
+        handleCalibration(pitch, rms, clarity);
     } else if (activeGrid.playing) {
         // Debug every potential hit (loud enough)
         // if (rms > roomNoiseFloor) {
@@ -208,16 +210,28 @@ function transcriptionLoop() {
             const detectedNoteLabel = findClosestScaleNote(pitch);
             let CLARITY_THRESHOLD = userClarityThreshold;
 
+            // DYNAMIC CLARITY ADJUSTMENT based on calibration
+            // If we have calibrated 'Tak' or 'Slap' clarity, we use it to nudge the threshold.
+            // This prevents "dirty" notes (like Dings) from being seen as accents if they are clearer than actual accents.
+            const takClarity = noteClarityAverages['Tak'] || 0.4;
+            const slapClarity = noteClarityAverages['Slap'] || 0.4;
+            const baselineAccentClarity = Math.max(takClarity, slapClarity);
+
             // Get Ding Frequency for dynamic protection
             const currentScale = getScale();
             const dingFreq = (currentScale && NOTE_FREQS[currentScale.ding]) ? NOTE_FREQS[currentScale.ding] : 0;
-            // Allow some headroom (e.g. +30Hz) for the Ding's resonance or slightly sharp attacks
             const dingProtectionLimit = dingFreq ? (dingFreq + 40) : 150;
 
-            // Dings (Low notes) often have lower clarity. Relax threshold for them.
-            if (detectedNoteLabel === 'D' || pitch < dingProtectionLimit) {
-                // dynamic adjustment relative to user setting
-                CLARITY_THRESHOLD = Math.max(0.3, userClarityThreshold - 0.08);
+            // If we have a detected note, we want to ensure its clarity is safely above
+            // the calibrated "noise" level of a true accent.
+            if (detectedNoteLabel) {
+                // If it's a Ding, be extra lenient, but still watch the accent baseline
+                if (detectedNoteLabel === 'D' || pitch < dingProtectionLimit) {
+                    CLARITY_THRESHOLD = Math.max(baselineAccentClarity + 0.05, userClarityThreshold - 0.1);
+                } else {
+                    // Regular notes should be significantly clearer than a Tak/Slap
+                    CLARITY_THRESHOLD = Math.max(baselineAccentClarity + 0.1, userClarityThreshold);
+                }
             }
 
             const isClearNote = detectedNoteLabel && clarity > CLARITY_THRESHOLD;
@@ -257,7 +271,7 @@ function transcriptionLoop() {
                             if (isCoaching()) {
                                 evaluateDetectedNote('ACCENT', transcriptionIndex, nowAudioMs);
                             } else {
-                                recordNoteToGrid('T', currentIndex, activeGrid);
+                                recordNoteToGrid('S', currentIndex, activeGrid);
                             }
                             lastNoteTime = now;
                             stepWasRecorded = true;
@@ -347,27 +361,45 @@ function transcriptionLoop() {
 }
 
 // Calibration Logic
-function handleCalibration(pitch, rms) {
+function handleCalibration(pitch, rms, clarity) {
     if (!isCalibrating) return;
 
     console.log("Calibrating...")
 
     const target = calQueue[calIndex];
-    const detected = findClosestScaleNote(pitch);
+    const isAccentCal = (target === 'Tak' || target === 'Slap');
+    let isHit = false;
 
-    // When calibrating, look for a clear, loud hit of the target note
-    if (rms > baseSensitivity && detected && detected === target) {
+    if (isAccentCal) {
+        // For accents, we look for a sharp strike (rms > floor) 
+        // with low clarity (as expected for percussive hits)
+        const flux = rms / prevRMS;
+        if (rms > baseSensitivity * 1.5 && flux > 1.3) {
+            isHit = true;
+        }
+    } else {
+        // Standard Note Calibration
+        const detected = findClosestScaleNote(pitch);
+        if (rms > baseSensitivity && detected && detected === target) {
+            isHit = true;
+        }
+    }
+
+    if (isHit) {
         // Standard volume calibration
         if (!noteSensitivities[target]) noteSensitivities[target] = [];
         if (Array.isArray(noteSensitivities[target])) {
             noteSensitivities[target].push(rms);
         } else {
-            // Already finished this note once? Resetting for re-calibration if somehow triggered
             noteSensitivities[target] = [rms];
         }
 
-        // Personalized Pitch Calibration
-        if (pitch && pitch > 50 && pitch < 1200) {
+        // Clarity Profile for Accents (and notes too, why not?)
+        if (!noteClarityAverages[target]) noteClarityAverages[target] = [];
+        noteClarityAverages[target].push(clarity);
+
+        // Personalized Pitch Calibration (Notes only)
+        if (!isAccentCal && pitch && pitch > 50 && pitch < 1200) {
             if (!currentCalibratedFreqs[target]) currentCalibratedFreqs[target] = [];
             if (Array.isArray(currentCalibratedFreqs[target])) {
                 currentCalibratedFreqs[target].push(pitch);
@@ -380,7 +412,7 @@ function handleCalibration(pitch, rms) {
 
         // Update UI with progress
         if (targetNoteDisplay) {
-            targetNoteDisplay.textContent = target; // Just note name now
+            targetNoteDisplay.textContent = target;
         }
         if (calProgressCircle) {
             const progress = (currentTally / CAL_SAMPLES_REQUIRED) * 100;
@@ -388,25 +420,30 @@ function handleCalibration(pitch, rms) {
         }
 
         if (currentTally >= CAL_SAMPLES_REQUIRED) {
-            // Reset circle for next note
             if (calProgressCircle) calProgressCircle.style.strokeDashoffset = 100;
 
-            // Average the volume sensitivity
-            const avg = noteSensitivities[target].reduce((a, b) => a + b, 0) / noteSensitivities[target].length;
-            noteSensitivities[target] = avg;
+            // Average Volume
+            const avgVol = noteSensitivities[target].reduce((a, b) => a + b, 0) / noteSensitivities[target].length;
+            noteSensitivities[target] = avgVol;
             localStorage.setItem('gp_cal', JSON.stringify(noteSensitivities));
 
-            // Average and sync the frequency profile
-            if (currentCalibratedFreqs[target] && Array.isArray(currentCalibratedFreqs[target]) && currentCalibratedFreqs[target].length >= CAL_SAMPLES_REQUIRED) {
-                const avgPitch = currentCalibratedFreqs[target].reduce((a, b) => a + b, 0) / currentCalibratedFreqs[target].length;
-                currentCalibratedFreqs[target] = avgPitch;
-                saveCalibrationProfile();
-            } else if (currentCalibratedFreqs[target] && !Array.isArray(currentCalibratedFreqs[target])) {
-                // Use already calculated pitch
-            } else {
-                // Fallback to theoretical if we didn't get enough samples
-                currentCalibratedFreqs[target] = getTheoreticalFreq(target);
-                saveCalibrationProfile();
+            // Average Clarity
+            const avgClarity = noteClarityAverages[target].reduce((a, b) => a + b, 0) / noteClarityAverages[target].length;
+            noteClarityAverages[target] = avgClarity;
+            localStorage.setItem('gp_clarity_profiles', JSON.stringify(noteClarityAverages));
+
+            // Average Pitch (Notes only)
+            if (!isAccentCal) {
+                if (currentCalibratedFreqs[target] && Array.isArray(currentCalibratedFreqs[target]) && currentCalibratedFreqs[target].length >= CAL_SAMPLES_REQUIRED) {
+                    const avgPitch = currentCalibratedFreqs[target].reduce((a, b) => a + b, 0) / currentCalibratedFreqs[target].length;
+                    currentCalibratedFreqs[target] = avgPitch;
+                    saveCalibrationProfile();
+                } else if (currentCalibratedFreqs[target] && !Array.isArray(currentCalibratedFreqs[target])) {
+                    // Use already calculated pitch
+                } else {
+                    currentCalibratedFreqs[target] = getTheoreticalFreq(target);
+                    saveCalibrationProfile();
+                }
             }
 
             calIndex++;
@@ -497,8 +534,22 @@ export function hasCalibrationForCurrentScale() {
 function finishCalibration() {
     isCalibrating = false;
     micCalOverlay.style.display = 'none';
-    alert("Calibration Complete! Your instrument's unique pitch profile has been saved.");
-    toggleListening(); // Disable microphone when done
+
+    if (isFullCalWizard) {
+        // Confirmation for Phase 2
+        const response = confirm("1. Pitch Calibration Complete!\n\nReady to start Phase 2: Sensitivity Calibration?\n\nThis will load a rhythmic pattern for you to play along with.");
+        if (response) {
+            // Trigger Guided (Sensitivity) Calibration
+            guidedCalBtn?.click();
+        } else {
+            isFullCalWizard = false;
+            setIsListening(false);
+            alert("Full Calibration cancelled.");
+        }
+    } else {
+        alert("Pitch Calibration Complete!");
+        setIsListening(false);
+    }
     Bus.emit(BUS_EVENT.CALIBRATION_DONE);
 }
 
@@ -566,6 +617,7 @@ function analyzeGuidedResults() {
     guidedCalModal.style.display = 'none';
 
     isGuidedCalibrating = false;
+    isFullCalWizard = false;
     resetGuideUI();
 
     localStorage.setItem('gp_multipliers', JSON.stringify(noteMultipliers));
@@ -820,6 +872,14 @@ export function initTranscription() {
         }, 10);
 
         resetGuideUI();
+    });
+
+    const fullCalBtn = document.getElementById('fullCalBtn');
+    fullCalBtn?.addEventListener('click', (e) => {
+        if (e) e.stopPropagation();
+        isFullCalWizard = true;
+        // Start Step 1
+        micCalBtn?.click();
     });
 
     const closeGuidedBtnLocal = document.getElementById('closeGuidedBtn');
