@@ -224,9 +224,9 @@ function transcriptionLoop() {
         //     console.log(`[Check] Pitch: ${pitch}, RMS: ${rms}, Floor: ${roomNoiseFloor}, StepRecorded: ${stepWasRecorded}`);
         // }
 
-        // In Coaching Mode, if we detected an ACCENT, we allow continuing to listen 
-        // for a specific pitch to "refine" the detection.
-        const canRefine = isCoaching() && stepWasRecorded && lastDetectedType === 'ACCENT';
+        // In Coaching Mode, if we have a PENDING ACCENT, we are in "Refinement Mode"
+        // This is much more reliable than stepWasRecorded/lastDetectedType checks.
+        const canRefine = (pendingAccent !== null);
 
         if ((!stepWasRecorded || canRefine) && rms > roomNoiseFloor) {
 
@@ -337,6 +337,8 @@ function transcriptionLoop() {
 
                         // SUSTAIN FIX: If we are detecting the SAME note as before,
                         // we MUST have a confirmed new strike (higher flux) to record it.
+                        // REFINEMENT EXCEPTION: If we are currently refining an accent,
+                        // we SKIP the sustain check because the accent ITSELF is the new strike.
                         let isSustainBlocked = false;
                         if (detected === lastGlobalDetectedNote && !canRefine) {
                             if (flux < 1.35) {
@@ -351,22 +353,30 @@ function transcriptionLoop() {
                             tally[detected] = (tally[detected] || 0) + 1;
 
                             if (tally[detected] >= CONFIDENCE_THRESHOLD) {
-                                // REFINEMENT: If we had a pending accent, clear it!
-                                // The pitch we just confirmed is the BETTER label for this strike,
-                                // even if it landed on a slightly different step boundary.
+                                // --- PERFORMANCE: Calculate the EXACT hit time ---
+                                // If refined, use the original percussive attack time.
+                                // If not refined, we subtract the confidence lag (approx 32ms for 2 frames).
+                                let hitTime = nowAudioMs;
+                                let hitStep = transcriptionIndex;
+
                                 if (pendingAccent) {
-                                    console.log(`[Transcription] Refined Accent to Note: ${detected} (Cross-step cancelled)`);
+                                    console.log(`[Transcription] Refining Accent -> Note: ${detected} (Using True Attack Timing)`);
+                                    hitTime = pendingAccent.timestamp;
+                                    hitStep = pendingAccent.step;
                                     pendingAccent = null;
+                                } else {
+                                    // Compensation for the 2-frame confidence threshold (~16ms * 2 = 32ms)
+                                    hitTime = nowAudioMs - 32;
                                 }
 
-                                logCoachingEvent(`NOTE Confirmed: ${detected} (Tally: ${tally[detected]})`, transcriptionIndex);
+                                logCoachingEvent(`NOTE Confirmed: ${detected} (Hit Time: ${hitTime.toFixed(0)})`, hitStep);
                                 // Update global tracker
                                 lastGlobalDetectedNote = detected;
 
                                 if (isCoaching()) {
-                                    evaluateDetectedNote(detected, transcriptionIndex, nowAudioMs);
+                                    evaluateDetectedNote(detected, hitStep, hitTime);
                                 } else {
-                                    recordNoteToGrid(detected, currentIndex, activeGrid);
+                                    recordNoteToGrid(detected, hitStep, activeGrid);
                                 }
                                 lastNoteTime = now;
                                 stepWasRecorded = true;

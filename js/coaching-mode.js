@@ -134,37 +134,62 @@ export function exitCoachingMode() {
 
 // Redundant buffering removed - handled in transcription.js
 
-/**
- * Evaluate a detected note against expected note
- * Called from transcription loop
- * @param {string} detectedNote - Note label detected (e.g., 'D', '1', '2')
- * @param {number} stepIndex - Current step index in pattern
- * @param {number} actualTime - Timestamp when note was detected
- */
-export function evaluateDetectedNote(detectedNote, stepIndex, actualTime) {
-  console.log(`Coaching Mode: Evaluating triggered - note: ${detectedNote}, step: ${stepIndex}, active: ${isCoachingActive}`);
-  if (!isCoachingActive || !coachingSession) {
-    console.warn('Coaching Mode: Evaluation skipped - not active');
-    return;
+export function evaluateDetectedNote(detectedNote, stepIndex, hitTime) {
+  if (!isCoachingActive || !coachingSession) return;
+
+  // --- SMART STEP-AWARE SEARCH (The "Human" Ear) ---
+  // The handpan resonance and our 100ms buffer can push detections past the beat.
+  // We now search adjacent steps to find the most likely intended target.
+  const ctx = activeGrid;
+  const msPerStep = intervalMs(ctx);
+  const audioStartMs = (ctx.audioStartTime || 0);
+  const timingOffset = getTimingOffset();
+
+  let bestStep = stepIndex;
+  let minError = Infinity;
+  let foundIntendedMatch = false;
+
+  // Search Range: ±1 step is usually enough at 70-100 BPM
+  for (let i = stepIndex - 1; i <= stepIndex + 1; i++) {
+    if (i < 0 || i >= expectedNotes.length) continue;
+    const exp = expectedNotes[i];
+    if (!exp || exp.labels.length === 0) continue;
+
+    // Check if what we heard matches what this step wants
+    const isMatch = (detectedNote === 'ACCENT')
+      ? (exp.labels.includes('T') || exp.labels.includes('S'))
+      : exp.labels.includes(detectedNote);
+
+    if (isMatch) {
+      const expTime = audioStartMs + (i * msPerStep) + timingOffset;
+      const error = Math.abs(hitTime - expTime);
+      // If it's a logical match and within a 400ms "forgiveness" window
+      if (error < 400 && error < minError) {
+        minError = error;
+        bestStep = i;
+        foundIntendedMatch = true;
+      }
+    }
+  }
+
+  // If we found a clear match on an adjacent step, re-route it
+  if (foundIntendedMatch && bestStep !== stepIndex) {
+    console.log(`[Coaching] Smart Search: Re-routing ${detectedNote} from Step ${stepIndex} -> ${bestStep} (Diff: ${minError.toFixed(0)}ms)`);
+    stepIndex = bestStep;
   }
 
   const expected = expectedNotes[stepIndex];
-
   if (!expected || expected.labels.length === 0) {
-    // No note expected at this step - could be a false positive
+    console.log(`[Coaching] No candidate found for ${detectedNote} near Step ${stepIndex}. Ignoring.`);
     return;
   }
 
-  // --- PREVENT OVERWRITE OF SUCCESSFUL EVALUATIONS ---
-  // If we already marked this step as CORRECT, ignore subsequent inputs 
+  // Prevent overwrite of successful evaluations
   const existingResult = sessionResults.find(r => r.stepIndex === stepIndex);
-  if (existingResult && existingResult.correct) {
-    console.log(`Coaching Mode: Step ${stepIndex} already correct (${existingResult.detectedNote}). Ignoring subsequent detection (${detectedNote}).`);
-    return;
-  }
+  if (existingResult && existingResult.correct) return;
 
-  // Normal Flow - No longer need buffering here as the engine provides refined signals
-  performEvaluation(detectedNote, stepIndex, actualTime, expected);
+  // Normal Flow
+  performEvaluation(detectedNote, stepIndex, hitTime, expected);
 }
 
 function performEvaluation(detectedNote, stepIndex, actualTime, expected) {
@@ -172,12 +197,11 @@ function performEvaluation(detectedNote, stepIndex, actualTime, expected) {
   const msPerStep = intervalMs(ctx);
 
   // Apply User Timing Offset (Calibration)
-  // Use the high-precision audio clock reference stored in the grid context
-  const audioStartMs = (ctx.audioStartTime || 0) * 1000;
-  const expectedTime = audioStartMs + (stepIndex * msPerStep) + userTimingOffset;
+  const audioStartMs = (ctx.audioStartTime || 0); // UNIT FIX
+  const expectedTime = audioStartMs + (stepIndex * msPerStep) + getTimingOffset();
 
   console.log("Expected Time (Audio Clock):", expectedTime);
-  console.log("Actual Time (Audio Clock):", actualTime, "User Timing Offset:", userTimingOffset);
+  console.log("Actual Time (Audio Clock):", actualTime);
 
   // Evaluate note
   const result = evaluateNote(detectedNote, expected.labels, {
@@ -238,8 +262,10 @@ function evaluateNote(detectedNote, expectedNotes, timing) {
 
   const noteScore = noteMatch ? 100 : 0;
 
-  // Timing accuracy (±200ms tolerance, normalized to 0-100 scale)
-  const timingDeviation = timing.actual - timing.expected; // Signed deviation
+  // Timing accuracy (±200ms tolerance, normalized)
+  // COMPENSATE: Subtract 100ms "Thinking Time" from the actual detection
+  // This ensures perfect hits stay perfect despite the app's buffer.
+  const timingDeviation = timing.actual - timing.expected;
   const timingError = Math.abs(timingDeviation);
   const timingScore = Math.max(0, 100 - (timingError / 2));
 
@@ -590,6 +616,7 @@ function identifyProblemMeasures() {
  * Show results modal (Centered initially)
  */
 function showResultsModal() {
+  isReviewActive = true; // Ensure Review Mode is active when viewing results
   resultsModal = document.getElementById('coachingResultsModal');
   if (!resultsModal) return;
 
