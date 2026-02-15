@@ -6,7 +6,9 @@
 import { currentUser } from './state.js';
 import { ADMIN_EMAILS } from './config.js';
 import { supabase } from './supabase-client.js';
-import { dbListPatternNames, dbLoadPatternByName, dbSavePattern } from './pattern-crud.js';
+import { dbListPatternNames, dbLoadPatternByName, dbSavePattern, applyPattern } from './pattern-crud.js';
+import { start, stop } from './noteplayer.js';
+import { GridContext } from './grid-context.js';
 
 let isAdmin = false;
 let patternOrgModal = null;
@@ -15,6 +17,10 @@ let gameConfigModal = null;
 // Cache for pattern data to avoiding hammering DB during tagging
 let patternCache = [];
 
+// Preview playback - dedicated grid for admin preview only
+let previewGrid = null;
+let currentPreviewPattern = null;
+
 export async function initAdmin() {
   const user = currentUser;
   if (!user || !user.email) return;
@@ -22,6 +28,11 @@ export async function initAdmin() {
   if (ADMIN_EMAILS.has(user.email)) {
     console.log('[Admin] Authorized user detected:', user.email);
     isAdmin = true;
+
+    // Initialize preview grid
+    previewGrid = new GridContext('preview', 'preview-grid-container');
+    console.log('[Admin] Preview grid initialized');
+
     injectAdminButton();
     setupModals();
   }
@@ -38,8 +49,6 @@ function injectAdminButton() {
 
   const btn = document.createElement('button');
   btn.id = 'adminBtn';
-  // Use default dropdown style (no specific class needed if CSS handles 'button' in dropdown)
-  // But let's match the "Account Settings" style if any
   btn.innerHTML = '⚙️ Admin Tools';
   btn.style.marginTop = '4px';
   btn.style.color = 'var(--accent-glow)';
@@ -50,7 +59,6 @@ function injectAdminButton() {
   dropdown.insertBefore(btn, accountSettingsBtn.nextSibling);
 
   // Also enable other admin-only buttons in the dropdown if they exist
-  // (e.g. Create Course, POTW Dashboard which are hardcoded in HTML but hidden)
   const adminElements = document.querySelectorAll('.admin-only');
   adminElements.forEach(el => el.style.display = 'block');
 }
@@ -60,8 +68,17 @@ function setupModals() {
   patternOrgModal = document.getElementById('patternOrgModal');
   if (patternOrgModal) {
     patternOrgModal.querySelector('.close-modal-btn').onclick = () => {
+      stopPatternPreview(); // Stop playback when closing modal
       patternOrgModal.style.display = 'none';
     }
+  }
+
+  // Search input listener
+  const searchInput = document.getElementById('adminPatternSearch');
+  if (searchInput) {
+    searchInput.oninput = (e) => {
+      renderPatternList(e.target.value.toLowerCase());
+    };
   }
 
   // Game Config Modal (Placeholder for now)
@@ -91,8 +108,6 @@ async function openPatternOrgModal() {
     const names = await dbListPatternNames();
 
     // 2. Fetch full data for each (to get tags)
-    // Optimization: In a real app we'd want a dedicated 'metadata' table or column,
-    // but for now we load the JSON.
     patternCache = [];
 
     // Fetch in parallel batches of 5 to avoid rate limits
@@ -118,8 +133,6 @@ function setupDelegation() {
   const listContainer = document.getElementById('adminPatternList');
   if (!listContainer) return;
 
-  // Singleton listener check (simple way: remove then add, or just check a flag if needed)
-  // Since initAdmin calls this once, it's fine.
   listContainer.onclick = (e) => {
     const removeBtn = e.target.closest('.remove-tag-btn');
     if (removeBtn) {
@@ -134,10 +147,26 @@ function setupDelegation() {
       promptAddTag(pattern);
       return;
     }
+
+    // Play/Stop button
+    const playBtn = e.target.closest('.pattern-play-btn');
+    if (playBtn) {
+      const { pattern } = playBtn.dataset;
+      togglePatternPreview(pattern);
+      return;
+    }
+
+    // Clicking pattern name
+    const patternName = e.target.closest('.row-name');
+    if (patternName) {
+      const { pattern } = patternName.dataset;
+      togglePatternPreview(pattern);
+      return;
+    }
   };
 }
 
-function renderPatternList(filterTag = null) {
+function renderPatternList(searchQuery = '') {
   const listContainer = document.getElementById('adminPatternList');
   listContainer.innerHTML = '';
 
@@ -149,14 +178,22 @@ function renderPatternList(filterTag = null) {
   patternCache.forEach(item => {
     const tags = item.data.tags || [];
 
-    // Filter logic
-    if (filterTag && !tags.includes(filterTag)) return;
+    // Filter logic: search by name or tags
+    if (searchQuery) {
+      const matchesName = item.name.toLowerCase().includes(searchQuery);
+      const matchesTags = tags.some(tag => tag.toLowerCase().includes(searchQuery));
+      if (!matchesName && !matchesTags) return;
+    }
 
     const row = document.createElement('div');
     row.className = 'admin-pattern-row';
 
+    const isPlaying = previewGrid && previewGrid.playing && currentPreviewPattern === item.name;
+    const playIcon = isPlaying ? '⏹' : '▶';
+
     row.innerHTML = `
-      <div class="row-name">${item.name}</div>
+      <button class="pattern-play-btn" data-pattern="${item.name}" style="background: transparent; border: none; cursor: pointer; font-size: 16px; padding: 4px 8px; color: var(--primary);" title="${isPlaying ? 'Stop' : 'Play'} preview">${playIcon}</button>
+      <div class="row-name" data-pattern="${item.name}" style="cursor: pointer;">${item.name}</div>
       <div class="row-tags" id="tags-${item.name.replace(/\s+/g, '-')}">
         ${tags.map(t => `
             <span class="tag-pill">
@@ -174,6 +211,62 @@ function renderPatternList(filterTag = null) {
   });
 
   listContainer.appendChild(table);
+}
+
+// Pattern Preview Playback
+function togglePatternPreview(patternName) {
+  // If currently playing this pattern, stop it
+  if (previewGrid && previewGrid.playing && currentPreviewPattern === patternName) {
+    stopPatternPreview();
+    return;
+  }
+
+  // If playing a different pattern, stop it first
+  if (previewGrid && previewGrid.playing) {
+    stopPatternPreview();
+  }
+
+  // Start playing the new pattern
+  startPatternPreview(patternName);
+}
+
+async function startPatternPreview(patternName) {
+  const item = patternCache.find(p => p.name === patternName);
+
+  if (!item || !item.data) {
+    console.error('[Admin Preview] Pattern not found in cache:', patternName);
+    return;
+  }
+
+  if (!previewGrid) {
+    console.error('[Admin Preview] Preview grid not initialized');
+    return;
+  }
+
+  currentPreviewPattern = patternName;
+
+  try {
+    // Use dedicated preview grid
+    await applyPattern(item.data, previewGrid);
+
+    // Start playback (skipCountdown = true for immediate playback)
+    await start(previewGrid, false, true);
+
+    // Update UI
+    renderPatternList();
+  } catch (err) {
+    console.error('[Admin Preview] Error during preview:', err);
+  }
+}
+
+function stopPatternPreview() {
+  if (previewGrid) {
+    stop(previewGrid, false);
+  }
+  currentPreviewPattern = null;
+
+  // Update UI
+  renderPatternList();
 }
 
 async function removeTag(patternName, tagToRemove) {

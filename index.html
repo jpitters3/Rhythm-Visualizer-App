@@ -1337,6 +1337,8 @@
         <div style="margin-bottom: 20px; color: var(--text-secondary);">
           Manage tags for saved patterns. Use tags like <code>#simon</code> or <code>#level1</code> to bucket content.
         </div>
+        <input type="text" id="adminPatternSearch" placeholder="Search patterns by name or tag..."
+          style="width: 100%; padding: 10px; margin-bottom: 16px; border-radius: 8px; border: 1px solid var(--panel-border); background: var(--panel); color: var(--text);" />
         <div id="adminPatternList" style="max-height: 500px; overflow-y: auto;">
           <!-- Populated by admin.js -->
         </div>
@@ -1357,6 +1359,12 @@
       </div>
     </div>
   </div>
+
+  <!-- Hidden Preview Grid for Admin Pattern Preview -->
+  <div id="preview-grid-container" style="display: none;" aria-hidden="true">
+    <div id="preview-grid"></div>
+  </div>
+
 
 </body>
 
