@@ -358,7 +358,7 @@ body:not(.dark) .cell.selected {
 }
 
 /* ON highlight only when unlabeled */
-.cell.selected:not(.label-d):not(.label-t):not(.label-s):not(.label-n) {
+.cell.selected:not(.label-ding):not(.label-t):not(.label-s):not(.label-n) {
   background: var(--cell-on);
 }
 

@@ -1,7 +1,7 @@
 /* ===== HAND ICONS (Split Mode) — IMAGE FILES ===== */
 
 /* Only show icons when split mode is ON AND the beat is labeled */
-body.handSplit .cell.label-d::after,
+body.handSplit .cell.label-ding::after,
 body.handSplit .cell.label-t::after,
 body.handSplit .cell.label-s::after,
 body.handSplit .cell.label-n::after {
@@ -23,7 +23,7 @@ body.handSplit .cell.label-n::after {
 }
 
 /* LEFT HAND icon: placed on left half */
-body.handSplit .cell.hand-l.label-d::after,
+body.handSplit .cell.hand-l.label-ding::after,
 body.handSplit .cell.hand-l.label-t::after,
 body.handSplit .cell.hand-l.label-s::after,
 body.handSplit .cell.hand-l.label-n::after {
@@ -32,7 +32,7 @@ body.handSplit .cell.hand-l.label-n::after {
 }
 
 /* RIGHT HAND icon: placed on right half */
-body.handSplit .cell.hand-r.label-d::after,
+body.handSplit .cell.hand-r.label-ding::after,
 body.handSplit .cell.hand-r.label-t::after,
 body.handSplit .cell.hand-r.label-s::after,
 body.handSplit .cell.hand-r.label-n::after {

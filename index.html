@@ -214,7 +214,7 @@
                 </div>
               </div>
 
-              <button id="micCalBtn">Auto-Calibrate</button>
+              <button id="micCalBtn">Calibrate Handpan</button>
               <button id="guidedCalBtn" style="margin-top:8px;">Guided Calibration</button>
             </div>
           </div>
@@ -224,7 +224,16 @@
         <button id="presentBtn" title="Toggle presentation mode (Esc exits)">⛶</button>
 
         <div id="calibrationStatus" class="calibration-overlay" style="display:none;">
-          <span>Tap Note: </span><span id="targetNoteName">D</span>
+          <div class="cal-progress-wrapper">
+            <svg class="cal-progress-svg" viewBox="0 0 36 36">
+              <circle class="cal-circle-bg" cx="18" cy="18" r="16"></circle>
+              <circle id="calProgressCircle" class="cal-circle-progress" cx="18" cy="18" r="16"></circle>
+            </svg>
+            <div class="cal-info">
+              <span class="cal-label">Tap Note</span>
+              <span id="targetNoteName" class="cal-note">Ding</span>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -760,6 +769,23 @@
   </div>
   <div id="micVisualizer" class="mic-meter" style="display:none;">
     <div id="micLevel" class="mic-level-bar"></div>
+  </div>
+
+  <!-- Calibration Optimization Prompt -->
+  <div id="calOptimizationModal" class="modal-overlay" aria-hidden="true" style="z-index: 2500;">
+    <div class="modal" style="width: min(450px, 90%); text-align: center; border: 2px solid var(--accent-glow);">
+      <div class="modal-title" style="color: var(--accent-glow); margin-bottom: 20px;">👂 Optimize Your Experience</div>
+      <div class="modal-subtitle" style="font-size: 15px; margin-bottom: 25px; line-height: 1.5;">
+        Coach mode works best when calibrated to your specific instrument's unique frequencies.
+        <br><br>
+        Would you like to take 20 seconds to calibrate now for <strong>maximum accuracy</strong>?
+      </div>
+      <div class="modal-actions" style="flex-direction: column; gap: 10px;">
+        <button id="calNowBtn" class="primary-btn active" style="width: 100%;">🎯 Calibrate Now</button>
+        <button id="calSkipBtn" class="secondary-btn" style="width: 100%; border: none; opacity: 0.7;">Continue
+          anyway</button>
+      </div>
+    </div>
   </div>
 
   <!-- Courses View -->

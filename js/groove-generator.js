@@ -27,7 +27,7 @@ function randInt(min, max) {
 function clearAllBeatsAndLabels(ctx = activeGrid) {
   ctx.innerLabels.fill('');
   cells(ctx).forEach((c) => {
-    c.classList.remove('label-d', 'label-t', 'label-s', 'label-n', 'selected', 'play');
+    c.classList.remove('label-ding', 'label-t', 'label-s', 'label-n', 'selected', 'play');
     const inner = c.querySelector('.inner');
     if (inner) inner.textContent = '';
   });
@@ -109,7 +109,7 @@ function applyGroove({ D, T, S, placement = 'none', completelyRandom = false, en
   if (!all.length) return;
 
   // force beat 1
-  setInnerLabel(0, 'D', ctx);
+  setInnerLabel(0, 'Ding', ctx);
 
   let dLeft = Math.max(0, D - 1);
   let tLeft = Math.max(0, T);
@@ -125,7 +125,7 @@ function applyGroove({ D, T, S, placement = 'none', completelyRandom = false, en
     const picks = pool.slice(0, totalLeft);
 
     const labelsArr = [];
-    for (let i = 0; i < dLeft; i++) labelsArr.push('D');
+    for (let i = 0; i < dLeft; i++) labelsArr.push('Ding');
     for (let i = 0; i < tLeft; i++) labelsArr.push('T');
     for (let i = 0; i < sLeft; i++) labelsArr.push('S');
     shuffle(labelsArr);
@@ -146,7 +146,7 @@ function applyGroove({ D, T, S, placement = 'none', completelyRandom = false, en
   const sPos = pickPositions({ pool, count: sLeft, used, strength });
 
   for (const idx of dPos) {
-    setInnerLabel(idx, 'D', ctx);
+    setInnerLabel(idx, 'Ding', ctx);
   }
   for (const idx of tPos) {
     setInnerLabel(idx, 'T', ctx);
@@ -278,7 +278,7 @@ function generateGroove(dCount, tCount, sCount, ctx = activeGrid) {
   // 1) Force "1" to be a Ding (step 0)
   const root = 0;
   allCells[root]?.classList.add('on');
-  setInnerLabel(root, 'D', ctx);
+  setInnerLabel(root, 'Ding', ctx);
   used.add(root);
 
   // We already placed 1 Ding at step 0
@@ -314,7 +314,7 @@ function generateGroove(dCount, tCount, sCount, ctx = activeGrid) {
 
   // Apply Dings
   for (const i of dIdx) {
-    setInnerLabel(i, 'D', ctx);
+    setInnerLabel(i, 'Ding', ctx);
   }
 
   // Apply Taks

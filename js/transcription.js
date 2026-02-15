@@ -1,12 +1,12 @@
 import { unlockAudio, getAudioCtx, addTickObserver, stop, start } from './noteplayer.js';
-import { getScale } from './state.js';
 import { activeGrid } from './grid-context.js';
 import { cells, setInnerLabel, renderAllMeasures } from './notegrid.js';
 import { loadPatternByName } from './controls.js';
-import { isListening, setIsListening } from './state.js';
-import { isCoaching, evaluateDetectedNote } from './coaching-mode.js';
+import { isListening, setIsListening, getScale, getCurrentScaleId, currentUser } from './state.js';
+import { isCoaching, evaluateDetectedNote, logCoachingEvent } from './coaching-mode.js';
 import { ACCENT_RMS_MULTIPLIER } from './config.js';
 import { Bus, BUS_EVENT } from './bus.js';
+import { supabase } from './supabase-client.js';
 
 export let micStream = null, audioAnalyser = null;
 let lastActiveElement = null;
@@ -30,8 +30,13 @@ const CONFIDENCE_THRESHOLD = 2;
 // --- Calibration State ---
 let isCalibrating = false; // Standard note-by-note volume check
 let calIndex = 0;
-const calQueue = ['D', '1', '2', '3', '4', '5', '6', '7', '8'];
+const calQueue = ['Ding', '1', '2', '3', '4', '5', '6', '7', '8'];
+const CAL_SAMPLES_REQUIRED = 20;
 let noteSensitivities = JSON.parse(localStorage.getItem('gp_cal')) || {};
+
+// --- Frequency Profiling ---
+let currentCalibratedFreqs = {}; // Map of { label: freq } for current scale
+let skipCalibrationCheck = {};   // Track if user clicked "Continue Anyway" for a scale
 
 // --- Guided Calibration State (Self-Correction) ---
 let isGuidedCalibrating = false
@@ -40,7 +45,7 @@ const CALIBRATE_PATTERN_8_BEATS = 'Calibrate - 8 Beats Per Measure';
 
 // Load custom multipliers or set defaults
 let noteMultipliers = JSON.parse(localStorage.getItem('gp_multipliers')) || {
-    'D': 0.85, '1': 0.5, '2': 0.5, '3': 0.5, '4': 0.5, '5': 0.5, '6': 0.5, '7': 0.5, '8': 0.5
+    'Ding': 0.85, '1': 0.5, '2': 0.5, '3': 0.5, '4': 0.5, '5': 0.5, '6': 0.5, '7': 0.5, '8': 0.5
 };
 
 // Note frequencies (Octaves 2-6)
@@ -53,7 +58,7 @@ const NOTE_FREQS = {
 };
 
 // --- UI References ---
-let micBtn, micCalBtn, guidedCalBtn, targetNoteDisplay, micCalOverlay, sensValDisplay, meter;
+let micBtn, micCalBtn, guidedCalBtn, targetNoteDisplay, micCalOverlay, sensValDisplay, meter, calProgressCircle;
 
 // --- Sync State ---
 let transcriptionIndex = -1;
@@ -177,7 +182,7 @@ function transcriptionLoop() {
 
     // Step Boundary Detection
     if (currentIndex !== lastFrameTranscriptionIndex) {
-        console.log(`[Step Change] ${lastFrameTranscriptionIndex} -> ${currentIndex}`);
+        logCoachingEvent(`--- Step Boundary: ${lastFrameTranscriptionIndex} -> ${currentIndex} ---`, currentIndex);
         tally = {};
         accentCandidate = null;
         stepWasRecorded = false;
@@ -239,13 +244,14 @@ function transcriptionLoop() {
             const isNewStrike = flux > 1.35;
 
             if (isAccent) {
-                console.log("Detected Accent: RMS:", rms, "Clarity:", clarity.toFixed(3));
+                logCoachingEvent(`ACCENT Candidate: RMS ${rms.toFixed(4)}, Clarity ${clarity.toFixed(3)}, Pitch ${pitch.toFixed(1)}`, transcriptionIndex);
 
                 if (isGateOpen || isNewStrike) {
                     // Fast Trigger for Slaps (1 Frame)
                     tally['ACCENT'] = (tally['ACCENT'] || 0) + 1;
 
                     if (tally['ACCENT'] >= 1) { // Immediate
+                        logCoachingEvent(`ACCENT Confirmed!`, transcriptionIndex);
                         // If we are refining (already recorded an accent), don't send another accent
                         if (!stepWasRecorded) {
                             if (isCoaching()) {
@@ -267,7 +273,7 @@ function transcriptionLoop() {
                 const detected = findClosestScaleNote(pitch); // Returns label string directly
 
                 if (detected) {
-                    console.log("Detected Note:", detected, "Pitch:", pitch.toFixed(3), "Clarity:", clarity.toFixed(3));
+                    logCoachingEvent(`NOTE Candidate: ${detected}, Pitch ${pitch.toFixed(1)}, Clarity ${clarity.toFixed(3)}, RMS ${rms.toFixed(4)}`, transcriptionIndex);
 
                     // Use the note-specific multiplier from Guided Calibration
                     const multiplier = noteMultipliers[detected] || 0.5;
@@ -278,8 +284,21 @@ function transcriptionLoop() {
                         noteSpecificThreshold = noteSensitivities[detected] * multiplier;
                     }
 
-                    // Allow bypass of gate if we are refining an accent
-                    if ((isGateOpen || isNewStrike || canRefine) && rms > noteSpecificThreshold) {
+                    const isPassRMS = rms > noteSpecificThreshold;
+                    const isPassGate = (isGateOpen || isNewStrike || canRefine);
+
+                    if (!isPassGate || !isPassRMS) {
+                        // Log why it was rejected early if needed, but maybe too noisy?
+                        // Let's log if it's loud enough but gate is closed.
+                        if (isPassRMS && !isPassGate) {
+                            const gateRemaining = Math.max(0, dynamicGate - (now - lastNoteTime));
+                            logCoachingEvent(`NOTE Rejected: Gate Closed (Remaining: ${gateRemaining.toFixed(0)}ms, Flux: ${flux.toFixed(2)})`, transcriptionIndex);
+                        } else if (!isPassRMS) {
+                            // Too quiet, don't log every frame
+                        }
+                    }
+
+                    if (isPassGate && isPassRMS) {
                         // console.log(`[Check] Note: ${detected}, Flux: ${flux.toFixed(2)}, NewStrike: ${isNewStrike}, Gate: ${isGateOpen}, RMS: ${rms.toFixed(4)}`);
 
                         // SUSTAIN FIX: If we are detecting the SAME note as before,
@@ -287,10 +306,10 @@ function transcriptionLoop() {
                         let isSustainBlocked = false;
                         if (detected === lastGlobalDetectedNote && !canRefine) {
                             if (flux < 1.35) {
-                                // console.log(`[Block] Sustain Blocked: ${detected} (Flux ${flux.toFixed(2)} < 1.35)`);
+                                logCoachingEvent(`NOTE Rejected: Sustain Blocked (Flux ${flux.toFixed(2)} < 1.35)`, transcriptionIndex);
                                 isSustainBlocked = true;
                             } else {
-                                // console.log(`[Pass] Sustain Allowed: ${detected} (Flux ${flux.toFixed(2)} > 1.35)`);
+                                logCoachingEvent(`NOTE Passed: Sustain Allowed (Flux ${flux.toFixed(2)} > 1.35)`, transcriptionIndex);
                             }
                         }
 
@@ -298,7 +317,7 @@ function transcriptionLoop() {
                             tally[detected] = (tally[detected] || 0) + 1;
 
                             if (tally[detected] >= CONFIDENCE_THRESHOLD) {
-
+                                logCoachingEvent(`NOTE Confirmed: ${detected} (Tally: ${tally[detected]})`, transcriptionIndex);
                                 // Update global tracker
                                 lastGlobalDetectedNote = detected;
 
@@ -329,24 +348,158 @@ function transcriptionLoop() {
 
 // Calibration Logic
 function handleCalibration(pitch, rms) {
+    if (!isCalibrating) return;
+
+    console.log("Calibrating...")
+
     const target = calQueue[calIndex];
     const detected = findClosestScaleNote(pitch);
 
     // When calibrating, look for a clear, loud hit of the target note
     if (rms > baseSensitivity && detected && detected === target) {
-        noteSensitivities[target] = rms; // Store the actual recorded volume
-        calIndex++;
-
-        if (calIndex >= calQueue.length) {
-            isCalibrating = false;
-            micCalOverlay.style.display = 'none';
-            // calBtn.classList.remove('active'); // calBtn not defined? Assuming micCalBtn logic handles it or this was legacy
-            localStorage.setItem('gp_cal', JSON.stringify(noteSensitivities));
-            alert("Handpan Profile Calibrated!");
+        // Standard volume calibration
+        if (!noteSensitivities[target]) noteSensitivities[target] = [];
+        if (Array.isArray(noteSensitivities[target])) {
+            noteSensitivities[target].push(rms);
         } else {
-            targetNoteDisplay.textContent = calQueue[calIndex];
+            // Already finished this note once? Resetting for re-calibration if somehow triggered
+            noteSensitivities[target] = [rms];
+        }
+
+        // Personalized Pitch Calibration
+        if (pitch && pitch > 50 && pitch < 1200) {
+            if (!currentCalibratedFreqs[target]) currentCalibratedFreqs[target] = [];
+            if (Array.isArray(currentCalibratedFreqs[target])) {
+                currentCalibratedFreqs[target].push(pitch);
+            } else {
+                currentCalibratedFreqs[target] = [pitch];
+            }
+        }
+
+        const currentTally = Array.isArray(noteSensitivities[target]) ? noteSensitivities[target].length : CAL_SAMPLES_REQUIRED;
+
+        // Update UI with progress
+        if (targetNoteDisplay) {
+            targetNoteDisplay.textContent = target; // Just note name now
+        }
+        if (calProgressCircle) {
+            const progress = (currentTally / CAL_SAMPLES_REQUIRED) * 100;
+            calProgressCircle.style.strokeDashoffset = 100 - progress;
+        }
+
+        if (currentTally >= CAL_SAMPLES_REQUIRED) {
+            // Reset circle for next note
+            if (calProgressCircle) calProgressCircle.style.strokeDashoffset = 100;
+
+            // Average the volume sensitivity
+            const avg = noteSensitivities[target].reduce((a, b) => a + b, 0) / noteSensitivities[target].length;
+            noteSensitivities[target] = avg;
+            localStorage.setItem('gp_cal', JSON.stringify(noteSensitivities));
+
+            // Average and sync the frequency profile
+            if (currentCalibratedFreqs[target] && Array.isArray(currentCalibratedFreqs[target]) && currentCalibratedFreqs[target].length >= CAL_SAMPLES_REQUIRED) {
+                const avgPitch = currentCalibratedFreqs[target].reduce((a, b) => a + b, 0) / currentCalibratedFreqs[target].length;
+                currentCalibratedFreqs[target] = avgPitch;
+                saveCalibrationProfile();
+            } else if (currentCalibratedFreqs[target] && !Array.isArray(currentCalibratedFreqs[target])) {
+                // Use already calculated pitch
+            } else {
+                // Fallback to theoretical if we didn't get enough samples
+                currentCalibratedFreqs[target] = getTheoreticalFreq(target);
+                saveCalibrationProfile();
+            }
+
+            calIndex++;
+            if (calIndex < calQueue.length) {
+                targetNoteDisplay.textContent = calQueue[calIndex];
+            } else {
+                finishCalibration();
+            }
         }
     }
+}
+
+function getTheoreticalFreq(label) {
+    const scale = getScale();
+    if (label === 'Ding') return NOTE_FREQS[scale.ding];
+    return NOTE_FREQS[scale.map[label]];
+}
+
+/**
+ * Persists the current frequency profile to DB and local cache
+ */
+async function saveCalibrationProfile() {
+    const scaleId = getCurrentScaleId();
+    const storageKey = `gp_pitch_cal_${scaleId}`;
+
+    // Cache locally
+    localStorage.setItem(storageKey, JSON.stringify(currentCalibratedFreqs));
+
+    if (currentUser && supabase) {
+        try {
+            const { error } = await supabase
+                .from('scale_calibrations')
+                .upsert({
+                    user_id: currentUser.id,
+                    scale_id: scaleId,
+                    frequency_map: currentCalibratedFreqs
+                }, { onConflict: 'user_id,scale_id' });
+
+            if (error) console.error("Error syncing calibration to DB:", error);
+        } catch (err) {
+            console.error("Failed to sync calibration:", err);
+        }
+    }
+}
+
+/**
+ * Loads the calibration profile for the current scale
+ */
+export async function loadCalibrationProfile() {
+    const scaleId = getCurrentScaleId();
+    const storageKey = `gp_pitch_cal_${scaleId}`;
+
+    // 1. Try local cache first for speed
+    const cached = localStorage.getItem(storageKey);
+    if (cached) {
+        currentCalibratedFreqs = JSON.parse(cached);
+        return currentCalibratedFreqs;
+    }
+
+    // 2. Try DB
+    if (currentUser && supabase) {
+        try {
+            const { data, error } = await supabase
+                .from('scale_calibrations')
+                .select('frequency_map')
+                .eq('user_id', currentUser.id)
+                .eq('scale_id', scaleId)
+                .maybeSingle();
+
+            if (data?.frequency_map) {
+                currentCalibratedFreqs = data.frequency_map;
+                localStorage.setItem(storageKey, JSON.stringify(currentCalibratedFreqs));
+                return currentCalibratedFreqs;
+            }
+        } catch (err) {
+            console.error("Failed to load calibration from DB:", err);
+        }
+    }
+
+    currentCalibratedFreqs = {};
+    return null;
+}
+
+export function hasCalibrationForCurrentScale() {
+    return Object.values(currentCalibratedFreqs).some(v => typeof v === 'number');
+}
+
+function finishCalibration() {
+    isCalibrating = false;
+    micCalOverlay.style.display = 'none';
+    alert("Calibration Complete! Your instrument's unique pitch profile has been saved.");
+    toggleListening(); // Disable microphone when done
+    Bus.emit(BUS_EVENT.CALIBRATION_DONE);
 }
 
 // Record the detected note to the grid
@@ -439,9 +592,27 @@ function findClosestScaleNote(freq) {
     const currentScale = getScale();
     if (!currentScale) return null;
 
-    let targets = [{ label: 'D', freq: NOTE_FREQS[currentScale.ding] }];
+    // Use a tighter tolerance if we have a calibrated frequency (3% instead of 5-8%)
+    const hasCal = hasCalibrationForCurrentScale();
+    const standardNoteTolerance = standardNoteToleranceValue || 0.05; // 5%
+    const dingTolerance = dingToleranceValue || 0.08; // 8%
+
+    let targets = [];
+
+    // Check Ding
+    let dFreq = currentCalibratedFreqs['Ding'];
+    if (typeof dFreq !== 'number') dFreq = NOTE_FREQS[currentScale.ding];
+    if (dFreq) {
+        targets.push({ label: 'Ding', freq: dFreq, tolerance: hasCal ? 0.03 : dingTolerance });
+    }
+
+    // Check Numbers
     for (let [label, noteName] of Object.entries(currentScale.map)) {
-        targets.push({ label, freq: NOTE_FREQS[noteName] });
+        let targetFreq = currentCalibratedFreqs[label];
+        if (typeof targetFreq !== 'number') targetFreq = NOTE_FREQS[noteName];
+        if (targetFreq) {
+            targets.push({ label, freq: targetFreq, tolerance: hasCal ? 0.03 : standardNoteTolerance });
+        }
     }
 
     let closest = null;
@@ -449,18 +620,18 @@ function findClosestScaleNote(freq) {
 
     targets.forEach(t => {
         const diff = Math.abs(t.freq - freq);
-        // Widen tolerance for Ding: Low freq extraction can be less precise, 
-        // and Dings often have pitch bends/overtones that shift fundamentals.
-        const tolerance = (t.label === 'D') ? 0.08 : 0.05;
-
-        if (diff < minDiff && diff < (t.freq * tolerance)) {
+        if (diff < minDiff && diff < (t.freq * t.tolerance)) {
             minDiff = diff;
-            closest = t.label; // Return the label string directly
+            closest = t.label;
         }
     });
 
     return closest;
 }
+
+// Internal defaults for findClosestScaleNote
+const dingToleranceValue = 0.08;
+const standardNoteToleranceValue = 0.05;
 
 // Listen for sensitivity changes from UI
 Bus.on(BUS_EVENT.SET_ACCENT_SENSITIVITY, (e) => {
@@ -564,6 +735,7 @@ export function initTranscription() {
     micCalOverlay = document.getElementById('calibrationStatus');
     sensValDisplay = document.getElementById('sensVal');
     meter = document.getElementById('micVisualizer');
+    calProgressCircle = document.getElementById('calProgressCircle');
 
     if (!micBtn) return;
 
@@ -589,13 +761,31 @@ export function initTranscription() {
         }
     });
 
-    micCalBtn?.addEventListener('click', (e) => {
+    micCalBtn?.addEventListener('click', async (e) => {
         if (e) e.stopPropagation();
-        if (!isListening) return;
-        isCalibrating = true;
-        calIndex = 0;
-        micCalOverlay.style.display = 'block';
-        targetNoteDisplay.textContent = calQueue[0];
+
+        // 1. Auto-enable microphone if not listening
+        if (!isListening) {
+            const originalText = micCalBtn.textContent;
+            micCalBtn.textContent = "Initializing Microphone...";
+            micCalBtn.disabled = true;
+            try {
+                await toggleListening();
+            } finally {
+                micCalBtn.textContent = originalText;
+                micCalBtn.disabled = false;
+            }
+        }
+
+        // 2. Start calibration if listening (might have failed above)
+        if (isListening) {
+            isCalibrating = true;
+            calIndex = 0;
+            micCalOverlay.style.display = 'block';
+            targetNoteDisplay.textContent = calQueue[0];
+        } else {
+            alert("Please enable microphone access to calibrate.");
+        }
     });
 
     guidedCalBtn?.addEventListener('click', (e) => {

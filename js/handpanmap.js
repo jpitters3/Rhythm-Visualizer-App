@@ -18,7 +18,7 @@ let handpanWrapBottom, handpanImgBottom, handpanOverlayBottom;
 
 /* Mapped to nine-note-handpan-numbered.png */
 const HANDPAN_MAP_SKETCH = {
-  "D": { x: 50.5, y: 47.8, r: 12 },
+  "Ding": { x: 50.5, y: 47.8, r: 12 },
   "1": { x: 62.1, y: 76.2, r: 12 },
   "2": { x: 34.8, y: 74.5, r: 12 },
   "3": { x: 78.7, y: 57.5, r: 11 },
@@ -32,7 +32,7 @@ const HANDPAN_MAP_SKETCH = {
 };
 
 const HANDPAN_MAP_BRONZE = {
-  "D": { x: 48.1, y: 45.6, r: 12 },
+  "Ding": { x: 48.1, y: 45.6, r: 12 },
   "1": { x: 59.6, y: 76.6, r: 10 },
   "2": { x: 34.4, y: 75.3, r: 10 },
   "3": { x: 78.4, y: 59.9, r: 10 },
@@ -219,19 +219,6 @@ async function renderCustomOptions() {
 
   // Update scaleSelect with user's preference
   scaleSelect.value = getSelectedScaleName();
-
-  // let handpanPrefRemote = await loadScaleRemote();
-  // let handpanPrefLocal = loadScaleLocal();
-
-  // if (handpanPrefRemote) {
-  //   if (handpanPrefRemote.includes('custom:')) {
-  //     scaleSelect.value = `custom:${handpanPrefRemote.split(':')[1]}`;
-  //   } else {
-  //     scaleSelect.value = handpanPrefRemote;
-  //   }
-  // } else if (handpanPrefLocal) {
-  //   scaleSelect.value = handpanPrefLocal;
-  // }
 }
 
 function applyCustomHandpan(handpanData) {

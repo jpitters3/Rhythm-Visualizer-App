@@ -252,7 +252,14 @@ export async function applyPattern(state, ctx = gridA) {
   }
 
   // Apply labels across all steps
-  ctx.innerLabels = state.labels;
+  // Migration: Convert legacy 'D' labels to 'Ding'
+  ctx.innerLabels = state.labels.map(lbl => {
+    if (Array.isArray(lbl)) {
+      return lbl.map(sub => sub === 'D' ? 'Ding' : sub);
+    }
+    return lbl === 'D' ? 'Ding' : lbl;
+  });
+
   ctx.innerHands = Array.isArray(state.hands) ? state.hands : Array(ctx.innerLabels.length).fill(null);
 
   renderAllMeasures(ctx);

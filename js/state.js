@@ -69,3 +69,19 @@ export function setCurrentScale(scaleObj) {
   if (!scaleObj) return;
   currentScale = scaleObj;
 }
+
+/**
+ * Returns a unique ID for the current scale, used for calibration keys.
+ * Format: 'sys_<slug>' or 'custom_<uuid>'
+ */
+export function getCurrentScaleId() {
+  const name = getSelectedScaleName();
+  if (!name) return 'sys_default';
+
+  if (name.startsWith('custom:')) {
+    return 'custom_' + name.split(':')[1];
+  }
+
+  // For system scales, slugify the name
+  return 'sys_' + name.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+}

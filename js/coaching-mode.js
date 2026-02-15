@@ -3,19 +3,17 @@
  * Evaluates note accuracy and timing during pattern playback
  */
 
-import { activeGrid } from './grid-context.js';
-import { cells } from './notegrid.js';
+import { activeGrid, setIsListening, getCurrentScaleId, currentUser } from './state.js';
 import { start, stop, getVolume, setVolume, intervalMs, addTickObserver } from './noteplayer.js';
-import { setIsListening } from './state.js';
 import { supabase } from './supabase-client.js';
-import { currentUser } from './state.js';
 import { Bus, BUS_EVENT } from './bus.js';
 import { AUDIO_DELAY } from './config.js';
 import { TransportRegistry } from './transport-ui.js';
 import { CoachingDiagnostics } from './coaching-diagnostics.js';
-import { setInnerLabel, renderAllMeasures } from './notegrid.js';
+import { setInnerLabel, renderAllMeasures, cells } from './notegrid.js';
 import { CoachingSession } from './coaching-session.js';
 import { getSelectedPatternName } from './pattern-crud.js';
+import { loadCalibrationProfile, hasCalibrationForCurrentScale } from './transcription.js';
 
 // Session state
 let coachingSession = null;
@@ -24,8 +22,12 @@ let isCoachingUIOpen = false; // New: Tracks if HUD is open but maybe not runnin
 let isReviewActive = false; // New: Tracks if we are in review mode
 let expectedNotes = []; // Array of { index, labels } from pattern
 let sessionResults = []; // Array of evaluation results per step
+let sessionLogs = []; // Array of { step, msg, time } for diagnostics
 let isLoopingEnabled = false; // Whether pattern should loop
 let userTimingOffset = parseInt(localStorage.getItem('gp_timing_offset') || '0', 10); // User's timing calibration (ms)
+
+// Phase 35: Calibration Skip Flag
+let skipCalibrationCheck = {}; // scaleId -> true
 
 // UI elements
 let coachingHUD = null;
@@ -128,94 +130,7 @@ export function exitCoachingMode() {
   clearCellHighlights(activeGrid);
 }
 
-/**
- * Start the actual coaching session (Playback + Recording)
- * @param {Object} ctx - Grid context (activeGrid)
- */
-export async function startCoachingSession(ctx = activeGrid) {
-  console.log('Coaching Mode: Starting session');
-  console.log('Coaching Mode: Context ID:', ctx?.id);
 
-  if (isCoachingActive) {
-    console.warn('Coaching session already active');
-    return;
-  }
-
-  // Disable review mode when starting new session
-  isReviewActive = false;
-
-  // Clear any existing cell highlights (including review highlights)
-  clearCellHighlights(ctx);
-
-  // Restore original grid state just in case (though clearCellHighlights helps)
-  // We don't want to carry over red/blue/etc from previous review if any
-  renderAllMeasures(ctx);
-
-  // Initialize session
-  coachingSession = new CoachingSession();
-
-  // Build expected notes array
-  expectedNotes = ctx.innerLabels.map((label, index) => ({
-    index,
-    labels: Array.isArray(label) ? label : (label ? [label] : [])
-  }));
-
-  // Count total notes
-  coachingSession.totalNotes = expectedNotes.reduce((sum, step) => sum + step.labels.length, 0);
-
-  // Reset results
-  sessionResults = [];
-  isCoachingActive = true;
-
-  // Turn on metronome programmatically
-  if (!ctx.metronomeOn) {
-    ctx.metronomeOn = true;
-    localStorage.setItem('groovepan_metro' + '-' + ctx.id, 'on');
-    if (TransportRegistry) TransportRegistry.updateAll(ctx);
-  }
-
-  // Update HUD to "Running" state
-  showCoachingHUD(false);
-
-  // Register tick observer to detect loops
-  const loopObserver = (grid, stepNotes, stepHands) => {
-    // Detect when pattern loops back to start (step 0)
-    if (grid.step === 0 && grid.transcriptionIndex === grid.cells.length - 1) {
-      console.log('Coaching Mode: Pattern loop detected');
-
-      if (isLoopingEnabled) {
-        // Timing stays synced via grid.audioStartTime (updated automatically by noteplayer)
-        coachingSession.loopCount++;
-        console.log(`Coaching Mode: Multi-loop active - Starting Loop ${coachingSession.loopCount + 1}`);
-      } else {
-        // Auto-stop when looping is disabled
-        console.log('Coaching Mode: Pattern complete, auto-stopping (looping disabled)');
-        // Use setTimeout to avoid stopping mid-tick
-        setTimeout(() => endCoachingSession(), 100);
-      }
-    }
-  };
-
-  // Store observer reference for cleanup
-  coachingSession._loopObserver = loopObserver;
-
-  // Register the observer
-  addTickObserver(loopObserver);
-
-  // Enable microphone if not already
-  const micBtn = document.getElementById('micBtn');
-  if (micBtn && !micBtn.classList.contains('active')) {
-    micBtn.click();
-    // Wait for mic to initialize
-    await new Promise(resolve => setTimeout(resolve, 500));
-  }
-
-  // Ensure isListening is true for countdown
-  setIsListening(true);
-
-  // Start playback
-  start(ctx, true, false);
-}
 
 const PENDING_EVAL_WINDOW = 100; // ms to wait for a pitch after an accent
 let pendingEvaluation = null; // { timeoutId, timestamp, type: 'ACCENT', stepIndex }
@@ -1304,7 +1219,7 @@ export function initCoachingMode() {
       resultsModal.setAttribute('aria-hidden', 'true');
     }
     clearCellHighlights(activeGrid);
-    startCoachingSession(activeGrid);
+    startCoachingSession(activeGrid); // This will trigger the calibration check if needed
   });
 
   const saveSessionBtn = document.getElementById('saveSessionBtn');
@@ -1318,6 +1233,146 @@ export function initCoachingMode() {
       evaluateDetectedNote(note, step, time || Date.now());
     }
   });
+}
+
+/**
+ * Shows a prompt suggesting the user calibrate for their specific instrument
+ */
+function showCalibrationPrompt(ctx) {
+  const modal = document.getElementById('calOptimizationModal');
+  if (!modal) {
+    // Fallback: just start if UI missing
+    startCoachingSessionActual(ctx);
+    return;
+  }
+
+  modal.style.display = 'flex';
+  modal.setAttribute('aria-hidden', 'false');
+
+  const calNowBtn = document.getElementById('calNowBtn');
+  const calSkipBtn = document.getElementById('calSkipBtn');
+
+  calNowBtn.onclick = () => {
+    modal.style.display = 'none';
+    modal.setAttribute('aria-hidden', 'true');
+    // Open mic calibration
+    const micCalBtn = document.getElementById('micCalBtn');
+    if (micCalBtn) micCalBtn.click();
+
+    // Auto-start session once calibration is done
+    Bus.once(BUS_EVENT.CALIBRATION_DONE, () => {
+      startCoachingSession(ctx);
+    });
+  };
+
+  calSkipBtn.onclick = () => {
+    modal.style.display = 'none';
+    modal.setAttribute('aria-hidden', 'true');
+    skipCalibrationCheck[getCurrentScaleId()] = true;
+    startCoachingSessionActual(ctx);
+  };
+}
+
+/**
+ * Start the actual coaching session (Playback + Recording)
+ * @param {Object} ctx - Grid context (activeGrid)
+ */
+export async function startCoachingSession(ctx = activeGrid) {
+  if (isCoachingActive) {
+    console.warn('Coaching session already active');
+    return;
+  }
+
+  // Phase 35: Calibration Pre-Check
+  const scaleId = getCurrentScaleId();
+  await loadCalibrationProfile(); // Ensure it's loaded from DB/Cache
+
+  if (!hasCalibrationForCurrentScale() && !skipCalibrationCheck[scaleId]) {
+    showCalibrationPrompt(ctx);
+    return; // Wait for user choice
+  }
+
+  startCoachingSessionActual(ctx);
+}
+
+async function startCoachingSessionActual(ctx = activeGrid) {
+  console.log('Coaching Mode: Starting session Actual');
+
+  // Disable review mode when starting new session
+  isReviewActive = false;
+
+  // Clear any existing cell highlights (including review highlights)
+  clearCellHighlights(ctx);
+
+  // Restore original grid state just in case (though clearCellHighlights helps)
+  // We don't want to carry over red/blue/etc from previous review if any
+  renderAllMeasures(ctx);
+
+  // Initialize session
+  coachingSession = new CoachingSession();
+
+  // Build expected notes array
+  expectedNotes = ctx.innerLabels.map((label, index) => ({
+    index,
+    labels: Array.isArray(label) ? label : (label ? [label] : [])
+  }));
+
+  // Count total notes
+  coachingSession.totalNotes = expectedNotes.reduce((sum, step) => sum + step.labels.length, 0);
+
+  // Reset results
+  sessionResults = [];
+  sessionLogs = []; // Clear diagnostics logs
+  isCoachingActive = true;
+
+  // Turn on metronome programmatically
+  if (!ctx.metronomeOn) {
+    ctx.metronomeOn = true;
+    localStorage.setItem('groovepan_metro' + '-' + ctx.id, 'on');
+    if (TransportRegistry) TransportRegistry.updateAll(ctx);
+  }
+
+  // Update HUD to "Running" state
+  showCoachingHUD(false);
+
+  // Register tick observer to detect loops
+  const loopObserver = (grid, stepNotes, stepHands) => {
+    // Detect when pattern loops back to start (step 0)
+    if (grid.step === 0 && grid.transcriptionIndex === grid.cells.length - 1) {
+      console.log('Coaching Mode: Pattern loop detected');
+
+      if (isLoopingEnabled) {
+        // Timing stays synced via grid.audioStartTime (updated automatically by noteplayer)
+        coachingSession.loopCount++;
+        console.log(`Coaching Mode: Multi-loop active - Starting Loop ${coachingSession.loopCount + 1}`);
+      } else {
+        // Auto-stop when looping is disabled
+        console.log('Coaching Mode: Pattern complete, auto-stopping (looping disabled)');
+        // Use setTimeout to avoid stopping mid-tick
+        setTimeout(() => endCoachingSession(), 100);
+      }
+    }
+  };
+
+  // Store observer reference for cleanup
+  coachingSession._loopObserver = loopObserver;
+
+  // Register the observer
+  addTickObserver(loopObserver);
+
+  // Enable microphone if not already
+  const micBtn = document.getElementById('micBtn');
+  if (micBtn && !micBtn.classList.contains('active')) {
+    micBtn.click();
+    // Wait for mic to initialize
+    await new Promise(resolve => setTimeout(resolve, 500));
+  }
+
+  // Ensure isListening is true for countdown
+  setIsListening(true);
+
+  // Start playback
+  start(ctx, true, false);
 }
 
 /**
@@ -1415,5 +1470,83 @@ export function showFeedbackTooltip(element, text) {
     tooltip.classList.add('fade-out');
     setTimeout(() => tooltip.remove(), 300);
   }, 2000);
+}
+
+/**
+ * Record a diagnostic log for the current coaching session
+ * @param {string} msg 
+ * @param {number} stepIndex 
+ */
+export function logCoachingEvent(msg, stepIndex = -1) {
+  if (!isCoachingActive) return;
+  sessionLogs.push({
+    step: stepIndex,
+    msg,
+    time: Date.now()
+  });
+}
+
+/**
+ * Copy logs for a specific step and its neighbors to the clipboard
+ * @param {number} targetStep 
+ */
+export async function copyLogsForStep(targetStep) {
+  if (!sessionLogs || sessionLogs.length === 0) {
+    console.warn("No logs available for this session.");
+    return false;
+  }
+
+  // Filter logs for [step-1, step+1]
+  const windowLogs = sessionLogs.filter(l => l.step >= targetStep - 1 && l.step <= targetStep + 1);
+
+  if (windowLogs.length === 0) {
+    alert(`No detailed logs found for Step ${targetStep}.`);
+    return false;
+  }
+
+  const sessionStart = sessionLogs[0]?.time || 0;
+
+  const header = `--- COACHING SESSION DEBUG LOGS ---
+Target Step: ${targetStep}
+Pattern: ${getSelectedPatternName() || 'Unknown'}
+BPM: ${activeGrid.bpm}
+----------------------------------
+`;
+
+  const body = windowLogs.map(l => {
+    const elapsed = ((l.time - sessionStart) / 1000).toFixed(3);
+    const stepStr = l.step === -1 ? "N/A" : l.step;
+    return `[T+${elapsed}s][Step ${stepStr}] ${l.msg}`;
+  }).join('\n');
+
+  const fullLog = header + body + "\n----------------------------------";
+
+  try {
+    // Attempt modern Clipboard API
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(fullLog);
+      return true;
+    }
+    throw new Error("Clipboard API unavailable");
+  } catch (err) {
+    console.warn("Clipboard API failed, trying fallback:", err);
+    // Fallback for focus/unsupported issues
+    try {
+      const textArea = document.createElement("textarea");
+      textArea.value = fullLog;
+      textArea.style.position = "fixed";
+      textArea.style.left = "-9999px";
+      textArea.style.top = "0";
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      const success = document.execCommand('copy');
+      document.body.removeChild(textArea);
+      return success;
+    } catch (fallbackErr) {
+      console.error("Fallback copy failed:", fallbackErr);
+      return false;
+    }
+  }
 }
 

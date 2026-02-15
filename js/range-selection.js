@@ -1,5 +1,6 @@
 import { activeGrid, gridA, gridB } from './grid-context.js';
 import { setLongPressFired } from './state.js';
+import { isReviewing } from './coaching-mode.js';
 
 function allCells(ctx) {
   return Array.from((ctx || activeGrid).cells);
@@ -107,12 +108,17 @@ export function startLongPress(cellEl) {
 
   longPressTimer = setTimeout(() => {
     setLongPressFired(true);
-    ctx.selecting = true;
 
+    // If reviewing, don't trigger range selection UI/logic
+    if (isReviewing && isReviewing()) {
+      if ('vibrate' in navigator) navigator.vibrate(50);
+      return;
+    }
+
+    ctx.selecting = true;
     if ('vibrate' in navigator) {
       navigator.vibrate(50);
     }
-
     ctx.anchorIndex = idx;
     setCaret(idx, ctx);
     setRange(idx, idx, ctx);

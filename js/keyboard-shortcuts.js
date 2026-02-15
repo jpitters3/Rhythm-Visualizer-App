@@ -164,7 +164,7 @@ export function initShortcuts() {
 
     const k = e.key;
     const lower = k.toLowerCase();
-    const map = { d: 'D', t: 'T', s: 'S' };
+    const map = { d: 'Ding', t: 'T', s: 'S' };
 
     if (map[lower]) {
       writeToSelected(map[lower], { advance: !noAdvance }, ctx);

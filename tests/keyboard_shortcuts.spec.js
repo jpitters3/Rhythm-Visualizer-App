@@ -98,7 +98,7 @@ test.describe('Keyboard Shortcuts', () => {
 
     // Press D for Ding
     await page.keyboard.press('d');
-    await expect(cell0).toHaveText('D');
+    await expect(cell0).toHaveText('Ding');
 
     // Press T for Tak (caret should have advanced in compose mode)
     await page.keyboard.press('t');
@@ -141,7 +141,7 @@ test.describe('Keyboard Shortcuts', () => {
 
     // Press Alt+D (should not advance even in compose mode)
     await page.keyboard.press('Alt+d');
-    await expect(cell0).toHaveText('D');
+    await expect(cell0).toHaveText('Ding');
     await expect(cell0).toHaveClass(/selected/);
 
     // Press Alt+1 (should not advance even in compose mode)
@@ -156,7 +156,7 @@ test.describe('Keyboard Shortcuts', () => {
     // Click cell and write a note
     await cell0.click();
     await page.keyboard.press('d');
-    await expect(cell0).toHaveText('D');
+    await expect(cell0).toHaveText('Ding');
 
     // Click cell again to select it
     await cell0.click();

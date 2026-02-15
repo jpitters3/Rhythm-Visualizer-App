@@ -7,7 +7,7 @@ import { setCaret, setRange, clearRange, getRange, updateDragSelectionOver, star
 import { HistoryManager } from './history.js';
 import { editHandsMode, isEditMulti, longPressFired, setLongPressFired, setIsEditMulti, labelNotation } from './state.js';
 import { TransportRegistry } from './transport-ui.js';
-import { isReviewing, getFeedbackForStep, showFeedbackTooltip } from './coaching-mode.js';
+import { isReviewing, getFeedbackForStep, showFeedbackTooltip, copyLogsForStep } from './coaching-mode.js';
 import { Bus, BUS_EVENT } from './bus.js';
 
 export const cells = (ctx) => (ctx || activeGrid).cells;
@@ -259,7 +259,7 @@ export function renderAllMeasures(ctx = activeGrid) {
 
       cell.dataset.index = g;
       if (lbl !== '') cell.classList.add('has-label');
-      if (lbl === 'D') cell.classList.add('label-d');
+      if (lbl === 'Ding') cell.classList.add('label-ding');
       else if (lbl === 'T') cell.classList.add('label-t');
       else if (lbl === 'S') cell.classList.add('label-s');
       else if (lbl === '?') cell.classList.add('label-q');
@@ -395,7 +395,7 @@ export function setInnerLabel(i, value, ctx = activeGrid) {
     const inner = cell.querySelector('.inner');
     if (inner) inner.textContent = value;
 
-    cell.classList.remove('label-d', 'label-t', 'label-s', 'label-n', 'label-q', 'has-label');
+    cell.classList.remove('label-ding', 'label-t', 'label-s', 'label-n', 'label-q', 'has-label');
     const v = String(value || '');
 
     // ghost = no label set
@@ -404,7 +404,7 @@ export function setInnerLabel(i, value, ctx = activeGrid) {
     if (!v) return;
     cell.classList.add('has-label');
 
-    if (v === 'D') cell.classList.add('label-d');
+    if (v === 'Ding') cell.classList.add('label-ding');
     else if (v === 'T') cell.classList.add('label-t');
     else if (v === 'S') cell.classList.add('label-s');
     else if (v === '?') cell.classList.add('label-q');
@@ -447,7 +447,17 @@ function attachCellListeners(cell, ctx = activeGrid) {
       if (!isNaN(gIndex)) {
         const feedback = getFeedbackForStep(gIndex);
         if (feedback) {
-          showFeedbackTooltip(cell, feedback);
+          if (longPressFired) {
+            // LONG PRESS: Copy logs + confirmation
+            copyLogsForStep(gIndex).then(copied => {
+              const status = copied ? " (Logs copied!)" : " (No logs)";
+              showFeedbackTooltip(cell, feedback + status);
+              setLongPressFired(false);
+            });
+          } else {
+            // QUICK CLICK: Just show standard feedback
+            showFeedbackTooltip(cell, feedback);
+          }
         }
       }
       return; // BLOCK EDITING

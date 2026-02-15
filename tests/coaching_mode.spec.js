@@ -86,7 +86,7 @@ test.describe('Coaching Mode', () => {
       console.log('TEST: activeGrid state:', JSON.stringify(window.activeGrid));
 
       const evt = new CustomEvent('coaching:evaluate', {
-        detail: { note: 'D', step: 0, time: Date.now() }
+        detail: { note: 'Ding', step: 0, time: Date.now() }
       });
       window.dispatchEvent(evt);
       console.log('TEST: Event dispatched');
