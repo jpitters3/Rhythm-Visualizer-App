@@ -1326,6 +1326,38 @@
     </div>
   </div>
 
+  <!-- Admin: Pattern Organization Modal -->
+  <div id="patternOrgModal" class="modal-overlay" aria-hidden="true" style="display: none;">
+    <div class="modal-content" style="max-width: 800px;">
+      <div class="modal-header">
+        <h2>🏷️ Pattern Organization</h2>
+        <button class="close-modal-btn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div style="margin-bottom: 20px; color: var(--text-secondary);">
+          Manage tags for saved patterns. Use tags like <code>#simon</code> or <code>#level1</code> to bucket content.
+        </div>
+        <div id="adminPatternList" style="max-height: 500px; overflow-y: auto;">
+          <!-- Populated by admin.js -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Admin: Game Config Modal (Placeholder) -->
+  <div id="gameConfigModal" class="modal-overlay" aria-hidden="true" style="display: none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>🛠️ Game Configuration</h2>
+        <button class="close-modal-btn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p>Configure which tags correspond to game levels.</p>
+        <!-- Implementation coming later -->
+      </div>
+    </div>
+  </div>
+
 </body>
 
 </html>

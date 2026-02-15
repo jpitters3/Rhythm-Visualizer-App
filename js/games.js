@@ -137,12 +137,28 @@ function startGameLoop() {
 /**
  * Begin a specific level
  */
+import { dbListPatternNames, dbLoadPatternByName } from './pattern-crud.js';
+
+// ... (existing imports)
+
+/**
+ * Begin a specific level
+ */
 async function startLevel() {
   currentState = GAME_STATE.DEMO;
   userProgressIndex = 0;
 
   // Create or extend sequence
+  // STRATEGY: 
+  // 1. If we have tagged patterns loaded, use them.
+  // 2. Fallback to random notes if no patterns found.
+
   if (currentSequence.length < currentLevel) {
+    // Phase 2: Fetch patterns via tag (Placeholder for now until we have robust efficient fetching)
+    // For now, continue with random generation, but prepared for hook.
+    // const simonPatterns = await fetchPatternsByTag('#simon_' + currentLevel);
+
+    // Default Random Logic
     const labels = ['D', '1', '2', '3', '4', '5', '6', '7', '8', 'T', 'S'];
     const randomNote = labels[Math.floor(Math.random() * labels.length)];
     currentSequence.push(randomNote);

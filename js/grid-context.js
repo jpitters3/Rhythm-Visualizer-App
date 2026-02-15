@@ -20,6 +20,7 @@ export class GridContext {
     this.isMuted = false;
     this.mode = '8'; // Default mode matching index.html
     this.transcriptionIndex = 0;
+    this.tags = []; // For categorization (e.g. #simon, #lesson)
 
     // Playback timers
     this.timers = [];

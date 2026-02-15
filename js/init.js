@@ -31,6 +31,7 @@ import { initFeed } from './feed.js';
 import { initCourseMarketplace } from './course-marketplace.js';
 import { initCoachingMode } from './coaching-mode.js';
 import { initGames } from './games.js';
+import { initAdmin } from './admin.js';
 
 /**
  * Main application initializer
@@ -59,6 +60,10 @@ async function init() {
     initGames();
     initCourseMarketplace();
     initCourseCreator();
+
+    // Admin Tools (Async check inside)
+    initAdmin();
+
     initControls();
     initShortcuts();
     setupAudioUnlock();

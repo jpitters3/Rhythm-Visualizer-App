@@ -75,3 +75,5 @@ import './js/pattern-of-the-week.js';
 import './js/midi-importer.js';
 import './js/song-library.js';
 import './js/games.js';
+import './css/admin.css'; // Admin Styles
+import './js/admin.js';   // Admin Logic

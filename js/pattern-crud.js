@@ -196,6 +196,7 @@ export function serializePattern(ctx = gridA) {
     measures: ctx.measures,
     labels: ctx.innerLabels ? ctx.innerLabels.slice() : [],
     hands: ctx.innerHands ? ctx.innerHands.slice() : [],
+    tags: ctx.tags ? ctx.tags.slice() : [],
   };
 
   // If serializing Grid A, check if Dual Mode is active to include Grid B
@@ -259,6 +260,13 @@ export async function applyPattern(state, ctx = gridA) {
   });
 
   ctx.innerHands = Array.isArray(state.hands) ? state.hands : Array(ctx.innerLabels.length).fill(null);
+
+  // Apply Tags
+  if (Array.isArray(state.tags)) {
+    ctx.tags = state.tags;
+  } else {
+    ctx.tags = [];
+  }
 
   renderAllMeasures(ctx);
 

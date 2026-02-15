@@ -1,0 +1,89 @@
+/**
+ * Admin UI Styles
+ */
+
+#patternOrgModal .modal-content,
+#gameConfigModal .modal-content {
+  background: var(--panel);
+  /* Solid/Themed background */
+  border: 1px solid var(--panel-border);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(10px);
+  /* Enhance glass effect if panel is semi-transparent */
+}
+
+.admin-pattern-table {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.admin-pattern-row {
+  display: flex;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--panel-border);
+  padding: 10px 16px;
+  border-radius: 8px;
+  transition: background 0.2s;
+}
+
+.admin-pattern-row:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.row-name {
+  flex: 1;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.row-tags {
+  flex: 2;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.tag-pill {
+  background: rgba(79, 70, 229, 0.2);
+  border: 1px solid rgba(79, 70, 229, 0.4);
+  color: #a5b4fc;
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tag-pill span {
+  cursor: pointer;
+  font-weight: bold;
+  opacity: 0.6;
+}
+
+.tag-pill span:hover {
+  opacity: 1;
+  color: #fff;
+}
+
+.add-tag-btn {
+  background: transparent;
+  border: 1px dashed var(--text-secondary);
+  color: var(--text-secondary);
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 12px;
+  cursor: pointer;
+}
+
+.add-tag-btn:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.row-actions {
+  margin-left: 16px;
+}
