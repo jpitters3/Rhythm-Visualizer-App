@@ -25,6 +25,7 @@ import './css/course-marketplace.css';
 import './css/calibration.css';
 import './css/error.css';
 import './css/pattern-of-the-week.css';
+import './css/games.css';
 
 // Import JS (Ordered Dependencies)
 // Using raw imports for side-effect scripts that populate 'window'
@@ -73,3 +74,4 @@ import './js/mobile-menu.js';
 import './js/pattern-of-the-week.js';
 import './js/midi-importer.js';
 import './js/song-library.js';
+import './js/games.js';

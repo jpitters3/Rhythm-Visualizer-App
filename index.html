@@ -221,6 +221,7 @@
           </div>
         </div>
         <button id="coachModeBtn" class="secondary-btn" title="Practice with real-time feedback">🎯 Coach</button>
+        <button id="gamesModeBtn" class="secondary-btn" title="Play games with your handpan">⚄ Games</button>
         <button id="clearBtn-A">Clear</button>
         <button id="presentBtn" title="Toggle presentation mode (Esc exits)">⛶</button>
 
@@ -480,6 +481,22 @@
       <span id="hudTotal" class="hud-total">0</span>
     </div>
     <button id="stopCoachingBtn" class="hud-stop">Stop</button>
+  </div>
+
+  <!-- Games HUD -->
+  <div id="gameHUD" class="coaching-hud game-hud" style="display:none;">
+    <button id="closeGameHUDBtn" class="close-hud-btn" title="Close">×</button>
+    <div class="hud-score">
+      <span class="hud-label">Level</span>
+      <span id="gameLevel" class="hud-value">1</span>
+    </div>
+    <div class="hud-notes">
+      <span class="hud-label" style="font-size: 0.8em; opacity: 0.7; margin-bottom: 2px;">Streak</span>
+      <span id="gameStreak" class="hud-value" style="color: var(--primary);">0</span>
+    </div>
+    <button id="startGameBtn" class="hud-stop"
+      style="background-color: var(--success); margin-bottom: 8px;">Start</button>
+    <button id="stopGameBtn" class="hud-stop">Exit Game</button>
   </div>
 
   <div class="footer"></div>
@@ -1260,6 +1277,52 @@
           </div>
         </div>
       </aside>
+    </div>
+  </div>
+
+  <!-- Games Selection Modal -->
+  <div id="gameSelectionModal" class="modal-overlay" aria-hidden="true" style="display: none;">
+    <div class="modal-content coaching-results-modal">
+      <div class="modal-header">
+        <h2 style="font-size: 24px; font-weight: 800; letter-spacing: -0.5px;">⚄ Games Mode</h2>
+        <button class="close-modal-btn" id="closeGameSelectionBtn">&times;</button>
+      </div>
+      <div class="modal-body" style="padding: 20px 0;">
+        <p style="color: var(--text-secondary); margin-bottom: 24px;">Select a game to start playing with your handpan!
+        </p>
+
+        <div style="display: flex; flex-direction: column; gap: 16px;">
+          <!-- Simon Game Card -->
+          <div
+            style="background: rgba(255,255,255,0.05); border: 1px solid var(--accent-glow); border-radius: 16px; padding: 20px; display: flex; align-items: center; gap: 20px; cursor: pointer; transition: all 0.2s ease;"
+            onclick="document.getElementById('startGameSimon').click()">
+            <div
+              style="font-size: 40px; background: rgba(79, 70, 229, 0.1); width: 80px; height: 80px; border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+              🔁</div>
+            <div style="flex: 1;">
+              <h3 style="margin: 0 0 4px 0; font-size: 18px; font-weight: 700;">Simon</h3>
+              <p style="margin: 0; font-size: 14px; color: var(--text-secondary); line-height: 1.4;">Watch the app play
+                a sequence, then mimic it back. Each success adds a note!</p>
+            </div>
+            <button id="startGameSimon" class="primary-btn"
+              style="height: 40px; padding: 0 20px; font-weight: 700;">Play</button>
+          </div>
+
+          <!-- Coming Soon Card -->
+          <div
+            style="background: rgba(255,255,255,0.02); border: 1px dashed var(--panel-border); border-radius: 16px; padding: 20px; display: flex; align-items: center; gap: 20px; opacity: 0.6;">
+            <div
+              style="font-size: 40px; background: rgba(255, 255, 255, 0.05); width: 80px; height: 80px; border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+              ⚡</div>
+            <div style="flex: 1;">
+              <h3 style="margin: 0 0 4px 0; font-size: 18px; font-weight: 700;">Speed Test</h3>
+              <p style="margin: 0; font-size: 14px; color: var(--text-secondary); line-height: 1.4;">Coming soon: How
+                many notes can you play in 30 seconds?</p>
+            </div>
+            <button class="secondary-btn" disabled style="height: 40px; padding: 0 20px;">Locked</button>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 

@@ -4,6 +4,7 @@ import { cells, setInnerLabel, renderAllMeasures } from './notegrid.js';
 import { loadPatternByName } from './controls.js';
 import { isListening, setIsListening, getScale, getCurrentScaleId, currentUser } from './state.js';
 import { isCoaching, evaluateDetectedNote, logCoachingEvent } from './coaching-mode.js';
+import { isGameModeActive, handleGameNote } from './games.js';
 import { ACCENT_RMS_MULTIPLIER } from './config.js';
 import { Bus, BUS_EVENT } from './bus.js';
 import { supabase } from './supabase-client.js';
@@ -192,6 +193,8 @@ function transcriptionLoop() {
 
             if (isCoaching()) {
                 evaluateDetectedNote('ACCENT', commitStep, commitTimestamp);
+            } else if (isGameModeActive()) {
+                handleGameNote('ACCENT');
             } else {
                 recordNoteToGrid('S', commitStep, activeGrid);
             }
@@ -375,6 +378,8 @@ function transcriptionLoop() {
 
                                 if (isCoaching()) {
                                     evaluateDetectedNote(detected, hitStep, hitTime);
+                                } else if (isGameModeActive()) {
+                                    handleGameNote(detected);
                                 } else {
                                     recordNoteToGrid(detected, hitStep, activeGrid);
                                 }

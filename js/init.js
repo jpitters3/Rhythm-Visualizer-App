@@ -30,6 +30,7 @@ import { initCalibration } from './calibration.js';
 import { initFeed } from './feed.js';
 import { initCourseMarketplace } from './course-marketplace.js';
 import { initCoachingMode } from './coaching-mode.js';
+import { initGames } from './games.js';
 
 /**
  * Main application initializer
@@ -55,6 +56,7 @@ async function init() {
     initAiAssistant();
     initCalibration();
     initFeed();
+    initGames();
     initCourseMarketplace();
     initCourseCreator();
     initControls();

@@ -1,0 +1,32 @@
+/**
+ * Games Mode Styles
+ */
+
+.game-hud {
+  border-color: var(--accent-glow);
+  box-shadow: 0 0 20px rgba(79, 70, 229, 0.2);
+}
+
+.game-hud .hud-value {
+  color: var(--primary);
+  text-shadow: 0 0 10px rgba(79, 70, 229, 0.3);
+}
+
+.game-selection-modal {
+  max-width: 500px;
+}
+
+.game-card {
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.game-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  background: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Specific Simon styles if needed */
+.game-card[data-game="simon"] {
+  border-color: var(--accent-glow);
+}
