@@ -624,9 +624,9 @@ export async function start(ctx, isSync = true, skipCountdown = false) {
   // If counting down, audioStartTime represents when the actual pattern (Step 0) starts.
   // This ensures visuals (Highway) are synced to the audio pattern start.
   if (useCountdown) {
-    c.audioStartTime = nextNoteTime + (4 * secondsPerBeat);
+    c.audioStartTime = (nextNoteTime + (4 * secondsPerBeat)) * 1000;
   } else {
-    c.audioStartTime = nextNoteTime;
+    c.audioStartTime = nextNoteTime * 1000;
   }
 
   c.lastTickAudioTime = nextNoteTime;

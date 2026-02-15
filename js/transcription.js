@@ -24,8 +24,9 @@ let stepWasRecorded = false;
 let tally = {};
 let lastDetectedType = null;
 let lastGlobalDetectedNote = null; // Track across steps to prevent sustain re-triggers
-let accentCandidate = null; // New: For delaying accent decision by 1 frame
 const CONFIDENCE_THRESHOLD = 2;
+const PENDING_ACCENT_WINDOW = 100; // ms to wait for a pitch after an accent
+let pendingAccent = null; // { step, timestamp, startTime }
 
 // --- Calibration State ---
 let isCalibrating = false; // Standard note-by-note volume check
@@ -42,6 +43,7 @@ let skipCalibrationCheck = {};   // Track if user clicked "Continue Anyway" for 
 // --- Guided Calibration State (Self-Correction) ---
 let isGuidedCalibrating = false;
 let isFullCalWizard = false;
+let lastGuidedIndex = -1;
 
 const CALIBRATE_PATTERN_8_BEATS = 'Calibrate - 8 Beats Per Measure';
 
@@ -177,6 +179,29 @@ function transcriptionLoop() {
     const micLevel = document.getElementById('micLevel');
     if (micLevel) micLevel.style.width = Math.min(100, rms * 500) + "%";
 
+    // --- COMMIT PENDING ACCENTS ---
+    if (pendingAccent) {
+        // Only commit if the 100ms window has passed.
+        // We REMOVED the "currentIndex !== pendingAccent.step" check so that 
+        // a pitch landing on the NEXT step can still claim/cancel this accent.
+        if (now - pendingAccent.startTime > PENDING_ACCENT_WINDOW) {
+            console.log(`[Transcription] Committing Buffered Accent: Step ${pendingAccent.step}`);
+            const commitTimestamp = pendingAccent.timestamp;
+            const commitStep = pendingAccent.step;
+            pendingAccent = null;
+
+            if (isCoaching()) {
+                evaluateDetectedNote('ACCENT', commitStep, commitTimestamp);
+            } else {
+                recordNoteToGrid('S', commitStep, activeGrid);
+            }
+            lastNoteTime = now;
+            stepWasRecorded = true;
+            lastDetectedType = 'ACCENT';
+            tally = {};
+        }
+    }
+
     // Adaptive Noise Floor
     if (rms < baseSensitivity * 0.5 || pitch === -1) {
         roomNoiseFloor = (roomNoiseFloor * 0.95) + (rms * 0.05);
@@ -186,7 +211,6 @@ function transcriptionLoop() {
     if (currentIndex !== lastFrameTranscriptionIndex) {
         logCoachingEvent(`--- Step Boundary: ${lastFrameTranscriptionIndex} -> ${currentIndex} ---`, currentIndex);
         tally = {};
-        accentCandidate = null;
         stepWasRecorded = false;
         lastDetectedType = null;
         lastFrameTranscriptionIndex = currentIndex;
@@ -265,18 +289,14 @@ function transcriptionLoop() {
                     tally['ACCENT'] = (tally['ACCENT'] || 0) + 1;
 
                     if (tally['ACCENT'] >= 1) { // Immediate
-                        logCoachingEvent(`ACCENT Confirmed!`, transcriptionIndex);
-                        // If we are refining (already recorded an accent), don't send another accent
-                        if (!stepWasRecorded) {
-                            if (isCoaching()) {
-                                evaluateDetectedNote('ACCENT', transcriptionIndex, nowAudioMs);
-                            } else {
-                                recordNoteToGrid('S', currentIndex, activeGrid);
-                            }
-                            lastNoteTime = now;
-                            stepWasRecorded = true;
-                            lastDetectedType = 'ACCENT';
-                            tally = {};
+                        logCoachingEvent(`ACCENT Buffered...`, transcriptionIndex);
+                        // Instead of committing immediately, we buffer to wait for pitch refinement
+                        if (!stepWasRecorded && !pendingAccent) {
+                            pendingAccent = {
+                                step: currentIndex,
+                                timestamp: nowAudioMs,
+                                startTime: now
+                            };
                         }
                     }
                 }
@@ -331,6 +351,14 @@ function transcriptionLoop() {
                             tally[detected] = (tally[detected] || 0) + 1;
 
                             if (tally[detected] >= CONFIDENCE_THRESHOLD) {
+                                // REFINEMENT: If we had a pending accent, clear it!
+                                // The pitch we just confirmed is the BETTER label for this strike,
+                                // even if it landed on a slightly different step boundary.
+                                if (pendingAccent) {
+                                    console.log(`[Transcription] Refined Accent to Note: ${detected} (Cross-step cancelled)`);
+                                    pendingAccent = null;
+                                }
+
                                 logCoachingEvent(`NOTE Confirmed: ${detected} (Tally: ${tally[detected]})`, transcriptionIndex);
                                 // Update global tracker
                                 lastGlobalDetectedNote = detected;
@@ -587,41 +615,63 @@ function recordNoteToGrid(label, index, ctx = activeGrid) {
 
 // --- 3. Guided Calibration Analysis ---
 function analyzeGuidedResults() {
-    const expected = ['D', '1', '2', '3', '4', '5', '6', '7', '8'];
+    const expected = ['Ding', '1', '2', '3', '4', '5', '6', '7', '8'];
     let adjustments = [];
-
     const ctx = activeGrid;
 
     expected.forEach((note, i) => {
-        const targetStep = i * 2; // We expect one note every 2 beats
-        const recorded = ctx.innerLabels[targetStep];
-        const doubleTrigger = ctx.innerLabels[targetStep + 1];
+        // Note i is expected in measure i+1
+        const measureStart = (i + 1) * 8;
+        const measureEnd = measureStart + 7;
 
-        // MISS: Lower multiplier (make it easier to trigger)
-        // recorded might be array or string. simplify check:
-        const recVal = Array.isArray(recorded) ? recorded[0] : recorded;
+        let targetCount = 0;
+        let otherLabels = new Set();
 
-        if (recVal !== note) {
-            noteMultipliers[note] = Math.max(0.1, noteMultipliers[note] - 0.1);
-            adjustments.push(`${note}: Sensitivity Increased`);
+        // Scan the entire measure range
+        for (let s = measureStart; s <= measureEnd; s++) {
+            const recorded = ctx.innerLabels[s];
+            const labArr = Array.isArray(recorded) ? recorded : (recorded ? [recorded] : []);
+
+            labArr.forEach(label => {
+                if (label === note) {
+                    targetCount++;
+                } else {
+                    otherLabels.add(label);
+                }
+            });
         }
-        // DOUBLE: Raise multiplier (make it harder to trigger)
-        else if ((Array.isArray(doubleTrigger) ? doubleTrigger[0] : doubleTrigger) === note) {
+
+        const hasExpected = targetCount > 0;
+        const hasOthers = otherLabels.size > 0;
+
+        if (!hasExpected) {
+            // MISS: Sensitivity Increased (Lower multiplier makes threshold easier to hit)
+            if (!noteMultipliers[note]) noteMultipliers[note] = 0.5;
+            noteMultipliers[note] = Math.max(0.05, noteMultipliers[note] - 0.1);
+            adjustments.push(`${note}: Missed (Sensitivity Increased)`);
+        } else if (targetCount > 1) {
+            // DOUBLE: Double-Trigger Fixed (Higher multiplier makes threshold harder to hit)
+            if (!noteMultipliers[note]) noteMultipliers[note] = 0.5;
             noteMultipliers[note] = Math.min(0.95, noteMultipliers[note] + 0.1);
             adjustments.push(`${note}: Double-Trigger Fixed`);
         }
+
+        if (hasOthers) {
+            otherLabels.forEach(intruder => {
+                // NOISE FIX: Make the intruder less sensitive
+                if (!noteMultipliers[intruder]) noteMultipliers[intruder] = 0.5;
+                noteMultipliers[intruder] = Math.min(0.95, noteMultipliers[intruder] + 0.1);
+                adjustments.push(`${note}: Unclear (Fixed ${intruder} noise)`);
+            });
+        }
     });
 
-    // UI Cleanup
-    alert("Calibration Complete!\n" + (adjustments.length ? adjustments.join('\n') : "Perfect recording. No changes needed."));
-    guidedCalModal.style.display = 'none';
-
-    isGuidedCalibrating = false;
-    isFullCalWizard = false;
-    resetGuideUI();
+    const isPerfect = adjustments.length === 0;
+    const summary = isPerfect ? "Perfect recording! No changes needed." : adjustments.join('\n');
+    alert("Sensitivity Calibration Results:\n\n" + summary);
 
     localStorage.setItem('gp_multipliers', JSON.stringify(noteMultipliers));
-    stop(activeGrid);
+    return isPerfect;
 }
 
 // Module-level Clarity Threshold (User Configurable)
@@ -751,31 +801,159 @@ const guideProgress = document.getElementById('guideProgress');
 function updateGuidedUI(currentIndex) {
     if (!isGuidedCalibrating) return;
 
-    const expected = ['D', '1', '2', '3', '4', '5', '6', '7', '8'];
-    // We expect a note every 2 steps: 0, 2, 4, 6...
-    const noteIndex = Math.floor(currentIndex / 2);
+    // Smooth Color Interpolation (Red -> Green)
+    // We strike every 8 steps (4 beats in 4/4)
+    const audioCtx = getAudioCtx();
+    const cycleDur = (60000 / activeGrid.bpm) * 4;
+    const now = audioCtx.currentTime * 1000;
+    const startTime = activeGrid.audioStartTime || 0;
+    const elapsed = now - startTime;
 
-    if (noteIndex < expected.length) {
-        const targetNote = expected[noteIndex];
-        const isStrikeStep = (currentIndex % 2 === 0);
+    // Phase 0->1 over a 4-beat measure (8 steps)
+    let phase = 0;
 
-        guideNoteBox.textContent = targetNote;
-        guideNoteBox.style.opacity = isStrikeStep ? "1" : "0.3";
+    if (elapsed < 0) {
+        phase = 0;
+    } else {
+        // Linear phase from 0 to 1 over the 8 beats
+        phase = (elapsed % cycleDur) / cycleDur;
+    }
 
-        // Update progress bar
-        const progress = ((noteIndex + 1) / expected.length) * 100;
-        guideProgress.style.width = progress + "%";
+    const isStrikeStep = (currentIndex % 8 === 0) && (currentIndex >= 8);
+
+    // Use phase for STRIKE TIMING bar
+    // Force 100% on strike steps so it looks full exactly on the hit
+    const barWidth = isStrikeStep ? 100 : (phase * 100);
+    guideProgress.style.width = barWidth + "%";
+
+    // Bar gradient color (only on bar)
+    const hue = Math.floor(phase * 120);
+    // Use green (120) on strike
+    guideProgress.style.background = isStrikeStep ? `hsl(120, 70%, 50%)` : `hsl(${hue}, 70%, 50%)`;
+
+    if (currentIndex === lastGuidedIndex) return;
+    lastGuidedIndex = currentIndex;
+
+    const expected = ['Ding', '1', '2', '3', '4', '5', '6', '7', '8'];
+    // 8 steps per cycle (4 beats)
+    const cycleIndex = Math.floor(currentIndex / 8);
+
+    // Check for completion
+    if (cycleIndex > expected.length) {
+        finishGuidedCalibration();
+        return;
+    }
+
+    if (cycleIndex <= expected.length) {
+
+        // Show the note we are about to strike (or are striking)
+        const displayNoteIndex = isStrikeStep ? cycleIndex - 1 : cycleIndex;
+        const targetNote = expected[displayNoteIndex];
+
+        if (targetNote && guideNoteBox.textContent !== targetNote) {
+            guideNoteBox.textContent = targetNote;
+        }
+
+        // Visual strike feedback
+        if (isStrikeStep) {
+            guideNoteBox.classList.remove('pulse');
+            guideNoteBox.classList.add('strike'); // Green background from CSS
+            void guideNoteBox.offsetWidth; // Trigger reflow
+            guideNoteBox.classList.add('pulse');
+
+            // Revert green after pulse
+            setTimeout(() => {
+                guideNoteBox.classList.remove('strike');
+            }, 300);
+        }
     }
 }
 
-function resetGuideUI() {
-    guideNoteBox.textContent = "READY";
-    guideNoteBox.style.opacity = "1";
-    guideProgress.style.width = "0%";
-    startGuidedBtn.disabled = false;
-    startGuidedBtn.textContent = "Begin Calibration";
+function finishGuidedCalibration() {
+    isGuidedCalibrating = false;
+    if (activeGrid.playing) stop(activeGrid);
+
+    // Show results and check if perfect
+    const isPerfect = analyzeGuidedResults();
+
+    if (!isPerfect) {
+        const goAgain = confirm("Automatic adjustments have been applied to improve your calibration.\n\nWould you like to run the test again to verify the fixes?");
+        if (goAgain) {
+            // Restart guided calibration
+            resetGuideUI();
+            const startBtn = document.getElementById('startGuidedBtn');
+            if (startBtn) startBtn.click();
+            return;
+        }
+    }
+
+    // If perfect or user declines restart, close modal
+    const modal = document.getElementById('guidedCalModal');
+    if (modal) {
+        modal.style.display = 'none';
+        modal.setAttribute('aria-hidden', true);
+    }
+
+    isFullCalWizard = false;
+    resetGuideUI();
+
+    if (lastActiveElement) lastActiveElement.focus();
 }
 
+function resetGuideUI() {
+    guideNoteBox.textContent = "Ding";
+    guideNoteBox.classList.remove('pulse', 'strike');
+    guideProgress.style.width = "0%";
+    guideProgress.style.background = 'hsl(0, 70%, 50%)';
+    const startBtn = document.getElementById('startGuidedBtn');
+    if (startBtn) {
+        startBtn.disabled = false;
+        startBtn.textContent = "Begin";
+    }
+}
+
+function startCountdown(callback) {
+    const overlay = document.getElementById('countdownOverlay');
+    const number = document.getElementById('countdownNumber');
+    if (!overlay || !number) return callback();
+
+    overlay.style.display = 'flex';
+    let count = 4;
+
+    const playTick = () => {
+        const audioCtx = getAudioCtx();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.frequency.setValueAtTime(count === 1 ? 880 : 440, audioCtx.currentTime);
+        gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.1);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.1);
+    };
+
+    const nextCount = () => {
+        if (count > 0) {
+            number.textContent = count;
+
+            // Trigger animation restrike
+            number.style.animation = 'none';
+            void number.offsetWidth; // Force reflow
+            number.style.animation = null;
+
+            playTick();
+            count--;
+            // Sync with BPM demo (40 BPM = 1500ms per beat)
+            const interval = (60000 / activeGrid.bpm);
+            setTimeout(nextCount, interval);
+        } else {
+            overlay.style.display = 'none';
+            callback();
+        }
+    };
+    nextCount();
+}
 
 export function initTranscription() {
     const ctx = activeGrid;
@@ -849,12 +1027,6 @@ export function initTranscription() {
         ctx.innerHands = Array(ctx.innerHands.length).fill(null);
         renderAllMeasures(ctx);
 
-        // Set BPM super slow
-        ctx.bpm = 40;
-        if (ctx.bpmInput) ctx.bpmInput.value = '40';
-        const bVal = document.getElementById('bpmVal-' + ctx.id);
-        if (bVal) bVal.textContent = '40';
-
         // Ensure there are just enough empty measures
         if (typeof loadPatternByName === 'function') loadPatternByName(CALIBRATE_PATTERN_8_BEATS);
 
@@ -895,15 +1067,22 @@ export function initTranscription() {
 
     const startGuidedBtnLocal = document.getElementById('startGuidedBtn');
     startGuidedBtnLocal?.addEventListener('click', () => {
-        isGuidedCalibrating = true;
         startGuidedBtnLocal.disabled = true;
-        startGuidedBtnLocal.textContent = "Calibrating...";
+        startGuidedBtnLocal.textContent = "Get Ready...";
 
-        const ctx = activeGrid;
-        ctx.innerLabels = Array(ctx.innerLabels.length).fill('');
-        ctx.innerHands = Array(ctx.innerHands.length).fill(null);
-        renderAllMeasures(ctx);
+        startCountdown(() => {
+            isGuidedCalibrating = true;
+            startGuidedBtnLocal.textContent = "Calibrating...";
 
-        start(ctx);
+            const ctx = activeGrid;
+            ctx.innerLabels = Array(ctx.innerLabels.length).fill('');
+            ctx.innerHands = Array(ctx.innerHands.length).fill(null);
+            renderAllMeasures(ctx);
+            lastGuidedIndex = -1;
+
+            // start(ctx, isSync, skipCountdown)
+            // Skip the internal countdown since we just did one!
+            start(ctx, true, true);
+        });
     });
 }

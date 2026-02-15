@@ -216,24 +216,99 @@
 /* Ensure unique and high Z-index */
 #guidedCalModal {
   z-index: 99999 !important;
-  /* Higher than your course modal */
+  background: transparent;
+  /* No dark overlay */
+  align-items: flex-start;
+  /* Move to top */
+  pointer-events: none;
+  /* Let clicks pass through to grid */
 }
 
-.modal-content {
+#guidedCalModal .modal-content {
+  pointer-events: auto;
+  /* Re-enable clicks for buttons in the banner */
   background: var(--panel);
-  padding: 30px;
-  border-radius: 20px;
+  padding: 15px 30px;
+  border-radius: 0 0 20px 20px;
   text-align: center;
-  max-width: 400px;
+  max-width: 600px;
+  width: 90%;
   border: 1px solid var(--panel-border);
+  border-top: none;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+#guidedCalModal h2 {
+  font-size: 1.2rem;
+  margin: 0;
+  white-space: nowrap;
+}
+
+#guidedCalModal p {
+  display: block;
+  /* Show instructions in banner */
+  font-size: 0.9rem;
+  opacity: 0.8;
+  margin: 0;
+}
+
+.calibration-guide {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 25px;
+  margin: 20px 0;
 }
 
 .guide-note-box {
-  font-size: 5rem;
+  width: 100px;
+  height: 100px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-size: 2.2rem;
   font-weight: 900;
-  margin: 20px 0;
-  color: var(--btn-active);
-  text-shadow: 0 0 20px rgba(var(--btn-active-rgb), 0.3);
+  margin: 0;
+  color: #f1c40f;
+  /* Yellow accent */
+  background: #000;
+  /* Black background */
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.5), inset 0 0 10px rgba(255, 255, 255, 0.1);
+  transition: transform 0.1s ease, background 0.2s ease;
+}
+
+.guide-note-box.strike {
+  background: #2ecc71;
+  /* Green on strike */
+}
+
+.guide-note-box.pulse {
+  animation: calPulse 0.3s ease-out;
+}
+
+@keyframes calPulse {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 0px rgba(46, 204, 113, 0);
+  }
+
+  50% {
+    transform: scale(1.15);
+    box-shadow: 0 0 40px rgba(46, 204, 113, 0.6);
+  }
+
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 20px rgba(46, 204, 113, 0.2);
+  }
 }
 
 .progress-bar-container {
@@ -248,7 +323,7 @@
   width: 0%;
   height: 100%;
   background: var(--btn-active);
-  transition: width 0.3s ease;
+  /* Removed transition to prevent lag on strike */
 }
 
 .modal-actions {

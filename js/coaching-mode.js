@@ -132,8 +132,7 @@ export function exitCoachingMode() {
 
 
 
-const PENDING_EVAL_WINDOW = 100; // ms to wait for a pitch after an accent
-let pendingEvaluation = null; // { timeoutId, timestamp, type: 'ACCENT', stepIndex }
+// Redundant buffering removed - handled in transcription.js
 
 /**
  * Evaluate a detected note against expected note
@@ -149,7 +148,6 @@ export function evaluateDetectedNote(detectedNote, stepIndex, actualTime) {
     return;
   }
 
-  const ctx = activeGrid;
   const expected = expectedNotes[stepIndex];
 
   if (!expected || expected.labels.length === 0) {
@@ -157,67 +155,15 @@ export function evaluateDetectedNote(detectedNote, stepIndex, actualTime) {
     return;
   }
 
-  // Check if we have a pending ACCENT evaluation for this step
-  if (pendingEvaluation && pendingEvaluation.stepIndex === stepIndex) {
-    if (detectedNote !== 'ACCENT' && expected.labels.includes(detectedNote)) {
-      // SUCCESS! We found the pitch we were looking for.
-      console.log(`Coaching Mode: Resolved Pending Accent -> Found Note ${detectedNote}`);
-      clearTimeout(pendingEvaluation.timeoutId);
-
-      // Use the timestamp of the ORIGINAL Accent (the attack) for timing accuracy
-      const attackTime = pendingEvaluation.timestamp;
-      pendingEvaluation = null;
-
-      // Proceed to evaluate with the correct note and the accurate attack time
-      performEvaluation(detectedNote, stepIndex, attackTime, expected);
-      return;
-    }
-  }
-
   // --- PREVENT OVERWRITE OF SUCCESSFUL EVALUATIONS ---
   // If we already marked this step as CORRECT, ignore subsequent inputs 
-  // (unless we are refining ACCENT -> Pitch, which is handled above or here if pending cleared)
   const existingResult = sessionResults.find(r => r.stepIndex === stepIndex);
   if (existingResult && existingResult.correct) {
-    // Step already passed!
-
-    // EXCEPTION: Refinement
-    // If we passed with 'ACCENT' but now have the actual 'NOTE', we might want to update it 
-    // just for display accuracy, but we definitely shouldn't fail it.
-    const isRefinement = (existingResult.detectedNote === 'ACCENT' && detectedNote !== 'ACCENT' && expected.labels.includes(detectedNote));
-
-    if (!isRefinement) {
-      console.log(`Coaching Mode: Step ${stepIndex} already correct (${existingResult.detectedNote}). Ignoring subsequent detection (${detectedNote}).`);
-      return;
-    }
+    console.log(`Coaching Mode: Step ${stepIndex} already correct (${existingResult.detectedNote}). Ignoring subsequent detection (${detectedNote}).`);
+    return;
   }
 
-  // Normal Flow
-  if (detectedNote === 'ACCENT') {
-    const expectsPitch = expected.labels.some(l => l !== 'T' && l !== 'S' && l !== 'ACCENT');
-
-    if (expectsPitch) {
-      // We expect a pitch, but got an accent. 
-      // This might be the attack of the note. Wait briefly.
-      console.log("Coaching Mode: Detected ACCENT but expecting Pitch. Buffering...");
-
-      if (pendingEvaluation) clearTimeout(pendingEvaluation.timeoutId);
-
-      pendingEvaluation = {
-        stepIndex,
-        timestamp: actualTime,
-        type: 'ACCENT',
-        timeoutId: setTimeout(() => {
-          console.log("Coaching Mode: Pending Accent Timed Out. Committing Accent.");
-          pendingEvaluation = null;
-          performEvaluation('ACCENT', stepIndex, actualTime, expected);
-        }, PENDING_EVAL_WINDOW)
-      };
-      return; // Wait for timeout or new note
-    }
-  }
-
-  // If we aren't buffering, just evaluate
+  // Normal Flow - No longer need buffering here as the engine provides refined signals
   performEvaluation(detectedNote, stepIndex, actualTime, expected);
 }
 
