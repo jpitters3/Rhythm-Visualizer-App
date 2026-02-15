@@ -24,14 +24,30 @@ const presentBtn = document.getElementById('presentBtn');
 const exitPresent = document.getElementById('exitPresent');
 const micBtn = document.getElementById('micBtn');
 const saveBtn = document.getElementById('saveBtn');
-const loadBtn = document.getElementById('loadBtn');
 const renameBtn = document.getElementById('renameBtn');
 const deleteBtn = document.getElementById('deleteBtn');
 const exportBtn = document.getElementById('exportBtn');
 const importBtn = document.getElementById('importBtn');
 
 if (patternSelect) {
-  patternSelect.addEventListener('change', updatePatternButtons);
+  patternSelect.addEventListener('change', async () => {
+    const selected = getSelectedPatternName();
+    if (!selected) return;
+
+    if (hasUnsavedChanges()) {
+      showConfirm(
+        'Unsaved Changes',
+        'You have unsaved changes in the current pattern. Discard them and load the new pattern?',
+        async () => {
+          await loadPatternByName(selected);
+          updatePatternButtons();
+        }
+      );
+    } else {
+      await loadPatternByName(selected);
+      updatePatternButtons();
+    }
+  });
 }
 
 // Dropdown Logic
@@ -320,15 +336,6 @@ export async function loadPatternByName(pattern) {
     alert(`Load failed: ${err?.message || err}`);
   }
 }
-
-loadBtn?.addEventListener('click', async (e) => {
-  if (e) e.stopPropagation();
-  const selected = getSelectedPatternName();
-  await loadPatternByName(selected);
-
-  const menu = document.getElementById('fileDropdownMenu');
-  if (menu) menu.classList.remove('show');
-});
 
 renameBtn?.addEventListener('click', async (e) => {
   if (e) e.stopPropagation();

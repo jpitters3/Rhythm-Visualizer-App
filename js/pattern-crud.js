@@ -119,14 +119,12 @@ export function getSelectedPatternName() {
 
 export function updatePatternButtons() {
   const patternSelect = document.getElementById('patternSelect');
-  const loadBtn = document.getElementById('loadBtn');
   const renameBtn = document.getElementById('renameBtn');
   const deleteBtn = document.getElementById('deleteBtn');
 
   if (!patternSelect) return;
 
   const hasSelection = !!patternSelect.value;
-  if (loadBtn) loadBtn.disabled = false;
   if (renameBtn) renameBtn.disabled = !hasSelection;
   if (deleteBtn) deleteBtn.disabled = !hasSelection;
 }

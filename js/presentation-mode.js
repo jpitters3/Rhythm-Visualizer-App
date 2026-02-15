@@ -774,11 +774,33 @@ function drawHighway(ctx) {
       }
 
       // 4e. Note Text
-      streamCtx.fillStyle = '#ffffff';
-      streamCtx.font = `bold ${Math.floor(40 * scale)}px Inter, system-ui`;
-      streamCtx.textAlign = 'center';
-      streamCtx.textBaseline = 'middle';
-      streamCtx.fillText(displayLabel, x, centerY + 2);
+      const notationPref = localStorage.getItem('handpanLabelPref') || 'Numbers';
+      const showEgg = isVisualDing && notationPref === 'Pitches';
+
+      if (showEgg) {
+        const eggW = radius * 0.40;
+        const eggH = radius * 0.45;
+        // Double White Ring
+        streamCtx.strokeStyle = '#ffffff';
+        streamCtx.lineWidth = 2;
+
+        // Outer Ring
+        streamCtx.beginPath();
+        streamCtx.ellipse(x, centerY, eggW - 2, eggH - 2, 0, 0, Math.PI * 2);
+        streamCtx.stroke();
+
+        // Inner Ring
+        streamCtx.beginPath();
+        streamCtx.ellipse(x, centerY, eggW - 6, eggH - 6, 0, 0, Math.PI * 2);
+        streamCtx.stroke();
+      } else {
+        const textToDraw = (notationPref === 'Numbers' && (rawLabel === '0' || rawLabel === 'Ding')) ? 'D' : displayLabel;
+        streamCtx.fillStyle = '#ffffff';
+        streamCtx.font = `bold ${Math.floor(40 * scale)}px Inter, system-ui`;
+        streamCtx.textAlign = 'center';
+        streamCtx.textBaseline = 'middle';
+        streamCtx.fillText(textToDraw, x, centerY + 2);
+      }
     } else {
       // 4f. Ghost Note Dot
       streamCtx.beginPath();

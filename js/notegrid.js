@@ -226,24 +226,31 @@ export function renderAllMeasures(ctx = activeGrid) {
         // Set single-note cell labels
         // Resolve Display Text (Number vs Pitch)
         let displayText = lbl;
-        const pref = localStorage.getItem('handpanLabelPref');
-        if (pref === 'Pitches' && lbl !== '' && getScale) {
-          const scale = getScale();
-          if (scale && scale.map) {
-            // Find pitch for this label
-            let pitch = scale.map[lbl];
+        const isDing = (lbl === '0' || lbl === 'Ding');
 
-            // Special handling for Ding if mapped differently
-            if (!pitch && (lbl === 'D' || lbl === 'Ding')) pitch = scale.ding;
-            if (pitch) {
-              // Format: "C#4" -> "C#" (cleaner for grid)
-              displayText = pitch.replace('s', '#').replace(/[0-9]/g, '');
+        const pref = localStorage.getItem('handpanLabelPref') || 'Numbers';
 
-              // Visual Ding Logic
-              const isDing = (lbl === '0' || lbl === 'D' || lbl === 'Ding');
-              if (isDing) {
-                cell.classList.add('visual-ding');
-                displayText = ''; // Clear text so we see the egg
+        if (isDing) {
+          if (pref === 'Pitches') {
+            cell.classList.add('visual-ding');
+            displayText = ''; // Use egg, hide text
+          } else {
+            cell.classList.remove('visual-ding');
+            displayText = 'D'; // Numbers mode: show 'D'
+          }
+        } else {
+          cell.classList.remove('visual-ding');
+          if (pref === 'Pitches' && lbl !== '' && getScale) {
+            const scale = getScale();
+            if (scale && scale.map) {
+              // Find pitch for this label
+              let pitch = scale.map[lbl];
+
+              // Special handling for Ding if mapped differently
+              if (!pitch && isDing) pitch = scale.ding;
+              if (pitch) {
+                // Format: "C#4" -> "C#" (cleaner for grid)
+                displayText = pitch.replace('s', '#').replace(/[0-9]/g, '');
               }
             }
           }
@@ -393,10 +400,21 @@ export function setInnerLabel(i, value, ctx = activeGrid) {
     // Set single note
     ctx.innerLabels[i] = value;
     const inner = cell.querySelector('.inner');
-    if (inner) inner.textContent = value;
-
-    cell.classList.remove('label-ding', 'label-t', 'label-s', 'label-n', 'label-q', 'has-label');
     const v = String(value || '');
+    const isDing = (v === 'Ding' || v === '0');
+    const pref = localStorage.getItem('handpanLabelPref') || 'Numbers';
+
+    if (inner) {
+      if (isDing) {
+        inner.textContent = (pref === 'Pitches') ? '' : 'D';
+      } else {
+        inner.textContent = value;
+      }
+    }
+
+    cell.classList.remove('label-ding', 'label-t', 'label-s', 'label-n', 'label-q', 'has-label', 'visual-ding');
+
+    if (isDing && pref === 'Pitches') cell.classList.add('visual-ding');
 
     // ghost = no label set
     cell.classList.toggle('ghost', !v);
