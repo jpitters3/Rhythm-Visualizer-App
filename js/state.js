@@ -42,6 +42,9 @@ export function setLabelNotation(v) {
 export let isListening = false;
 export function setIsListening(v) { isListening = v; }
 
+export let isCalibrationMode = false;
+export function setIsCalibrationMode(v) { isCalibrationMode = v; }
+
 // Auth State (Migrated from auth.js/profile.js)
 export let currentUser = null;
 export function setCurrentUser(u) { currentUser = u; }

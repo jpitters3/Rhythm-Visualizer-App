@@ -7,7 +7,7 @@ import { setCaret, setRange, clearRange, getRange, updateDragSelectionOver, star
 import { HistoryManager } from './history.js';
 import { editHandsMode, isEditMulti, longPressFired, setLongPressFired, setIsEditMulti, labelNotation } from './state.js';
 import { TransportRegistry } from './transport-ui.js';
-import { isReviewing, getFeedbackForStep, showFeedbackTooltip, copyLogsForStep } from './coaching-mode.js';
+import { isReviewing, getFeedbackForStep, showFeedbackTooltip, copyLogsForStep, getExpectedNoteForStep } from './coaching-mode.js';
 import { Bus, BUS_EVENT } from './bus.js';
 
 export const cells = (ctx) => (ctx || activeGrid).cells;
@@ -466,15 +466,31 @@ function attachCellListeners(cell, ctx = activeGrid) {
         const feedback = getFeedbackForStep(gIndex);
         if (feedback) {
           if (longPressFired) {
-            // LONG PRESS: Copy logs + confirmation
+            // ... existing long press logic ...
             copyLogsForStep(gIndex).then(copied => {
               const status = copied ? " (Logs copied!)" : " (No logs)";
               showFeedbackTooltip(cell, feedback + status);
               setLongPressFired(false);
             });
           } else {
-            // QUICK CLICK: Just show standard feedback
-            showFeedbackTooltip(cell, feedback);
+            // QUICK CLICK: Check for "Wrong Note" or "Missed Note" to offer Challenge
+            // Simple heuristic based on feedback string
+            const isError = feedback.includes('Wrong') || feedback.includes('Missed') || feedback.includes('Misclassified');
+
+            if (isError) {
+              // Challenge Logic
+              const expected = getExpectedNoteForStep(gIndex);
+              if (expected) {
+                const confirmChallenge = confirm(`I detected a mistake:\n"${feedback}"\n\nDid you play a '${expected}' correctly?\n\nClick OK to train me to hear it better next time.`);
+                if (confirmChallenge) {
+                  Bus.emit(BUS_EVENT.CHALLENGE_CORRECTION, { targetNote: expected });
+                }
+              } else {
+                showFeedbackTooltip(cell, feedback);
+              }
+            } else {
+              showFeedbackTooltip(cell, feedback);
+            }
           }
         }
       }

@@ -19,6 +19,9 @@ let tickObservers = [];
 
 export function registerHighlighter(fn) { highlighterFn = fn; }
 export function addTickObserver(fn) { tickObservers.push(fn); }
+export function removeTickObserver(fn) {
+  tickObservers = tickObservers.filter(o => o !== fn);
+}
 
 let countdownRemaining = 0;
 const COUNTDOWN_LENGTH = 4; // 4 steps
@@ -286,6 +289,7 @@ function scheduleAudio(c, step, time) {
   }
 
   // 2. PATTERN
+
   const realStep = step % c.cells.length;
   const currentData = c.innerLabels[realStep];
 
@@ -299,11 +303,16 @@ function scheduleAudio(c, step, time) {
 
   // 3. METRONOME
   if (c.metronomeOn) {
+    const stepsPerMeasure = c.stepsPerMeasure || 8;
+    const isDownbeat = (realStep % stepsPerMeasure === 0);
     const beatStride = (c.mode === '8') ? 2 : 4;
     const isQuarter = (realStep % beatStride === 0);
-    const isDownbeat = (realStep === 0);
-    // On step 0, it's a downbeat
+
+    // On step 0, 8, 16... it's a downbeat
     const kind = isDownbeat ? 'downbeat' : (isQuarter ? 'beat' : 'sub');
+
+    if (isDownbeat) console.log(`[Audio] Downbeat Detected! Step: ${realStep}, Measures: ${c.measures}, StepsPerMeasure: ${stepsPerMeasure}`);
+
     metroClick(kind, delay);
   }
 }
@@ -372,8 +381,8 @@ export function tick(ctx, overrideStep = null, audioTime = null, audioStartTime 
   const stepNotes = [];
   const stepHands = [];
 
-  // Only highlight handpan for Grid A
-  const shouldHighlight = (c.id === 'A');
+  // Only highlight handpan for Grid A or Simon Preview
+  const shouldHighlight = (c.id === 'A' || c.id === 'simon-preview');
 
   // Highlight Multiple Notes (Visual Only)
   if (Array.isArray(currentData)) {
@@ -430,7 +439,19 @@ function getMetroClickKind(ctx) {
 }
 
 export function playNoteByLabel(label, step, delay = 0) {
-  const note = noteForLabel(label); // e.g. "C#", "D3_ding"
+  let note = noteForLabel(label); // e.g. "C#", "D3_ding"
+
+  // Simon Fallback: If label doesn't exist in current scale, try handpan defaults
+  if (!note && (label === 'Ding' || label.match(/^[1-8]$/))) {
+    const handpanDefaults = {
+      'Ding': 'D3_ding',
+      '1': 'A3', '2': 'Bb3', '3': 'C4', '4': 'D4', '5': 'E4', '6': 'F4', '7': 'G4', '8': 'A4'
+    };
+    note = handpanDefaults[label];
+    console.log(`[Audio] Simon Fallback applied for "${label}" -> Note: "${note}"`);
+  }
+
+  console.log(`[Audio] playNoteByLabel: "${label}" -> Note: "${note}" (Step: ${step})`);
   if (note) { playNoteSample(note, delay); }
 }
 

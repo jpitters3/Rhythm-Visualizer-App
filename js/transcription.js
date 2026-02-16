@@ -2,9 +2,9 @@ import { unlockAudio, getAudioCtx, addTickObserver, stop, start } from './notepl
 import { activeGrid } from './grid-context.js';
 import { cells, setInnerLabel, renderAllMeasures } from './notegrid.js';
 import { loadPatternByName } from './controls.js';
-import { isListening, setIsListening, getScale, getCurrentScaleId, currentUser } from './state.js';
+import { isListening, setIsListening, getScale, getCurrentScaleId, currentUser, setIsCalibrationMode } from './state.js';
 import { isCoaching, evaluateDetectedNote, logCoachingEvent } from './coaching-mode.js';
-import { isGameModeActive, handleGameNote } from './games.js';
+import { isGameModeActive } from './games.js';
 import { ACCENT_RMS_MULTIPLIER } from './config.js';
 import { Bus, BUS_EVENT } from './bus.js';
 import { supabase } from './supabase-client.js';
@@ -163,13 +163,18 @@ function transcriptionLoop() {
     const nowAudioMs = audioCtx.currentTime * 1000; // Unified Audio Clock (ms)
 
     // Update current index from grid (User confirmed transcriptionIndex is correct)
-    currentIndex = activeGrid.transcriptionIndex;
-    transcriptionIndex = currentIndex; // Sync local global variable
+    // Fallback to local transcriptionIndex (from observer) if activeGrid property is missing
+    if (typeof activeGrid.transcriptionIndex === 'number') {
+        currentIndex = activeGrid.transcriptionIndex;
+        transcriptionIndex = currentIndex; // Sync local global variable
+    } else {
+        currentIndex = transcriptionIndex;
+    }
 
     // DEBUG: Heartbeat to ensure loop is alive and see state
-    // if (Math.random() < 0.02) {
-    //     console.log(`[Transcription Heartbeat] Listening: ${isListening}, Index: ${currentIndex}, RMS: ${rms.toFixed(4)}, Floor: ${roomNoiseFloor.toFixed(4)}, Pitch: ${pitch}`);
-    // }
+    if (Math.random() < 0.05) {
+        console.log(`[Transcription Heartbeat] Listening: ${isListening}, Index: ${currentIndex}, RMS: ${rms.toFixed(4)}, Floor: ${roomNoiseFloor.toFixed(4)}, Pitch: ${pitch}`);
+    }
 
     // Update Guided Calibration display
     if (isGuidedCalibrating) {
@@ -180,24 +185,41 @@ function transcriptionLoop() {
     const micLevel = document.getElementById('micLevel');
     if (micLevel) micLevel.style.width = Math.min(100, rms * 500) + "%";
 
+    const MAX_PENDING_ACCENT_WINDOW = 200; // Hard limit to commit accent
+
     // --- COMMIT PENDING ACCENTS ---
     if (pendingAccent) {
-        // Only commit if the 100ms window has passed.
-        // We REMOVED the "currentIndex !== pendingAccent.step" check so that 
-        // a pitch landing on the NEXT step can still claim/cancel this accent.
-        if (now - pendingAccent.startTime > PENDING_ACCENT_WINDOW) {
-            console.log(`[Transcription] Committing Buffered Accent: Step ${pendingAccent.step}`);
+        const timeSinceStart = now - pendingAccent.startTime;
+        const timeSinceFirstDetection = now - pendingAccent.firstDetectionTime; // We need to track total time
+
+        // "SNOOZE" LOGIC:
+        // If we see a POTENTIAL note (good pitch but maybe low clarity), 
+        // we extend the window to give it a chance to stabilize.
+        // Pitch must be valid (> 0) and RMS decent (> baseSensitivity).
+        // This prevents the accent from committing while the note is "blooming".
+        const potentialNote = (pitch > 50 && rms > baseSensitivity);
+
+        if (potentialNote && timeSinceFirstDetection < MAX_PENDING_ACCENT_WINDOW) {
+            // Bump the start time to delay commit, but don't exceed MAX window
+            pendingAccent.startTime = now;
+            // console.log(`[Transcription] Snoozing Accent Commit (Potential Note Detected: ${pitch.toFixed(1)}Hz)`);
+        }
+
+        // Commit if window passed OR (Crucial) if we exceeded the hard limit
+        if ((now - pendingAccent.startTime > PENDING_ACCENT_WINDOW) || (timeSinceFirstDetection > MAX_PENDING_ACCENT_WINDOW)) {
+
+            console.log(`[Transcription] Committing Buffered Accent: Step ${pendingAccent.step} (Waited: ${timeSinceFirstDetection.toFixed(0)}ms)`);
             const commitTimestamp = pendingAccent.timestamp;
             const commitStep = pendingAccent.step;
             pendingAccent = null;
 
             if (isCoaching()) {
                 evaluateDetectedNote('ACCENT', commitStep, commitTimestamp);
-            } else if (isGameModeActive()) {
-                handleGameNote('ACCENT');
             } else {
                 recordNoteToGrid('S', commitStep, activeGrid);
             }
+
+            Bus.emit(BUS_EVENT.ACCENT_DETECTED, { step: commitStep, time: commitTimestamp });
             lastNoteTime = now;
             stepWasRecorded = true;
             lastDetectedType = 'ACCENT';
@@ -223,9 +245,9 @@ function transcriptionLoop() {
         handleCalibration(pitch, rms, clarity);
     } else if (activeGrid.playing) {
         // Debug every potential hit (loud enough)
-        // if (rms > roomNoiseFloor) {
-        //     console.log(`[Check] Pitch: ${pitch}, RMS: ${rms}, Floor: ${roomNoiseFloor}, StepRecorded: ${stepWasRecorded}`);
-        // }
+        if (rms > roomNoiseFloor) {
+            console.log(`[Check] Pitch: ${pitch}, RMS: ${rms}, Floor: ${roomNoiseFloor}, StepRecorded: ${stepWasRecorded}`);
+        }
 
         // In Coaching Mode, if we have a PENDING ACCENT, we are in "Refinement Mode"
         // This is much more reliable than stepWasRecorded/lastDetectedType checks.
@@ -237,28 +259,59 @@ function transcriptionLoop() {
             const detectedNoteLabel = findClosestScaleNote(pitch);
             let CLARITY_THRESHOLD = userClarityThreshold;
 
+            // SMART CALIBRATION: Use dynamic thresholds
+            if (isGuidedCalibrating) {
+                // During calibration learning, be permissive (0.4) to capture even low-clarity notes
+                // so we can measure their true average clarity.
+                CLARITY_THRESHOLD = 0.4;
+            } else {
+                // Normal Play: Use learned profile
+                CLARITY_THRESHOLD = getNoteClarityThreshold(detectedNoteLabel);
+            }
+
             // DYNAMIC CLARITY ADJUSTMENT based on calibration
             // If we have calibrated 'Tak' or 'Slap' clarity, we use it to nudge the threshold.
             // This prevents "dirty" notes (like Dings) from being seen as accents if they are clearer than actual accents.
-            const takClarity = noteClarityAverages['Tak'] || 0.4;
-            const slapClarity = noteClarityAverages['Slap'] || 0.4;
+            const getClarityAvg = (label) => {
+                const val = noteClarityAverages[label];
+                if (Array.isArray(val) && val.length > 0) {
+                    return val.reduce((a, b) => a + b, 0) / val.length;
+                }
+                return typeof val === 'number' ? val : 0.4;
+            };
+
+            const takClarity = getClarityAvg('Tak');
+            const slapClarity = getClarityAvg('Slap');
             const baselineAccentClarity = Math.max(takClarity, slapClarity);
 
             // Get Ding Frequency for dynamic protection
             const currentScale = getScale();
-            const dingFreq = (currentScale && NOTE_FREQS[currentScale.ding]) ? NOTE_FREQS[currentScale.ding] : 0;
-            const dingProtectionLimit = dingFreq ? (dingFreq + 40) : 150;
 
-            // If we have a detected note, we want to ensure its clarity is safely above
-            // the calibrated "noise" level of a true accent.
-            if (detectedNoteLabel) {
+            // LOGIC SPLIT:
+            // 1. Guided Calibration: Force low threshold (already set to 0.4 above, preserve it).
+            // 2. Smart Profile: If we have data, use it (already set via getNoteClarityThreshold above).
+            // 3. Heuristic Fallback: If no data, use "Ding Protection" logic.
+
+            const hasSpecificProfile = (typeof noteClarityAverages[detectedNoteLabel] === 'number');
+
+            if (!isGuidedCalibrating && !hasSpecificProfile && detectedNoteLabel) {
+                // Fallback to Heuristic Protection only if we don't have better data
+                const dingFreq = (currentScale && NOTE_FREQS[currentScale.ding]) ? NOTE_FREQS[currentScale.ding] : 0;
+                const dingProtectionLimit = dingFreq ? (dingFreq + 40) : 150;
+
                 // If it's a Ding, be extra lenient, but still watch the accent baseline
-                if (detectedNoteLabel === 'D' || pitch < dingProtectionLimit) {
+                if (detectedNoteLabel === 'Ding' || pitch < dingProtectionLimit) {
                     CLARITY_THRESHOLD = Math.max(baselineAccentClarity + 0.05, userClarityThreshold - 0.1);
+                    // console.log(`[Transcription] Ding detected (Heuristic), adjusting clarity threshold to: ${CLARITY_THRESHOLD.toFixed(2)}`);
                 } else {
                     // Regular notes should be significantly clearer than a Tak/Slap
                     CLARITY_THRESHOLD = Math.max(baselineAccentClarity + 0.1, userClarityThreshold);
+                    // console.log(`[Transcription] Regular note detected (Heuristic), adjusting clarity threshold to: ${CLARITY_THRESHOLD.toFixed(2)}`);
                 }
+            } else if (!isGuidedCalibrating && hasSpecificProfile) {
+                // Ensure we use the profile (already set, but let's confirm precedence against baseline?)
+                // Generally we trust the profile more than baselineAccentClarity, presuming calibration captured the "real" instrument.
+                // So we do nothing, letting CLARITY_THRESHOLD remain what getNoteClarityThreshold returned.
             }
 
             const isClearNote = detectedNoteLabel && clarity > CLARITY_THRESHOLD;
@@ -270,9 +323,14 @@ function transcriptionLoop() {
             }
 
             // 2. Check for ACCENTS (Secondary)
+            // Use calibrated multipliers if available (S, Tak, Slap). Default is 0.5 (Base Sensitivity)
+            // If multiplier > 0.5 (e.g. 0.6), we make it HARDER to trigger (1.2x threshold).
+            const accentMult = noteMultipliers['S'] || noteMultipliers['Tak'] || noteMultipliers['Slap'] || 0.5;
+            const sensitivityFactor = accentMult / 0.5;
+
             const flux = rms / prevRMS;
-            const isStrike = flux > 1.3 || rms > (baseSensitivity * 2);
-            const MIN_ACCENT_RMS = 0.02;
+            const isStrike = flux > 1.3 || rms > (baseSensitivity * 2 * sensitivityFactor);
+            const MIN_ACCENT_RMS = 0.02 * sensitivityFactor;
 
             // It is an accent only if:
             // - It is a strike
@@ -298,7 +356,8 @@ function transcriptionLoop() {
                             pendingAccent = {
                                 step: currentIndex,
                                 timestamp: nowAudioMs,
-                                startTime: now
+                                startTime: now,
+                                firstDetectionTime: now // Track absolute start for hard limit
                             };
                         }
                     }
@@ -310,16 +369,18 @@ function transcriptionLoop() {
                 const detected = findClosestScaleNote(pitch); // Returns label string directly
 
                 if (detected) {
-                    logCoachingEvent(`NOTE Candidate: ${detected}, Pitch ${pitch.toFixed(1)}, Clarity ${clarity.toFixed(3)}, RMS ${rms.toFixed(4)}`, transcriptionIndex);
+                    logCoachingEvent(`NOTE Candidate: ${detected}, Pitch ${pitch.toFixed(1)}, Clarity ${clarity.toFixed(3)} (Thresh ${CLARITY_THRESHOLD.toFixed(2)}), RMS ${rms.toFixed(4)}`, transcriptionIndex);
 
                     // Use the note-specific multiplier from Guided Calibration
                     const multiplier = noteMultipliers[detected] || 0.5;
 
                     // Calculate specific threshold
-                    let noteSpecificThreshold = baseSensitivity * multiplier;
-                    if (noteSensitivities[detected]) {
-                        noteSpecificThreshold = noteSensitivities[detected] * multiplier;
+                    let sens = noteSensitivities[detected];
+                    if (Array.isArray(sens)) {
+                        // If it's still an array from active calibration, use the latest sample or average
+                        sens = sens.length > 0 ? (sens.reduce((a, b) => a + b, 0) / sens.length) : baseSensitivity;
                     }
+                    let noteSpecificThreshold = (sens || baseSensitivity) * multiplier;
 
                     const isPassRMS = rms > noteSpecificThreshold;
                     const isPassGate = (isGateOpen || isNewStrike || canRefine);
@@ -336,7 +397,7 @@ function transcriptionLoop() {
                     }
 
                     if (isPassGate && isPassRMS) {
-                        // console.log(`[Check] Note: ${detected}, Flux: ${flux.toFixed(2)}, NewStrike: ${isNewStrike}, Gate: ${isGateOpen}, RMS: ${rms.toFixed(4)}`);
+                        console.log(`[Check] Note: ${detected}, Flux: ${flux.toFixed(2)}, NewStrike: ${isNewStrike}, Gate: ${isGateOpen}, RMS: ${rms.toFixed(4)}`);
 
                         // SUSTAIN FIX: If we are detecting the SAME note as before,
                         // we MUST have a confirmed new strike (higher flux) to record it.
@@ -378,11 +439,17 @@ function transcriptionLoop() {
 
                                 if (isCoaching()) {
                                     evaluateDetectedNote(detected, hitStep, hitTime);
-                                } else if (isGameModeActive()) {
-                                    handleGameNote(detected);
                                 } else {
                                     recordNoteToGrid(detected, hitStep, activeGrid);
                                 }
+
+                                // Collect Clarity Data for Smart Calibration (Phase 2)
+                                if (isGuidedCalibrating) {
+                                    if (!Array.isArray(noteClarityAverages[detected])) noteClarityAverages[detected] = [];
+                                    noteClarityAverages[detected].push(clarity);
+                                }
+
+                                Bus.emit(BUS_EVENT.NOTE_DETECTED, { label: detected, step: hitStep, time: hitTime });
                                 lastNoteTime = now;
                                 stepWasRecorded = true;
                                 lastDetectedType = detected;
@@ -390,7 +457,7 @@ function transcriptionLoop() {
 
                                 // Auto-finish Guided Calibration
                                 if (isGuidedCalibrating && detected === '8' && currentIndex >= 16) {
-                                    setTimeout(analyzeGuidedResults, 1000);
+                                    setTimeout(finishGuidedCalibration, 1000);
                                 }
                             }
                         }
@@ -578,22 +645,25 @@ function finishCalibration() {
     isCalibrating = false;
     micCalOverlay.style.display = 'none';
 
-    if (isFullCalWizard) {
-        // Confirmation for Phase 2
-        const response = confirm("1. Pitch Calibration Complete!\n\nReady to start Phase 2: Sensitivity Calibration?\n\nThis will load a rhythmic pattern for you to play along with.");
-        if (response) {
-            // Trigger Guided (Sensitivity) Calibration
-            guidedCalBtn?.click();
-        } else {
-            isFullCalWizard = false;
-            setIsListening(false);
-            alert("Full Calibration cancelled.");
-        }
-    } else {
-        alert("Pitch Calibration Complete!");
-        setIsListening(false);
-    }
     Bus.emit(BUS_EVENT.CALIBRATION_DONE);
+
+    setTimeout(() => {
+        if (isFullCalWizard) {
+            // Confirmation for Phase 2
+            const response = confirm("1. Pitch Calibration Complete!\n\nReady to start Phase 2: Sensitivity Calibration?\n\nThis will load a rhythmic pattern for you to play along with.");
+            if (response) {
+                // Trigger Guided (Sensitivity) Calibration
+                guidedCalBtn?.click();
+            } else {
+                isFullCalWizard = false;
+                setIsListening(false);
+                alert("Full Calibration cancelled.");
+            }
+        } else {
+            alert("Pitch Calibration Complete!");
+            setIsListening(false);
+        }
+    }, 100);
 }
 
 // Record the detected note to the grid
@@ -660,10 +730,15 @@ function analyzeGuidedResults() {
         const hasOthers = otherLabels.size > 0;
 
         if (!hasExpected) {
-            // MISS: Sensitivity Increased (Lower multiplier makes threshold easier to hit)
-            if (!noteMultipliers[note]) noteMultipliers[note] = 0.5;
-            noteMultipliers[note] = Math.max(0.05, noteMultipliers[note] - 0.1);
-            adjustments.push(`${note}: Missed (Sensitivity Increased)`);
+            if (hasOthers) {
+                // Sound was heard, just wrong label. Don't increase sensitivity.
+                adjustments.push(`${note}: Misclassified (Found ${Array.from(otherLabels).join(', ')})`);
+            } else {
+                // Sound was not heard at all. Sensitivity Increased (Lower multiplier makes threshold easier to hit)
+                if (!noteMultipliers[note]) noteMultipliers[note] = 0.5;
+                noteMultipliers[note] = Math.max(0.05, noteMultipliers[note] - 0.1);
+                adjustments.push(`${note}: Missed (Sensitivity Increased)`);
+            }
         } else if (targetCount > 1) {
             // DOUBLE: Double-Trigger Fixed (Higher multiplier makes threshold harder to hit)
             if (!noteMultipliers[note]) noteMultipliers[note] = 0.5;
@@ -681,12 +756,63 @@ function analyzeGuidedResults() {
         }
     });
 
+    // Create structured results for review mode
+    const detailedResults = expected.map((note, i) => {
+        const measureStart = (i + 1) * 8;
+        const measureEnd = measureStart + 7;
+        let foundLabel = null;
+        let status = 'Correct';
+
+        // Find what was actually recorded in this measure
+        for (let s = measureStart; s <= measureEnd; s++) {
+            const recorded = ctx.innerLabels[s];
+            if (recorded) {
+                foundLabel = recorded;
+                break;
+            }
+        }
+
+        if (foundLabel === note) {
+            status = 'Correct';
+        } else if (!foundLabel) {
+            status = 'Missed';
+        } else {
+            status = 'Misclassified';
+        }
+
+        // Check for double triggers
+        let count = 0;
+        for (let s = measureStart; s <= measureEnd; s++) {
+            if (ctx.innerLabels[s] === note) count++;
+        }
+        if (count > 1) status = 'Double-Trigger';
+
+        // Add Average Clarity info to result
+        let avgClarity = null;
+        if (noteClarityAverages[note] && Array.isArray(noteClarityAverages[note])) {
+            const vals = noteClarityAverages[note];
+            avgClarity = vals.reduce((a, b) => a + b, 0) / vals.length;
+        }
+
+        return { note, step: measureStart, status, found: foundLabel, avgClarity };
+    });
+
+    // Compute final averages for persistent storage
+    // We only update keys that were actually calibrated in this session (found as arrays)
+    Object.keys(noteClarityAverages).forEach(key => {
+        const val = noteClarityAverages[key];
+        if (Array.isArray(val) && val.length > 0) {
+            noteClarityAverages[key] = val.reduce((a, b) => a + b, 0) / val.length;
+        }
+    });
+
     const isPerfect = adjustments.length === 0;
     const summary = isPerfect ? "Perfect recording! No changes needed." : adjustments.join('\n');
-    alert("Sensitivity Calibration Results:\n\n" + summary);
 
     localStorage.setItem('gp_multipliers', JSON.stringify(noteMultipliers));
-    return isPerfect;
+    localStorage.setItem('gp_clarity_profiles', JSON.stringify(noteClarityAverages));
+
+    return { isPerfect, summary, detailedResults };
 }
 
 // Module-level Clarity Threshold (User Configurable)
@@ -704,7 +830,87 @@ export function getClarityThreshold() {
     return userClarityThreshold;
 }
 
+/**
+ * Challenge Feature: Apply smart correction for a specific note
+ * Called when user says "I played a X but you heard an Accent/Nothing"
+ */
+export function applyChallengeCorrection(targetNote) {
+    if (!targetNote) return { success: false, msg: "Invalid note" };
+
+    const updates = [];
+    const isAccentType = ['S', 'T', 'Tak', 'Slap'].includes(targetNote);
+
+    if (isAccentType) {
+        // CASE A: User played an Accent, but we missed it (or heard a weak note?)
+        // Action: Make Accents EASIER to trigger
+        ['S', 'Tak', 'Slap'].forEach(acc => {
+            if (!noteMultipliers[acc]) noteMultipliers[acc] = 0.5;
+            const oldMult = noteMultipliers[acc];
+            // Decrease by 0.05 -> Lower threshold -> Easier to trigger
+            const newMult = Math.max(0.1, oldMult - 0.05);
+            noteMultipliers[acc] = newMult;
+        });
+        localStorage.setItem('gp_multipliers', JSON.stringify(noteMultipliers));
+        updates.push(`Made Accents easier to detect (Sensitivity increased)`);
+
+    } else {
+        // CASE B: User played a Note (e.g. '4'), but we heard an Accent (or nothing)
+
+        // 1. Relax Clarity Requirement for this specific note
+        if (!noteClarityAverages[targetNote]) noteClarityAverages[targetNote] = 0.6;
+
+        const oldAvg = noteClarityAverages[targetNote];
+        let currentVal = Array.isArray(oldAvg) ? (oldAvg.reduce((a, b) => a + b, 0) / oldAvg.length) : oldAvg;
+
+        // Reduce required clarity by 10%
+        const newAvg = Math.max(0.1, currentVal * 0.9);
+        noteClarityAverages[targetNote] = newAvg;
+        localStorage.setItem('gp_clarity_profiles', JSON.stringify(noteClarityAverages));
+        updates.push(`Reduced Clarity req for ${targetNote} (${currentVal.toFixed(2)} -> ${newAvg.toFixed(2)})`);
+
+        // 2. Harden Accent Trigger (Make it harder to trigger Accents globally)
+        // Only do this if we actually misfired an accent (which is the common case for '4').
+        // We increase the multiplier -> Higher threshold -> Harder to trigger
+        ['S', 'Tak', 'Slap'].forEach(acc => {
+            if (!noteMultipliers[acc]) noteMultipliers[acc] = 0.5;
+            const oldMult = noteMultipliers[acc];
+            const newMult = Math.min(0.95, oldMult + 0.05);
+            noteMultipliers[acc] = newMult;
+        });
+        localStorage.setItem('gp_multipliers', JSON.stringify(noteMultipliers));
+        updates.push(`Increased Accent resistance (to prevent false positives)`);
+    }
+
+    console.log(`[Calibration] Challenge accepted for ${targetNote}:`, updates);
+    return { success: true, msg: updates.join(', ') };
+}
+
 // --- 4. Logic Fix: findClosestScaleNote returns label ---
+
+/**
+ * Get Dynamic Clarity Threshold for a specific note.
+ * Uses calibrated data if available, otherwise falls back to global setting.
+ */
+function getNoteClarityThreshold(noteLabel) {
+    if (!noteLabel) return userClarityThreshold;
+
+    const profile = noteClarityAverages[noteLabel];
+
+    // If we have a calibrated average (number), use it with safety margin.
+    if (typeof profile === 'number' && profile > 0) {
+        // Smart Logic: Threshold should be slightly below the average clarity.
+        // e.g. Avg 0.65 -> Threshold 0.55 (approx 15% margin)
+        // Check "Tak" and "Slap" interference? Maybe stricter if overlapping?
+        // For now, simpler is better.
+        // Clamp to reasonable bounds (0.4 - 0.9)
+        // RELAXED from 0.85 to 0.75 to capture "messy" valid notes (like 4)
+        const smartThreshold = Math.max(0.4, Math.min(0.9, profile * 0.75));
+        return smartThreshold;
+    }
+
+    return userClarityThreshold;
+}
+
 function findClosestScaleNote(freq) {
     const currentScale = getScale();
     if (!currentScale) return null;
@@ -754,6 +960,16 @@ const standardNoteToleranceValue = 0.05;
 Bus.on(BUS_EVENT.SET_ACCENT_SENSITIVITY, (e) => {
     if (e.detail && typeof e.detail.threshold === 'number') {
         setClarityThreshold(e.detail.threshold);
+    }
+});
+
+// Listen for Challenge Corrections
+Bus.on(BUS_EVENT.CHALLENGE_CORRECTION, (e) => {
+    if (e.detail && e.detail.targetNote) {
+        const result = applyChallengeCorrection(e.detail.targetNote);
+        if (result.success) {
+            alert(`Got it! I've adjusted my hearing for '${e.detail.targetNote}'.\n\nChanges applied:\n- ${result.msg}`);
+        }
     }
 });
 
@@ -888,31 +1104,60 @@ function finishGuidedCalibration() {
     isGuidedCalibrating = false;
     if (activeGrid.playing) stop(activeGrid);
 
-    // Show results and check if perfect
-    const isPerfect = analyzeGuidedResults();
+    // Short delay to let UI stop visibly before the alert blocks
+    setTimeout(() => {
+        // Show results and check if perfect
+        const { isPerfect, summary } = analyzeGuidedResults();
+        alert("Sensitivity Calibration Results:\n\n" + summary);
 
-    if (!isPerfect) {
-        const goAgain = confirm("Automatic adjustments have been applied to improve your calibration.\n\nWould you like to run the test again to verify the fixes?");
-        if (goAgain) {
-            // Restart guided calibration
-            resetGuideUI();
-            const startBtn = document.getElementById('startGuidedBtn');
-            if (startBtn) startBtn.click();
-            return;
+        if (!isPerfect) {
+            // const printLogs = confirm("Print logs?");
+            // if (printLogs) {
+            //     logCoachingEvent(summary);
+            // }
+            const goAgain = confirm("Automatic adjustments have been applied to improve your calibration.\n\nWould you like to run the test again to verify the fixes?");
+            if (goAgain) {
+                // Restart guided calibration
+                resetGuideUI();
+                const startBtn = document.getElementById('startGuidedBtn');
+                if (startBtn) startBtn.click();
+                return;
+            }
         }
-    }
 
-    // If perfect or user declines restart, close modal
-    const modal = document.getElementById('guidedCalModal');
-    if (modal) {
-        modal.style.display = 'none';
-        modal.setAttribute('aria-hidden', true);
-    }
+        // If perfect or user declines restart, enable review mode
+        const modal = document.getElementById('guidedCalModal');
+        if (modal) {
+            modal.style.display = 'none';
+            modal.setAttribute('aria-hidden', true);
+        }
 
-    isFullCalWizard = false;
-    resetGuideUI();
+        isFullCalWizard = false;
+        resetGuideUI();
 
-    if (lastActiveElement) lastActiveElement.focus();
+        // Enable Review Mode and show Calibration HUD
+        enableCalibrationReview();
+
+        if (lastActiveElement) lastActiveElement.focus();
+    }, 150);
+}
+
+function enableCalibrationReview() {
+    // Import the review functions from coaching-mode
+    import('./coaching-mode.js').then(({ enableReviewMode, mapCalibrationResultsToGrid }) => {
+        // Map calibration results to grid for visual feedback
+        const calibrationResults = analyzeGuidedResults();
+        mapCalibrationResultsToGrid(calibrationResults, activeGrid);
+
+        // Enable review mode
+        enableReviewMode();
+
+        // Show Calibration HUD
+        const calibrationHUD = document.getElementById('calibrationHUD');
+        if (calibrationHUD) {
+            calibrationHUD.style.display = 'block';
+        }
+    });
 }
 
 function resetGuideUI() {
@@ -1084,6 +1329,7 @@ export function initTranscription() {
     startGuidedBtnLocal?.addEventListener('click', () => {
         startGuidedBtnLocal.disabled = true;
         startGuidedBtnLocal.textContent = "Get Ready...";
+        setIsCalibrationMode(true); // Enable calibration mode immediately for logging
 
         startCountdown(() => {
             isGuidedCalibrating = true;
@@ -1098,6 +1344,33 @@ export function initTranscription() {
             // start(ctx, isSync, skipCountdown)
             // Skip the internal countdown since we just did one!
             start(ctx, true, true);
+        });
+    });
+
+    initExitCalibrationButton();
+}
+// Exit Calibration Button Handler (added separately)
+export function initExitCalibrationButton() {
+    const exitCalibrationBtn = document.getElementById('exitCalibrationBtn');
+    exitCalibrationBtn?.addEventListener('click', () => {
+        // Clear calibration mode
+        setIsCalibrationMode(false);
+
+        // Hide Calibration HUD
+        const calibrationHUD = document.getElementById('calibrationHUD');
+        if (calibrationHUD) {
+            calibrationHUD.style.display = 'none';
+        }
+
+        // Disable review mode and clear grid feedback
+        import('./coaching-mode.js').then(({ disableReviewMode }) => {
+            disableReviewMode();
+
+            // Clear grid visuals
+            const ctx = activeGrid;
+            ctx.cells.forEach(cell => {
+                cell.classList.remove('has-feedback', 'feedback-wrong', 'feedback-correct');
+            });
         });
     });
 }

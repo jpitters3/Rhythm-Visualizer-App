@@ -3,8 +3,8 @@
  * Evaluates note accuracy and timing during pattern playback
  */
 
-import { activeGrid, setIsListening, getCurrentScaleId, currentUser } from './state.js';
-import { start, stop, getVolume, setVolume, intervalMs, addTickObserver } from './noteplayer.js';
+import { activeGrid, setIsListening, getCurrentScaleId, currentUser, isCalibrationMode } from './state.js';
+import { start, stop, getVolume, setVolume, intervalMs, addTickObserver, removeTickObserver } from './noteplayer.js';
 import { supabase } from './supabase-client.js';
 import { Bus, BUS_EVENT } from './bus.js';
 import { AUDIO_DELAY } from './config.js';
@@ -481,6 +481,12 @@ export function endCoachingSession() {
 
   // Stop playback
   stop(activeGrid);
+
+  // Remove tick observer to prevent leaks
+  if (coachingSession._loopObserver) {
+    removeTickObserver(coachingSession._loopObserver);
+    delete coachingSession._loopObserver;
+  }
 
   // Mark session end time
   coachingSession.endTime = Date.now();
@@ -1395,12 +1401,30 @@ export function getFeedbackForStep(stepIndex) {
   }
 
   const deviation = result.timingDeviation;
-  // if (deviation !== undefined && deviation > 20 && deviation < -20) {
   if (deviation !== undefined && deviation !== 0 && result.timingScore < TIMING_SCORE_GREAT) {
     if (deviation < 0) feedback += `Early by (${Math.abs(deviation)}ms)`;
     else if (deviation > 0) feedback += `Late by (${deviation}ms)`;
   }
   return feedback;
+}
+
+/**
+ * Get the expected note(s) for a step
+ * Used for "Challenge" logic
+ */
+export function getExpectedNoteForStep(stepIndex) {
+  if (!coachingSession || !coachingSession.noteResults) return null;
+  const result = coachingSession.noteResults.find(r => r.stepIndex === stepIndex);
+  // If result exists, use its expectedNote property (single note) or expectedNotes (array)
+  if (result) {
+    if (result.expectedNote) return result.expectedNote;
+    if (result.expectedNotes && result.expectedNotes.length > 0) return result.expectedNotes[0];
+  }
+  // Fallback to initial expectedNotes array
+  const exp = expectedNotes ? expectedNotes[stepIndex] : null;
+  if (exp && exp.labels && exp.labels.length > 0) return exp.labels[0];
+
+  return null;
 }
 
 /**
@@ -1451,7 +1475,7 @@ export function showFeedbackTooltip(element, text) {
  * @param {number} stepIndex 
  */
 export function logCoachingEvent(msg, stepIndex = -1) {
-  if (!isCoachingActive) return;
+  if (!isCoachingActive && !isCalibrationMode) return;
   sessionLogs.push({
     step: stepIndex,
     msg,
@@ -1523,3 +1547,131 @@ BPM: ${activeGrid.bpm}
   }
 }
 
+/**
+ * Enable Review Mode (can be called from coaching or calibration)
+ */
+export function enableReviewMode() {
+  isReviewActive = true;
+}
+
+/**
+ * Disable Review Mode
+ */
+export function disableReviewMode() {
+  isReviewActive = false;
+
+  // Clear session data
+  if (coachingSession) {
+    coachingSession.noteResults = [];
+  }
+  sessionLogs = [];
+}
+
+/**
+ * Map calibration results to grid for visual feedback
+ * @param {Object} calibrationResults - Results from analyzeGuidedResults
+ * @param {Object} ctx - Grid context
+ */
+export function mapCalibrationResultsToGrid(calibrationResults, ctx) {
+  if (!calibrationResults || !ctx) return;
+
+  // Use structured results if available (Preferred)
+  const { detailedResults, summary } = calibrationResults;
+
+  // Create noteResults array for review mode
+  if (!coachingSession) {
+    coachingSession = {
+      noteResults: []
+    };
+  } else {
+    coachingSession.noteResults = [];
+  }
+
+  if (detailedResults && Array.isArray(detailedResults)) {
+    detailedResults.forEach(res => {
+      let feedback = res.status;
+      let correct = (res.status === 'Correct');
+
+      if (res.status === 'Misclassified') {
+        feedback = `Misclassified (Found ${res.found || 'Noise'})`;
+      }
+
+      // Add result for this step
+      coachingSession.noteResults.push({
+        stepIndex: res.step,
+        detectedNote: res.found || 'Miss',
+        expectedNote: res.note,
+        correct: correct,
+        feedback: feedback,
+        timingScore: correct ? 100 : 0,
+        noteScore: correct ? 1 : 0
+      });
+
+      // Apply visual feedback to the cell
+      const cell = ctx.cells[res.step];
+      if (cell) {
+        cell.classList.add('has-feedback');
+        if (!correct) {
+          cell.classList.add('coach-wrong');
+        } else {
+          cell.classList.add('coach-correct'); // Feedback for correct notes too!
+        }
+      }
+    });
+    return;
+  }
+
+  // Fallback to legacy summary parsing (if detailedResults missing)
+  if (!summary) return;
+
+  const lines = summary.split('\n');
+  const expected = ['Ding', '1', '2', '3', '4', '5', '6', '7', '8'];
+
+  expected.forEach((note, i) => {
+    const measureStart = (i + 1) * 8;
+
+    // Find feedback for this note in the summary
+    const feedbackLine = lines.find(line => line.startsWith(`${note}:`));
+
+    let feedback = 'Correct';
+    let correct = true;
+
+    if (feedbackLine) {
+      if (feedbackLine.includes('Missed')) {
+        feedback = 'Missed Note';
+        correct = false;
+      } else if (feedbackLine.includes('Double-Trigger')) {
+        feedback = 'Double-Trigger';
+        correct = false;
+      } else if (feedbackLine.includes('Misclassified')) {
+        feedback = feedbackLine; // Show full misclassification info
+        correct = false;
+      } else if (feedbackLine.includes('Unclear')) {
+        feedback = feedbackLine; // Show noise info
+        correct = false;
+      }
+    }
+
+    // Add result for this step (EVEN IF CORRECT)
+    coachingSession.noteResults.push({
+      stepIndex: measureStart,
+      detectedNote: note,
+      expectedNote: note,
+      correct: correct,
+      feedback: feedback,
+      timingScore: correct ? 100 : 0,
+      noteScore: correct ? 1 : 0
+    });
+
+    // Apply visual feedback to the cell
+    const cell = ctx.cells[measureStart];
+    if (cell) {
+      cell.classList.add('has-feedback');
+      if (!correct) {
+        cell.classList.add('coach-wrong');
+      } else {
+        cell.classList.add('coach-correct');
+      }
+    }
+  });
+}

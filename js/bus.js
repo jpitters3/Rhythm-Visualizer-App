@@ -12,7 +12,10 @@ export const BUS_EVENT = {
   PROFILE_LOAD_NEEDED: 'profile:load-needed',
   COACHING_EVALUATE: 'coaching:evaluate',
   SET_ACCENT_SENSITIVITY: 'transcription:set-accent-sensitivity',
-  GRID_RENDERED: 'grid:rendered'
+  NOTE_DETECTED: 'transcription:note-detected',
+  ACCENT_DETECTED: 'transcription:accent-detected',
+  GRID_RENDERED: 'grid:rendered',
+  CHALLENGE_CORRECTION: 'transcription:challenge-correction'
 };
 
 /**

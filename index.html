@@ -499,6 +499,20 @@
     <button id="stopGameBtn" class="hud-stop">Exit Game</button>
   </div>
 
+  <!-- Calibration HUD -->
+  <div id="calibrationHUD" class="coaching-hud calibration-hud" style="display:none;">
+    <button id="closeCalibrationHUDBtn" class="close-hud-btn" title="Close">×</button>
+    <div class="hud-score">
+      <span class="hud-label">Calibration</span>
+      <span id="calibrationMode" class="hud-value">Review</span>
+    </div>
+    <div class="hud-notes">
+      <span class="hud-label" style="font-size: 0.8em; opacity: 0.7; margin-bottom: 2px;">Long-press steps to view
+        logs</span>
+    </div>
+    <button id="exitCalibrationBtn" class="hud-stop">Exit Calibration</button>
+  </div>
+
   <div class="footer"></div>
 
   <!-- Static Labels for Presentation Mode -->
@@ -1358,6 +1372,12 @@
         <!-- Implementation coming later -->
       </div>
     </div>
+  </div>
+
+  <!-- Simon Game Turn Indicator -->
+  <div id="simonTurnIndicator" class="simon-turn-indicator" style="display: none;">
+    <div class="turn-message"></div>
+    <div class="turn-timer"></div>
   </div>
 
   <!-- Hidden Preview Grid for Admin Pattern Preview -->
