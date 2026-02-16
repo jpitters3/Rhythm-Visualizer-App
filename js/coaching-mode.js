@@ -3,7 +3,7 @@
  * Evaluates note accuracy and timing during pattern playback
  */
 
-import { activeGrid, setIsListening, getCurrentScaleId, currentUser, isCalibrationMode } from './state.js';
+import { activeGrid, getCurrentScaleId, currentUser, isCalibrationMode } from './state.js';
 import { start, stop, getVolume, setVolume, intervalMs, addTickObserver, removeTickObserver } from './noteplayer.js';
 import { supabase } from './supabase-client.js';
 import { Bus, BUS_EVENT } from './bus.js';
@@ -13,7 +13,7 @@ import { CoachingDiagnostics } from './coaching-diagnostics.js';
 import { setInnerLabel, renderAllMeasures, cells } from './notegrid.js';
 import { CoachingSession } from './coaching-session.js';
 import { getSelectedPatternName } from './pattern-crud.js';
-import { loadCalibrationProfile, hasCalibrationForCurrentScale } from './transcription.js';
+import { loadCalibrationProfile, hasCalibrationForCurrentScale, turnOnMic } from './transcription.js';
 
 // Session state
 let coachingSession = null;
@@ -1339,16 +1339,7 @@ async function startCoachingSessionActual(ctx = activeGrid) {
   // Register the observer
   addTickObserver(loopObserver);
 
-  // Enable microphone if not already
-  const micBtn = document.getElementById('micBtn');
-  if (micBtn && !micBtn.classList.contains('active')) {
-    micBtn.click();
-    // Wait for mic to initialize
-    await new Promise(resolve => setTimeout(resolve, 500));
-  }
-
-  // Ensure isListening is true for countdown
-  setIsListening(true);
+  turnOnMic();
 
   // Start playback
   start(ctx, true, false);

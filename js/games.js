@@ -3,12 +3,11 @@
  * Handles gamified practice experiences like Simon.
  */
 
-import { activeGrid, setIsListening, getScale } from './state.js';
-import { start, stop, playHandpanSoundForLabel, intervalMs, noteForLabel, playSample, addTickObserver, removeTickObserver } from './noteplayer.js';
-import { highlightHandpan } from './handpanmap.js';
-import { GridContext } from './grid-context.js';
+import { activeGrid } from './state.js';
+import { start, stop, addTickObserver, removeTickObserver } from './noteplayer.js';
 import { Bus, BUS_EVENT } from './bus.js';
 import { renderAllMeasures } from './notegrid.js';
+import { turnOnMic, turnOffMic } from './transcription.js';
 
 // Game States
 const GAME_STATE = {
@@ -238,17 +237,8 @@ async function startGameLoop() {
     gameStreakEl = document.getElementById('gameStreak');
   }
 
-  // Enable microphone if not already active
-  const micBtn = document.getElementById('micBtn');
-  if (micBtn && !micBtn.classList.contains('active')) {
-    // console.log('[Simon] Activating microphone automatically');
-    micBtn.click();
-    // Wait for mic to initialize (simulated async wait)
-    await new Promise(resolve => setTimeout(resolve, 500));
-  }
-
-  // Ensure isListening is true
-  setIsListening(true);
+  // Make sure app is listening
+  turnOnMic();
 
   // Add the rhythmic observer (Clean up any old one first)
   removeTickObserver(handleSimonTick);
@@ -259,9 +249,6 @@ async function startGameLoop() {
 
   // VISIBILITY: Mark body for styling
   document.body.classList.add('simon-game-active');
-
-  // Ensure isListening is true
-  setIsListening(true);
 
   // START: Use the main active grid
   activeGrid.metronomeOn = true;
@@ -509,7 +496,7 @@ export function handleGameNote(detectedNote, hitStep, hitTime) {
 
 function gameOver(message = `Game Over! You reached Level ${currentLevel}.`) {
   currentState = GAME_STATE.FEEDBACK;
-  setIsListening(false);
+  turnOffMic();
 
   // Stop the grid on loss
   stop(activeGrid);
@@ -552,7 +539,7 @@ function exitGameMode() {
   document.body.classList.remove('simon-game-active');
 
   if (gameHUD) gameHUD.style.display = 'none';
-  setIsListening(false);
+  turnOffMic();
 
   // Stop active grid
   stop(activeGrid);
@@ -562,11 +549,6 @@ function exitGameMode() {
   // Remove Bus listeners
   Bus.off(BUS_EVENT.NOTE_DETECTED, onNoteDetected);
   Bus.off(BUS_EVENT.ACCENT_DETECTED, onAccentDetected);
-}
-
-// Visual Feedback
-function highlightHandpanNote(label) {
-  highlightHandpan(label, 0, 'R');
 }
 
 function flashHandpan(label, type) {
@@ -595,7 +577,7 @@ export function isGameModeActive() {
 
 function stopGame() {
   currentState = GAME_STATE.FEEDBACK;
-  setIsListening(false);
+  turnOffMic();
 
   // Stop metronome
   stop(activeGrid);

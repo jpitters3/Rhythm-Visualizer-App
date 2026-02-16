@@ -69,15 +69,8 @@ let micBtn, micCalBtn, guidedCalBtn, targetNoteDisplay, micCalOverlay, sensValDi
 let transcriptionIndex = -1;
 
 
-async function toggleListening() {
-    if (isListening) {
-        setIsListening(false);
-        micBtn.textContent = "🎤";
-        micBtn.classList.remove('active');
-        meter.style.display = 'none';
-        if (micStream) micStream.getTracks().forEach(t => t.stop());
-        return;
-    }
+export async function turnOnMic() {
+    if (isListening) return;
 
     try {
         // 1. Initialize Audio Context (User Gesture)
@@ -132,6 +125,21 @@ async function toggleListening() {
         console.error("Microphone/Audio Error:", err);
         alert("Microphone access denied or audio device error.\nPlease check your settings.");
     }
+}
+
+export async function turnOffMic() {
+    if (!isListening) return;
+
+    setIsListening(false);
+    micBtn.textContent = "🎤";
+    micBtn.classList.remove('active');
+    meter.style.display = 'none';
+    if (micStream) micStream.getTracks().forEach(t => t.stop());
+}
+
+async function toggleListening() {
+    if (isListening) turnOffMic();
+    else turnOnMic();
 }
 
 // --- 1. Rhythmic Intelligence (Auto-Gate) ---
@@ -656,12 +664,12 @@ function finishCalibration() {
                 guidedCalBtn?.click();
             } else {
                 isFullCalWizard = false;
-                setIsListening(false);
+                turnOffMic();
                 alert("Full Calibration cancelled.");
             }
         } else {
             alert("Pitch Calibration Complete!");
-            setIsListening(false);
+            turnOffMic();
         }
     }, 100);
 }
