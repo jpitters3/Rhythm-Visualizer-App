@@ -6,7 +6,7 @@ import { currentUser, activeGrid, setActiveGrid } from './state.js';
 import { HistoryManager } from './history.js';
 import { TransportRegistry } from './transport-ui.js';
 import { isListening, getSelectedScaleName, setSelectedScaleName, getScale, setCurrentScale } from './state.js';
-import { SCALE_KEY_LOCAL, SCALE_KEY_REMOTE, AUDIO_DELAY, VISUAL_OFFSET, BASE_PATH } from './config.js';
+import { SCALE_KEY_LOCAL, SCALE_KEY_REMOTE, AUDIO_DELAY, VISUAL_HEADSTART, BASE_PATH } from './config.js';
 import { renderAllMeasures } from './notegrid.js';
 import { coachingSession, isCoaching } from './coaching-mode.js';
 
@@ -271,14 +271,14 @@ function scheduleAudio(c, step, time) {
 
   // Push to visual queue
   visualQueue.push({
-    time: time,
+    time: time - (VISUAL_HEADSTART || 0),
     step: step,
     ctx: c,
     audioStartTime: c.audioStartTime
   });
 
   // Delay relative to AudioContext time
-  const delay = Math.max(0, time - audioCtx.currentTime);
+  const delay = Math.max(0, time - audioCtx.currentTime + AUDIO_DELAY);
 
   // 1. COUNTDOWN
   if (step < 0) {
@@ -289,7 +289,6 @@ function scheduleAudio(c, step, time) {
   }
 
   // 2. PATTERN
-
   const realStep = step % c.cells.length;
   const currentData = c.innerLabels[realStep];
 
@@ -328,9 +327,8 @@ function scheduler(c) {
 
   // Visual Queue Processing
   const currentTime = audioCtx.currentTime;
-  const visualTolerance = VISUAL_OFFSET || 0.025; // Matching lead time for visuals
 
-  while (visualQueue.length > 0 && visualQueue[0].time <= currentTime + visualTolerance) {
+  while (visualQueue.length > 0 && visualQueue[0].time <= currentTime) {
     const job = visualQueue.shift();
     tick(job.ctx, job.step, job.time, job.audioStartTime);
   }
@@ -381,8 +379,8 @@ export function tick(ctx, overrideStep = null, audioTime = null, audioStartTime 
   const stepNotes = [];
   const stepHands = [];
 
-  // Only highlight handpan for Grid A or Simon Preview
-  const shouldHighlight = (c.id === 'A' || c.id === 'simon-preview');
+  // Only highlight handpan for Grid A
+  const shouldHighlight = (c.id === 'A');
 
   // Highlight Multiple Notes (Visual Only)
   if (Array.isArray(currentData)) {
@@ -639,27 +637,20 @@ export async function start(ctx, isSync = true, skipCountdown = false) {
 
   // Init Scheduler
   const secondsPerBeat = intervalMs(c) / 1000;
-  const delay = AUDIO_DELAY;
-  nextNoteTime = audioCtx.currentTime + delay;
+  nextNoteTime = audioCtx.currentTime;
 
   // If counting down, audioStartTime represents when the actual pattern (Step 0) starts.
   // This ensures visuals (Highway) are synced to the audio pattern start.
   if (useCountdown) {
-    c.audioStartTime = (nextNoteTime + (4 * secondsPerBeat)) * 1000;
+    c.audioStartTime = nextNoteTime + (4 * secondsPerBeat);
   } else {
-    c.audioStartTime = nextNoteTime * 1000;
+    c.audioStartTime = nextNoteTime;
   }
 
   c.lastTickAudioTime = nextNoteTime;
 
   visualQueue.length = 0;
   c.cells.forEach(el => el.classList.remove('play'));
-
-  if (c.playBtn) {
-    c.playBtn.textContent = '⏹';
-    c.playBtn.classList.add('active');
-    c.playBtn.classList.add('playing');
-  }
 
   scheduler(c);
 
@@ -684,7 +675,7 @@ export function getPlaybackPosition(ctx) {
   const beatDuration = intervalMs(c) / 1000;
 
   // Apply latency compensation (moves visuals ahead of audio engine)
-  const adjustedNow = now + (VISUAL_OFFSET || 0);
+  const adjustedNow = now + (VISUAL_HEADSTART || 0);
 
   // Calculate total steps since playback start
   const totalSteps = (adjustedNow - c.audioStartTime) / beatDuration;
@@ -711,11 +702,6 @@ export function stop(ctx, isSync = true) {
   c.step = 0;
   c.transcriptionIndex = 0;
 
-  if (c.playBtn) {
-    c.playBtn.textContent = '►';
-    c.playBtn.classList.remove('active');
-    c.playBtn.classList.remove('playing');
-  }
   c.cells.forEach(cell => cell.classList.remove('play'));
   if (c.id === 'A') {
     window.dispatchEvent(new CustomEvent('playbackStateChange', { detail: { grid: c } }));

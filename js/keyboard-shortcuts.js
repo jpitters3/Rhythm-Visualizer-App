@@ -150,8 +150,12 @@ export function initShortcuts() {
     // Space: Play / Stop
     if (e.code === 'Space') {
       e.preventDefault();
-      if (ctx.playing) stop(ctx);
-      else start(ctx);
+      if (ctx.playing) {
+        stop(ctx);
+      } else {
+        start(ctx);
+      }
+      TransportRegistry.updateAll(ctx);
       return;
     }
 
