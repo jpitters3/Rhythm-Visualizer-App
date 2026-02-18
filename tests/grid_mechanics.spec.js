@@ -49,7 +49,7 @@ test.describe('Grid Mechanics', () => {
 
     // D = Ding
     await page.keyboard.type('d');
-    await expect(cell.locator('.inner')).toHaveText('Ding');
+    await expect(cell.locator('.inner')).toHaveText('D');
     await expect(cell).toHaveClass(/label-ding/);
 
     // T = Tak

@@ -80,14 +80,7 @@ test.describe('Pattern Management', () => {
     await ensureMenuOpen(page); // Ensure menu is visible to select pattern
     await select.selectOption(uniqueName);
 
-    // Handle "Unsaved Changes" check (since we cleared, it might be clean, but just in case)
-    // Actually, confirm logic for Load might trigger if state is dirty.
-    // We just cleared, so it should be clean.
-
-    await ensureMenuOpen(page); // OPEN MENU IF NEEDED
-    await page.click('#fileDropdownBtn');
-    await page.waitForSelector('.dropdown-content.show');
-    await page.click('#loadBtn');
+    // Handle "Unsaved Changes" check
 
     // 5. Verify Restoration
     await expect(cell0.locator('.inner')).toHaveText('1');
