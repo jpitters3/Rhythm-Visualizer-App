@@ -9,6 +9,7 @@ import { editHandsMode, isEditMulti, longPressFired, setLongPressFired, setIsEdi
 import { TransportRegistry } from './transport-ui.js';
 import { isReviewing, getFeedbackForStep, showFeedbackTooltip, copyLogsForStep, getExpectedNoteForStep } from './coaching-mode.js';
 import { Bus, BUS_EVENT } from './bus.js';
+import { checkExportVisibility } from './controls.js';
 
 export const cells = (ctx) => (ctx || activeGrid).cells;
 export let activeSubIndex = null;
@@ -298,6 +299,10 @@ export function renderAllMeasures(ctx = activeGrid) {
 
   // Notify listeners (e.g. Presentation Mode) that DOM was rebuilt
   Bus.emit(BUS_EVENT.GRID_RENDERED, { gridId: ctx.id });
+
+  if (ctx.id === 'A') {
+    checkExportVisibility();
+  }
 }
 
 // ===== SELECTION ACTIONS ===== //
@@ -448,6 +453,10 @@ export function setInnerLabel(i, value, ctx = activeGrid) {
       subs[idx].textContent = label;
       subs[idx].classList.toggle('active', !!label);
     });
+  }
+
+  if (ctx.id === 'A') {
+    checkExportVisibility();
   }
 }
 

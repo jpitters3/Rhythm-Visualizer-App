@@ -90,7 +90,7 @@ export async function unlockAudio() {
 }
 
 // ===== HANDPAN SAMPLE BUFFERS =====
-const samples = {};
+export const samples = {};
 
 export function intervalMs(ctx) {
   const c = ctx || activeGrid;

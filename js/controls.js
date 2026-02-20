@@ -12,6 +12,7 @@ import {
 } from './pattern-crud.js';
 import { setPresentation } from './presentation-mode.js';
 import { getRange } from './range-selection.js';
+import { exportAudioWav } from './audio-export.js';
 import { editHandsMode, setEditHandsMode } from './state.js';
 import { updateUserGridLabelNotation } from './profile.js';
 import { HistoryManager } from './history.js';
@@ -556,5 +557,60 @@ function initControls() {
     if (ctx.id === 'A') syncVirtualHandpanControls();
   });
 }
+
+export function checkExportVisibility() {
+  const container = document.getElementById('exportAudioBtnContainer');
+  if (!container || !activeGrid || !activeGrid.innerLabels) return;
+
+  const hasNotes = activeGrid.innerLabels.some(l => {
+    if (Array.isArray(l)) return l.some(sub => sub !== '');
+    return l !== '';
+  });
+
+  if (hasNotes) {
+    if (container.style.display === 'none') {
+      container.style.display = 'block';
+      void container.offsetWidth; // Force reflow
+    }
+    container.style.opacity = '1';
+  } else {
+    container.style.opacity = '0';
+    setTimeout(() => {
+      if (container.style.opacity === '0') container.style.display = 'none';
+    }, 500);
+  }
+}
+
+// Attach export audio click listener
+document.addEventListener('DOMContentLoaded', () => {
+  const exportAudioBtn = document.getElementById('exportAudioBtn');
+  if (exportAudioBtn) {
+    exportAudioBtn.addEventListener('click', async () => {
+      const originalHtml = exportAudioBtn.innerHTML;
+      exportAudioBtn.disabled = true;
+      exportAudioBtn.innerHTML = '⏳ Rendering...';
+      try {
+        const blob = await exportAudioWav();
+        if (blob) {
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          const name = document.getElementById('patternSelect')?.value || 'Pattern';
+          a.download = `${name}.wav`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        }
+      } catch (err) {
+        console.error(err);
+        alert('Error exporting audio: ' + (err.message || err));
+      } finally {
+        exportAudioBtn.disabled = false;
+        exportAudioBtn.innerHTML = originalHtml;
+      }
+    });
+  }
+});
 
 export { initControls };
