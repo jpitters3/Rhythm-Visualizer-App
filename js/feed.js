@@ -19,6 +19,7 @@ let feedGrid;
 let feedFilterTabs;
 let navCompositionsBtn;
 let navDiscussionBtn;
+let currentFeedFilter = 'newest';
 let compositionsView;
 let discussionView;
 
