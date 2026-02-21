@@ -403,7 +403,7 @@ export async function initAuth() {
 
     authHint.textContent = 'Sending reset link...';
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: window.location.origin,
+      redirectTo: window.location.origin + window.location.pathname,
     });
 
     if (error) {
