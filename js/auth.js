@@ -43,9 +43,12 @@ let accountBtn = null;
 let authLogin = null;
 let authRegister = null;
 let authLogout = null;
+let authOtp = null;
+let authOtpRow = null;
 
 let accountDropdownMenu = null;
 let authLogoutDropdown = null;
+let authVerifyOtp = null;
 
 // Auth modal
 export function openAuthModal() {
@@ -144,6 +147,9 @@ export function updateAccountUI() {
     const tpb = document.getElementById('authTogglePasswordBtn');
     if (tpb) tpb.style.display = '';
 
+    if (authOtpRow) authOtpRow.style.display = 'none';
+    if (authVerifyOtp) authVerifyOtp.style.display = 'none';
+
     // Update hint only if it's the default or signed-out message
     const hint = document.getElementById('authHint');
     if (hint && (hint.textContent.includes('Tip:') || hint.textContent === 'Signed out.' || hint.textContent === 'Not signed in')) {
@@ -204,6 +210,9 @@ export function updateAccountUI() {
     if (pcr) pcr.style.display = 'none';
     const tpb = document.getElementById('authTogglePasswordBtn');
     if (tpb) tpb.style.display = 'none';
+
+    if (authOtpRow) authOtpRow.style.display = 'none';
+    if (authVerifyOtp) authVerifyOtp.style.display = 'none';
 
     // Reset inputs
     if (authPass) authPass.placeholder = '••••••••';
@@ -277,6 +286,8 @@ export async function initAuth() {
   authLogin = document.getElementById('authLogin');
   authRegister = document.getElementById('authRegister');
   authLogout = document.getElementById('authLogout');
+  authOtp = document.getElementById('authOtp');
+
   accountDropdownMenu = document.getElementById('accountDropdownMenu');
   authLogoutDropdown = document.getElementById('authLogoutDropdown');
 
@@ -289,6 +300,8 @@ export async function initAuth() {
   const authTogglePasswordBtn = document.getElementById('authTogglePasswordBtn');
   const authUpdateEmailBtn = document.getElementById('authUpdateEmail');
   const authCurrentPass = document.getElementById('authCurrentPass');
+  authOtpRow = document.getElementById('authOtpRow');
+  authVerifyOtp = document.getElementById('authVerifyOtp');
 
   // New Logic: Click Account -> If Signed In (Toggle Dropdown) ELSE (Open Modal)
   accountBtn?.addEventListener('click', (e) => {
@@ -401,15 +414,59 @@ export async function initAuth() {
       return;
     }
 
-    authHint.textContent = 'Sending reset link...';
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: window.location.origin + window.location.pathname,
-    });
+    authHint.textContent = 'Sending reset code...';
+    // By omitting redirectTo, Supabase should send a 6-digit OTP instead (if configured inside their email template)
+    const { error } = await supabase.auth.resetPasswordForEmail(email);
 
     if (error) {
       authHint.textContent = `Error: ${error.message} `;
     } else {
-      authHint.textContent = 'Reset link sent! Check your email.';
+      authHint.textContent = 'Reset code sent! Check your email and enter it below.';
+
+      // Update UI to OTP mode
+      authForgotPassword.style.display = 'none';
+      authLogin.style.display = 'none';
+      authRegister.style.display = 'none';
+      document.getElementById('authPasswordRow').style.display = 'none';
+
+      authOtpRow.style.display = '';
+      authVerifyOtp.style.display = '';
+      authOtp.focus();
+    }
+  });
+
+  authVerifyOtp?.addEventListener('click', async () => {
+    const email = authEmail.value.trim();
+    const token = authOtp.value.trim();
+
+    if (!token || token.length !== 6) {
+      authHint.textContent = 'Please enter the 6-digit code correctly.';
+      authOtp.focus();
+      return;
+    }
+
+    authHint.textContent = 'Verifying code...';
+    const { error } = await supabase.auth.verifyOtp({
+      email,
+      token,
+      type: 'recovery'
+    });
+
+    if (error) {
+      authHint.textContent = `Error: ${error.message}`;
+    } else {
+      authHint.textContent = 'Code verified! Please enter your new password.';
+
+      // Switch UI to password update mode
+      authOtpRow.style.display = 'none';
+      authVerifyOtp.style.display = 'none';
+
+      document.getElementById('authPasswordRow').style.display = '';
+      document.getElementById('authPasswordConfirmRow').style.display = '';
+      document.getElementById('authUpdatePassword').style.display = '';
+      authPass.value = '';
+      authPassConfirm.value = '';
+      authPass.focus();
     }
   });
 
