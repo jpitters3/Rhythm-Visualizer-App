@@ -709,8 +709,10 @@ export function buildHandpanOverlay() {
 let hpPulseTimers = new Map();
 
 export function highlightHandpan(note, stepIndex, forceHand = null) {
-  const key = String(note || '').toUpperCase();
-  const el = handpanDots.get(key);
+  let key = String(note || '').toUpperCase();
+  let el = handpanDots.get(key);
+  if (!el) el = handpanDots.get(note); // Fallback to raw note
+  if (!el && key === 'DING') el = handpanDots.get('D'); // Aliasing for Ding
   if (!el) return;
 
   // Sticking Override
