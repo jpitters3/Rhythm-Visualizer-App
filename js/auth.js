@@ -439,8 +439,8 @@ export async function initAuth() {
     const email = authEmail.value.trim();
     const token = authOtp.value.trim();
 
-    if (!token || token.length !== 6) {
-      authHint.textContent = 'Please enter the 6-digit code correctly.';
+    if (!token || token.length < 6 || token.length > 8) {
+      authHint.textContent = 'Please enter the verification code correctly.';
       authOtp.focus();
       return;
     }
