@@ -1,6 +1,5 @@
 import { SCALES } from './config.js';
 import { currentUser } from './state.js';
-import { innerLabels, setInnerLabels, measures, setMeasures } from './state.js';
 import { renderAllMeasures } from './notegrid.js';
 import { supabase } from './supabase-client.js';
 import { gridA } from './grid-context.js';
@@ -79,10 +78,10 @@ class AiAssistant {
         this.dbKey = data.value;
         console.log("AI Assistant: API Key loaded from DB");
         // If we were waiting for a key, update UI
-        if (this.waitingForKey) {
-          this.waitingForKey = false;
-          this.addMessage("bot", "I've connected to the cloud! How can I help you?");
-        }
+        // if (this.waitingForKey) {
+        //   this.waitingForKey = false;
+        //   this.addMessage("bot", "I've connected to the cloud! How can I help you?");
+        // }
       }
     } catch (err) {
       console.warn("Exception fetching AI key:", err);
@@ -404,29 +403,40 @@ Output ONLY valid JSON. No markdown formatting.
   appendPatternToGrid(pattern) {
     if (!pattern || !pattern.labels) return;
 
+    // Use active grid
+    const targetGrid = gridA;
+
     // 1. Extend innerLabels
-    // Ensure innerLabels is defined in grid context
-    if (!gridA.innerLabels) gridA.innerLabels = [];
+    if (!targetGrid.innerLabels) targetGrid.innerLabels = [];
 
-    // We append to the global innerLabels
-    // pattern.labels should be an array.
-    setInnerLabels(innerLabels.concat(pattern.labels));
+    // If grid is currently default empty, replace it, else append
+    const isEmpty = targetGrid.innerLabels.every(l => l === '');
 
-    // 2. Recalculate 'measures' count
-    // STEPS is defined in rhythm-core usually, or assume 16
-    const stepCount = 16;
-    const newMeasures = Math.ceil(innerLabels.length / stepCount);
-    setMeasures(newMeasures);
+    if (isEmpty) {
+      targetGrid.innerLabels = [...pattern.labels];
+    } else {
+      targetGrid.innerLabels = targetGrid.innerLabels.concat(pattern.labels);
+    }
 
-    // 3. Render
+    // Extend innerHands to match the new length
+    if (targetGrid.innerHands) {
+      const diff = targetGrid.innerLabels.length - targetGrid.innerHands.length;
+      if (diff > 0) {
+        targetGrid.innerHands = targetGrid.innerHands.concat(Array(diff).fill(null));
+      } else if (isEmpty) {
+        targetGrid.innerHands = Array(targetGrid.innerLabels.length).fill(null);
+      }
+    }
+
+    // 2. Render
     if (typeof renderAllMeasures === 'function') {
-      renderAllMeasures();
+      renderAllMeasures(targetGrid);
     } else {
       console.warn("renderAllMeasures not found!");
     }
 
     // Scroll to bottom
-    const measuresEl = document.getElementById('measures');
+    const measuresEl = targetGrid.container;
     if (measuresEl) {
       // Wait for DOM update
       setTimeout(() => {
