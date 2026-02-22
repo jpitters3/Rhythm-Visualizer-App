@@ -33,11 +33,12 @@ test.describe('Handpan Pulse Animations', () => {
 
     // 4. Verify pulse occurs on note 1
     const note1Dot = page.locator('.hp-dot[data-note="1"]');
-    await expect(note1Dot).toHaveClass(/active/, { timeout: 3000 });
+    // For firefox testing, wait up to 10s.
+    await expect(note1Dot).toHaveClass(/active/, { timeout: 10000 });
 
     // 5. Verify pulse occurs on note 2
     const note2Dot = page.locator('.hp-dot[data-note="2"]');
-    await expect(note2Dot).toHaveClass(/active/, { timeout: 3000 });
+    await expect(note2Dot).toHaveClass(/active/, { timeout: 10000 });
 
     // 6. Stop playback
     await playBtn.click();
