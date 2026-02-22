@@ -350,6 +350,13 @@ export function tick(ctx, overrideStep = null, audioTime = null, audioStartTime 
     c.audioStartTime = audioStartTime;
   }
 
+  // Calculate rendering latency: How late did this visual tick fire compared to its intended scheduled audio time?
+  // VISUAL_HEADSTART is already subtracted in scheduleAudio, so `audioTime` is exactly when this visual should have fired.
+  let latency = 0;
+  if (audioCtx && audioTime !== null) {
+    latency = Math.max(0, audioCtx.currentTime - audioTime);
+  }
+
   // If called by scheduler, overrideStep is passed.
   // If called manually or by old code, use c.step (but likely deprecated usage)
   const isScheduler = (overrideStep !== null);
@@ -389,7 +396,7 @@ export function tick(ctx, overrideStep = null, audioTime = null, audioStartTime 
         const hand = resolveHand(c.step, currentHandsData, subIdx, true, c.mode);
         if (shouldHighlight) {
           if (typeof highlighterFn === 'function') {
-            highlighterFn(label, c.step, hand);
+            highlighterFn(label, c.step, hand, latency);
           }
         }
         stepNotes.push(label);
@@ -400,7 +407,7 @@ export function tick(ctx, overrideStep = null, audioTime = null, audioStartTime 
     const hand = resolveHand(c.step, currentHandsData, 0, false, c.mode);
     if (shouldHighlight) {
       if (typeof highlighterFn === 'function') {
-        highlighterFn(currentData, c.step, hand);
+        highlighterFn(currentData, c.step, hand, latency);
       }
     }
     stepNotes.push(currentData);
@@ -415,10 +422,25 @@ export function tick(ctx, overrideStep = null, audioTime = null, audioStartTime 
   // Update Visuals (Play Class)
   const allCells = c.cells;
   const prev = c.container?.querySelector('.cell.play');
-  if (prev) prev.classList.remove('play');
+  if (prev) {
+    prev.classList.remove('play');
+    prev.style.animationDelay = '';
+    prev.style.transitionDelay = '';
+  }
 
   const cell = allCells[c.step];
-  if (cell) cell.classList.add('play');
+  if (cell) {
+    // Apply negative animation/transition delay so CSS perfectly snaps to the audio reality
+    if (latency > 0) {
+      const offset = `-${latency.toFixed(3)}s`;
+      cell.style.animationDelay = offset;
+      cell.style.transitionDelay = offset;
+    } else {
+      cell.style.animationDelay = '';
+      cell.style.transitionDelay = '';
+    }
+    cell.classList.add('play');
+  }
 
   c.transcriptionIndex = c.step;
 
@@ -702,7 +724,11 @@ export function stop(ctx, isSync = true) {
   c.step = 0;
   c.transcriptionIndex = 0;
 
-  c.cells.forEach(cell => cell.classList.remove('play'));
+  c.cells.forEach(cell => {
+    cell.classList.remove('play');
+    cell.style.animationDelay = '';
+    cell.style.transitionDelay = '';
+  });
   if (c.id === 'A') {
     window.dispatchEvent(new CustomEvent('playbackStateChange', { detail: { grid: c } }));
   }

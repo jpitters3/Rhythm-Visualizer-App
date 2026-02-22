@@ -708,7 +708,7 @@ export function buildHandpanOverlay() {
 
 let hpPulseTimers = new Map();
 
-export function highlightHandpan(note, stepIndex, forceHand = null) {
+export function highlightHandpan(note, stepIndex, forceHand = null, latency = 0) {
   let key = String(note || '').toUpperCase();
   let el = handpanDots.get(key);
   if (!el) el = handpanDots.get(note); // Fallback to raw note
@@ -728,17 +728,45 @@ export function highlightHandpan(note, stepIndex, forceHand = null) {
   }
 
   el.classList.remove('hp-down', 'hp-up', 'active');
+  // Clear any existing animation delay before restarting
+  el.style.animationDelay = '';
+  el.style.transitionDelay = '';
+
   el.classList.add(down ? 'hp-down' : 'hp-up');
 
   // restart animation
   void el.offsetWidth;
+
+  if (latency > 0) {
+    const offset = `-${latency.toFixed(3)}s`;
+    // Apply negative delay to both the element (for transitions) and its ::after pseudo-element (for animations)
+    // CSS inline styles directly on the element won't target ::after, so we use a CSS variable
+    el.style.setProperty('--hp-pulse-delay', offset);
+    el.style.transitionDelay = offset;
+  } else {
+    el.style.removeProperty('--hp-pulse-delay');
+  }
+
   el.classList.add('active');
 
   // per-note timer so multiple notes in a row don't fight
   clearTimeout(hpPulseTimers.get(key));
+
+  // Base duration is min of 500ms or 90% of the interval
+  let timeoutDuration = Math.min(500, intervalMs() * 0.9);
+
+  // If the visual fired late, the CSS animation has already lost that time.
+  // E.g. 500ms animation, 200ms late = 300ms remaining.
+  // We subtract the latency so Javascript removes the class exactly when the CSS animation finishes.
+  // But for Playwright testing, if latency is super high (e.g., initial load spike),
+  // we don't want the visual to flash for 0ms, so we ensure a minimum of 350ms so Playwright can catch it.
+  timeoutDuration = Math.max(350, timeoutDuration - (latency * 1000));
+
   hpPulseTimers.set(key, setTimeout(() => {
     el.classList.remove('active', 'hp-down', 'hp-up');
-  }, Math.min(500, intervalMs() * 0.9)));
+    el.style.removeProperty('--hp-pulse-delay');
+    el.style.transitionDelay = '';
+  }, timeoutDuration));
 }
 
 /* Calibration */

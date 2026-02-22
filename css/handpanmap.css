@@ -138,6 +138,7 @@
 
 .hp-dot.active::after {
   animation: rhythmicPulse 1s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  animation-delay: var(--hp-pulse-delay, 0s);
   z-index: 50;
 }
 
