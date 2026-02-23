@@ -2,6 +2,7 @@ import { activeGrid } from './grid-context.js';
 import { setCaret, clearRange } from './range-selection.js';
 import { cells, setInnerLabel, renderAllMeasures } from './notegrid.js';
 import { HistoryManager } from './history.js';
+import { isReviewing } from './coaching-mode.js';
 
 export const COMPOSE_KEY = 'groovepan_compose_mode';
 let composeOn = (localStorage.getItem(COMPOSE_KEY) === 'on');
@@ -60,6 +61,7 @@ export function advanceSelection(delta = 1, ctx) {
 }
 
 export function writeToSelected(label, { advance = true } = {}, ctx) {
+  if (isReviewing && isReviewing()) return; // BLOCK EDITING
   const c = ctx || activeGrid;
   if (HistoryManager) HistoryManager.pushState();
   if (c.caretIndex === null) return;

@@ -331,6 +331,7 @@ function applyBeat(i, beat, ctx = activeGrid) {
 }
 
 export function setBeatToGhost(i, ctx = activeGrid) {
+  if (isReviewing && isReviewing()) return; // BLOCK EDITING
   // Your ghost behavior may be "no label + default dot".
   // We'll implement as clearing label + turning OFF accent.
   setInnerLabel(i, '', ctx);
@@ -351,6 +352,7 @@ export function copySelection(ctx = activeGrid) {
 }
 
 export function pasteSelection(ctx = activeGrid) {
+  if (isReviewing && isReviewing()) return; // BLOCK EDITING
   if (!beatClipboard || beatClipboard.type !== 'beats') return;
   if (HistoryManager) HistoryManager.pushState();
 
@@ -384,6 +386,7 @@ export function pasteSelection(ctx = activeGrid) {
 }
 
 export function deleteSelection(ctx = activeGrid) {
+  if (isReviewing && isReviewing()) return; // BLOCK EDITING
   const r = (typeof getRange === 'function') ? getRange(ctx) : null;
   if (!r) return;
   if (HistoryManager) HistoryManager.pushState();
@@ -580,6 +583,7 @@ function attachCellListeners(cell, ctx = activeGrid) {
 
   cell.addEventListener('dblclick', (ev) => {
     ev.stopPropagation();
+    if (isReviewing && isReviewing()) return; // BLOCK EDITING
     setIsEditMulti(true);
     cell.classList.add('multi-selected');
     const allSubs = Array.from(cell.querySelectorAll('.sub-dot'));
@@ -611,6 +615,7 @@ function attachCellListeners(cell, ctx = activeGrid) {
   cell.addEventListener('contextmenu', (ev) => {
     ev.preventDefault();
     ev.stopPropagation();
+    if (isReviewing && isReviewing()) return; // BLOCK EDITING
 
     const i = parseInt(cell.dataset.index);
     if (isNaN(i)) return;
@@ -656,6 +661,7 @@ export function setDualGrid(next) {
 // ==== CHORD INJECTION LOGIC ====
 
 export function assignChordToSelectedCell(labels, ctx = activeGrid) {
+  if (isReviewing && isReviewing()) return false; // BLOCK EDITING
   // Find selected cell
   const gridCells = cells(ctx);
   let selIdx = ctx.caretIndex ?? -1;
