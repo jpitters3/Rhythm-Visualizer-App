@@ -8,7 +8,7 @@ import { TransportRegistry } from './transport-ui.js';
 import { isListening, getSelectedScaleName, setSelectedScaleName, getScale, setCurrentScale } from './state.js';
 import { SCALE_KEY_LOCAL, SCALE_KEY_REMOTE, AUDIO_DELAY, VISUAL_HEADSTART, BASE_PATH } from './config.js';
 import { renderAllMeasures } from './notegrid.js';
-import { coachingSession, isCoaching } from './coaching-mode.js';
+import { coachingSession, isCoaching, isReviewing } from './coaching-mode.js';
 
 const SOUND_TAK = 'Tak';
 const SOUND_SLAP = 'Slap';
@@ -648,7 +648,7 @@ export async function start(ctx, isSync = true, skipCountdown = false) {
   const targetStart = (c.caretIndex !== null && c.caretIndex >= 0) ? c.caretIndex : 0;
 
   // COUNTDOWN SETUP
-  const useCountdown = (isListening && !skipCountdown);
+  const useCountdown = (isListening || isReviewing()) && !skipCountdown;
   if (useCountdown) {
     c.audioStep = -4;
     c.targetAudioStart = targetStart;
