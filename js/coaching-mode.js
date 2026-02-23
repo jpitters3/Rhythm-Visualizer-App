@@ -25,6 +25,7 @@ let sessionResults = []; // Array of evaluation results per step
 let sessionLogs = []; // Array of { step, msg, time } for diagnostics
 let isLoopingEnabled = false; // Whether pattern should loop
 let userTimingOffset = parseInt(localStorage.getItem('gp_timing_offset') || '0', 10); // User's timing calibration (ms)
+let gridLabels;
 
 // Phase 35: Calibration Skip Flag
 let skipCalibrationCheck = {}; // scaleId -> true
@@ -41,7 +42,7 @@ let resultsModal = null;
 const TIMING_SCORE_GREAT = 70;
 const TIMING_SCORE_GOOD = 50;
 
-export { coachingSession, isCoachingActive, isReviewActive };
+export { coachingSession, isCoachingActive, isReviewActive, gridLabels };
 
 /**
  * Check if we are currently reviewing a session
@@ -154,8 +155,6 @@ export function evaluateDetectedNote(detectedNote, stepIndex, hitTime) {
     if (i < 0 || i >= expectedNotes.length) continue;
     const exp = expectedNotes[i];
     if (!exp || exp.labels.length === 0) continue;
-
-    logCoachingEvent(`Expected Note: ${expectedNotes[stepIndex].labels}`, stepIndex); //, `at ${exp.time.toFixed(0)}ms`);
 
     // Check if what we heard matches what this step wants
     const isMatch = (detectedNote === 'ACCENT')
@@ -1298,8 +1297,11 @@ export async function startCoachingSession(ctx = activeGrid) {
   startCoachingSessionActual(ctx);
 }
 
+
 async function startCoachingSessionActual(ctx = activeGrid) {
   console.log('Coaching Mode: Starting session Actual');
+
+  gridLabels = activeGrid.innerLabels;
 
   // Disable review mode when starting new session
   isReviewActive = false;
@@ -1449,9 +1451,10 @@ export function toggleReviewPlayback() {
     audioPlayer.currentTime = 0;
     activeGrid.caretIndex = 0; // Force restart from 0
 
-    audioPlayer.play().then(() => {
-      // Start grid only when audio actually starts
-      start(activeGrid, true, false); // (ctx, isSync, skipCountdown) => skip countdown!
+    start(activeGrid, true, false);   // (ctx, isSync, skipCountdown) => skip countdown!
+
+    setTimeout(() => {
+      audioPlayer.play();
 
       isPlayingReview = true;
       playBtn.textContent = '⏹️ Stop Recording & Grid';
@@ -1461,12 +1464,7 @@ export function toggleReviewPlayback() {
       audioPlayer.onended = () => {
         if (isPlayingReview) toggleReviewPlayback();
       };
-    }).catch(e => {
-      console.error("Failed to play review audio:", e);
-      // Fallback restore
-      setVolume('instrument', originalInstVol);
-      setVolume('metronome', originalMetroVol);
-    });
+    }, AUDIO_DELAY * 3000);
   }
 }
 
@@ -1619,8 +1617,15 @@ export async function copyLogsForStep(targetStep) {
 
   const sessionStart = sessionLogs[0]?.time || 0;
 
+  let targetNoteResult = coachingSession.noteResults.filter(r => r.stepIndex === targetStep)[0];
+  let targetNotes = targetNoteResult.expectedNotes;
+  if (Array.isArray(targetNoteResult.expectedNotes)) {
+    targetNotes = targetNoteResult.expectedNotes.join(', ');
+  }
+
   const header = `--- COACHING SESSION DEBUG LOGS ---
 Target Step: ${targetStep}
+Target Note: ${targetNotes}
 Pattern: ${getSelectedPatternName() || 'Unknown'}
 BPM: ${activeGrid.bpm}
 ----------------------------------

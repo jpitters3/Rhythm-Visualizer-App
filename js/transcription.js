@@ -3,7 +3,7 @@ import { activeGrid } from './grid-context.js';
 import { cells, setInnerLabel, renderAllMeasures } from './notegrid.js';
 import { loadPatternByName } from './controls.js';
 import { isListening, setIsListening, getScale, getCurrentScaleId, currentUser, setIsCalibrationMode } from './state.js';
-import { isCoaching, evaluateDetectedNote, logCoachingEvent } from './coaching-mode.js';
+import { isCoaching, evaluateDetectedNote, logCoachingEvent, gridLabels } from './coaching-mode.js';
 import { Bus, BUS_EVENT } from './bus.js';
 import { supabase } from './supabase-client.js';
 
@@ -249,6 +249,10 @@ function transcriptionLoop() {
     // Step Boundary Detection
     if (currentIndex !== lastFrameTranscriptionIndex) {
         logCoachingEvent(`--- Step Boundary: ${lastFrameTranscriptionIndex} -> ${currentIndex} ---`, currentIndex);
+
+        const notesInCurrentStep = gridLabels[currentIndex];
+        logCoachingEvent(`Expected Notes: ${notesInCurrentStep}`, currentIndex);
+
         tally = {};
         stepWasRecorded = false;
         lastDetectedType = null;
@@ -523,6 +527,18 @@ function transcriptionLoop() {
                                 }
                             }
                         }
+                    }
+                } else {
+                    // Log the unrecognized pitch so we can see what it actually was
+                    const isPassRMS = rms > (baseSensitivity * 0.5); // At least loud enough to care
+                    const dynamicGate = getDynamicGate();
+                    const isGateOpen = (now - lastNoteTime > dynamicGate);
+                    const isNewStrike = flux > 1.35;
+                    const canRefine = (pendingAccent !== null);
+                    const isPassGate = (isGateOpen || isNewStrike || canRefine);
+
+                    if (isPassRMS && isPassGate && pitch > 50 && pitch < 1200) {
+                        logCoachingEvent(`NOTE Rejected: Unrecognized Pitch ${pitch.toFixed(1)}Hz (Clarity ${clarity.toFixed(3)}, RMS ${rms.toFixed(4)})`, transcriptionIndex);
                     }
                 }
             }
@@ -1008,7 +1024,7 @@ function findClosestScaleNote(freq) {
     const currentScale = getScale();
     if (!currentScale) return null;
 
-    // Use a tighter tolerance if we have a calibrated frequency (3% instead of 5-8%)
+    // Use a tighter tolerance if we have a calibrated frequency
     const hasCal = hasCalibrationForCurrentScale();
     const standardNoteTolerance = standardNoteToleranceValue || 0.05; // 5%
     const dingTolerance = dingToleranceValue || 0.08; // 8%
@@ -1019,7 +1035,7 @@ function findClosestScaleNote(freq) {
     let dFreq = currentCalibratedFreqs['Ding'];
     if (typeof dFreq !== 'number') dFreq = NOTE_FREQS[currentScale.ding];
     if (dFreq) {
-        targets.push({ label: 'Ding', freq: dFreq, tolerance: hasCal ? 0.03 : dingTolerance });
+        targets.push({ label: 'Ding', freq: dFreq, tolerance: hasCal ? 0.05 : dingTolerance });
     }
 
     // Check Numbers
@@ -1027,7 +1043,7 @@ function findClosestScaleNote(freq) {
         let targetFreq = currentCalibratedFreqs[label];
         if (typeof targetFreq !== 'number') targetFreq = NOTE_FREQS[noteName];
         if (targetFreq) {
-            targets.push({ label, freq: targetFreq, tolerance: hasCal ? 0.03 : standardNoteTolerance });
+            targets.push({ label, freq: targetFreq, tolerance: hasCal ? 0.05 : standardNoteTolerance });
         }
     }
 
