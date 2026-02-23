@@ -13,7 +13,7 @@ import { CoachingDiagnostics } from './coaching-diagnostics.js';
 import { setInnerLabel, renderAllMeasures, cells } from './notegrid.js';
 import { CoachingSession } from './coaching-session.js';
 import { getSelectedPatternName } from './pattern-crud.js';
-import { loadCalibrationProfile, hasCalibrationForCurrentScale, turnOnMic } from './transcription.js';
+import { loadCalibrationProfile, hasCalibrationForCurrentScale, turnOnMic, micStream, turnOffMic } from './transcription.js';
 
 // Session state
 let coachingSession = null;
@@ -483,6 +483,13 @@ export function endCoachingSession() {
   // Stop playback
   stop(activeGrid);
 
+  turnOffMic();
+
+  // Phase 3: Stop Audio Recording
+  if (sessionRecorder && sessionRecorder.state !== 'inactive') {
+    sessionRecorder.stop();
+  }
+
   // Remove tick observer to prevent leaks
   if (coachingSession._loopObserver) {
     removeTickObserver(coachingSession._loopObserver);
@@ -870,6 +877,16 @@ function showResultsModal() {
     }
   };
 
+  // Phase 3: Show Recording Playback Button if available
+  const playReviewBtn = document.getElementById('playReviewBtn');
+  if (playReviewBtn) {
+    if (sessionAudioBlobUrl) {
+      playReviewBtn.style.display = 'block';
+    } else {
+      playReviewBtn.style.display = 'none';
+    }
+  }
+
   // --- COACH'S TIPS (Diagnostics) ---
   // (Already handled above)
 
@@ -1205,6 +1222,12 @@ export function initCoachingMode() {
   const saveSessionBtn = document.getElementById('saveSessionBtn');
   saveSessionBtn?.addEventListener('click', saveCoachingSession);
 
+  // Phase 3: Review Playback Sync Trigger
+  const playReviewBtn = document.getElementById('playReviewBtn');
+  if (playReviewBtn) {
+    playReviewBtn.addEventListener('click', toggleReviewPlayback);
+  }
+
   // Listen for bus evaluation (for testing or other integrations)
   Bus.on(BUS_EVENT.COACHING_EVALUATE, (e) => {
     let { note, step, time } = e.detail || {};
@@ -1342,8 +1365,109 @@ async function startCoachingSessionActual(ctx = activeGrid) {
 
   await turnOnMic();
 
+  // Phase 3: Start Audio Recording
+  setupSessionRecorder();
+
   // Start playback
   start(ctx, true, false);
+}
+
+// --- Session Recording State ---
+let sessionRecorder = null;
+let sessionAudioChunks = [];
+export let sessionAudioBlobUrl = null;
+
+function setupSessionRecorder() {
+  // Clear previous recording
+  if (sessionAudioBlobUrl) {
+    URL.revokeObjectURL(sessionAudioBlobUrl);
+    sessionAudioBlobUrl = null;
+  }
+  sessionAudioChunks = [];
+
+  if (!micStream) {
+    console.warn("Coaching Mode: Cannot start recording, micStream is null.");
+    return;
+  }
+
+  try {
+    sessionRecorder = new MediaRecorder(micStream);
+
+    sessionRecorder.ondataavailable = (e) => {
+      if (e.data && e.data.size > 0) {
+        sessionAudioChunks.push(e.data);
+      }
+    };
+
+    sessionRecorder.onstop = () => {
+      const audioBlob = new Blob(sessionAudioChunks, { type: 'audio/webm' }); // Default browser format
+      sessionAudioBlobUrl = URL.createObjectURL(audioBlob);
+      console.log("Coaching Mode: Recording saved, Blob URL created:", sessionAudioBlobUrl);
+    };
+
+    sessionRecorder.start();
+    console.log("Coaching Mode: Recording started.");
+  } catch (err) {
+    console.error("Coaching Mode: Failed to start MediaRecorder:", err);
+  }
+}
+
+// --- Phase 3: Synchronized Playback Logic ---
+let isPlayingReview = false;
+let originalInstVol = 1.0;
+let originalMetroVol = 1.0;
+
+export function toggleReviewPlayback() {
+  const audioPlayer = document.getElementById('sessionAudioPlayer');
+  const playBtn = document.getElementById('playReviewBtn');
+  if (!audioPlayer || !playBtn || !sessionAudioBlobUrl) return;
+
+  if (isPlayingReview) {
+    // Stop Playback
+    audioPlayer.pause();
+    stop(activeGrid, true);
+
+    // Restore Volumes
+    setVolume('instrument', originalInstVol);
+    setVolume('metronome', originalMetroVol);
+
+    isPlayingReview = false;
+    playBtn.textContent = '⏯️ Play Recording & Grid';
+    playBtn.classList.remove('playing');
+  } else {
+    // Start Playback
+    // 1. Setup Audio Element
+    audioPlayer.src = sessionAudioBlobUrl;
+
+    // 2. Cache & Mute Noteplayer Grid
+    originalInstVol = getVolume('instrument');
+    originalMetroVol = getVolume('metronome');
+    setVolume('instrument', 0);
+    setVolume('metronome', 0);
+
+    // 3. Sync & Start Both
+    audioPlayer.currentTime = 0;
+    activeGrid.caretIndex = 0; // Force restart from 0
+
+    audioPlayer.play().then(() => {
+      // Start grid only when audio actually starts
+      start(activeGrid, true, false); // (ctx, isSync, skipCountdown) => skip countdown!
+
+      isPlayingReview = true;
+      playBtn.textContent = '⏹️ Stop Recording & Grid';
+      playBtn.classList.add('playing');
+
+      // Auto-stop when audio finishes
+      audioPlayer.onended = () => {
+        if (isPlayingReview) toggleReviewPlayback();
+      };
+    }).catch(e => {
+      console.error("Failed to play review audio:", e);
+      // Fallback restore
+      setVolume('instrument', originalInstVol);
+      setVolume('metronome', originalMetroVol);
+    });
+  }
 }
 
 /**
