@@ -4,8 +4,6 @@ import { cells, setInnerLabel, renderAllMeasures } from './notegrid.js';
 import { loadPatternByName } from './controls.js';
 import { isListening, setIsListening, getScale, getCurrentScaleId, currentUser, setIsCalibrationMode } from './state.js';
 import { isCoaching, evaluateDetectedNote, logCoachingEvent } from './coaching-mode.js';
-import { isGameModeActive } from './games.js';
-import { ACCENT_RMS_MULTIPLIER } from './config.js';
 import { Bus, BUS_EVENT } from './bus.js';
 import { supabase } from './supabase-client.js';
 
@@ -25,6 +23,7 @@ let stepWasRecorded = false;
 let tally = {};
 let lastDetectedType = null;
 let lastGlobalDetectedNote = null; // Track across steps to prevent sustain re-triggers
+let latestStableBackgroundNote = null; // Tracks the *true* background note currently ringing
 const CONFIDENCE_THRESHOLD = 2;
 const PENDING_ACCENT_WINDOW = 100; // ms to wait for a pitch after an accent
 let pendingAccent = null; // { step, timestamp, startTime }
@@ -36,6 +35,8 @@ const calQueue = ['Ding', '1', '2', '3', '4', '5', '6', '7', '8', 'Tak', 'Slap']
 const CAL_SAMPLES_REQUIRED = 20;
 let noteSensitivities = JSON.parse(localStorage.getItem('gp_cal')) || {};
 let noteClarityAverages = JSON.parse(localStorage.getItem('gp_clarity_profiles')) || {};
+let noteBlossomTimes = JSON.parse(localStorage.getItem('gp_blossom_times')) || {};
+let calBlossomStartTime = 0;
 
 // --- Frequency Profiling ---
 let currentCalibratedFreqs = {}; // Map of { label: freq } for current scale
@@ -229,9 +230,14 @@ function transcriptionLoop() {
 
             Bus.emit(BUS_EVENT.ACCENT_DETECTED, { step: commitStep, time: commitTimestamp });
             lastNoteTime = now;
-            stepWasRecorded = true;
+
+            // CRITICAL FIX: We do NOT set stepWasRecorded = true here.
+            // If we did, and the accent committed, it would permanently close the 
+            // window for any legitimate notes trying to blossom in this very same timeframe.
+            // stepWasRecorded = true; 
+
             lastDetectedType = 'ACCENT';
-            tally = {};
+            tally['ACCENT'] = 0; // FIX: Only clear the accent tally, do not wipe out blooming notes.
         }
     }
 
@@ -250,7 +256,7 @@ function transcriptionLoop() {
     }
 
     if (isCalibrating) {
-        handleCalibration(pitch, rms, clarity);
+        handleCalibration(pitch, rms, clarity, nowAudioMs);
     } else if (activeGrid.playing) {
         // Debug every potential hit (loud enough)
         if (rms > roomNoiseFloor) {
@@ -324,6 +330,11 @@ function transcriptionLoop() {
 
             const isClearNote = detectedNoteLabel && clarity > CLARITY_THRESHOLD;
 
+            // Track background stability (even if gate is closed) to know what was ringing BEFORE a strike
+            if (isClearNote) {
+                latestStableBackgroundNote = detectedNoteLabel;
+            }
+
             // 1. Check for NOTES first (Priority)
             if (isClearNote) {
                 // If it's a clear note, we trust it over any accent/strike logic
@@ -365,7 +376,9 @@ function transcriptionLoop() {
                                 step: currentIndex,
                                 timestamp: nowAudioMs,
                                 startTime: now,
-                                firstDetectionTime: now // Track absolute start for hard limit
+                                firstDetectionTime: now, // Track absolute start for hard limit
+                                backgroundNote: latestStableBackgroundNote,
+                                preStrikeRMS: prevRMS
                             };
                         }
                     }
@@ -409,10 +422,44 @@ function transcriptionLoop() {
 
                         // SUSTAIN FIX: If we are detecting the SAME note as before,
                         // we MUST have a confirmed new strike (higher flux) to record it.
-                        // REFINEMENT EXCEPTION: If we are currently refining an accent,
-                        // we SKIP the sustain check because the accent ITSELF is the new strike.
+                        // REFINEMENT EXCEPTION: If we are refining an accent, we bypass this block
+                        // BUT ONLY if the refinement is fast (< 65ms). True consecutive notes resolve
+                        // their pitch quickly. If it takes > 65ms for the pitch to appear, it's just 
+                        // the previous note bleeding through after a percussive slap decays.
                         let isSustainBlocked = false;
-                        if (detected === lastGlobalDetectedNote && !canRefine) {
+                        let bypassSustainBlock = false;
+
+                        if (canRefine) {
+                            const timeSinceStrike = now - pendingAccent.firstDetectionTime;
+
+                            const maxBlossomTime = (noteBlossomTimes[detected] && typeof noteBlossomTimes[detected] === 'number')
+                                ? noteBlossomTimes[detected] + 20 // Buffer
+                                : 65; // Default fallback
+
+                            const isBackgroundBleed = (detected === pendingAccent.backgroundNote);
+
+                            if (isBackgroundBleed) {
+                                // If the candidate is exactly what was already ringing in the background, 
+                                // it MUST have received new tonal energy from the strike to be considered a new strike.
+                                if (timeSinceStrike <= maxBlossomTime) {
+                                    if (rms > pendingAccent.preStrikeRMS * 1.25) {
+                                        bypassSustainBlock = true;
+                                    } else {
+                                        logCoachingEvent(`[Transcription] Refinement Rejected (Late bleed. Tonal energy ${rms.toFixed(4)} <= pre-strike background ${pendingAccent.preStrikeRMS.toFixed(4)} * 1.25)`, transcriptionIndex);
+                                        isSustainBlocked = true;
+                                    }
+                                } else {
+                                    logCoachingEvent(`[Transcription] Refinement Rejected (Late bleed: ${timeSinceStrike}ms vs ${maxBlossomTime}ms allowed)`, transcriptionIndex);
+                                    isSustainBlocked = true;
+                                }
+                            } else {
+                                // It's a genuinely different note than what was ringing! Pass.
+                                bypassSustainBlock = true;
+                            }
+                        }
+
+                        // Also apply standard sustain block logic (outside of refinement) if it's the same note
+                        if (detected === lastGlobalDetectedNote && !bypassSustainBlock) {
                             if (flux < 1.35) {
                                 logCoachingEvent(`NOTE Rejected: Sustain Blocked (Flux ${flux.toFixed(2)} < 1.35)`, transcriptionIndex);
                                 isSustainBlocked = true;
@@ -424,7 +471,14 @@ function transcriptionLoop() {
                         if (!isSustainBlocked) {
                             tally[detected] = (tally[detected] || 0) + 1;
 
-                            if (tally[detected] >= CONFIDENCE_THRESHOLD) {
+                            // DYNAMIC CONFIDENCE: Strong new attacks only need 1 frame of high clarity.
+                            // Sustaining notes need 2 frames to prevent ghost harmonics from registering as hits.
+                            // CRUENCIAL FIX: If we are actively refining an Accent, we *know* there was a high-flux strike, 
+                            // even if the flux has dropped by the time the note's pitch blossoms.
+                            const effectiveIsNewStrike = isNewStrike || (canRefine && bypassSustainBlock);
+                            const requiredConfidence = effectiveIsNewStrike ? 1 : CONFIDENCE_THRESHOLD;
+
+                            if (tally[detected] >= requiredConfidence) {
                                 // --- PERFORMANCE: Calculate the EXACT hit time ---
                                 // If refined, use the original percussive attack time.
                                 // If not refined, we subtract the confidence lag (approx 32ms for 2 frames).
@@ -461,7 +515,7 @@ function transcriptionLoop() {
                                 lastNoteTime = now;
                                 stepWasRecorded = true;
                                 lastDetectedType = detected;
-                                tally = {};
+                                tally[detected] = 0; // FIX: Only clear this note's tally.
 
                                 // Auto-finish Guided Calibration
                                 if (isGuidedCalibrating && detected === '8' && currentIndex >= 16) {
@@ -479,7 +533,7 @@ function transcriptionLoop() {
 }
 
 // Calibration Logic
-function handleCalibration(pitch, rms, clarity) {
+function handleCalibration(pitch, rms, clarity, nowStr) {
     if (!isCalibrating) return;
 
     console.log("Calibrating...")
@@ -488,10 +542,16 @@ function handleCalibration(pitch, rms, clarity) {
     const isAccentCal = (target === 'Tak' || target === 'Slap');
     let isHit = false;
 
+    const flux = rms / prevRMS;
+
+    // Track Blossom Start Time
+    if (rms > baseSensitivity * 1.5 && flux > 1.35) {
+        calBlossomStartTime = nowStr;
+    }
+
     if (isAccentCal) {
         // For accents, we look for a sharp strike (rms > floor) 
         // with low clarity (as expected for percussive hits)
-        const flux = rms / prevRMS;
         if (rms > baseSensitivity * 1.5 && flux > 1.3) {
             isHit = true;
         }
@@ -514,7 +574,11 @@ function handleCalibration(pitch, rms, clarity) {
 
         // Clarity Profile for Accents (and notes too, why not?)
         if (!noteClarityAverages[target]) noteClarityAverages[target] = [];
-        noteClarityAverages[target].push(clarity);
+        if (Array.isArray(noteClarityAverages[target])) {
+            noteClarityAverages[target].push(clarity);
+        } else {
+            noteClarityAverages[target] = [clarity];
+        }
 
         // Personalized Pitch Calibration (Notes only)
         if (!isAccentCal && pitch && pitch > 50 && pitch < 1200) {
@@ -524,6 +588,20 @@ function handleCalibration(pitch, rms, clarity) {
             } else {
                 currentCalibratedFreqs[target] = [pitch];
             }
+        }
+
+        // Track Blossom Time (Notes only)
+        if (!isAccentCal && calBlossomStartTime > 0) {
+            const blossomTime = nowStr - calBlossomStartTime;
+            if (blossomTime >= 0 && blossomTime < 300) { // Sanity check
+                if (!noteBlossomTimes[target]) noteBlossomTimes[target] = [];
+                if (Array.isArray(noteBlossomTimes[target])) {
+                    noteBlossomTimes[target].push(blossomTime);
+                } else {
+                    noteBlossomTimes[target] = [blossomTime];
+                }
+            }
+            calBlossomStartTime = 0; // Reset
         }
 
         const currentTally = Array.isArray(noteSensitivities[target]) ? noteSensitivities[target].length : CAL_SAMPLES_REQUIRED;
@@ -552,6 +630,13 @@ function handleCalibration(pitch, rms, clarity) {
 
             // Average Pitch (Notes only)
             if (!isAccentCal) {
+                // Average Blossom Time
+                if (noteBlossomTimes[target] && Array.isArray(noteBlossomTimes[target]) && noteBlossomTimes[target].length > 0) {
+                    const avgBlossom = noteBlossomTimes[target].reduce((a, b) => a + b, 0) / noteBlossomTimes[target].length;
+                    noteBlossomTimes[target] = Math.max(20, Math.round(avgBlossom)); // At least 20ms
+                    localStorage.setItem('gp_blossom_times', JSON.stringify(noteBlossomTimes));
+                }
+
                 if (currentCalibratedFreqs[target] && Array.isArray(currentCalibratedFreqs[target]) && currentCalibratedFreqs[target].length >= CAL_SAMPLES_REQUIRED) {
                     const avgPitch = currentCalibratedFreqs[target].reduce((a, b) => a + b, 0) / currentCalibratedFreqs[target].length;
                     currentCalibratedFreqs[target] = avgPitch;
@@ -1372,13 +1457,218 @@ export function initExitCalibrationButton() {
 
         // Disable review mode and clear grid feedback
         import('./coaching-mode.js').then(({ disableReviewMode }) => {
-            disableReviewMode();
-
-            // Clear grid visuals
-            const ctx = activeGrid;
-            ctx.cells.forEach(cell => {
-                cell.classList.remove('has-feedback', 'feedback-wrong', 'feedback-correct');
-            });
         });
     });
 }
+
+// --- ADVANCED CALIBRATION LOGIC ---
+const DEFAULT_MULTIPLIERS = { 'Ding': 0.85, '1': 0.5, '2': 0.5, '3': 0.5, '4': 0.5, '5': 0.5, '6': 0.5, '7': 0.5, '8': 0.5, 'Tak': 0.5, 'Slap': 0.5 };
+const DEFAULT_CLARITY_V2 = { 'Ding': 0.5, '1': 0.5, '2': 0.5, '3': 0.5, '4': 0.5, '5': 0.5, '6': 0.5, '7': 0.5, '8': 0.5, 'Tak': 0.5, 'Slap': 0.5 };
+const DEFAULT_VOLUMES = { 'Ding': 0.05, '1': 0.05, '2': 0.05, '3': 0.05, '4': 0.05, '5': 0.05, '6': 0.05, '7': 0.05, '8': 0.05, 'Tak': 0.05, 'Slap': 0.05 };
+
+function openAdvancedCalibrationModal() {
+    const modal = document.getElementById('advancedCalModal');
+    const listContainer = document.getElementById('advancedCalList');
+    if (!modal || !listContainer) return;
+
+    // Get current scale to know which notes to show
+    const scale = getScale();
+    const notes = ['Ding', '1', '2', '3', '4', '5', '6', '7', '8', 'Tak', 'Slap'];
+
+    // Build the HTML for the list
+    listContainer.innerHTML = notes.map(note => {
+        const isScaleNote = (note === 'Ding' || note === 'Tak' || note === 'Slap' || scale.map[note]);
+        if (!isScaleNote && note !== 'Tak' && note !== 'Slap') return ''; // Skip disabled notes
+
+        const currentMult = noteMultipliers[note] !== undefined ? noteMultipliers[note] : (DEFAULT_MULTIPLIERS[note] || 0.5);
+
+        // Handle Clarity: Might be a raw number from new profiles or old global
+        let currentClarity = typeof noteClarityAverages[note] === 'number'
+            ? noteClarityAverages[note]
+            : (window.userClarityThreshold !== undefined ? window.userClarityThreshold : 0.5);
+
+        // Handle Sensitivity: Might be raw number or array
+        let currentVol = noteSensitivities[note];
+        if (Array.isArray(currentVol)) currentVol = currentVol.reduce((a, b) => a + b, 0) / currentVol.length;
+        if (typeof currentVol !== 'number') currentVol = (note === 'Tak' || note === 'Slap' ? 0.07 : 0.05);
+
+        // Handle Blossom Time
+        const currentBlossom = (noteBlossomTimes[note] !== undefined && typeof noteBlossomTimes[note] === 'number') ? Math.max(20, noteBlossomTimes[note]) : 65;
+
+        return `
+            <div class="adv-cal-row">
+                <div class="adv-cal-row-header">
+                    <div class="adv-cal-note-label">
+                        ${note} 
+                        ${scale.map[note] || note === 'Ding' ? `<span class="adv-cal-pill">${note === 'Ding' ? scale.ding : scale.map[note]}</span>` : ''}
+                    </div>
+                </div>
+                <div class="adv-cal-controls">
+                    <div class="adv-cal-control-group">
+                        <label>Sensitivity Tolerance (Multiplier) <span>0.05 - 1.0</span></label>
+                        <div class="adv-cal-input-row">
+                            <input type="range" class="adv-mult-input" data-note="${note}" min="0.05" max="1.0" step="0.05" value="${currentMult.toFixed(2)}">
+                            <span class="adv-cal-val">${currentMult.toFixed(2)}x</span>
+                        </div>
+                    </div>
+                    <div class="adv-cal-control-group">
+                        <label>Baseline Volume (RMS) <span>0.01 - 0.20</span></label>
+                        <div class="adv-cal-input-row">
+                            <input type="range" class="adv-vol-input" data-note="${note}" min="0.01" max="0.20" step="0.01" value="${currentVol.toFixed(2)}">
+                            <span class="adv-cal-val">${currentVol.toFixed(2)}</span>
+                        </div>
+                    </div>
+                    <div class="adv-cal-control-group">
+                        <label>Expected Clarity Threshold <span>0.1 - 0.9</span></label>
+                        <div class="adv-cal-input-row">
+                            <input type="range" class="adv-clarity-input" data-note="${note}" min="0.1" max="0.9" step="0.05" value="${currentClarity.toFixed(2)}">
+                            <span class="adv-cal-val">${currentClarity.toFixed(2)}</span>
+                        </div>
+                    </div>
+                    <div class="adv-cal-control-group">
+                        <label>Pitch Stabilization (Blossom) <span>65ms - 200ms</span></label>
+                        <div class="adv-cal-input-row">
+                            <input type="range" class="adv-blossom-input" data-note="${note}" min="65" max="200" step="5" value="${currentBlossom}">
+                            <span class="adv-cal-val">${currentBlossom}ms</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    // Attach dynamic listeners to sliders
+    listContainer.querySelectorAll('input[type="range"]').forEach(input => {
+        input.addEventListener('input', (e) => {
+            const valDisplay = e.target.nextElementSibling;
+            if (e.target.classList.contains('adv-mult-input')) {
+                valDisplay.textContent = parseFloat(e.target.value).toFixed(2) + 'x';
+            } else if (e.target.classList.contains('adv-blossom-input')) {
+                valDisplay.textContent = parseInt(e.target.value) + 'ms';
+            } else {
+                valDisplay.textContent = parseFloat(e.target.value).toFixed(2);
+            }
+        });
+    });
+
+    modal.style.display = 'flex';
+    modal.setAttribute('aria-hidden', 'false');
+
+    // Close Mic dropdown
+    const menu = document.getElementById('micDropdownMenu');
+    if (menu) menu.classList.remove('show');
+}
+
+function saveAdvancedCalibration() {
+    const listContainer = document.getElementById('advancedCalList');
+    if (!listContainer) return;
+
+    // Collect all values
+    const newMults = { ...noteMultipliers };
+    const newClarity = { ...noteClarityAverages };
+    const newVols = { ...noteSensitivities };
+    const newBlossoms = { ...noteBlossomTimes };
+
+    listContainer.querySelectorAll('.adv-cal-row').forEach(row => {
+        const note = row.querySelector('.adv-mult-input').dataset.note;
+
+        const multVal = parseFloat(row.querySelector('.adv-mult-input').value);
+        const volVal = parseFloat(row.querySelector('.adv-vol-input').value);
+        const clarityVal = parseFloat(row.querySelector('.adv-clarity-input').value);
+        const blossomVal = parseInt(row.querySelector('.adv-blossom-input').value);
+
+        newMults[note] = multVal;
+        newVols[note] = volVal;
+        newClarity[note] = clarityVal;
+        newBlossoms[note] = blossomVal;
+    });
+
+    // Update in-memory
+    noteMultipliers = newMults;
+    noteSensitivities = newVols;
+    noteClarityAverages = newClarity;
+    noteBlossomTimes = newBlossoms;
+
+    // Persist
+    localStorage.setItem('gp_multipliers', JSON.stringify(noteMultipliers));
+    localStorage.setItem('gp_cal', JSON.stringify(noteSensitivities));
+    localStorage.setItem('gp_clarity_profiles', JSON.stringify(noteClarityAverages));
+    localStorage.setItem('gp_blossom_times', JSON.stringify(noteBlossomTimes));
+
+    alert('Advanced Calibration Settings Saved!');
+    closeAdvancedCalibrationModal();
+}
+
+function resetAdvancedCalibration() {
+    // Check if they had a perfect calibration
+    const perfectCalFlag = localStorage.getItem('gp_perfect_cal');
+    const hasPerfect = perfectCalFlag === 'true';
+
+    let msg = "Are you sure you want to reset all sensitivity and clarity profiles to factory defaults?";
+    if (hasPerfect) {
+        msg = "You previously achieved a PERFECT auto-calibration score.\n\n[OK] to restore your PERFECT baseline.\n[Cancel] to aggressively wipe to Factory Defaults.";
+    }
+
+    if (confirm(msg)) {
+        if (hasPerfect) {
+            // Restore Perfect
+            const perfectMultStr = localStorage.getItem('gp_perfect_cal_mults');
+            if (perfectMultStr) {
+                noteMultipliers = JSON.parse(perfectMultStr);
+                localStorage.setItem('gp_multipliers', perfectMultStr);
+            }
+            alert("Restored to your Perfect Calibration baseline.");
+        } else {
+            // Factory Reset everything but Pitch
+            noteMultipliers = { ...DEFAULT_MULTIPLIERS };
+            noteClarityAverages = {};
+            noteSensitivities = {};
+            noteBlossomTimes = {};
+
+            localStorage.setItem('gp_multipliers', JSON.stringify(noteMultipliers));
+            localStorage.removeItem('gp_cal');
+            localStorage.removeItem('gp_clarity_profiles');
+            localStorage.removeItem('gp_blossom_times');
+
+            alert("Factory Defaults Restored.");
+        }
+
+        // Re-populate modal to show new values
+        openAdvancedCalibrationModal();
+    } else {
+        if (hasPerfect && confirm("Force wipe everything to Factory Defaults instead?")) {
+            noteMultipliers = { ...DEFAULT_MULTIPLIERS };
+            noteClarityAverages = {};
+            noteSensitivities = {};
+            noteBlossomTimes = {};
+
+            localStorage.setItem('gp_multipliers', JSON.stringify(noteMultipliers));
+            localStorage.removeItem('gp_cal');
+            localStorage.removeItem('gp_clarity_profiles');
+            localStorage.removeItem('gp_blossom_times');
+            localStorage.removeItem('gp_perfect_cal');
+            localStorage.removeItem('gp_perfect_cal_mults');
+
+            alert("Factory Defaults Restored. Perfect calibration flag cleared.");
+            openAdvancedCalibrationModal();
+        }
+    }
+}
+
+function closeAdvancedCalibrationModal() {
+    const modal = document.getElementById('advancedCalModal');
+    if (modal) {
+        modal.style.display = 'none';
+        modal.setAttribute('aria-hidden', 'true');
+    }
+}
+
+// Attach listeners inside initialization
+document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('advancedCalBtn')?.addEventListener('click', openAdvancedCalibrationModal);
+    document.getElementById('closeAdvancedCalBtn')?.addEventListener('click', closeAdvancedCalibrationModal);
+    document.getElementById('cancelAdvancedCalBtn')?.addEventListener('click', closeAdvancedCalibrationModal);
+    document.getElementById('saveAdvancedCalBtn')?.addEventListener('click', saveAdvancedCalibration);
+    document.getElementById('resetAdvancedCalBtn')?.addEventListener('click', resetAdvancedCalibration);
+});
+

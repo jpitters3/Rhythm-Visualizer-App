@@ -217,6 +217,8 @@
                 (Recommended)</button>
               <button id="micCalBtn">1. Pitch Calibration</button>
               <button id="guidedCalBtn" style="margin-top:8px;">2. Sensitivity Calibration</button>
+              <button id="advancedCalBtn" style="margin-top:8px;" title="Manually adjust note thresholds">3. Advanced
+                Calibration</button>
             </div>
           </div>
         </div>
@@ -805,6 +807,37 @@
       <div class="modal-actions">
         <button id="startGuidedBtn" class="primary-btn">Begin</button>
         <button id="closeGuidedBtn" class="text-btn">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Advanced Calibration Modal -->
+  <div id="advancedCalModal" class="modal-overlay" style="display: none;">
+    <div class="modal-content advanced-cal-modal" style="max-width: 600px;">
+      <div class="modal-header">
+        <h2>Advanced Calibration</h2>
+        <button id="closeAdvancedCalBtn" class="close-btn">&times;</button>
+      </div>
+
+      <div class="modal-body" style="max-height: 60vh; overflow-y: auto; padding-right: 10px;">
+        <p style="color: var(--text-secondary); margin-top: 0; margin-bottom: 20px;">
+          Manually tweak sensitivity multipliers and threshold baseline profiles for each note.
+          Use carefully!
+        </p>
+
+        <!-- Dynamic Note Rows will be injected here -->
+        <div id="advancedCalList" class="advanced-cal-list">
+          <div class="loading-spinner">Loading...</div>
+        </div>
+
+      </div>
+
+      <div class="modal-actions" style="justify-content: space-between; margin-top: 20px;">
+        <button id="resetAdvancedCalBtn" class="text-btn danger-text">Reset to Defaults</button>
+        <div style="display: flex; gap: 10px;">
+          <button id="cancelAdvancedCalBtn" class="secondary-btn">Cancel</button>
+          <button id="saveAdvancedCalBtn" class="primary-btn">Save Changes</button>
+        </div>
       </div>
     </div>
   </div>

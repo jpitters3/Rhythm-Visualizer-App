@@ -142,7 +142,7 @@ export function evaluateDetectedNote(detectedNote, stepIndex, hitTime) {
   // We now search adjacent steps to find the most likely intended target.
   const ctx = activeGrid;
   const msPerStep = intervalMs(ctx);
-  const audioStartMs = (ctx.audioStartTime || 0);
+  const audioStartMs = (ctx.audioStartTime || 0) * 1000;
   const timingOffset = getTimingOffset();
 
   let bestStep = stepIndex;
@@ -155,14 +155,18 @@ export function evaluateDetectedNote(detectedNote, stepIndex, hitTime) {
     const exp = expectedNotes[i];
     if (!exp || exp.labels.length === 0) continue;
 
+    logCoachingEvent(`Expected Note: ${expectedNotes[stepIndex].labels}`, stepIndex); //, `at ${exp.time.toFixed(0)}ms`);
+
     // Check if what we heard matches what this step wants
     const isMatch = (detectedNote === 'ACCENT')
       ? (exp.labels.includes('T') || exp.labels.includes('S'))
       : exp.labels.includes(detectedNote);
 
     if (isMatch) {
-      const expTime = audioStartMs + (i * msPerStep) + timingOffset;
+      // The audio plays precisely AUDIO_DELAY seconds *after* the raw schedule time.
+      const expTime = audioStartMs + (i * msPerStep) + timingOffset + (AUDIO_DELAY * 1000);
       const error = Math.abs(hitTime - expTime);
+
       // If it's a logical match and within a 400ms "forgiveness" window
       if (error < 400 && error < minError) {
         minError = error;
@@ -197,11 +201,8 @@ function performEvaluation(detectedNote, stepIndex, actualTime, expected) {
   const msPerStep = intervalMs(ctx);
 
   // Apply User Timing Offset (Calibration)
-  const audioStartMs = (ctx.audioStartTime || 0); // UNIT FIX
-  const expectedTime = audioStartMs + (stepIndex * msPerStep) + getTimingOffset();
-
-  console.log("Expected Time (Audio Clock):", expectedTime);
-  console.log("Actual Time (Audio Clock):", actualTime);
+  const audioStartMs = (ctx.audioStartTime || 0) * 1000; // UNIT FIX: Convert to ms
+  const expectedTime = audioStartMs + (stepIndex * msPerStep) + getTimingOffset() + (AUDIO_DELAY * 1000);
 
   // Evaluate note
   const result = evaluateNote(detectedNote, expected.labels, {
@@ -1339,7 +1340,7 @@ async function startCoachingSessionActual(ctx = activeGrid) {
   // Register the observer
   addTickObserver(loopObserver);
 
-  turnOnMic();
+  await turnOnMic();
 
   // Start playback
   start(ctx, true, false);
