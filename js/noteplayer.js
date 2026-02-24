@@ -160,32 +160,79 @@ async function loadSample(key, url) {
   samples[key] = await audioCtx.decodeAudioData(arrayBuffer);
 }
 
+let currentMetroSound = localStorage.getItem('metronomeSoundPref') || 'Click';
+
+export function getMetronomeSound() {
+  return currentMetroSound;
+}
+
+export function setMetronomeSound(sound) {
+  currentMetroSound = sound;
+  localStorage.setItem('metronomeSoundPref', sound);
+}
+
 function metroClick(kind, delay = 0) {
   ensureAudio();
   if (!audioCtx) return;
 
   const t = audioCtx.currentTime + (delay || 0);
-  const osc = audioCtx.createOscillator();
-  const gain = audioCtx.createGain();
 
-  osc.type = 'square';
-  const freq = (kind === 'downbeat') ? 1600 : (kind === 'beat' ? 1300 : 1000);
-  const level = (kind === 'downbeat') ? 0.28 : (kind === 'beat' ? 0.20 : 0.12);
+  if (currentMetroSound === 'Shaker') {
+    // Shaker Synthesis (Filtered White Noise)
+    const bufferSize = audioCtx.sampleRate * 0.1; // 100ms noise buffer
+    const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+      data[i] = Math.random() * 2 - 1;
+    }
 
-  osc.frequency.setValueAtTime(freq, t);
+    const noiseSource = audioCtx.createBufferSource();
+    noiseSource.buffer = buffer;
 
-  // Click Envelope (with volume control)
-  // Note: exponentialRampToValueAtTime cannot use 0, must use small positive value
-  const targetLevel = Math.max(0.0001, level * volMetronome);
-  gain.gain.setValueAtTime(0.0001, t);
-  gain.gain.exponentialRampToValueAtTime(targetLevel, t + 0.002);
-  gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.03);
+    // Bandpass to focus on the 'tsss' frequencies (7kHz - 10kHz)
+    const bandpass = audioCtx.createBiquadFilter();
+    bandpass.type = 'bandpass';
+    bandpass.frequency.setValueAtTime(8000, t);
+    bandpass.Q.setValueAtTime(1.5, t);
 
-  osc.connect(gain);
-  gain.connect(audioCtx.destination);
+    const gain = audioCtx.createGain();
+    const peakVol = (kind === 'downbeat') ? 0.35 : (kind === 'beat' ? 0.25 : 0.15);
+    const targetLevel = Math.max(0.0001, peakVol * volMetronome);
 
-  osc.start(t);
-  osc.stop(t + 0.04);
+    // Shaker Envelope: fast attack, smooth decay
+    gain.gain.setValueAtTime(0.0001, t);
+    gain.gain.exponentialRampToValueAtTime(targetLevel, t + 0.015);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.08);
+
+    noiseSource.connect(bandpass);
+    bandpass.connect(gain);
+    gain.connect(audioCtx.destination);
+
+    noiseSource.start(t);
+    noiseSource.stop(t + 0.1);
+  } else {
+    // Classic Square Click
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+
+    osc.type = 'square';
+    const freq = (kind === 'downbeat') ? 1600 : (kind === 'beat' ? 1300 : 1000);
+    const level = (kind === 'downbeat') ? 0.28 : (kind === 'beat' ? 0.20 : 0.12);
+
+    osc.frequency.setValueAtTime(freq, t);
+
+    // Click Envelope (with volume control)
+    const targetLevel = Math.max(0.0001, level * volMetronome);
+    gain.gain.setValueAtTime(0.0001, t);
+    gain.gain.exponentialRampToValueAtTime(targetLevel, t + 0.002);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.03);
+
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+
+    osc.start(t);
+    osc.stop(t + 0.04);
+  }
 }
 
 export function isDownbeatStep(stepIndex, mode) {

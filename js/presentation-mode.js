@@ -22,13 +22,13 @@ let streamCtx = null;
 let isDashboardOpen = false;
 let isMicLoading = false;
 export const Aesthetics = {
-  sparks: true,
-  trails: true,
+  sparks: false,
+  trails: false,
   glow: true,
   sticking: true,
   proximity: true,
   colors: true,
-  comets: true
+  comets: false
 };
 
 const sparks = []; // { x, y, vx, vy, alpha, color }

@@ -1,5 +1,5 @@
 // TransportUI manages a set of transport controls
-import { start, stop } from './noteplayer.js';
+import { start, stop, getMetronomeSound, setMetronomeSound } from './noteplayer.js';
 
 export class TransportUI {
   constructor(ctx, container) {
@@ -11,6 +11,7 @@ export class TransportUI {
     this.metroBtn = container.querySelector('.t-metro-btn');
     this.bpmInput = container.querySelector('.t-bpm-input');
     this.bpmVal = container.querySelector('.t-bpm-val');
+    this.metroSoundSelect = container.querySelector('.t-metro-sound');
     this.muteBtn = container.querySelector('.t-mute-btn');
 
     this.init();
@@ -51,6 +52,14 @@ export class TransportUI {
       };
     }
 
+    if (this.metroSoundSelect) {
+      this.metroSoundSelect.value = getMetronomeSound();
+      this.metroSoundSelect.onchange = (e) => {
+        setMetronomeSound(e.target.value);
+        TransportRegistry.updateAll(this.ctx);
+      };
+    }
+
     if (this.muteBtn) {
       this.muteBtn.onclick = (e) => {
         e.stopPropagation();
@@ -82,6 +91,10 @@ export class TransportUI {
 
     if (this.bpmInput) {
       this.bpmInput.value = this.ctx.bpm;
+    }
+
+    if (this.metroSoundSelect) {
+      this.metroSoundSelect.value = getMetronomeSound();
     }
 
     if (this.bpmVal) {
