@@ -416,8 +416,9 @@ function transcriptionLoop() {
                         if (isPassRMS && !isPassGate) {
                             const gateRemaining = Math.max(0, dynamicGate - (now - lastNoteTime));
                             logCoachingEvent(`NOTE Rejected: Gate Closed (Remaining: ${gateRemaining.toFixed(0)}ms, Flux: ${flux.toFixed(2)})`, transcriptionIndex);
-                        } else if (!isPassRMS) {
-                            // Too quiet, don't log every frame
+                        } else if (!isPassRMS && rms > (baseSensitivity * 0.5)) {
+                            // Log the silent drop due to note-specific threshold
+                            logCoachingEvent(`NOTE Rejected: RMS Too Low (${rms.toFixed(4)} < Thresh ${noteSpecificThreshold.toFixed(4)})`, transcriptionIndex);
                         }
                     }
 
