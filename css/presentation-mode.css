@@ -559,8 +559,8 @@ body.present.mode-gravity .handpan-panel {
 }
 
 body.present.mode-gravity .handpan-wrap {
-  width: 400px !important;
-  height: 400px !important;
+  width: 500px !important;
+  height: 500px !important;
   transform: scale(1.0);
   background: transparent;
 }
@@ -615,10 +615,10 @@ body.present.mode-gravity .stream-view {
 }
 
 body.present.mode-gravity .hp-dot.active::after {
-  /* animation: rhythmicPulse 0.5s cubic-bezier(0.22, 1, 0.36, 0.1) forwards;
+  animation: rhythmicPulse 0.5s cubic-bezier(0.22, 1, 0.36, 0.1) forwards;
   animation-delay: var(--hp-pulse-delay, 0s);
-  z-index: 50; */
-  animation: none !important;
+  z-index: 50;
+  /* animation: none !important; */
 }
 
 .dashboard-panel {
