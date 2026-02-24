@@ -555,6 +555,7 @@ body.present.mode-gravity .handpan-panel {
   width: auto;
   pointer-events: none;
   z-index: 100;
+  opacity: 0.5;
 }
 
 body.present.mode-gravity .handpan-wrap {
@@ -591,6 +592,33 @@ body.present.mode-gravity .stream-view {
   align-items: center;
   justify-content: center;
   padding: 20px;
+}
+
+/* ===== PLAY PULSE (@keyframes eliminates "hang") ===== */
+@keyframes rhythmicPulse {
+  0% {
+    transform: translateZ(0) scale(1);
+    box-shadow: 0 0 0 0 rgba(79, 140, 255, 0);
+  }
+
+  /* Rapid but organic expansion to peak */
+  15% {
+    transform: translateZ(0) scale(1.3);
+    box-shadow: 0 0 0 1px var(--play-glow);
+  }
+
+  /* Immediate start of decay even if beat class persists */
+  100% {
+    transform: translateZ(0) scale(1);
+    box-shadow: 0 0 0 0 rgba(79, 140, 255, 0);
+  }
+}
+
+body.present.mode-gravity .hp-dot.active::after {
+  /* animation: rhythmicPulse 0.5s cubic-bezier(0.22, 1, 0.36, 0.1) forwards;
+  animation-delay: var(--hp-pulse-delay, 0s);
+  z-index: 50; */
+  animation: none !important;
 }
 
 .dashboard-panel {

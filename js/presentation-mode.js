@@ -25,10 +25,10 @@ export const Aesthetics = {
   sparks: true,
   trails: true,
   glow: true,
-  interval: false,
-  sticking: false,
+  sticking: true,
   proximity: true,
-  colors: true
+  colors: true,
+  comets: true
 };
 
 const sparks = []; // { x, y, vx, vy, alpha, color }
@@ -360,6 +360,7 @@ function initDashboard() {
   bindAesthetic('dashStickingBtn', 'sticking', true);
   bindAesthetic('dashProximityBtn', 'proximity');
   bindAesthetic('dashColorsBtn', 'colors');
+  bindAesthetic('dashCometsBtn', 'comets');
 
   // === DYNAMIC WORLD & CATEGORY MANAGEMENT ===
   const setWorld = (worldIdOrFilename) => {
@@ -1037,38 +1038,63 @@ function drawGravity(ctx) {
 
       // Fade in from distance
       let alpha = 1.0;
-      if (visualDt > LOOKAHEAD_STEPS - 2) {
-        alpha = (LOOKAHEAD_STEPS - visualDt) / 2.0;
-      }
-      if (visualDt < 0) {
-        alpha = 1.0 + (visualDt * 2.0); // Fade out instantly after hit
-        if (alpha < 0) alpha = 0;
-      }
 
-      if (alpha <= 0) continue;
+      if (!Aesthetics.sticking) {
+        if (visualDt > LOOKAHEAD_STEPS - 2) {
+          alpha = (LOOKAHEAD_STEPS - visualDt) / 2.0;
+        }
+        if (visualDt < 0) {
+          alpha = 1.0 + (visualDt * 2.0); // Fade out instantly after hit
+          if (alpha < 0) alpha = 0;
+        }
+
+        if (alpha <= 0) continue;
+      }
 
       // Color Logic
       const stepsAway = Math.max(0, Math.floor(dt));
 
-      let cr, cg, cb;
-      if (stepsAway < 1) {
-        // n-1: Green (dt between 0 and 1)
-        cr = 34; cg = 197; cb = 94;
-      } else if (stepsAway < 2) {
-        // n-2: Yellow
-        cr = 234; cg = 179; cb = 8;
-      } else if (stepsAway < 3) {
-        // n-3: Orange
-        cr = 255; cg = 140; cb = 0;
-      } else if (stepsAway < 4) {
-        // n-4: Red
-        cr = 255; cg = 0; cb = 0;
-      } else if (stepsAway < 5) {
-        // n-5: Indigo
-        cr = 79; cg = 70; cb = 239;
-      } else {
-        // n-6 or less: Deep purple
-        cr = 148; cg = 41; cb = 184;
+      let cr = 1, cg = 1, cb = 1, co = 1;
+
+      // Drawing Logic (Orb)
+      const hand = (ctx.innerHands && ctx.innerHands[i]) ? ctx.innerHands[i] : (i % 2 === 0 ? 'R' : 'L');
+
+      if (Aesthetics.sticking) {
+        if (hand === 'R') {
+          // n-1: var(--up-fill) rgb(97, 10, 66);
+          cr = 97; cg = 10; cb = 66;
+        } else {
+          // n-1: var(--down-fill) rgb(2, 68, 150);
+          cr = 2; cg = 68; cb = 150;
+        }
+
+        if (stepsAway === 0) {
+          co = 0.6;
+        } else {
+          co = 0;
+        }
+      }
+      else {
+        co = 0.35;
+        if (stepsAway < 1) {
+          // n-1: Green (dt between 0 and 1)
+          cr = 34; cg = 197; cb = 94;
+        } else if (stepsAway < 2) {
+          // n-2: Yellow
+          cr = 234; cg = 179; cb = 8;
+        } else if (stepsAway < 3) {
+          // n-3: Orange
+          cr = 255; cg = 140; cb = 0;
+        } else if (stepsAway < 4) {
+          // n-4: Red
+          cr = 255; cg = 0; cb = 0;
+        } else if (stepsAway < 5) {
+          // n-5: Indigo
+          cr = 79; cg = 70; cb = 239;
+        } else {
+          // n-6 or less: Deep purple
+          cr = 148; cg = 41; cb = 184;
+        }
       }
 
       const baseCol = `rgb(${cr}, ${cg}, ${cb})`;
@@ -1081,7 +1107,7 @@ function drawGravity(ctx) {
 
           streamCtx.beginPath();
           streamCtx.arc(targetX, targetY, 35, 0, Math.PI * 2);
-          streamCtx.fillStyle = `rgba(${cr}, ${cg}, ${cb}, 0.35)`;
+          streamCtx.fillStyle = `rgba(${cr}, ${cg}, ${cb}, ${co})`;
           streamCtx.fill();
         }
       }
@@ -1090,9 +1116,6 @@ function drawGravity(ctx) {
         // Fixed: Deep purple
         cr = 148; cg = 41; cb = 184;
       }
-
-      // Drawing Logic (Orb)
-      const hand = (ctx.innerHands && ctx.innerHands[i]) ? ctx.innerHands[i] : (i % 2 === 0 ? 'R' : 'L');
 
       let drawRadius = 20;
       streamCtx.globalAlpha = alpha;
@@ -1109,66 +1132,70 @@ function drawGravity(ctx) {
         flashCg = Math.round(cg + (255 - cg) * popScale);
         flashCb = Math.round(cb + (255 - cb) * popScale);
 
-        // Glow flash
-        streamCtx.beginPath();
-        streamCtx.arc(drawX, drawY, drawRadius + (popScale * 25), 0, Math.PI * 2);
-        streamCtx.fillStyle = `rgba(255, 255, 255, ${0.6 * popScale})`; // Bright white halo
-        streamCtx.fill();
+        if (Aesthetics.comets) {
+          // Glow flash
+          streamCtx.beginPath();
+          streamCtx.arc(drawX, drawY, drawRadius + (popScale * 25), 0, Math.PI * 2);
+          streamCtx.fillStyle = `rgba(255, 255, 255, ${0.6 * popScale})`; // Bright white halo
+          streamCtx.fill();
+        }
       }
 
       const drawCol = `rgb(${flashCr}, ${flashCg}, ${flashCb})`;
 
-      // Optional Trail Effect (Comet Tail)
-      if (Aesthetics.trails && dt > 0) {
-        // The trail extends BACKWARD along the vector (positive nx, ny because nx is target -> source direction)
-        // Shorter tail as it gets closer to 0 so it visually burns up on impact
-        const maxTail = 150 + (dt * 50);
-        const tailLength = Math.min(maxTail, dt * 200); // Rapidly shrinks to 0 in the final beat
-        const tailX = drawX + (nx * tailLength);
-        const tailY = drawY + (ny * tailLength);
+      if (Aesthetics.comets) {
+        // Optional Trail Effect (Comet Tail)
+        if (Aesthetics.trails && dt > 0) {
+          // The trail extends BACKWARD along the vector (positive nx, ny because nx is target -> source direction)
+          // Shorter tail as it gets closer to 0 so it visually burns up on impact
+          const maxTail = 150 + (dt * 50);
+          const tailLength = Math.min(maxTail, dt * 200); // Rapidly shrinks to 0 in the final beat
+          const tailX = drawX + (nx * tailLength);
+          const tailY = drawY + (ny * tailLength);
 
-        // Create a gradient that fades out towards the end of the tail
-        const gradient = streamCtx.createLinearGradient(drawX, drawY, tailX, tailY);
-        gradient.addColorStop(0, `rgba(${cr}, ${cg}, ${cb}, ${alpha * 0.8})`);
-        gradient.addColorStop(1, `rgba(${cr}, ${cg}, ${cb}, 0)`);
+          // Create a gradient that fades out towards the end of the tail
+          const gradient = streamCtx.createLinearGradient(drawX, drawY, tailX, tailY);
+          gradient.addColorStop(0, `rgba(${cr}, ${cg}, ${cb}, ${alpha * 0.8})`);
+          gradient.addColorStop(1, `rgba(${cr}, ${cg}, ${cb}, 0)`);
 
-        // Draw a tapering polygon from the sides of the orb to the tail point
-        // Perpendicular vector for the width of the orb
-        const px = -ny;
-        const py = nx;
+          // Draw a tapering polygon from the sides of the orb to the tail point
+          // Perpendicular vector for the width of the orb
+          const px = -ny;
+          const py = nx;
 
-        const width = drawRadius * 0.8; // Slightly narrower than full radius for aerodynamics
+          const width = drawRadius * 0.8; // Slightly narrower than full radius for aerodynamics
 
+          streamCtx.beginPath();
+          // Left edge of orb
+          streamCtx.moveTo(drawX + (px * width), drawY + (py * width));
+          // Right edge of orb
+          streamCtx.lineTo(drawX - (px * width), drawY - (py * width));
+          // Tip of the tail
+          streamCtx.lineTo(tailX, tailY);
+          streamCtx.closePath();
+
+          streamCtx.fillStyle = gradient;
+          streamCtx.fill();
+        }
+
+        // Orb Background
         streamCtx.beginPath();
-        // Left edge of orb
-        streamCtx.moveTo(drawX + (px * width), drawY + (py * width));
-        // Right edge of orb
-        streamCtx.lineTo(drawX - (px * width), drawY - (py * width));
-        // Tip of the tail
-        streamCtx.lineTo(tailX, tailY);
-        streamCtx.closePath();
-
-        streamCtx.fillStyle = gradient;
+        streamCtx.arc(drawX, drawY, drawRadius, 0, Math.PI * 2);
+        streamCtx.fillStyle = cellBgCol;
         streamCtx.fill();
+
+        if (isGlass) {
+          streamCtx.lineWidth = 2;
+          streamCtx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+          streamCtx.stroke();
+        }
+
+        // Inner Color
+        streamCtx.globalAlpha = alpha * 0.8;
+        streamCtx.fillStyle = drawCol;
+        streamCtx.fill();
+        streamCtx.globalAlpha = alpha;
       }
-
-      // Orb Background
-      streamCtx.beginPath();
-      streamCtx.arc(drawX, drawY, drawRadius, 0, Math.PI * 2);
-      streamCtx.fillStyle = cellBgCol;
-      streamCtx.fill();
-
-      if (isGlass) {
-        streamCtx.lineWidth = 2;
-        streamCtx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
-        streamCtx.stroke();
-      }
-
-      // Inner Color
-      streamCtx.globalAlpha = alpha * 0.8;
-      streamCtx.fillStyle = drawCol;
-      streamCtx.fill();
-      streamCtx.globalAlpha = alpha;
 
       // Hit Expansion
       if (dt < 0.1 && dt > -0.1 && !cell._hasSparkedGrav) {
@@ -1188,20 +1215,22 @@ function drawGravity(ctx) {
         cell._hasSparkedGrav = false;
       }
 
-      // Note Text
-      const notationPref = localStorage.getItem('handpanLabelPref') || 'Numbers';
-      const displayLabel = Array.isArray(rawLabel) ? rawLabel.join('') : String(rawLabel);
-      const textToDraw = (notationPref === 'Numbers' && (displayLabel === '0' || displayLabel === 'Ding')) ? 'D' : displayLabel;
+      if (Aesthetics.comets) {
+        // Note Text
+        const notationPref = localStorage.getItem('handpanLabelPref') || 'Numbers';
+        const displayLabel = Array.isArray(rawLabel) ? rawLabel.join('') : String(rawLabel);
+        const textToDraw = (notationPref === 'Numbers' && (displayLabel === '0' || displayLabel === 'Ding')) ? 'D' : displayLabel;
 
-      streamCtx.fillStyle = '#ffffff';
-      streamCtx.font = `bold 18px Inter, system-ui`;
-      streamCtx.textAlign = 'center';
-      streamCtx.textBaseline = 'middle';
-      streamCtx.fillText(textToDraw, drawX, drawY + 1);
+        streamCtx.fillStyle = '#ffffff';
+        streamCtx.font = `bold 18px Inter, system-ui`;
+        streamCtx.textAlign = 'center';
+        streamCtx.textBaseline = 'middle';
+        streamCtx.fillText(textToDraw, drawX, drawY + 1);
 
-      // Coaching Highlight
-      if (cell.classList.contains('coach-wrong') || cell.classList.contains('coach-missed')) {
-        highlightCell(drawX, drawY, drawRadius, '#e74c3c', false);
+        // Coaching Highlight
+        if (cell.classList.contains('coach-wrong') || cell.classList.contains('coach-missed')) {
+          highlightCell(drawX, drawY, drawRadius, '#e74c3c', false);
+        }
       }
     }
   } // end if (ctx.playing)
