@@ -648,7 +648,8 @@ export async function start(ctx, isSync = true, skipCountdown = false) {
   const targetStart = (c.caretIndex !== null && c.caretIndex >= 0) ? c.caretIndex : 0;
 
   // COUNTDOWN SETUP
-  const useCountdown = (isListening || isReviewing()) && !skipCountdown;
+  const isGravity = document.body.classList.contains('mode-gravity') && document.body.classList.contains('present');
+  const useCountdown = (isListening || isReviewing() || isGravity) && !skipCountdown;
   if (useCountdown) {
     c.audioStep = -4;
     c.targetAudioStart = targetStart;

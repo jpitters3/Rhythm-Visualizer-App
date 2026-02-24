@@ -28,7 +28,12 @@ body.present .left {
   max-width: 100%;
   padding: 0;
   flex-grow: 1;
-  /* Propagate growth */
+}
+
+body.present.mode-gravity .container {
+  position: relative;
+  z-index: 10;
+  /* Escapes the backdrop-filter stacking context to sit above stream-view (z:0) */
 }
 
 body.present h2,
@@ -508,6 +513,12 @@ body.present .transport-container:not(#presentationControls) {
   z-index: 0;
 }
 
+body.present.mode-gravity .stream-view {
+  z-index: 20;
+  pointer-events: none;
+  /* Let clicks pass through the canvas to the handpan below */
+}
+
 #stream-canvas {
   width: 100%;
   height: 100%;
@@ -515,21 +526,55 @@ body.present .transport-container:not(#presentationControls) {
 }
 
 /* Stream Mode overrides */
-body.present.mode-stream .measure-row {
+body.present.mode-stream .measure-row,
+body.present.mode-gravity .measure-row {
   display: none !important;
 }
 
-body.present.mode-stream .static-labels {
+body.present.mode-stream .static-labels,
+body.present.mode-gravity .static-labels {
   display: none !important;
 }
 
 body.present.mode-stream .handpan-panel,
-body.present.mode-stream .labels {
+body.present.mode-stream .labels,
+body.present.mode-gravity .labels {
   display: none !important;
+}
+
+body.present.mode-gravity .handpan-panel {
+  display: flex !important;
+  position: absolute;
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  bottom: auto;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  width: auto;
+  pointer-events: none;
+  z-index: 100;
+}
+
+body.present.mode-gravity .handpan-wrap {
+  width: 400px !important;
+  height: 400px !important;
+  transform: scale(1.0);
+  background: transparent;
+}
+
+body.present.mode-stream .stream-view,
+body.present.mode-gravity .stream-view {
+  display: block;
 }
 
 body.present.mode-stream .stream-view {
   background: var(--btn-bg);
+}
+
+body.present.mode-gravity .stream-view {
+  background: transparent;
 }
 
 /* ===== IMMERSIVE DASHBOARD ===== */
