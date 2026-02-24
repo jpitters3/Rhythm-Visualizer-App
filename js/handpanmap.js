@@ -753,14 +753,14 @@ export function highlightHandpan(note, stepIndex, forceHand = null, latency = 0)
   clearTimeout(hpPulseTimers.get(key));
 
   // Base duration is min of 500ms or 90% of the interval
-  let timeoutDuration = Math.min(500, intervalMs() * 0.9);
+  let timeoutDuration = Math.min(200, intervalMs() * 0.9);
 
   // If the visual fired late, the CSS animation has already lost that time.
   // E.g. 500ms animation, 200ms late = 300ms remaining.
   // We subtract the latency so Javascript removes the class exactly when the CSS animation finishes.
   // But for Playwright testing, if latency is super high (e.g., initial load spike),
   // we don't want the visual to flash for 0ms, so we ensure a minimum of 350ms so Playwright can catch it.
-  timeoutDuration = Math.max(350, timeoutDuration - (latency * 1000));
+  timeoutDuration = Math.max(100, timeoutDuration - (latency * 1000));
 
   hpPulseTimers.set(key, setTimeout(() => {
     el.classList.remove('active', 'hp-down', 'hp-up');

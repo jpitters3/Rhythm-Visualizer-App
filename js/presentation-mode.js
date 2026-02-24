@@ -931,7 +931,7 @@ function drawGravity(ctx) {
 
   // 1. Locate Handpan and Tonefields dynamically
   const hpImg = document.getElementById('handpanImg');
-  let hpRect = { left: 0, top: 0, width: 400, height: 400 };
+  let hpRect = { left: 0, top: 0, width: 500, height: 500 };
 
   if (hpImg && hpImg.width > 0) {
     hpRect = hpImg.getBoundingClientRect();

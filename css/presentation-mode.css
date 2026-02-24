@@ -603,8 +603,8 @@ body.present.mode-gravity .stream-view {
 
   /* Rapid but organic expansion to peak */
   15% {
-    transform: translateZ(0) scale(1.3);
-    box-shadow: 0 0 0 1px var(--play-glow);
+    transform: translateZ(0) scale(1.1);
+    box-shadow: 0 0 0 4px var(--play-glow);
   }
 
   /* Immediate start of decay even if beat class persists */
@@ -615,7 +615,7 @@ body.present.mode-gravity .stream-view {
 }
 
 body.present.mode-gravity .hp-dot.active::after {
-  animation: rhythmicPulse 0.5s cubic-bezier(0.22, 1, 0.36, 0.1) forwards;
+  animation: rhythmicPulse 1s cubic-bezier(0.22, 1, 0.36, 0.1) forwards;
   animation-delay: var(--hp-pulse-delay, 0s);
   z-index: 50;
   /* animation: none !important; */
