@@ -138,6 +138,13 @@
   font-size: 14px;
 }
 
+/* Even smaller sub-dots for 16 beats */
+.sixteen-beats .sub-dot {
+  width: 18px;
+  height: 18px;
+  font-size: 14px;
+}
+
 /* Define the mobile-only layout (Max 4 beats per row) */
 @media (max-width: 768px) {
 

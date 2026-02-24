@@ -151,7 +151,8 @@ export function renderAllMeasures(ctx = activeGrid) {
   for (let m = 0; m < measureCount; m++) {
     const row = document.createElement('div');
     row.className = 'measure-row';
-    if (s === 12) row.classList.add('twelve-beats');
+    if (s >= 16) row.classList.add('sixteen-beats');
+    else if (s >= 12) row.classList.add('twelve-beats');
     if (s <= 6) row.classList.add('fewer-beats');
 
     const header = document.createElement('div');
@@ -259,9 +260,14 @@ export function renderAllMeasures(ctx = activeGrid) {
         inner.textContent = displayText;
       } else {
         cell.classList.add('multi-mode');
+        const pref = localStorage.getItem('handpanLabelPref') || 'Numbers';
         const allSubs = cell.querySelectorAll('.sub-dot');
         for (let idx = 0; idx < allSubs.length; idx++) {
-          allSubs[idx].textContent = lbl[idx];
+          let subText = lbl[idx] || '';
+          if (subText === '0' || subText === 'Ding') {
+            subText = (pref === 'Numbers') ? 'D' : ''; // Or 'D' depending on preference
+          }
+          allSubs[idx].textContent = subText;
         };
       }
 
@@ -448,12 +454,17 @@ export function setInnerLabel(i, value, ctx = activeGrid) {
       ctx.innerLabels[i][activeSubIndex] = value;
     }
 
+    const pref = localStorage.getItem('handpanLabelPref') || 'Numbers';
     const labels = ctx.innerLabels[i].filter(l => l !== '');
     cell.classList.toggle('has-label', labels.length > 0);
 
     const subs = Array.from(cell.querySelectorAll('.sub-dot'));
     ctx.innerLabels[i].forEach((label, idx) => {
-      subs[idx].textContent = label;
+      let subText = label || '';
+      if (subText === '0' || subText === 'Ding') {
+        subText = (pref === 'Numbers') ? 'D' : '';
+      }
+      subs[idx].textContent = subText;
       subs[idx].classList.toggle('active', !!label);
     });
   }
