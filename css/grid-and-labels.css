@@ -138,6 +138,11 @@
   font-size: 14px;
 }
 
+
+.sixteen-beats .cell.has-label .inner {
+  font-size: 24px;
+}
+
 /* Even smaller sub-dots for 16 beats */
 .sixteen-beats .sub-dot {
   width: 18px;
