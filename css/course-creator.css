@@ -213,7 +213,7 @@ button {
 
 /* Save Course (Primary) */
 .primary-btn {
-  background: #f1c40f;
+  background: var(--primary-color);
   /* Gold/Yellow from mockup */
   color: #3b3005;
   border: none;

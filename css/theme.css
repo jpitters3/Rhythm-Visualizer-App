@@ -57,6 +57,7 @@ h2 {
   --play-glow: rgb(231, 231, 231);
   --btn-bg: #e8e5dc;
   --btn-active: #ffd166;
+  --primary-color: #ffd166;
 }
 
 body.dark {

@@ -245,7 +245,6 @@ body.dark .clickable-nav-title:hover {
    ============================== */
 .course-item {
   background: transparent;
-  border-radius: 16px;
   margin-bottom: 16px;
   border: 1px solid rgba(0, 0, 0, 0.05);
   overflow: hidden;
@@ -259,14 +258,14 @@ body.dark .course-item {
 /* --- ACTIVE --- */
 .course-item.active {
   /* LIGHT: Indigo Glow (Replaced Gold) */
-  border-color: #6366f1;
-  background: linear-gradient(180deg, rgba(99, 102, 241, 0.1) 0%, rgba(99, 102, 241, 0.02) 100%);
+  /* border-color: #6366f1; */
+  /* background: linear-gradient(180deg, rgba(99, 102, 241, 0.1) 0%, rgba(99, 102, 241, 0.02) 100%); */
   box-shadow: 0 4px 20px rgba(99, 102, 241, 0.15);
 }
 
 body.dark .course-item.active {
-  border-color: #6366f1;
-  background: linear-gradient(180deg, rgba(99, 102, 241, 0.1) 0%, rgba(99, 102, 241, 0.02) 100%);
+  /* border-color: #6366f1; */
+  /* background: linear-gradient(180deg, rgba(99, 102, 241, 0.1) 0%, rgba(99, 102, 241, 0.02) 100%); */
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
 }
 
@@ -292,15 +291,16 @@ body.dark .course-item.collapsed:hover {
 
 /* HEADERS */
 .course-header {
-  padding: 16px 20px;
+  padding: 0px 20px;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  background: var(--primary-color);
 }
 
 .course-header h4 {
   margin: 0;
-  font-size: 15px;
+  font-size: 18px;
   font-weight: 600;
   color: #444;
   letter-spacing: 0.2px;
@@ -312,7 +312,8 @@ body.dark .course-header h4 {
 
 /* Active Header Text */
 .course-item.active .course-header h4 {
-  color: #4f46e5;
+  color: #000;
+  /* color: #4f46e5; */
   /* Dark Indigo */
   text-shadow: 0 0 10px rgba(99, 102, 241, 0.2);
 }
@@ -341,7 +342,6 @@ body.dark .collapsed-hint {
 
 .course-body {
   border-top: 1px solid rgba(0, 0, 0, 0.05);
-  padding: 8px 0;
 }
 
 body.dark .course-body {
@@ -354,12 +354,12 @@ body.dark .course-body {
 
 .section-title {
   padding: 12px 24px 6px;
-  font-size: 11px;
+  font-size: 14px;
   text-transform: uppercase;
   letter-spacing: 1px;
-  color: #888;
-  font-weight: 900;
-  background-color: rgba(0, 0, 0, 0.05);
+  color: #fff;
+  font-weight: 600;
+  background-color: rgba(0, 0, 0, 0.3);
 }
 
 body.dark .section-title {
@@ -371,7 +371,7 @@ body.dark .section-title {
    ============================== */
 .lesson-link {
   padding: 12px 24px;
-  font-size: 14px;
+  font-size: 18px;
   color: #555;
   cursor: pointer;
   border-left: 3px solid transparent;
@@ -397,9 +397,9 @@ body.dark .lesson-link:hover {
 }
 
 .lesson-link.active-lesson {
-  background: rgba(99, 102, 241, 0.1);
-  border-left-color: #6366f1;
-  color: #4f46e5;
+  background: color-mix(in srgb, #8b5cf6, transparent 80%);
+  border-left-color: #888;
+  color: #000;
   font-weight: 600;
 }
 

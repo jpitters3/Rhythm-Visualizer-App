@@ -153,16 +153,17 @@ export function renderCourseSidebar(courses) {
       if (isAdminUser(currentUser)) {
         adminActions = `
           <div class="lesson-admin-actions" style="display:flex; gap:10px; margin-top:10px;">
-            <button class="lesson-edit-btn btn-secondary" data-course-id="${course.id}">Edit Course</button>
-            <button class="lesson-delete-btn btn-danger" data-course-id="${course.id}">Delete Course</button>
           </div>
         `;
       }
 
       return `
         <div class="course-item active" data-id="${course.id}">
-          <div class="course-header">
-            <h4>${course.title}</h4>
+          <div class="course-header" style="justify-content: flex-start; gap: 8px;">
+            <button class="toggle-course-btn" data-action="toggle-course" data-id="${course.id}" style="background: none; border: none; cursor: pointer; padding: 0; display: flex; align-items: center; color: currentColor;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="transform: rotate(90deg); transition: transform 0.2s;"><polyline points="9 18 15 12 9 6"></polyline></svg>
+            </button>
+            <h4 style="margin: 0; flex-grow: 1;">${course.title}</h4>
             ${(isAdminUser(currentUser)) ? `<div class="edit-course" data-action="edit-course" data-id="${course.id}" title="Edit Course">
                <svg width="16px" height="16px" style="pointer-events: none;" fill="currentColor" viewBox="0 0 16 16"><path d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.813-6.814z"/><path fill-rule="evenodd" d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5H9a.5.5 0 0 0 0-1H2.5A1.5 1.5 0 0 0 1 2.5z"/></svg>
              </div>` : ''}
@@ -196,9 +197,12 @@ export function renderCourseSidebar(courses) {
     } else {
       // === COLLAPSED (INACTIVE) ===
       return `
-        <div class="course-item collapsed" data-id="${course.id}" data-action="set-active-course" data-course-id="${course.id}">
-          <div class="course-header">
-            <h4>${course.title}</h4>
+        <div class="course-item collapsed" data-id="${course.id}" >
+          <div class="course-header" style="justify-content: flex-start; gap: 8px; cursor: pointer;" data-action="toggle-course" data-id="${course.id}">
+            <button class="toggle-course-btn" style="background: none; border: none; cursor: pointer; padding: 0; display: flex; align-items: center; color: currentColor; pointer-events: none;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="transition: transform 0.2s;"><polyline points="9 18 15 12 9 6"></polyline></svg>
+            </button>
+            <h4 style="margin: 0; flex-grow: 1;">${course.title}</h4>
             <span class="collapsed-hint">Click to expand</span>
           </div>
         </div>
@@ -289,6 +293,18 @@ export function loadLesson(lessonId) {
 
     // Force visible
     player.style.display = 'block';
+
+    // Add active lesson style to lesson-link
+    const lessonLink = document.querySelector(`.lesson-link[data-id="${lessonId}"]`);
+    if (lessonLink) {
+      lessonLink.classList.add('active-lesson');
+    }
+
+    // Remove active lesson style from other lesson-links
+    const otherLessonLinks = document.querySelectorAll('.lesson-link:not([data-id="' + lessonId + '"])');
+    otherLessonLinks.forEach(link => {
+      link.classList.remove('active-lesson');
+    });
 
     const section = allSections.find(s => s.id === lesson.section_id);
     const sectionTitle = section ? section.title : 'Unknown Section';
@@ -677,8 +693,20 @@ document.body.addEventListener('click', async (e) => {
       }
       break;
     case 'set-active-course':
-      const cid = target.dataset.courseId;
+      const cid = target.dataset.courseId || target.dataset.id;
       if (cid) setActiveCourse(cid);
+      break;
+    case 'toggle-course':
+      const toggleId = target.dataset.id;
+      if (toggleId) {
+        if (activeCourseId === toggleId) {
+          // Collapse if currently active
+          setActiveCourse(null);
+        } else {
+          // Expand
+          setActiveCourse(toggleId);
+        }
+      }
       break;
     case 'toggle-completion':
       const lid = target.dataset.lessonId;
