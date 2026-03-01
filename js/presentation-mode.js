@@ -967,6 +967,11 @@ function drawGravity(ctx) {
       let targetX = centerX;
       let targetY = centerY;
 
+      // Proximity Footprint values (defaults to circle of radius 35)
+      let targetRx = 35;
+      let targetRy = 35;
+      let targetRot = 0;
+
       // Fallback if HANDPAN_MAP is missing: Arrange notes in a simple circle
       let isFallback = false;
 
@@ -976,6 +981,16 @@ function drawGravity(ctx) {
         // NOTE_CONFIG x and y are percentages (0-100) of the handpan bounds.
         targetX = (hpRect.left - canvasRect.left) + (NOTE_CONFIG.x / 100) * hpRect.width;
         targetY = (hpRect.top - canvasRect.top) + (NOTE_CONFIG.y / 100) * hpRect.height;
+
+        // Footprint radius calculation based on width, height or r
+        if (NOTE_CONFIG.width && NOTE_CONFIG.height) {
+          targetRx = (NOTE_CONFIG.width / 100) * hpRect.width / 2;
+          targetRy = (NOTE_CONFIG.height / 100) * hpRect.height / 2;
+          targetRot = (NOTE_CONFIG.rotation || 0) * (Math.PI / 180);
+        } else if (NOTE_CONFIG.r) {
+          targetRx = (NOTE_CONFIG.r / 100) * hpRect.width;
+          targetRy = targetRx;
+        }
 
       } else if (strLabel === 'Ding' || strLabel === 'Tak' || strLabel === 'Slap') {
         // Center hits
@@ -1106,7 +1121,7 @@ function drawGravity(ctx) {
           seenProximityTargets.add(targetKey);
 
           streamCtx.beginPath();
-          streamCtx.arc(targetX, targetY, 35, 0, Math.PI * 2);
+          streamCtx.ellipse(targetX, targetY, targetRx, targetRy, targetRot, 0, Math.PI * 2);
           streamCtx.fillStyle = `rgba(${cr}, ${cg}, ${cb}, ${co})`;
           streamCtx.fill();
         }
