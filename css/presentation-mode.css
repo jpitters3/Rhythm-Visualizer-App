@@ -192,6 +192,7 @@ body.present .measure-row.current-measure {
 /* Position Handpan at Bottom Center */
 body.present .handpan-panel {
   position: fixed;
+  max-width: 400px;
   left: 50%;
   top: calc(var(--horizon) + 20vh);
   /* Starts below the rhythm highway */
@@ -276,12 +277,6 @@ body.present .lesson-panel {
 /* Ensure handpan image is visible and centered */
 body.present .handpan-wrap {
   margin: 0;
-  padding: 0;
-}
-
-body.present .handpan-overlay,
-body.present .v-hand-layer {
-  inset: 0;
 }
 
 /* Hide headers/labels in presentation for cleaner look? 

@@ -17,6 +17,7 @@ let presentBtn, exitPresent;
 let presentationViewMode = localStorage.getItem(PRESENT_MODE_KEY) || 'measure'; // Default to measure for consistency
 let streamCanvas = null;
 let streamCtx = null;
+let globalFallbackWarned = false;
 
 // Dashboard State & Aesthetics
 let isDashboardOpen = false;
@@ -930,11 +931,11 @@ function drawGravity(ctx) {
   }
 
   // 1. Locate Handpan and Tonefields dynamically
-  const hpImg = document.getElementById('handpanImg');
+  const hpOverlay = document.querySelector('.handpan-overlay') || document.getElementById('handpanImg');
   let hpRect = { left: 0, top: 0, width: 500, height: 500 };
 
-  if (hpImg && hpImg.width > 0) {
-    hpRect = hpImg.getBoundingClientRect();
+  if (hpOverlay && hpOverlay.offsetWidth > 0) {
+    hpRect = hpOverlay.getBoundingClientRect();
   }
 
   const canvasRect = streamCanvas.getBoundingClientRect();
@@ -947,7 +948,7 @@ function drawGravity(ctx) {
   // 2. Sliding Window Calculation
   const currentTotalStep = pos.step + pos.fraction;
   const LOOKAHEAD_STEPS = 16; // How many steps in the future to draw
-  const SPEED_FACTOR = 40; // Pixels per step 
+  const SPEED_FACTOR = 100; // Pixels per step 
 
   if (ctx.playing) {
     const seenProximityTargets = new Set();
@@ -998,6 +999,10 @@ function drawGravity(ctx) {
         targetY = hpCenterY;
       } else {
         // Fallback positioning (pseudo-random circle based on label string)
+        if (!globalFallbackWarned) {
+          console.warn('NOTE MISSING IN HANDPAN_MAP, FALLING BACK:', strLabel, HANDPAN_MAP);
+          globalFallbackWarned = true;
+        }
         isFallback = true;
         const fallbackAngle = (strLabel.charCodeAt(0) * 45) * (Math.PI / 180);
         const tr = hpRadius * 0.7;
