@@ -1091,21 +1091,21 @@ function drawGravity(ctx) {
       }
       else {
         co = 0.35;
-        if (stepsAway < 1) {
+        if (stepsAway < 2) {
           // n-1: Green (dt between 0 and 1)
           cr = 34; cg = 197; cb = 94;
-        } else if (stepsAway < 2) {
-          // n-2: Yellow
-          cr = 234; cg = 179; cb = 8;
-        } else if (stepsAway < 3) {
-          // n-3: Orange
-          cr = 255; cg = 140; cb = 0;
-        } else if (stepsAway < 4) {
-          // n-4: Red
-          cr = 255; cg = 0; cb = 0;
-        } else if (stepsAway < 5) {
-          // n-5: Indigo
-          cr = 79; cg = 70; cb = 239;
+          // } else if (stepsAway < 2) {
+          //   // n-2: Yellow
+          //   cr = 234; cg = 179; cb = 8;
+          // } else if (stepsAway < 3) {
+          //   // n-3: Orange
+          //   cr = 255; cg = 140; cb = 0;
+          // } else if (stepsAway < 4) {
+          //   // n-4: Red
+          //   cr = 255; cg = 0; cb = 0;
+          // } else if (stepsAway < 5) {
+          // // n-5: Indigo
+          // cr = 79; cg = 70; cb = 239;
         } else {
           // n-6 or less: Deep purple
           cr = 148; cg = 41; cb = 184;

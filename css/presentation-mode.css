@@ -555,7 +555,7 @@ body.present.mode-gravity .handpan-panel {
   width: auto;
   pointer-events: none;
   z-index: 100;
-  opacity: 0.5;
+  opacity: 0.9;
 }
 
 body.present.mode-gravity .handpan-wrap {
