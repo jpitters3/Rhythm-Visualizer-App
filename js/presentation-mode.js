@@ -1163,7 +1163,7 @@ function drawGravity(ctx) {
 
       const drawCol = `rgb(${flashCr}, ${flashCg}, ${flashCb})`;
 
-      if (Aesthetics.comets) {
+      if (Aesthetics.comets && dt > 0) {
         // Optional Trail Effect (Comet Tail)
         if (Aesthetics.trails && dt > 0) {
           // The trail extends BACKWARD along the vector (positive nx, ny because nx is target -> source direction)
@@ -1235,7 +1235,7 @@ function drawGravity(ctx) {
         cell._hasSparkedGrav = false;
       }
 
-      if (Aesthetics.comets) {
+      if (Aesthetics.comets && dt > 0) {
         // Note Text
         const notationPref = localStorage.getItem('handpanLabelPref') || 'Numbers';
         const displayLabel = Array.isArray(rawLabel) ? rawLabel.join('') : String(rawLabel);
