@@ -33,7 +33,15 @@ export class TransportUI {
     if (this.metroBtn) {
       this.metroBtn.onclick = (e) => {
         e.stopPropagation();
-        this.ctx.metronomeOn = !this.ctx.metronomeOn;
+        const currentSound = getMetronomeSound();
+        if (!this.ctx.metronomeOn) {
+          this.ctx.metronomeOn = true;
+          setMetronomeSound('Click');
+        } else if (currentSound === 'Click') {
+          setMetronomeSound('Shaker');
+        } else {
+          this.ctx.metronomeOn = false;
+        }
         localStorage.setItem('groovepan_metro' + '-' + this.ctx.id, this.ctx.metronomeOn ? 'on' : 'off');
         TransportRegistry.updateAll(this.ctx);
       };
@@ -87,6 +95,8 @@ export class TransportUI {
       const isOn = this.ctx.metronomeOn;
       this.metroBtn.classList.toggle('active', isOn);
       this.metroBtn.style.opacity = isOn ? '1' : '0.5';
+      const sound = getMetronomeSound();
+      this.metroBtn.title = isOn ? `Metronome: ${sound}` : 'Metronome: Off';
     }
 
     if (this.bpmInput) {
