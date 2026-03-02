@@ -586,23 +586,35 @@
 
         <!-- Aesthetics -->
         <div class="dashboard-section">
-          <label>Animations</label>
+          <!-- Atmosphere Selector -->
+          <label style="font-size:1em">Atmosphere</label>
           <div id="dashAtmosphereButtons" class="dash-aesthetic-grid">
-            <button id="dashSparksBtn" class="dash-pill active">✨ Sparks</button>
-            <button id="dashTrailsBtn" class="dash-pill active">☄️ Trails</button>
-            <button id="dashGlowBtn" class="dash-pill active">🌟 Pulse</button>
-            <button id="dashIntervalBtn" class="dash-pill">⏭️ Interval</button>
-            <button id="dashStickingBtn" class="dash-pill active">🎨 Sticking</button>
-            <button id="dashProximityBtn" class="dash-pill">🎯 Proximity</button>
-            <button id="dashColorsBtn" class="dash-pill active">🌈 Colors</button>
-            <button id="dashCometsBtn" class="dash-pill active">☄️ Comets</button>
             <!-- Dynamic Category Buttons will be injected here -->
           </div>
-          <!-- Atmosphere Selector -->
-          <label>Atmosphere</label>
           <select id="aestheticWorldSelect" class="dash-dropdown" style="display:none; margin-top:10px; width:100%;">
             <option value="" disabled selected>Select Atmosphere...</option>
           </select>
+        </div>
+        <div class="dashboard-section">
+          <label style="font-size:1em">FX</label>
+          <div class="dash-aesthetic-grid">
+            <button id="dashSparksBtn" class="dash-pill">✨ Sparks</button>
+          </div>
+          <label>Stream FX</label>
+          <div class="dash-aesthetic-grid">
+            <button id="dashGlowBtn" class="dash-pill">🌟 Glow</button>
+          </div>
+          <label>Gravity FX</label>
+          <div class="dash-aesthetic-grid">
+            <button id="dashProximityBtn" class="dash-pill">🎯 Targets</button>
+            <!-- <button id="dashColorsBtn" class="dash-pill">🌈 Colors</button> -->
+            <button id="dashStickingBtn" class="dash-pill">🔴 Right / 🔵 Left</button>
+          </div>
+          <div class="dash-aesthetic-grid">
+            <button id="dashCometsBtn" class="dash-pill active">☄️ Comets</button>
+            <button id="dashTrailsBtn" class="dash-pill">☄️ Trails</button>
+            <button id="dashIntervalBtn" class="dash-pill">⏭️ Interval</button>
+          </div>
         </div>
       </div>
     </div>

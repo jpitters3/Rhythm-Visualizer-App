@@ -23,13 +23,13 @@ let globalFallbackWarned = false;
 let isDashboardOpen = false;
 let isMicLoading = false;
 export const Aesthetics = {
-  sparks: false,
+  sparks: true,
   trails: false,
-  glow: true,
+  glow: false,
   sticking: true,
   proximity: true,
-  colors: true,
-  comets: false
+  comets: false,
+  interval: false
 };
 
 const sparks = []; // { x, y, vx, vy, alpha, color }
@@ -162,9 +162,25 @@ export async function setPresentation(on) {
     if (measuresEl) measuresEl.style.display = 'block';
 
     document.body.classList.remove('mode-stream', 'mode-measure', 'mode-gravity');
+
+    updateQuickSettingsDefaults();
   }
 }
 
+function updateQuickSettingsDefaults() {
+  for (const a in Aesthetics) {
+    let s = a;
+    s = s.charAt(0).toUpperCase() + s.slice(1);
+    const btn = document.getElementById(`dash${s}Btn`);
+    if (btn) {
+      if (Aesthetics[a]) {
+        btn.classList.add('active');
+      } else {
+        btn.classList.remove('active');
+      }
+    }
+  }
+}
 
 function updatePresentationView(currentStep, ctx = gridA) {
   if (ctx.id !== 'A') return;
@@ -175,6 +191,8 @@ function updatePresentationView(currentStep, ctx = gridA) {
   } else {
     updateMeasureView(currentStep, ctx);
   }
+
+  updateQuickSettingsDefaults();
 }
 
 function updateStaticHeader(cols, ctx = gridA) {
@@ -341,12 +359,36 @@ function initDashboard() {
   }
 
   // 3. Aesthetics
+
   const bindAesthetic = (id, key, addBodyClass = false) => {
     const btn = document.getElementById(id);
     if (!btn) return;
+
+    // Load from local storage
+    const saved = localStorage.getItem(`aesthetic_${key}`);
+    if (saved !== null) {
+      Aesthetics[key] = saved === 'true';
+    }
+
+    // Initial state
+    btn.classList.toggle('active', Aesthetics[key]);
+    if (addBodyClass) {
+      document.body.classList.toggle('no-sticking', !Aesthetics[key]);
+    }
+
     btn.onclick = () => {
       Aesthetics[key] = !Aesthetics[key];
       btn.classList.toggle('active', Aesthetics[key]);
+
+      if (key === 'comets') {
+        const trailsBtn = document.getElementById('dashTrailsBtn');
+        trailsBtn.disabled = !Aesthetics.comets;
+        const intervalBtn = document.getElementById('dashIntervalBtn');
+        intervalBtn.disabled = !Aesthetics.comets;
+      }
+
+      // Save to local storage
+      localStorage.setItem(`aesthetic_${key}`, Aesthetics[key]);
 
       if (addBodyClass) {
         document.body.classList.toggle('no-sticking', !Aesthetics[key]);
@@ -362,6 +404,12 @@ function initDashboard() {
   bindAesthetic('dashProximityBtn', 'proximity');
   bindAesthetic('dashColorsBtn', 'colors');
   bindAesthetic('dashCometsBtn', 'comets');
+
+  // Set initial disabled state for Comets dependent buttons
+  const initTrailsBtn = document.getElementById('dashTrailsBtn');
+  const initIntervalBtn = document.getElementById('dashIntervalBtn');
+  if (initTrailsBtn) initTrailsBtn.disabled = !Aesthetics.comets;
+  if (initIntervalBtn) initIntervalBtn.disabled = !Aesthetics.comets;
 
   // === DYNAMIC WORLD & CATEGORY MANAGEMENT ===
   const setWorld = (worldIdOrFilename) => {
@@ -1027,25 +1075,21 @@ function drawGravity(ctx) {
 
       let visualDt = dt;
       if (Aesthetics.interval && dt > 0) {
-        // We want the comet to rest at destination (0.0) when 0 < dt <= 1.0
-        // We want it to rest at distance 1.0 when 1.0 < dt <= 2.0, etc.
         const targetHoverDist = Math.max(0, Math.ceil(dt) - 1);
         const frac = dt - Math.floor(dt); // 0.99 down to 0.00 inside the tier
 
         // 'extraHover' adds distance to push it back up to the PREVIOUS tier's resting spot.
         let extraHover = 0;
 
-        if (dt > 1.0) {
-          // For the first 65% of the beat time (frac from 0.99 down to 0.35), 
-          // the comet rests at the HIGHER tier (+1 distance).
-          if (frac > 0.35) {
-            extraHover = 1.0;
-          } else {
-            // In the final 35% of the beat time (frac from 0.35 down to 0.00),
-            // it gets sucked forward (extraHover drops from 1.0 down to 0.0)
-            let pull = frac / 0.35; // 1.0 (far away) down to 0.0 (arrived at targetHoverDist)
-            extraHover = Math.pow(pull, 1.5);
-          }
+        // For the first 65% of the beat time (frac from 0.99 down to 0.35), 
+        // the comet rests at the HIGHER tier (+1 distance).
+        if (frac > 0.35) {
+          extraHover = 1.0;
+        } else {
+          // In the final 35% of the beat time (frac from 0.35 down to 0.00),
+          // it gets sucked forward (extraHover drops from 1.0 down to 0.0)
+          let pull = frac / 0.35; // 1.0 (far away) down to 0.0 (arrived at targetHoverDist)
+          extraHover = Math.pow(pull, 1.5);
         }
 
         visualDt = targetHoverDist + extraHover;
@@ -1112,8 +1156,8 @@ function drawGravity(ctx) {
           // // n-5: Indigo
           // cr = 79; cg = 70; cb = 239;
         } else {
-          // n-6 or less: Deep purple
-          cr = 148; cg = 41; cb = 184;
+          // n-6 or less: Gold
+          cr = 255; cg = 215; cb = 0;
         }
       }
 
@@ -1132,10 +1176,8 @@ function drawGravity(ctx) {
         }
       }
 
-      if (!Aesthetics.colors) {
-        // Fixed: Deep purple
-        cr = 148; cg = 41; cb = 184;
-      }
+      // Fixed comet colour: Gold
+      cr = 255; cg = 215; cb = 0;
 
       let drawRadius = 20;
       streamCtx.globalAlpha = alpha;
