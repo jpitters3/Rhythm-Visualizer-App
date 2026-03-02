@@ -29,6 +29,7 @@ const renameBtn = document.getElementById('renameBtn');
 const deleteBtn = document.getElementById('deleteBtn');
 const exportBtn = document.getElementById('exportBtn');
 const importBtn = document.getElementById('importBtn');
+const loadBtn = document.getElementById('loadBtn');
 
 if (patternSelect) {
   patternSelect.addEventListener('change', async () => {
@@ -263,6 +264,32 @@ saveBtn?.addEventListener('click', async (e) => {
 
   if (!name) return;
   saveCurrentPatternAs(name);
+});
+
+loadBtn?.addEventListener('click', async (e) => {
+  if (e) e.stopPropagation();
+  const selected = getSelectedPatternName();
+  if (!selected) {
+    alert('Please select a pattern to load.');
+    return;
+  }
+
+  const menu = document.getElementById('fileDropdownMenu');
+  if (menu) menu.classList.remove('show');
+
+  if (hasUnsavedChanges()) {
+    showConfirm(
+      'Unsaved Changes',
+      'You have unsaved changes in the current pattern. Discard them and load the new pattern?',
+      async () => {
+        await loadPatternByName(selected);
+        updatePatternButtons();
+      }
+    );
+  } else {
+    await loadPatternByName(selected);
+    updatePatternButtons();
+  }
 });
 
 export async function saveCurrentPatternAs(name) {

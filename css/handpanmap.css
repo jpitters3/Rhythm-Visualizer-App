@@ -177,6 +177,18 @@ body:not(.dark) .hp-dot[data-note="S"]::after {
   box-shadow: 0 0 0 10px color-mix(in srgb, var(--up-fill) 22%, transparent);
 }
 
+/* Sticking Colors Override */
+body.no-sticking .hp-dot.hp-down::after,
+body.no-sticking .hp-dot.hp-up::after {
+  border-color: rgba(255, 255, 255, 0.7) !important;
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+
+body.no-sticking .hp-dot.active.hp-down::after,
+body.no-sticking .hp-dot.active.hp-up::after {
+  box-shadow: 0 0 0 10px rgba(255, 255, 255, 0.22) !important;
+}
+
 span.note-label {
   left: 50%;
   top: 50%;

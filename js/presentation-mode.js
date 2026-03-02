@@ -4,6 +4,7 @@ import { labelForStep } from './notegrid.js';
 import { addTickObserver, getPlaybackPosition } from './noteplayer.js';
 import { TransportRegistry } from './transport-ui.js';
 import { Bus, BUS_EVENT } from './bus.js';
+import { HANDPAN_MAP } from './handpanmap.js';
 
 export const PRESENT_KEY = 'groovepan_presentation_mode';
 export const PRESENT_MODE_KEY = 'groovepan_presentation_mode_view';
@@ -16,20 +17,25 @@ let presentBtn, exitPresent;
 let presentationViewMode = localStorage.getItem(PRESENT_MODE_KEY) || 'measure'; // Default to measure for consistency
 let streamCanvas = null;
 let streamCtx = null;
+let globalFallbackWarned = false;
 
 // Dashboard State & Aesthetics
 let isDashboardOpen = false;
 let isMicLoading = false;
 export const Aesthetics = {
   sparks: true,
-  trails: true,
-  glow: true
+  trails: false,
+  glow: false,
+  sticking: true,
+  proximity: true,
+  comets: false,
+  interval: false
 };
 
 const sparks = []; // { x, y, vx, vy, alpha, color }
 
 export function setPresentationMode(mode) {
-  if (['measure', 'stream'].includes(mode)) {
+  if (['measure', 'stream', 'gravity'].includes(mode)) {
     presentationViewMode = mode;
     localStorage.setItem(PRESENT_MODE_KEY, mode);
 
@@ -38,6 +44,7 @@ export function setPresentationMode(mode) {
       // Toggle Classes on Body for CSS styling
       document.body.classList.toggle('mode-stream', mode === 'stream');
       document.body.classList.toggle('mode-measure', mode === 'measure');
+      document.body.classList.toggle('mode-gravity', mode === 'gravity');
 
       lastMeasureIndex = -1; // Force full re-render
       // We need to access gridA, so we import it (already imported)
@@ -86,6 +93,11 @@ function animatePresentation() {
     handleStreamResize();
     updateSparks();
     drawHighway(gridA);
+  } else if (presentationViewMode === 'gravity') {
+    ensureStreamCanvasReady(); // Reusing the same canvas container
+    handleStreamResize();
+    updateSparks();
+    drawGravity(gridA);
   }
 
   animationFrameId = requestAnimationFrame(animatePresentation);
@@ -149,20 +161,38 @@ export async function setPresentation(on) {
     const measuresEl = document.getElementById('measures');
     if (measuresEl) measuresEl.style.display = 'block';
 
-    document.body.classList.remove('mode-stream', 'mode-measure');
+    document.body.classList.remove('mode-stream', 'mode-measure', 'mode-gravity');
+
+    updateQuickSettingsDefaults();
   }
 }
 
+function updateQuickSettingsDefaults() {
+  for (const a in Aesthetics) {
+    let s = a;
+    s = s.charAt(0).toUpperCase() + s.slice(1);
+    const btn = document.getElementById(`dash${s}Btn`);
+    if (btn) {
+      if (Aesthetics[a]) {
+        btn.classList.add('active');
+      } else {
+        btn.classList.remove('active');
+      }
+    }
+  }
+}
 
 function updatePresentationView(currentStep, ctx = gridA) {
   if (ctx.id !== 'A') return;
   if (!document.body.classList.contains('present')) return;
 
-  if (presentationViewMode === 'stream') {
-    updateStreamView(currentStep, ctx);
+  if (presentationViewMode === 'stream' || presentationViewMode === 'gravity') {
+    updateStreamView(currentStep, ctx); // Canvas handles both
   } else {
     updateMeasureView(currentStep, ctx);
   }
+
+  updateQuickSettingsDefaults();
 }
 
 function updateStaticHeader(cols, ctx = gridA) {
@@ -329,18 +359,57 @@ function initDashboard() {
   }
 
   // 3. Aesthetics
-  const bindAesthetic = (id, key) => {
+
+  const bindAesthetic = (id, key, addBodyClass = false) => {
     const btn = document.getElementById(id);
     if (!btn) return;
+
+    // Load from local storage
+    const saved = localStorage.getItem(`aesthetic_${key}`);
+    if (saved !== null) {
+      Aesthetics[key] = saved === 'true';
+    }
+
+    // Initial state
+    btn.classList.toggle('active', Aesthetics[key]);
+    if (addBodyClass) {
+      document.body.classList.toggle('no-sticking', !Aesthetics[key]);
+    }
+
     btn.onclick = () => {
       Aesthetics[key] = !Aesthetics[key];
       btn.classList.toggle('active', Aesthetics[key]);
+
+      if (key === 'comets') {
+        const trailsBtn = document.getElementById('dashTrailsBtn');
+        trailsBtn.disabled = !Aesthetics.comets;
+        const intervalBtn = document.getElementById('dashIntervalBtn');
+        intervalBtn.disabled = !Aesthetics.comets;
+      }
+
+      // Save to local storage
+      localStorage.setItem(`aesthetic_${key}`, Aesthetics[key]);
+
+      if (addBodyClass) {
+        document.body.classList.toggle('no-sticking', !Aesthetics[key]);
+      }
     };
   };
 
   bindAesthetic('dashSparksBtn', 'sparks');
   bindAesthetic('dashTrailsBtn', 'trails');
   bindAesthetic('dashGlowBtn', 'glow');
+  bindAesthetic('dashIntervalBtn', 'interval');
+  bindAesthetic('dashStickingBtn', 'sticking', true);
+  bindAesthetic('dashProximityBtn', 'proximity');
+  bindAesthetic('dashColorsBtn', 'colors');
+  bindAesthetic('dashCometsBtn', 'comets');
+
+  // Set initial disabled state for Comets dependent buttons
+  const initTrailsBtn = document.getElementById('dashTrailsBtn');
+  const initIntervalBtn = document.getElementById('dashIntervalBtn');
+  if (initTrailsBtn) initTrailsBtn.disabled = !Aesthetics.comets;
+  if (initIntervalBtn) initIntervalBtn.disabled = !Aesthetics.comets;
 
   // === DYNAMIC WORLD & CATEGORY MANAGEMENT ===
   const setWorld = (worldIdOrFilename) => {
@@ -850,6 +919,394 @@ function highlightCell(x, y, r, color, glow) {
   streamCtx.beginPath();
   streamCtx.arc(x, y, r, 0, Math.PI * 2);
   streamCtx.stroke();
+}
+
+// Helper to convert hex to rgb string for rgba gradients
+function hexToRgb(hex) {
+  // If it's already an rgb/rgba string, try to extract numbers
+  if (hex.startsWith('rgb')) {
+    const match = hex.match(/\d+/g);
+    if (match && match.length >= 3) {
+      return `${match[0]}, ${match[1]}, ${match[2]}`;
+    }
+    return "255, 255, 255"; // Fallback
+  }
+
+  // Clean hex
+  hex = hex.replace(/^#/, '');
+  if (hex.length === 3) {
+    hex = hex.split('').map(char => char + char).join('');
+  }
+
+  const bigint = parseInt(hex, 16);
+  if (isNaN(bigint)) return "255, 255, 255";
+
+  const r = (bigint >> 16) & 255;
+  const g = (bigint >> 8) & 255;
+  const b = bigint & 255;
+
+  return `${r}, ${g}, ${b}`;
+}
+
+// === GRAVITY VIEW (Radial Inward) === //
+function drawGravity(ctx) {
+  if (!streamCtx || !streamCanvas) return;
+
+  const dpr = window.devicePixelRatio || 1;
+  const w = streamCanvas.width / dpr;
+  const h = streamCanvas.height / dpr;
+  const pos = getPlaybackPosition(ctx);
+
+  const centerY = h / 2;
+  const centerX = w / 2;
+
+  const totalSteps = ctx.cells.length;
+  if (totalSteps === 0) return;
+
+  streamCtx.save();
+  streamCtx.clearRect(0, 0, w, h);
+
+  // Theme & Colors
+  const isDark = document.body.classList.contains('dark');
+  const handRCol = isDark ? '#fd0380' : '#610a42';
+  const handLCol = isDark ? 'rgb(30, 121, 232)' : 'rgb(2, 68, 150)';
+  let cellBgCol = isDark ? '#222233' : '#ffffff';
+  let isGlass = false;
+
+  if (Aesthetics.world === 'nature' || Aesthetics.world === 'sky') {
+    cellBgCol = 'rgba(255, 255, 255, 0.1)';
+    isGlass = true;
+  }
+
+  // 1. Locate Handpan and Tonefields dynamically
+  const hpOverlay = document.querySelector('.handpan-overlay') || document.getElementById('handpanImg');
+  let hpRect = { left: 0, top: 0, width: 500, height: 500 };
+
+  if (hpOverlay && hpOverlay.offsetWidth > 0) {
+    hpRect = hpOverlay.getBoundingClientRect();
+  }
+
+  const canvasRect = streamCanvas.getBoundingClientRect();
+
+  // Calculate Handpan center relative to canvas (Canvas is usually absolute full screen)
+  const hpCenterX = (hpRect.left - canvasRect.left) + (hpRect.width / 2);
+  const hpCenterY = (hpRect.top - canvasRect.top) + (hpRect.height / 2);
+  const hpRadius = (hpRect.width / 2) || 200;
+
+  // 2. Sliding Window Calculation
+  const currentTotalStep = pos.step + pos.fraction;
+  const LOOKAHEAD_STEPS = 16; // How many steps in the future to draw
+  const SPEED_FACTOR = 100; // Pixels per step 
+
+  if (ctx.playing) {
+    const seenProximityTargets = new Set();
+    for (let j = Math.floor(currentTotalStep); j <= Math.ceil(currentTotalStep) + LOOKAHEAD_STEPS; j++) {
+      const i = j % totalSteps;
+      const cell = ctx.cells[i];
+      const rawLabel = ctx.innerLabels[i];
+
+      if (!cell || !rawLabel || rawLabel === '') continue;
+
+      // Time Delta (0 = impact)
+      const dt = j - currentTotalStep;
+      if (dt < -0.5) continue; // Don't draw things that have already passed (unless trailing out)
+
+      // Calculate Target Coordinates
+      const strLabel = String(rawLabel);
+      let targetX = centerX;
+      let targetY = centerY;
+
+      // Proximity Footprint values (defaults to circle of radius 35)
+      let targetRx = 35;
+      let targetRy = 35;
+      let targetRot = 0;
+
+      // Fallback if HANDPAN_MAP is missing: Arrange notes in a simple circle
+      let isFallback = false;
+
+      if (HANDPAN_MAP && HANDPAN_MAP[strLabel]) {
+        const NOTE_CONFIG = HANDPAN_MAP[strLabel];
+
+        // NOTE_CONFIG x and y are percentages (0-100) of the handpan bounds.
+        targetX = (hpRect.left - canvasRect.left) + (NOTE_CONFIG.x / 100) * hpRect.width;
+        targetY = (hpRect.top - canvasRect.top) + (NOTE_CONFIG.y / 100) * hpRect.height;
+
+        // Footprint radius calculation based on width, height or r
+        if (NOTE_CONFIG.width && NOTE_CONFIG.height) {
+          targetRx = (NOTE_CONFIG.width / 100) * hpRect.width / 2;
+          targetRy = (NOTE_CONFIG.height / 100) * hpRect.height / 2;
+          targetRot = (NOTE_CONFIG.rotation || 0) * (Math.PI / 180);
+        } else if (NOTE_CONFIG.r) {
+          targetRx = (NOTE_CONFIG.r / 100) * hpRect.width;
+          targetRy = targetRx;
+        }
+
+      } else if (strLabel === 'Ding' || strLabel === 'Tak' || strLabel === 'Slap') {
+        // Center hits
+        targetX = hpCenterX;
+        targetY = hpCenterY;
+      } else {
+        // Fallback positioning (pseudo-random circle based on label string)
+        if (!globalFallbackWarned) {
+          console.warn('NOTE MISSING IN HANDPAN_MAP, FALLING BACK:', strLabel, HANDPAN_MAP);
+          globalFallbackWarned = true;
+        }
+        isFallback = true;
+        const fallbackAngle = (strLabel.charCodeAt(0) * 45) * (Math.PI / 180);
+        const tr = hpRadius * 0.7;
+        targetX = hpCenterX + tr * Math.cos(fallbackAngle);
+        targetY = hpCenterY + tr * Math.sin(fallbackAngle);
+      }
+
+      // Spawn Vector Definition (From Center extending outward)
+      // To make it fall IN, the starting point needs to be "dt" distance AWAY along the vector passing through the center to the target.
+      // If it's a center hit (Ding), we need a fallback aesthetic vector, like straight up.
+      let vx = targetX - hpCenterX;
+      let vy = targetY - hpCenterY;
+      let vLen = Math.sqrt(vx * vx + vy * vy);
+
+      if (vLen < 1) {
+        vx = 0; vy = -1; vLen = 1; // Fall straight down for center notes
+      }
+
+      // Normalize and scale by time*speed
+      const nx = vx / vLen;
+      const ny = vy / vLen;
+
+      let visualDt = dt;
+      if (Aesthetics.interval && dt > 0) {
+        const targetHoverDist = Math.max(0, Math.ceil(dt) - 1);
+        const frac = dt - Math.floor(dt); // 0.99 down to 0.00 inside the tier
+
+        // 'extraHover' adds distance to push it back up to the PREVIOUS tier's resting spot.
+        let extraHover = 0;
+
+        // For the first 65% of the beat time (frac from 0.99 down to 0.35), 
+        // the comet rests at the HIGHER tier (+1 distance).
+        if (frac > 0.35) {
+          extraHover = 1.0;
+        } else {
+          // In the final 35% of the beat time (frac from 0.35 down to 0.00),
+          // it gets sucked forward (extraHover drops from 1.0 down to 0.0)
+          let pull = frac / 0.35; // 1.0 (far away) down to 0.0 (arrived at targetHoverDist)
+          extraHover = Math.pow(pull, 1.5);
+        }
+
+        visualDt = targetHoverDist + extraHover;
+      }
+
+      const distanceOffset = visualDt * SPEED_FACTOR;
+
+      const drawX = targetX + (nx * distanceOffset);
+      const drawY = targetY + (ny * distanceOffset);
+
+      // Fade in from distance
+      let alpha = 1.0;
+
+      if (!Aesthetics.sticking) {
+        if (visualDt > LOOKAHEAD_STEPS - 2) {
+          alpha = (LOOKAHEAD_STEPS - visualDt) / 2.0;
+        }
+        if (visualDt < 0) {
+          alpha = 1.0 + (visualDt * 2.0); // Fade out instantly after hit
+          if (alpha < 0) alpha = 0;
+        }
+
+        if (alpha <= 0) continue;
+      }
+
+      // Color Logic
+      const stepsAway = Math.max(0, Math.floor(dt));
+
+      let cr = 1, cg = 1, cb = 1, co = 1;
+
+      // Drawing Logic (Orb)
+      const hand = (ctx.innerHands && ctx.innerHands[i]) ? ctx.innerHands[i] : (i % 2 === 0 ? 'R' : 'L');
+
+      if (Aesthetics.sticking) {
+        if (hand === 'R') {
+          // n-1: var(--up-fill) rgb(97, 10, 66);
+          cr = 97; cg = 10; cb = 66;
+        } else {
+          // n-1: var(--down-fill) rgb(2, 68, 150);
+          cr = 2; cg = 68; cb = 150;
+        }
+
+        if (stepsAway === 0) {
+          co = 0.6;
+        } else {
+          co = 0;
+        }
+      }
+      else {
+        co = 0.35;
+        if (stepsAway < 2) {
+          // n-1: Green (dt between 0 and 1)
+          cr = 34; cg = 197; cb = 94;
+          // } else if (stepsAway < 2) {
+          //   // n-2: Yellow
+          //   cr = 234; cg = 179; cb = 8;
+          // } else if (stepsAway < 3) {
+          //   // n-3: Orange
+          //   cr = 255; cg = 140; cb = 0;
+          // } else if (stepsAway < 4) {
+          //   // n-4: Red
+          //   cr = 255; cg = 0; cb = 0;
+          // } else if (stepsAway < 5) {
+          // // n-5: Indigo
+          // cr = 79; cg = 70; cb = 239;
+        } else {
+          // n-6 or less: Gold
+          cr = 255; cg = 215; cb = 0;
+        }
+      }
+
+      const baseCol = `rgb(${cr}, ${cg}, ${cb})`;
+
+      // Proximity Colouring Overlay on Tonefield
+      if (Aesthetics.proximity && dt > 0 && stepsAway < 3) {
+        const targetKey = `${Math.round(targetX)},${Math.round(targetY)}`;
+        if (!seenProximityTargets.has(targetKey)) {
+          seenProximityTargets.add(targetKey);
+
+          streamCtx.beginPath();
+          streamCtx.ellipse(targetX, targetY, targetRx, targetRy, targetRot, 0, Math.PI * 2);
+          streamCtx.fillStyle = `rgba(${cr}, ${cg}, ${cb}, ${co})`;
+          streamCtx.fill();
+        }
+      }
+
+      // Fixed comet colour: Gold
+      cr = 255; cg = 215; cb = 0;
+
+      let drawRadius = 20;
+      streamCtx.globalAlpha = alpha;
+
+      // On the step before target, add an animation pulse and white flash
+      let flashCr = cr, flashCg = cg, flashCb = cb;
+      if (dt > 0 && dt <= 1.0) {
+        const popTime = 1.0 - dt;
+        const popScale = Math.exp(-6 * popTime); // High at dt=1, decals to 0 as dt=0
+        drawRadius += (popScale * 12);
+
+        // Interpolate towards White based on popScale
+        flashCr = Math.round(cr + (255 - cr) * popScale);
+        flashCg = Math.round(cg + (255 - cg) * popScale);
+        flashCb = Math.round(cb + (255 - cb) * popScale);
+
+        if (Aesthetics.comets) {
+          // Glow flash
+          streamCtx.beginPath();
+          streamCtx.arc(drawX, drawY, drawRadius + (popScale * 25), 0, Math.PI * 2);
+          streamCtx.fillStyle = `rgba(255, 255, 255, ${0.6 * popScale})`; // Bright white halo
+          streamCtx.fill();
+        }
+      }
+
+      const drawCol = `rgb(${flashCr}, ${flashCg}, ${flashCb})`;
+
+      if (Aesthetics.comets && dt > 0) {
+        // Optional Trail Effect (Comet Tail)
+        if (Aesthetics.trails && dt > 0) {
+          // The trail extends BACKWARD along the vector (positive nx, ny because nx is target -> source direction)
+          // Shorter tail as it gets closer to 0 so it visually burns up on impact
+          const maxTail = 150 + (dt * 50);
+          const tailLength = Math.min(maxTail, dt * 200); // Rapidly shrinks to 0 in the final beat
+          const tailX = drawX + (nx * tailLength);
+          const tailY = drawY + (ny * tailLength);
+
+          // Create a gradient that fades out towards the end of the tail
+          const gradient = streamCtx.createLinearGradient(drawX, drawY, tailX, tailY);
+          gradient.addColorStop(0, `rgba(${cr}, ${cg}, ${cb}, ${alpha * 0.8})`);
+          gradient.addColorStop(1, `rgba(${cr}, ${cg}, ${cb}, 0)`);
+
+          // Draw a tapering polygon from the sides of the orb to the tail point
+          // Perpendicular vector for the width of the orb
+          const px = -ny;
+          const py = nx;
+
+          const width = drawRadius * 0.8; // Slightly narrower than full radius for aerodynamics
+
+          streamCtx.beginPath();
+          // Left edge of orb
+          streamCtx.moveTo(drawX + (px * width), drawY + (py * width));
+          // Right edge of orb
+          streamCtx.lineTo(drawX - (px * width), drawY - (py * width));
+          // Tip of the tail
+          streamCtx.lineTo(tailX, tailY);
+          streamCtx.closePath();
+
+          streamCtx.fillStyle = gradient;
+          streamCtx.fill();
+        }
+
+        // Orb Background
+        streamCtx.beginPath();
+        streamCtx.arc(drawX, drawY, drawRadius, 0, Math.PI * 2);
+        streamCtx.fillStyle = cellBgCol;
+        streamCtx.fill();
+
+        if (isGlass) {
+          streamCtx.lineWidth = 2;
+          streamCtx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+          streamCtx.stroke();
+        }
+
+        // Inner Color
+        streamCtx.globalAlpha = alpha * 0.8;
+        streamCtx.fillStyle = drawCol;
+        streamCtx.fill();
+        streamCtx.globalAlpha = alpha;
+      }
+
+      // Hit Expansion
+      if (dt < 0.1 && dt > -0.1 && !cell._hasSparkedGrav) {
+        let sc = 1.0;
+        if (Aesthetics.glow) sc = 1.5;
+        streamCtx.beginPath();
+        streamCtx.arc(targetX, targetY, drawRadius * sc, 0, Math.PI * 2);
+        streamCtx.strokeStyle = baseCol;
+        streamCtx.lineWidth = 4;
+        streamCtx.stroke();
+
+        createBurst(targetX, targetY, baseCol);
+        cell._hasSparkedGrav = true;
+      }
+
+      if (dt > 0.5) {
+        cell._hasSparkedGrav = false;
+      }
+
+      if (Aesthetics.comets && dt > 0) {
+        // Note Text
+        const notationPref = localStorage.getItem('handpanLabelPref') || 'Numbers';
+        const displayLabel = Array.isArray(rawLabel) ? rawLabel.join('') : String(rawLabel);
+        const textToDraw = (notationPref === 'Numbers' && (displayLabel === '0' || displayLabel === 'Ding')) ? 'D' : displayLabel;
+
+        streamCtx.fillStyle = '#ffffff';
+        streamCtx.font = `bold 18px Inter, system-ui`;
+        streamCtx.textAlign = 'center';
+        streamCtx.textBaseline = 'middle';
+        streamCtx.fillText(textToDraw, drawX, drawY + 1);
+
+        // Coaching Highlight
+        if (cell.classList.contains('coach-wrong') || cell.classList.contains('coach-missed')) {
+          highlightCell(drawX, drawY, drawRadius, '#e74c3c', false);
+        }
+      }
+    }
+  } // end if (ctx.playing)
+
+  // Draw Sparks
+  sparks.forEach(s => {
+    streamCtx.globalAlpha = s.alpha;
+    streamCtx.fillStyle = s.color;
+    streamCtx.beginPath();
+    streamCtx.arc(s.x, s.y, 3, 0, Math.PI * 2);
+    streamCtx.fill();
+  });
+  streamCtx.globalAlpha = 1.0;
+
   streamCtx.restore();
 }
 

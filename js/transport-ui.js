@@ -1,5 +1,5 @@
 // TransportUI manages a set of transport controls
-import { start, stop } from './noteplayer.js';
+import { start, stop, getMetronomeSound, setMetronomeSound } from './noteplayer.js';
 
 export class TransportUI {
   constructor(ctx, container) {
@@ -11,6 +11,7 @@ export class TransportUI {
     this.metroBtn = container.querySelector('.t-metro-btn');
     this.bpmInput = container.querySelector('.t-bpm-input');
     this.bpmVal = container.querySelector('.t-bpm-val');
+    this.metroSoundSelect = container.querySelector('.t-metro-sound');
     this.muteBtn = container.querySelector('.t-mute-btn');
 
     this.init();
@@ -32,7 +33,15 @@ export class TransportUI {
     if (this.metroBtn) {
       this.metroBtn.onclick = (e) => {
         e.stopPropagation();
-        this.ctx.metronomeOn = !this.ctx.metronomeOn;
+        const currentSound = getMetronomeSound();
+        if (!this.ctx.metronomeOn) {
+          this.ctx.metronomeOn = true;
+          setMetronomeSound('Click');
+        } else if (currentSound === 'Click') {
+          setMetronomeSound('Shaker');
+        } else {
+          this.ctx.metronomeOn = false;
+        }
         localStorage.setItem('groovepan_metro' + '-' + this.ctx.id, this.ctx.metronomeOn ? 'on' : 'off');
         TransportRegistry.updateAll(this.ctx);
       };
@@ -47,6 +56,14 @@ export class TransportUI {
         if (realInput && realInput !== this.bpmInput) {
           realInput.value = val;
         }
+        TransportRegistry.updateAll(this.ctx);
+      };
+    }
+
+    if (this.metroSoundSelect) {
+      this.metroSoundSelect.value = getMetronomeSound();
+      this.metroSoundSelect.onchange = (e) => {
+        setMetronomeSound(e.target.value);
         TransportRegistry.updateAll(this.ctx);
       };
     }
@@ -78,10 +95,16 @@ export class TransportUI {
       const isOn = this.ctx.metronomeOn;
       this.metroBtn.classList.toggle('active', isOn);
       this.metroBtn.style.opacity = isOn ? '1' : '0.5';
+      const sound = getMetronomeSound();
+      this.metroBtn.title = isOn ? `Metronome: ${sound}` : 'Metronome: Off';
     }
 
     if (this.bpmInput) {
       this.bpmInput.value = this.ctx.bpm;
+    }
+
+    if (this.metroSoundSelect) {
+      this.metroSoundSelect.value = getMetronomeSound();
     }
 
     if (this.bpmVal) {

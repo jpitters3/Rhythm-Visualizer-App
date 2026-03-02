@@ -54,6 +54,11 @@
           <path d="M12 18a2 2 0 1 0 0 4 2 2 0 0 0 0-4Z" />
         </svg>
       </button>
+      <select class="t-metro-sound" title="Metronome Sound"
+        style="display: none; background: transparent; color: var(--text-secondary); border: 1px solid var(--panel-border); border-radius: 4px; padding: 2px 4px; font-size: 11px; margin-left: 4px; cursor: pointer; outline: none;">
+        <option value="Click">Click</option>
+        <option value="Shaker">Shaker</option>
+      </select>
       <button class="t-mute-btn" title="Toggle Mute">🔊</button>
     </div>
   </template>
@@ -109,6 +114,7 @@
             <button id="fileDropdownBtn" class="dropdown-toggle">File ▾</button>
             <div id="fileDropdownMenu" class="dropdown-content">
               <button id="saveBtn" title="Save current pattern">Save</button>
+              <button id="loadBtn" title="Load selected pattern">Load</button>
               <button id="renameBtn" title="Rename selected pattern">Rename</button>
               <button id="deleteBtn" title="Delete selected pattern">Delete</button>
               <div class="dropdown-divider"></div>
@@ -545,7 +551,7 @@
       <select id="presentModeSelect">
         <option value="stream">Stream</option>
         <option value="measure">Measure</option>
-        <option value="gravity" disabled>Gravity (Coming Soon)</option>
+        <option value="gravity">Gravity</option>
       </select>
     </div>
     <!-- Will be populated by TransportUI -->
@@ -581,18 +587,35 @@
 
         <!-- Aesthetics -->
         <div class="dashboard-section">
-          <label>Animations</label>
+          <!-- Atmosphere Selector -->
+          <label style="font-size:1em">Atmosphere</label>
           <div id="dashAtmosphereButtons" class="dash-aesthetic-grid">
-            <button id="dashSparksBtn" class="dash-pill active">✨ Sparks</button>
-            <button id="dashTrailsBtn" class="dash-pill active">☄️ Trails</button>
-            <button id="dashGlowBtn" class="dash-pill active">🌟 Pulse</button>
             <!-- Dynamic Category Buttons will be injected here -->
           </div>
-          <!-- Atmosphere Selector -->
-          <label>Atmosphere</label>
           <select id="aestheticWorldSelect" class="dash-dropdown" style="display:none; margin-top:10px; width:100%;">
             <option value="" disabled selected>Select Atmosphere...</option>
           </select>
+        </div>
+        <div class="dashboard-section">
+          <label style="font-size:1em">FX</label>
+          <div class="dash-aesthetic-grid">
+            <button id="dashSparksBtn" class="dash-pill">✨ Sparks</button>
+          </div>
+          <label>Stream FX</label>
+          <div class="dash-aesthetic-grid">
+            <button id="dashGlowBtn" class="dash-pill">🌟 Glow</button>
+          </div>
+          <label>Gravity FX</label>
+          <div class="dash-aesthetic-grid">
+            <button id="dashProximityBtn" class="dash-pill">🎯 Targets</button>
+            <!-- <button id="dashColorsBtn" class="dash-pill">🌈 Colors</button> -->
+            <button id="dashStickingBtn" class="dash-pill">🔴 Right / 🔵 Left</button>
+          </div>
+          <div class="dash-aesthetic-grid">
+            <button id="dashCometsBtn" class="dash-pill active">☄️ Comets</button>
+            <button id="dashTrailsBtn" class="dash-pill">☄️ Trails</button>
+            <button id="dashIntervalBtn" class="dash-pill">⏭️ Interval</button>
+          </div>
         </div>
       </div>
     </div>

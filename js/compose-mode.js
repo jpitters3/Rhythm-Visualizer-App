@@ -77,16 +77,12 @@ export function writeToSelected(label, { advance = true } = {}, ctx) {
   if (composeOn && advance) advanceSelection(1, c);
 }
 
-function labelFromHandpanDot(dotNote) {
-  return dotNote;
-}
-
 function scrollToPatternGrid(composeOn, ctx) {
   const c = ctx || activeGrid;
   if (composeOn) {
     const i = c.caretIndex ? c.caretIndex : 0;
     let cell = cells(c)[i];
-    cell?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    cell?.scrollIntoView({ block: 'center', behavior: 'smooth' });
   }
 }
 

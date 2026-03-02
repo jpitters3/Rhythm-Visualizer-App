@@ -31,16 +31,30 @@ const HANDPAN_MAP_SKETCH = {
   "S": { x: 94.1, y: 45.7, r: 7 },
 };
 
+// const HANDPAN_MAP_BRONZE = {
+//   "Ding": { x: 48.1, y: 45.6, r: 12 },
+//   "1": { x: 59.6, y: 76.6, r: 10 },
+//   "2": { x: 34.4, y: 75.3, r: 10 },
+//   "3": { x: 78.4, y: 59.9, r: 10 },
+//   "4": { x: 17.4, y: 57.3, r: 10 },
+//   "5": { x: 78, y: 33.9, r: 9 },
+//   "6": { x: 21.8, y: 32.8, r: 9 },
+//   "7": { x: 61.4, y: 18.1, r: 8 },
+//   "8": { x: 37.8, y: 17.9, r: 8 },
+//   "T": { x: 61.1, y: 56.3, r: 7 },
+//   "S": { x: 93.3, y: 47.9, r: 6 },
+// };
+
 const HANDPAN_MAP_BRONZE = {
   "Ding": { x: 48.1, y: 45.6, r: 12 },
-  "1": { x: 59.6, y: 76.6, r: 10 },
+  "1": { x: 58.9, y: 75.7, r: 10 },
   "2": { x: 34.4, y: 75.3, r: 10 },
-  "3": { x: 78.4, y: 59.9, r: 10 },
-  "4": { x: 17.4, y: 57.3, r: 10 },
-  "5": { x: 78, y: 33.9, r: 9 },
-  "6": { x: 21.8, y: 32.8, r: 9 },
-  "7": { x: 61.4, y: 18.1, r: 8 },
-  "8": { x: 37.8, y: 17.9, r: 8 },
+  "3": { x: 77.9, y: 59.2, r: 10 },
+  "4": { x: 17.9, y: 55.9, r: 10 },
+  "5": { x: 77.5, y: 34.8, r: 9 },
+  "6": { x: 21.1, y: 32.6, r: 9 },
+  "7": { x: 60, y: 18.8, r: 8 },
+  "8": { x: 38.3, y: 18.6, r: 8 },
   "T": { x: 61.1, y: 56.3, r: 7 },
   "S": { x: 93.3, y: 47.9, r: 6 },
 };
@@ -753,14 +767,14 @@ export function highlightHandpan(note, stepIndex, forceHand = null, latency = 0)
   clearTimeout(hpPulseTimers.get(key));
 
   // Base duration is min of 500ms or 90% of the interval
-  let timeoutDuration = Math.min(500, intervalMs() * 0.9);
+  let timeoutDuration = Math.min(200, intervalMs() * 0.9);
 
   // If the visual fired late, the CSS animation has already lost that time.
   // E.g. 500ms animation, 200ms late = 300ms remaining.
   // We subtract the latency so Javascript removes the class exactly when the CSS animation finishes.
   // But for Playwright testing, if latency is super high (e.g., initial load spike),
   // we don't want the visual to flash for 0ms, so we ensure a minimum of 350ms so Playwright can catch it.
-  timeoutDuration = Math.max(350, timeoutDuration - (latency * 1000));
+  timeoutDuration = Math.max(100, timeoutDuration - (latency * 1000));
 
   hpPulseTimers.set(key, setTimeout(() => {
     el.classList.remove('active', 'hp-down', 'hp-up');

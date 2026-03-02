@@ -28,7 +28,12 @@ body.present .left {
   max-width: 100%;
   padding: 0;
   flex-grow: 1;
-  /* Propagate growth */
+}
+
+body.present.mode-gravity .container {
+  position: relative;
+  z-index: 10;
+  /* Escapes the backdrop-filter stacking context to sit above stream-view (z:0) */
 }
 
 body.present h2,
@@ -187,6 +192,7 @@ body.present .measure-row.current-measure {
 /* Position Handpan at Bottom Center */
 body.present .handpan-panel {
   position: fixed;
+  max-width: 400px;
   left: 50%;
   top: calc(var(--horizon) + 20vh);
   /* Starts below the rhythm highway */
@@ -271,12 +277,6 @@ body.present .lesson-panel {
 /* Ensure handpan image is visible and centered */
 body.present .handpan-wrap {
   margin: 0;
-  padding: 0;
-}
-
-body.present .handpan-overlay,
-body.present .v-hand-layer {
-  inset: 0;
 }
 
 /* Hide headers/labels in presentation for cleaner look? 
@@ -508,6 +508,12 @@ body.present .transport-container:not(#presentationControls) {
   z-index: 0;
 }
 
+body.present.mode-gravity .stream-view {
+  z-index: 20;
+  pointer-events: none;
+  /* Let clicks pass through the canvas to the handpan below */
+}
+
 #stream-canvas {
   width: 100%;
   height: 100%;
@@ -515,21 +521,56 @@ body.present .transport-container:not(#presentationControls) {
 }
 
 /* Stream Mode overrides */
-body.present.mode-stream .measure-row {
+body.present.mode-stream .measure-row,
+body.present.mode-gravity .measure-row {
   display: none !important;
 }
 
-body.present.mode-stream .static-labels {
+body.present.mode-stream .static-labels,
+body.present.mode-gravity .static-labels {
   display: none !important;
 }
 
 body.present.mode-stream .handpan-panel,
-body.present.mode-stream .labels {
+body.present.mode-stream .labels,
+body.present.mode-gravity .labels {
   display: none !important;
+}
+
+body.present.mode-gravity .handpan-panel {
+  display: flex !important;
+  position: absolute;
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  bottom: auto;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  width: auto;
+  pointer-events: none;
+  z-index: 100;
+  opacity: 0.9;
+}
+
+body.present.mode-gravity .handpan-wrap {
+  width: 500px !important;
+  height: 500px !important;
+  transform: scale(1.0);
+  background: transparent;
+}
+
+body.present.mode-stream .stream-view,
+body.present.mode-gravity .stream-view {
+  display: block;
 }
 
 body.present.mode-stream .stream-view {
   background: var(--btn-bg);
+}
+
+body.present.mode-gravity .stream-view {
+  background: transparent;
 }
 
 /* ===== IMMERSIVE DASHBOARD ===== */
@@ -546,6 +587,33 @@ body.present.mode-stream .stream-view {
   align-items: center;
   justify-content: center;
   padding: 20px;
+}
+
+/* ===== PLAY PULSE (@keyframes eliminates "hang") ===== */
+@keyframes rhythmicPulse {
+  0% {
+    transform: translateZ(0) scale(1);
+    box-shadow: 0 0 0 0 rgba(79, 140, 255, 0);
+  }
+
+  /* Rapid but organic expansion to peak */
+  15% {
+    transform: translateZ(0) scale(1.1);
+    box-shadow: 0 0 0 4px var(--play-glow);
+  }
+
+  /* Immediate start of decay even if beat class persists */
+  100% {
+    transform: translateZ(0) scale(1);
+    box-shadow: 0 0 0 0 rgba(79, 140, 255, 0);
+  }
+}
+
+body.present.mode-gravity .hp-dot.active::after {
+  animation: rhythmicPulse 1s cubic-bezier(0.22, 1, 0.36, 0.1) forwards;
+  animation-delay: var(--hp-pulse-delay, 0s);
+  z-index: 50;
+  /* animation: none !important; */
 }
 
 .dashboard-panel {
