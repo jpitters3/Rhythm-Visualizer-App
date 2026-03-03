@@ -63,1320 +63,1367 @@
     </div>
   </template>
 
-  <div class="container">
-    <div class="grid-container top-row">
-      <div class="grid-child logo">
-        <img class="logo-img" src="./assets/images/groovepan-logo.png" />
-      </div>
-
-      <!-- Mobile Hamburger Button -->
-      <button id="mobileMenuBtn" class="hamburger-btn" aria-label="Menu">
-        <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none">
-          <line x1="3" y1="12" x2="21" y2="12"></line>
-          <line x1="3" y1="6" x2="21" y2="6"></line>
-          <line x1="3" y1="18" x2="21" y2="18"></line>
-        </svg>
-      </button>
-
-      <!-- WRAPPER for collapsible items -->
-      <div id="headerMenu" class="header-menu-items">
-
-        <!-- Account Moved to TOP for Mobile Priority -->
-        <div class="pattern-row grid-child account">
-          <div class="dropdown account-dropdown">
-            <button id="accountBtn" title="Account">Account</button>
-            <div id="accountDropdownMenu" class="dropdown-content right-aligned">
-              <button id="authBtn" style="display:none; font-weight:bold; color:var(--primary);">Sign In /
-                Register</button>
-              <button id="openProfileBtn">👤 Edit Profile</button>
-              <button id="openAccountAuthBtn">⚙️ Account Settings</button>
-              <div class="dropdown-divider"></div>
-              <button id="toggleSidebarBtn">📚 Courses</button>
-              <button id="openCourseModalBtn" class="admin-only" style="display: none;">➕ Create Course</button>
-              <button id="openPotwModalBtn" class="admin-only" style="display: none;">🛠️ POTW Dashboard</button>
-              <button id="togglePracticeBtn">📋 Practice Plan</button>
-              <div class="dropdown-divider"></div>
-              <button id="myScalesBtn" style="display:none;">🛸 My Scales</button>
-              <button id="authLogoutDropdown">🚪 Sign out</button>
-            </div>
-          </div>
-          <span id="accountStatus" style="opacity:.75;font-size:13px;"></span>
+  <div id="view-freeplay" class="route-view active">
+    <div class="container">
+      <div class="grid-container top-row">
+        <div class="grid-child logo">
+          <img class="logo-img" src="./assets/images/groovepan-logo.png" />
         </div>
 
-        <!-- Pattern select, save, load, etc. -->
-        <div class="pattern-row grid-child pattern-select">
-          <h3>Select pattern:</h3>
-          <select id="patternSelect" title="Saved patterns">
-            <option value="">(no saved patterns)</option>
-          </select>
-          <!-- File Dropdown -->
-          <div class="dropdown">
-            <button id="fileDropdownBtn" class="dropdown-toggle">File ▾</button>
-            <div id="fileDropdownMenu" class="dropdown-content">
-              <button id="saveBtn" title="Save current pattern">Save</button>
-              <button id="loadBtn" title="Load selected pattern">Load</button>
-              <button id="renameBtn" title="Rename selected pattern">Rename</button>
-              <button id="deleteBtn" title="Delete selected pattern">Delete</button>
-              <div class="dropdown-divider"></div>
-              <button id="exportBtn" title="Copy pattern JSON to clipboard">Export</button>
-              <button id="importBtn" title="Paste JSON to load a pattern">Import</button>
-              <div class="dropdown-divider"></div>
-              <button id="songLibraryBtn" title="Browse playable songs">Song Library</button>
-              <button id="importMidiBtn" title="Import MIDI file">Import MIDI</button>
-              <input type="file" id="midiFileInput" accept=".mid,.midi,.kar" style="display:none;">
+        <!-- Mobile Hamburger Button -->
+        <button id="mobileMenuBtn" class="hamburger-btn" aria-label="Menu">
+          <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none">
+            <line x1="3" y1="12" x2="21" y2="12"></line>
+            <line x1="3" y1="6" x2="21" y2="6"></line>
+            <line x1="3" y1="18" x2="21" y2="18"></line>
+          </svg>
+        </button>
+
+        <!-- WRAPPER for collapsible items -->
+        <div id="headerMenu" class="header-menu-items">
+
+          <!-- Account Moved to TOP for Mobile Priority -->
+          <div class="pattern-row grid-child account">
+            <div class="dropdown account-dropdown">
+              <button id="accountBtn" title="Account">Account</button>
+              <div id="accountDropdownMenu" class="dropdown-content right-aligned">
+                <button id="navDashboardBtn" onclick="window.location.hash = '#dashboard'"
+                  style="font-weight:bold; color:var(--primary);">Dashboard</button>
+                <div class="dropdown-divider"></div>
+                <button id="authBtn" style="display:none; font-weight:bold; color:var(--primary);">Sign In /
+                  Register</button>
+                <button id="openProfileBtn">👤 Edit Profile</button>
+                <button id="openAccountAuthBtn">⚙️ Account Settings</button>
+                <div class="dropdown-divider"></div>
+                <button id="toggleSidebarBtn">📚 Courses</button>
+                <button id="openCourseModalBtn" class="admin-only" style="display: none;">➕ Create Course</button>
+                <button id="openPotwModalBtn" class="admin-only" style="display: none;">🛠️ POTW Dashboard</button>
+                <button id="togglePracticeBtn">📋 Practice Plan</button>
+                <div class="dropdown-divider"></div>
+                <button id="myScalesBtn" style="display:none;">🛸 My Scales</button>
+                <button id="authLogoutDropdown">🚪 Sign out</button>
+              </div>
             </div>
+            <span id="accountStatus" style="opacity:.75;font-size:13px;"></span>
           </div>
 
-          <button id="shareBtn" title="Create a share link (public)">Share</button>
-          <button id="communityBtn" class="primary-btn" title="Browse Community Rhythms">Community</button>
-        </div>
-      </div> <!-- End Wrapper -->
-    </div>
-
-    <!-- Shared Pattern Banner -->
-    <div id="sharedBanner" class="shared-banner" style="display:none;">
-      <div class="shared-left">
-        <div class="shared-title">Viewing shared pattern</div>
-        <div class="shared-sub" id="sharedBannerSub"></div>
-      </div>
-
-      <div class="shared-actions">
-        <button id="sharedSaveCopyBtn" class="active" title="Save a copy to your patterns">Save a copy</button>
-        <button id="sharedExitBtn" title="Exit shared view">Exit</button>
-      </div>
-    </div>
-
-    <!-- Control buttons -->
-    <div class="controls pattern-row">
-      <div class="controls-primary">
-        <button id="themeBtn" title="Toggle light / dark mode">☀︎ / ☾</button>
-        <button id="grooveBtn" title="Generate a random groove" style="display: none;">Give me a groove!</button>
-        <button id="labelNotationBtn" title="Toggle label notation (Musical vs Numeric)">1 2 3</button>
-        <button id="composeBtn"
-          title="Compose mode: writing advances to the next beat (Alt = write without advance)">🎼</button>
-        <button id="gridBtn" style="display:none;" title="Toggle between 8th and 16th grid">8ths</button>
-        <button id="handBtn" style="display: none;" class="active" title="Toggle left/right hand coloring">Left/Right:
-          Off</button>
-        <button id="stickingBtn" title="Edit Sticking Mode: Click cells to toggle Hand (R/L)">🤚</button>
-        <button id="dualModeBtn" title="Toggle Dual Grid Mode">👥</button>
-        <button id="flipHandsBtn" style="display:none;"
-          title="Flip Remaining: Inverts hands from current selection onwards">🔁</button>
-        <div class="control-group">
-          <!-- Time Signature -->
-          <div class="ts-wrapper">
-            <select id="tsNum" class="ts-select">
-              <option value="1">1</option>
-              <option value="2">2</option>
-              <option value="3">3</option>
-              <option value="4" selected>4</option>
-              <option value="5">5</option>
-              <option value="6">6</option>
-              <option value="7">7</option>
-              <option value="8">8</option>
-              <option value="9">9</option>
-              <option value="10">10</option>
-              <option value="11">11</option>
-              <option value="12">12</option>
-              <option value="13">13</option>
-              <option value="14">14</option>
-              <option value="15">15</option>
-              <option value="16">16</option>
-              <option value="17">17</option>
-              <option value="18">18</option>
-              <option value="19">19</option>
+          <!-- Pattern select, save, load, etc. -->
+          <div class="pattern-row grid-child pattern-select">
+            <h3>Select pattern:</h3>
+            <select id="patternSelect" title="Saved patterns">
+              <option value="">(no saved patterns)</option>
             </select>
-            <span class="ts-sep">/</span>
-            <select id="tsDen" class="ts-select">
-              <option value="2">2</option>
-              <option value="4" selected>4</option>
-              <option value="8">8</option>
-            </select>
-          </div>
-        </div>
-
-        <button id="undoBtn" title="Undo (Cmd+Z)" disabled>↩️</button>
-        <button id="redoBtn" title="Redo (Cmd+Shift+Z)" style="display:none;" disabled>↪️</button>
-        <!-- Microphone -->
-        <div class="dropdown mic-dropdown">
-          <button id="micBtn" class="secondary-btn" title="Toggle mic (Click) / Settings (Auto-open)">🎤</button>
-          <div id="micDropdownMenu" class="dropdown-content">
-            <div style="padding: 8px 12px;">
-              <div class="setting-group" style="margin-bottom: 12px;">
-                <label style="font-size: 13px; font-weight: 500; display:block; margin-bottom:4px;">Sensitivity</label>
-                <div style="display:flex; align-items:center; gap:8px;">
-                  <input type="range" id="micSensInput" min="0.01" max="0.3" step="0.01" value="0.05"
-                    style="width:100px;">
-                  <span id="sensVal" style="font-size:12px; font-family:monospace;">0.05</span>
-                </div>
-              </div>
-
-              <div class="setting-group" style="margin-bottom:12px;">
-                <label style="font-size: 13px; font-weight: 500; display:block; margin-bottom:4px;">Latency
-                  Comp</label>
-                <div style="display:flex; align-items:center; gap:8px;">
-                  <input type="range" id="micDelayInput" min="-100" max="100" step="1" value="0" style="width:100px;">
-                  <span id="delayVal" style="font-size:12px; font-family:monospace;">0ms</span>
-                </div>
-              </div>
-
-              <button id="fullCalBtn" class="primary-btn" style="margin-bottom:8px; width: 100%;">Full Calibration
-                (Recommended)</button>
-              <button id="micCalBtn">1. Pitch Calibration</button>
-              <button id="guidedCalBtn" style="margin-top:8px;">2. Sensitivity Calibration</button>
-              <button id="advancedCalBtn" style="margin-top:8px;" title="Manually adjust note thresholds">3. Advanced
-                Calibration</button>
-            </div>
-          </div>
-        </div>
-        <button id="coachModeBtn" class="secondary-btn" title="Practice with real-time feedback">🎯 Coach</button>
-        <button id="gamesModeBtn" class="secondary-btn" title="Play games with your handpan">⚄ Games</button>
-        <button id="clearBtn-A">Clear</button>
-        <button id="presentBtn" title="Toggle presentation mode (Esc exits)">⛶</button>
-
-        <div id="calibrationStatus" class="calibration-overlay" style="display:none;">
-          <div class="cal-progress-wrapper">
-            <svg class="cal-progress-svg" viewBox="0 0 36 36">
-              <circle class="cal-circle-bg" cx="18" cy="18" r="16"></circle>
-              <circle id="calProgressCircle" class="cal-circle-progress" cx="18" cy="18" r="16"></circle>
-            </svg>
-            <div class="cal-info">
-              <span class="cal-label">Tap Note</span>
-              <span id="targetNoteName" class="cal-note">Ding</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-    </div>
-    <div class="controls-transport">
-      <div id="mainTransport-A" class="transport-container" data-grid="A">
-        <!-- Will be populated by TransportUI -->
-      </div>
-    </div>
-
-    <!-- Selection Action Bar (shows when a range is selected) -->
-    <div id="selBar" class="sel-bar" style="display:none;" aria-label="Selection actions">
-      <div class="sel-bar-left">
-        <span id="selBarText" class="sel-bar-text">0 selected</span>
-      </div>
-      <div class="sel-bar-actions">
-        <button id="selCopyBtn">Copy</button>
-        <button id="selDuplicateBtn">Duplicate</button>
-        <button id="selPasteBtn" disabled>Paste</button>
-        <button id="selDeleteBtn">Delete</button>
-        <button id="selCancelBtn">Cancel</button>
-      </div>
-    </div>
-
-    <!-- Lesson Player -->
-    <div id="lessonPlayer" style="display: none;" class="lesson-panel">
-      <div id="sectionHeader" class="section-header">
-        <h2 id="activeSectionTitle">Section Name</h2>
-      </div>
-      <div id="lessonHeader" class="lesson-header">
-        <h2 id="activeLessonTitle">Lesson Name</h2>
-      </div>
-      <div id="lessonContent" class="lesson-content">
-        <div id="lessonDescription" class="text-area" contenteditable="true"></div>
-        <div id="videoContainer" class="video-wrapper"></div>
-        <div id="activeLessonFooter" style="margin-top:24px;">
-          <div
-            style="display:grid; grid-template-columns: 180px auto; gap:16px; align-items:center; justify-content:center; margin-bottom:16px;">
-            <button id="lessonCompleteBtn" class="secondary-btn"
-              style="white-space:nowrap; width:100%; justify-content:center;">✅ Mark as Complete</button>
-            <button id="nextLessonBtn" class="primary-btn" style="white-space:nowrap;"><span class="desktop-text">Next
-                Lesson&nbsp;</span>&rarr;</button>
-            <button id="closeLessonBtn" class="text-btn" style="color: var(--text-secondary); font-size: 0.9em;">❌
-              Exit Lesson</button>
-            <button id="prevLessonBtn" class="primary-btn"
-              style="white-space:nowrap; background-color: #f9e17f; justify-content:center;">&larr;</button>
-          </div>
-          <div id="lessonTransport" class="transport-container" data-grid="A">
-            <!-- Will be populated by TransportUI -->
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Grid -->
-    <div class="main">
-
-      <div class="left">
-        <div id="measures" class="measures" aria-label="Rhythm grid"></div>
-
-        <!-- Secondary Grid (Only shows in Dual Mode) -->
-        <div id="controls-B" class="controls secondary-controls" style="display:none;">
-          <div class="instance-label">Grid B</div>
-          <div id="mainTransport-B" class="transport-container" data-grid="B">
-            <!-- Will be populated by TransportUI -->
-          </div>
-          <button id="clearBtn-B">Clear</button>
-        </div>
-        <div id="measures-B" class="measures secondary-measures" style="display:none;"
-          aria-label="Secondary rhythm grid">
-        </div>
-
-        <!-- Measure Actions -->
-        <div class="measure-tools" id="measureTools">
-          <span class="measure-tools-label">Measure</span>
-          <button id="addMeasureBtn" title="Add a new measure">＋</button>
-          <button id="delMeasureBtn" title="Delete active measure">−</button>
-        </div>
-      </div>
-
-      <!-- HANDPAN OPTIONS -->
-      <aside class="handpan-panel" aria-label="Handpan map">
-        <!-- TABS -->
-        <div class="handpan-tabs">
-          <button class="tab-btn" data-tab="handpanSettingsDrawer" title="Settings">🛸</button>
-          <button class="tab-btn" data-tab="chordDrawer" title="Chords">🎶</button>
-          <button class="tab-btn" data-tab="customizeDrawer" title="Customize">⚙️</button>
-        </div>
-
-        <!-- TAB PANES -->
-
-        <!-- 1. SETTINGS -->
-        <div id="handpanSettingsDrawer" class="tab-pane">
-          <div class="drawer-content"> <!-- Keep wrapper for padding inheritance -->
-            <div class="setting-row">
-              <label>Scale:</label>
-              <select id="scaleSelect" title="Choose your handpan scale"></select>
-              <span id="scaleStatus" style="display:none; opacity:.7;font-size:13px;"></span>
-            </div>
-
-            <div class="setting-row">
-              <label>Color:</label>
-              <select id="handpanColorSelect" title="Choose your handpan color">
-                <option value="Bronze">Bronze</option>
-                <option value="Sketch">Sketch</option>
-              </select>
-            </div>
-
-            <div class="setting-row">
-              <label>Labels:</label>
-              <select id="numberPitchSelect" title="Display numbers or pitches">
-                <option value="default">-----</option>
-                <option value="Numbers">Numbers</option>
-                <option value="Pitches">Pitches</option>
-              </select>
-            </div>
-
-            <div class="setting-row">
-              <label>Hands:</label>
-              <div class="toggle-wrapper" style="display:flex; align-items:center; gap:8px;">
-                <input type="checkbox" id="vHandsToggle" checked style="width:auto;">
-                <label for="vHandsToggle" style="font-size:12px; font-weight:400; cursor:pointer; margin:0;">Show Ghost
-                  Hands</label>
+            <!-- File Dropdown -->
+            <div class="dropdown">
+              <button id="fileDropdownBtn" class="dropdown-toggle">File ▾</button>
+              <div id="fileDropdownMenu" class="dropdown-content">
+                <button id="saveBtn" title="Save current pattern">Save</button>
+                <button id="loadBtn" title="Load selected pattern">Load</button>
+                <button id="renameBtn" title="Rename selected pattern">Rename</button>
+                <button id="deleteBtn" title="Delete selected pattern">Delete</button>
+                <div class="dropdown-divider"></div>
+                <button id="exportBtn" title="Copy pattern JSON to clipboard">Export</button>
+                <button id="importBtn" title="Paste JSON to load a pattern">Import</button>
+                <div class="dropdown-divider"></div>
+                <button id="songLibraryBtn" title="Browse playable songs">Song Library</button>
+                <button id="importMidiBtn" title="Import MIDI file">Import MIDI</button>
+                <input type="file" id="midiFileInput" accept=".mid,.midi,.kar" style="display:none;">
               </div>
             </div>
+
+            <button id="shareBtn" title="Create a share link (public)">Share</button>
+            <button id="communityBtn" class="primary-btn" title="Browse Community Rhythms">Community</button>
           </div>
-        </div>
-
-        <!-- 2. CHORDS -->
-        <div id="chordDrawer" class="tab-pane">
-          <div id="chordList" class="drawer-content">
-            <!-- Chords injected here -->
-          </div>
-          <div class="drawer-meta" style="text-align:center; font-size:12px; margin-top:8px; opacity:0.7">
-            <span id="chordCount">0</span> chords available
-          </div>
-        </div>
-
-        <!-- 3. CUSTOMIZE -->
-        <div id="customizeDrawer" class="tab-pane">
-          <div id="hpCustomizeControls">
-            <div class="setting-row" style="margin-top: 5px;">
-              <button id="calBtn" class="secondary-btn small-btn" style="width:100%">Adjust Tonefields</button>
-            </div>
-            <div class="setting-row" style="margin-top: 5px;">
-              <button id="calibrateHandpanBtn" class="secondary-btn small-btn" style="width:100%">Calibrate
-                Handpan</button>
-            </div>
-
-            <div class="setting-row"
-              style="margin-top: 10px; border-top: 1px solid var(--panel-border); padding-top: 10px;">
-              <button id="buildScaleBtn" class="primary-btn small-btn"
-                style="width:100%; background: linear-gradient(135deg, #6366f1, #8b5cf6); border:none; color:white;">Build
-                Custom Scale</button>
-            </div>
-          </div>
-
-          <!-- Creation Form Mode (Hidden initially) -->
-
-        </div>
-
-
-        <!-- HANDPAN WRAP -->
-        <div class="handpan-wrap" id="handpanWrap">
-          <div id="handpanLoading" class="hp-loading-overlay">
-            <div class="hp-loader"></div>
-            <span>Loading Scale...</span>
-          </div>
-          <div id="lockBtn" class="lock-btn" style="display:none;">
-            <img id="lockBtnImg" src="./assets/images/lock.png" alt="Lock handpan" />
-          </div>
-          <div id="handpanFlipBtnContainer" style="position:absolute; width:100%;">
-            <button id="flipSideBtn" class="flip-btn" style="display:none;" title="Flip to Bottom">🔄</button>
-          </div>
-          <img id="handpanImg" class="handpan-img" src="./assets/images/handpan-for-groovepan.png"
-            alt="Handpan note layout" />
-          <div class="handpan-overlay" id="handpanOverlay"></div>
-        </div>
-
-        <!-- DUAL VIEW: BOTTOM WRAP -->
-        <div class="handpan-wrap" id="handpanWrapBottom" style="display:none; margin-top: 5px;">
-          <img id="handpanImgBottom" class="handpan-img" src="" alt="Handpan Bottom" />
-          <div class="handpan-overlay" id="handpanOverlayBottom"></div>
-        </div>
-        <div id="ghostNoteSection" class="under-handpan">
-          <button id="ghostBtn"><img src="./assets/images/ghost.png" /></button>
-        </div><br />
-
-
-        <!-- PLAYBACK MENU -->
-        <div id="virtualHandpanPlaybackControls" class="transport-container" data-grid="A">
-          <!-- Will be populated by TransportUI -->
-        </div>
-
-        <!-- AUDIO EXPORT MENU -->
-        <div id="exportAudioBtnContainer"
-          style="display:none; text-align:center; margin-top:20px; transition: opacity 0.5s ease-in-out; opacity: 0;">
-          <button id="exportAudioBtn" class="primary-btn"
-            style="width:100%; font-size: 14px; padding: 10px; display: flex; align-items: center; justify-content: center; gap: 8px;">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
-              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-              <polyline points="7 10 12 15 17 10"></polyline>
-              <line x1="12" y1="15" x2="12" y2="3"></line>
-            </svg>
-            Download Audio
-          </button>
-        </div>
-        <!-- PLAYBACK MENU -->
-
-        <!-- Lesson Player -->
-        <br />
-
-      </aside>
-    </div>
-
-
-  </div> <!-- End Container -->
-
-  <!-- Legend -->
-  <div class="legend" aria-label="Legend">
-    <div class="legend-title">Legend</div>
-    <div class="legend-row">
-      <h3>Actions for Setting the Notes</h3><br />
-    </div>
-    <div class="legend-row">
-      <span><kbd>Click</kbd> Select A Note</span>
-      <span><kbd>D</kbd> Ding</span>
-      <span><kbd>T</kbd> Tak</span>
-      <span><kbd>S</kbd> Slap</span>
-      <span><kbd>0–9</kbd> Numbered Note</span>
-      <span><kbd>G</kbd> Ghost Note</span>
-      <span><kbd>M</kbd> Toggle metronome</span>
-      <span><kbd>Esc</kbd> Exit</span>
-    </div>
-    <div class="legend-row">
-      <h3>Labels</h3><br />
-    </div>
-    <div class="legend-row">
-      <span><kbd>Left/Right</kbd> Toggle hand icons</span>
-
-    </div>
-  </div>
-
-  <div id="countdownOverlay" class="countdown-overlay" style="display: none;">
-    <span id="countdownNumber">4</span>
-  </div>
-
-  <!-- Coaching HUD -->
-  <div id="coachingHUD" class="coaching-hud" style="display:none;">
-    <button id="closeCoachingHUDBtn" class="close-hud-btn" title="Close">×</button>
-    <div class="hud-score">
-      <span class="hud-label">Accuracy</span>
-      <span id="hudAccuracy" class="hud-value">0%</span>
-    </div>
-    <div class="hud-notes">
-      <span id="hudCorrect" class="hud-correct">0</span> /
-      <span id="hudTotal" class="hud-total">0</span>
-    </div>
-    <button id="stopCoachingBtn" class="hud-stop">Stop</button>
-  </div>
-
-  <!-- Games HUD -->
-  <div id="gameHUD" class="coaching-hud game-hud" style="display:none;">
-    <button id="closeGameHUDBtn" class="close-hud-btn" title="Close">×</button>
-    <div class="hud-score">
-      <span class="hud-label">Level</span>
-      <span id="gameLevel" class="hud-value">1</span>
-    </div>
-    <div class="hud-notes">
-      <span class="hud-label" style="font-size: 0.8em; opacity: 0.7; margin-bottom: 2px;">Streak</span>
-      <span id="gameStreak" class="hud-value" style="color: var(--primary);">0</span>
-    </div>
-    <button id="startGameBtn" class="hud-stop"
-      style="background-color: var(--success); margin-bottom: 8px;">Start</button>
-    <button id="stopGameBtn" class="hud-stop">Exit Game</button>
-  </div>
-
-  <!-- Calibration HUD -->
-  <div id="calibrationHUD" class="coaching-hud calibration-hud" style="display:none;">
-    <button id="closeCalibrationHUDBtn" class="close-hud-btn" title="Close">×</button>
-    <div class="hud-score">
-      <span class="hud-label">Calibration</span>
-      <span id="calibrationMode" class="hud-value">Review</span>
-    </div>
-    <div class="hud-notes">
-      <span class="hud-label" style="font-size: 0.8em; opacity: 0.7; margin-bottom: 2px;">Long-press steps to view
-        logs</span>
-    </div>
-    <button id="exitCalibrationBtn" class="hud-stop">Exit Calibration</button>
-  </div>
-
-  <div class="footer"></div>
-
-  <!-- Static Labels for Presentation Mode -->
-  <div id="static-measure-labels" class="static-labels" style="display: none;"></div>
-
-  <button id="exitPresent" class="present-exit" title="Exit presentation mode (Esc)">Exit</button>
-
-  <!-- PRESENTATION MODE PLAYBACK MENU -->
-  <div id="presentationControls" class="transport-container" data-grid="A">
-    <!-- Mode Selector -->
-    <div class="presentation-mode-select">
-      <label for="presentModeSelect">View:</label>
-      <select id="presentModeSelect">
-        <option value="stream">Stream</option>
-        <option value="measure">Measure</option>
-        <option value="gravity">Gravity</option>
-      </select>
-    </div>
-    <!-- Will be populated by TransportUI -->
-    <button id="dashboardBtn" class="icon-btn dashboard-toggle" title="Quick Settings">⚙️</button>
-  </div>
-
-  <!-- Immersive Dashboard -->
-  <div id="presentationDashboard" class="presentation-dashboard" style="display: none;">
-    <div class="dashboard-panel glass-panel">
-      <div class="dashboard-header">
-        <h3>Quick Settings</h3>
-        <button id="closeDashboardBtn" class="icon-btn">✕</button>
+        </div> <!-- End Wrapper -->
       </div>
 
-      <div class="dashboard-grid">
-        <!-- Quick Toggles -->
-        <div class="dashboard-section">
-          <label>Live Interaction</label>
-          <div class="dash-row">
-            <button id="dashMicBtn" class="dash-pill">🎤 Listening</button>
-            <button id="dashCoachBtn" class="dash-pill">🎓 Coach</button>
-          </div>
+      <!-- Shared Pattern Banner -->
+      <div id="sharedBanner" class="shared-banner" style="display:none;">
+        <div class="shared-left">
+          <div class="shared-title">Viewing shared pattern</div>
+          <div class="shared-sub" id="sharedBannerSub"></div>
         </div>
 
-        <!-- Selectors -->
-        <div class="dashboard-section">
-          <label>Musical Controls</label>
-          <div class="dash-col">
-            <select id="dashPatternSelect" class="dash-select" title="Switch Pattern"></select>
-            <select id="dashScaleSelect" class="dash-select" title="Switch Scale"></select>
-          </div>
-        </div>
-
-        <!-- Aesthetics -->
-        <div class="dashboard-section">
-          <!-- Atmosphere Selector -->
-          <label style="font-size:1em">Atmosphere</label>
-          <div id="dashAtmosphereButtons" class="dash-aesthetic-grid">
-            <!-- Dynamic Category Buttons will be injected here -->
-          </div>
-          <select id="aestheticWorldSelect" class="dash-dropdown" style="display:none; margin-top:10px; width:100%;">
-            <option value="" disabled selected>Select Atmosphere...</option>
-          </select>
-        </div>
-        <div class="dashboard-section">
-          <label style="font-size:1em">FX</label>
-          <div class="dash-aesthetic-grid">
-            <button id="dashSparksBtn" class="dash-pill">✨ Sparks</button>
-          </div>
-          <label>Stream FX</label>
-          <div class="dash-aesthetic-grid">
-            <button id="dashGlowBtn" class="dash-pill">🌟 Glow</button>
-          </div>
-          <label>Gravity FX</label>
-          <div class="dash-aesthetic-grid">
-            <button id="dashProximityBtn" class="dash-pill">🎯 Targets</button>
-            <!-- <button id="dashColorsBtn" class="dash-pill">🌈 Colors</button> -->
-            <button id="dashStickingBtn" class="dash-pill">🔴 Right / 🔵 Left</button>
-          </div>
-          <div class="dash-aesthetic-grid">
-            <button id="dashCometsBtn" class="dash-pill active">☄️ Comets</button>
-            <button id="dashTrailsBtn" class="dash-pill">☄️ Trails</button>
-            <button id="dashIntervalBtn" class="dash-pill">⏭️ Interval</button>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-  <!-- END PRESENTATION MODE PLAYBACK MENU -->
-
-  <!-- Groove Generator Modal -->
-  <div id="grooveModal" class="modal-overlay" aria-hidden="true">
-    <div class="modal">
-      <div class="modal-title">Give me a groove!</div>
-      <div class="modal-subtitle">Choose accents, or leave as Auto and hit Go.</div>
-
-      <select id="complexitySelect" title="Groove complexity">
-        <option value="1" selected>Simple</option>
-        <option value="2">Groovy</option>
-        <option value="3">Wild</option>
-        <option value="R">Completely Random</option>
-      </select>
-
-      <div class="modal-grid">
-        <label class="modal-row">
-          <span>Ding accents</span>
-          <input id="dingCount" type="number" min="0" max="8" placeholder="Auto" />
-        </label>
-
-        <label class="modal-row">
-          <span>Tak accents</span>
-          <input id="takCount" type="number" min="0" max="8" placeholder="Auto" />
-        </label>
-
-        <label class="modal-row">
-          <span>Slap accents</span>
-          <input id="slapCount" type="number" min="0" max="8" placeholder="Auto" />
-        </label>
-      </div>
-
-      <div class="modal-hint" id="grooveHint"></div>
-
-      <div class="modal-actions">
-        <button id="grooveCancel">Cancel</button>
-        <button id="grooveGo" class="active">Go!</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Auth Modal -->
-  <div id="authModal" class="modal-overlay" aria-hidden="true">
-    <div class="modal" role="dialog" aria-modal="true" aria-label="Account">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-        <div class="modal-title" style="margin:0;">Account</div>
-        <button id="closeAuthBtn" class="close-btn">&times;</button>
-      </div>
-      <div class="modal-subtitle">Sign in to save grooves to the cloud.</div>
-
-      <div class="modal-grid">
-        <label class="modal-row">
-          <span>Email</span>
-          <input id="authEmail" type="email" autocomplete="email" placeholder="you@example.com"
-            style="width:200px;padding:10px 12px;border-radius:999px;border:1px solid var(--panel-border);background:var(--panel);color:var(--text);" />
-        </label>
-
-        <label id="authCurrentPassRow" class="modal-row" style="display:none;">
-          <span>Current Password</span>
-          <input id="authCurrentPass" type="password" autocomplete="current-password" placeholder="Confirm email change"
-            style="width:200px;padding:10px 12px;border-radius:999px;border:1px solid var(--panel-border);background:var(--panel);color:var(--text);" />
-        </label>
-
-        <label id="authPasswordRow" class="modal-row">
-          <span>Password</span>
-          <input id="authPass" type="password" autocomplete="current-password" placeholder="••••••••"
-            style="width:200px;padding:10px 12px;border-radius:999px;border:1px solid var(--panel-border);background:var(--panel);color:var(--text);" />
-        </label>
-
-        <label id="authPasswordConfirmRow" class="modal-row" style="display:none;">
-          <span>Confirm Password</span>
-          <input id="authPassConfirm" type="password" autocomplete="new-password" placeholder="Confirm new password"
-            style="width:200px;padding:10px 12px;border-radius:999px;border:1px solid var(--panel-border);background:var(--panel);color:var(--text);" />
-        </label>
-        <label id="authOtpRow" class="modal-row" style="display:none;">
-          <span>Verfication Code</span>
-          <input id="authOtp" type="text" autocomplete="one-time-code" placeholder="12345678"
-            style="width:200px;padding:10px 12px;border-radius:999px;border:1px solid var(--panel-border);background:var(--panel);color:var(--text);text-align:center;letter-spacing:0.2em;font-size:16px;"
-            maxlength="8" />
-        </label>
-      </div>
-
-      <div class="modal-hint" id="authHint">Tip: Use Register once, then Sign in.</div>
-
-      <div style="text-align: right; margin-bottom: 15px;">
-        <button id="authForgotPassword"
-          style="background:none; border:none; color:var(--text-secondary); font-size:12px; cursor:pointer; text-decoration:underline;">Forgot
-          Password?</button>
-        <button id="authTogglePasswordBtn"
-          style="display:none; background:none; border:none; color:var(--text-secondary); font-size:12px; cursor:pointer; text-decoration:underline;">Change
-          Password</button>
-      </div>
-
-      <div class="modal-actions">
-        <button id="authRegister">Register</button>
-        <button id="authLogin" class="active">Sign in</button>
-        <button id="authUpdateEmail" style="display:none;" class="active">Update Email</button>
-        <button id="authUpdatePassword" style="display:none;" class="active">Update Password</button>
-        <button id="authLogout" style="display:none;">Sign out</button>
-        <button id="authVerifyOtp" style="display:none;" class="active">Verify Code</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Course Creator Modal -->
-  <div id="courseModal" class="modal-overlay" aria-hidden="true">
-    <div class="modal course-modal">
-      <div class="modal-header">
-        <h2 class="modal-title">Course Creator</h2>
-        <button id="closeCourseModal" class="close-btn">&times;</button>
-      </div>
-
-      <div class="course-form">
-        <input type="text" id="courseTitle" placeholder="Course Title (e.g., Intro to D-Kurd)" class="full-width">
-        <textarea id="courseDesc" placeholder="Course Description"></textarea>
-
-        <div id="courseStructure">
+        <div class="shared-actions">
+          <button id="sharedSaveCopyBtn" class="active" title="Save a copy to your patterns">Save a copy</button>
+          <button id="sharedExitBtn" title="Exit shared view">Exit</button>
         </div>
       </div>
 
-      <div class="modal-footer">
-        <span id="courseSaveStatus" class="status-msg"
-          style="margin-right: auto; color: #2ecc71; font-weight: bold; opacity: 0; transition: opacity 0.3s; pointer-events: none;">Saved!</span>
-        <button id="addSectionBtn" class="secondary-btn">+ Add Section</button>
-        <button id="saveAndContinueBtn" class="secondary-btn">Save & Continue</button>
-        <button id="saveCourseBtn" class="primary-btn">Save Course</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Community Feed Modal -->
-  <div id="feedModal" class="modal-overlay" aria-hidden="true">
-    <div class="modal feed-modal">
-      <div class="feed-main-header">
-        <div class="feed-nav-group">
-          <button id="navDiscussionBtn" class="feed-main-tab active">Discussion</button>
-          <button id="navCompositionsBtn" class="feed-main-tab">Compositions</button>
-        </div>
-        <button id="closeFeedBtn" class="close-btn">&times;</button>
-      </div>
-
-      <!-- COMPOSITIONS VIEW -->
-      <div id="compositionsView" class="feed-view" style="display:none;">
-        <div class="feed-filters">
-          <button class="feed-filter-tab active" data-filter="newest">Newest</button>
-          <button class="feed-filter-tab" data-filter="top">Top Rated</button>
-          <button class="feed-filter-tab" data-filter="mine">My Shares</button>
-        </div>
-        <div id="feedGrid" class="feed-grid">
-          <div class="loading-spinner">Loading...</div>
-        </div>
-      </div>
-
-      <!-- DISCUSSION VIEW -->
-      <div id="discussionView" class="feed-view active">
-        <div id="createPostContainer" class="create-post-container">
-          <!-- Dynamic Input Area -->
-        </div>
-        <div id="postsFeed" class="posts-feed">
-          <div class="loading-spinner">Loading discussion...</div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Course Marketplace Modal -->
-  <div id="marketplaceModal" class="modal-overlay" aria-hidden="true">
-    <div class="modal marketplace-modal">
-      <div class="market-header">
-        <h2 class="market-title">Course Marketplace</h2>
-        <button id="closeMarketBtn" class="close-btn">&times;</button>
-      </div>
-      <div class="market-subtitle">Master the handpan with premium and free courses.</div>
-      <div id="marketGrid" class="market-grid">
-        <!-- Course Cards injected here -->
-        <div class="loading-spinner">Loading courses...</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Song Library Modal -->
-  <div id="songLibraryModal" class="modal-overlay" aria-hidden="true">
-    <div class="modal song-library-modal">
-      <div class="modal-header">
-        <h2 class="modal-title">Song Library</h2>
-        <button id="closeSongLibBtn" class="close-btn">&times;</button>
-      </div>
-      <div class="modal-subtitle">Select a song to load. Colors indicate compatibility with your current scale.</div>
-      <div id="songLibraryList" class="song-list-container">
-        <div class="loading-spinner">Loading songs...</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Guided Calibration Modal -->
-  <div id="guidedCalModal" class="modal-overlay" style="display: none;">
-    <div class="modal-content">
-      <h2>Sensitivity Calibration</h2>
-      <p id="guidedCalInstruction">Strike this note when the circle turns green.</p>
-
-      <div class="calibration-guide">
-        <div id="guideNoteBox" class="guide-note-box" style="--cal-color: hsl(0, 70%, 50%)">D</div>
-        <div class="progress-bar-container">
-          <div id="guideProgress" class="progress-bar"></div>
-        </div>
-      </div>
-
-      <div class="modal-actions">
-        <button id="startGuidedBtn" class="primary-btn">Begin</button>
-        <button id="closeGuidedBtn" class="text-btn">Cancel</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Advanced Calibration Modal -->
-  <div id="advancedCalModal" class="modal-overlay" style="display: none;">
-    <div class="modal-content advanced-cal-modal" style="max-width: 600px;">
-      <div class="modal-header">
-        <h2>Advanced Calibration</h2>
-        <button id="closeAdvancedCalBtn" class="close-btn">&times;</button>
-      </div>
-
-      <div class="modal-body" style="max-height: 60vh; overflow-y: auto; padding-right: 10px;">
-        <p style="color: var(--text-secondary); margin-top: 0; margin-bottom: 20px;">
-          Manually tweak sensitivity multipliers and threshold baseline profiles for each note.
-          Use carefully!
-        </p>
-
-        <!-- Dynamic Note Rows will be injected here -->
-        <div id="advancedCalList" class="advanced-cal-list">
-          <div class="loading-spinner">Loading...</div>
-        </div>
-
-      </div>
-
-      <div class="modal-actions" style="justify-content: space-between; margin-top: 20px;">
-        <button id="resetAdvancedCalBtn" class="text-btn danger-text">Reset to Defaults</button>
-        <div style="display: flex; gap: 10px;">
-          <button id="cancelAdvancedCalBtn" class="secondary-btn">Cancel</button>
-          <button id="saveAdvancedCalBtn" class="primary-btn">Save Changes</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Custom Confirmation Modal -->
-  <div id="confirmModal" class="modal-overlay" aria-hidden="true" style="z-index: 2000;">
-    <div class="modal" style="width: min(400px, 90%); text-align: center;">
-      <h3 class="modal-title" id="confirmTitle">Confirm Action</h3>
-      <div class="modal-subtitle" id="confirmMessage" style="font-size: 15px; margin: 15px 0 25px;">Are you sure?</div>
-      <div class="modal-actions" style="justify-content: center; gap: 15px;">
-        <button id="confirmCancelBtn" class="secondary-btn">Cancel</button>
-        <button id="confirmOkBtn" class="primary-btn"
-          style="background: #e74c3c; border-color: #c0392b; color: white;">Delete</button>
-      </div>
-    </div>
-  </div>
-  <div id="countdownOverlay" class="countdown-overlay" style="display:none;">
-    <div id="countdownNumber"></div>
-  </div>
-  <div id="micVisualizer" class="mic-meter" style="display:none;">
-    <div id="micLevel" class="mic-level-bar"></div>
-  </div>
-
-  <!-- Calibration Optimization Prompt -->
-  <div id="calOptimizationModal" class="modal-overlay" aria-hidden="true" style="z-index: 2500;">
-    <div class="modal" style="width: min(450px, 90%); text-align: center; border: 2px solid var(--accent-glow);">
-      <div class="modal-title" style="color: var(--accent-glow); margin-bottom: 20px;">👂 Optimize Your Experience</div>
-      <div class="modal-subtitle" style="font-size: 15px; margin-bottom: 25px; line-height: 1.5;">
-        Coach mode works best when calibrated to your specific instrument's unique frequencies.
-        <br><br>
-        Would you like to take 20 seconds to calibrate now for <strong>maximum accuracy</strong>?
-      </div>
-      <div class="modal-actions" style="flex-direction: column; gap: 10px;">
-        <button id="calNowBtn" class="primary-btn active" style="width: 100%;">🎯 Calibrate Now</button>
-        <button id="calSkipBtn" class="secondary-btn" style="width: 100%; border: none; opacity: 0.7;">Continue
-          anyway</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Courses View -->
-  <div id="courseSidebar" class="sidebar" aria-hidden="true">
-    <div class="sidebar-header">
-      <h3>Course Library</h3>
-      <button id="closeSidebar" class="close-btn">&times;</button>
-    </div><br />
-    <div class="sidebar-search">
-      <input type="text" id="courseSearchInput" placeholder="Search lessons or scales...">
-    </div>
-    <div id="courseList">
-      <p class="loading">Loading courses...</p>
-    </div>
-  </div>
-
-  <!-- Practice Sidebar -->
-  <div id="practiceSidebar" class="sidebar" aria-hidden="true">
-    <div class="sidebar-header">
-      <h3>Daily Practice</h3>
-      <button id="closePracticeSidebar" class="close-btn">&times;</button>
-    </div>
-    <div class="sidebar-search">
-      <div style="display:flex; gap:10px;">
-        <button id="startPracticeBtn" class="primary-btn" style="flex:1;">▶ Start</button>
-        <button id="refreshPracticeBtn" class="secondary-btn" title="Refresh">↻</button>
-      </div>
-    </div>
-    <div id="practiceList" class="sidebar-content">
-      <!-- Items go here -->
-    </div>
-  </div>
-
-  <!-- AI Assistant UI -->
-  <div id="aiFab" title="AI Assistant">
-    <svg viewBox="0 0 24 24">
-      <path
-        d="M19 9l1.25-2.75L23 5l-2.75-1.25L19 1l-1.25 2.75L15 5l2.75 1.25L19 9zm-7.5.5L9 4 6.5 9.5 1 12l5.5 2.5L9 20l2.5-5.5L17 12l-5.5-2.5zM19 15l-1.25 2.75L15 19l2.75 1.25L19 23l1.25-2.75L23 19l-2.75-1.25L19 15z" />
-    </svg>
-  </div>
-
-  <div id="aiChatContainer">
-    <div class="ai-header">
-      <h3>Rhythm Assistant</h3>
-      <button class="close-ai-btn">✕</button>
-    </div>
-    <div class="ai-messages"></div>
-    <div class="ai-input-area">
-      <input type="text" id="aiInput" placeholder="Ask for a beat or change..." autocomplete="off">
-      <button id="sendAiBtn">
-        <svg viewBox="0 0 24 24">
-          <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
-        </svg>
-      </button>
-    </div>
-  </div>
-
-  <!-- My Scales Management Modal -->
-  <div id="myScalesModal" class="profile-modal-overlay" aria-hidden="true" style="display:none;">
-    <div class="profile-modal">
-      <div class="profile-header">
-        <h3>My Handpans</h3>
-        <button id="closeMyScalesBtn" class="close-btn">&times;</button>
-      </div>
-      <div class="profile-content">
-        <div id="myScalesList" class="my-scales-list">
-          <!-- Dynamically populated -->
-        </div>
-
-        <!-- Creation Form Mode (Moved from settings) -->
-        <div id="hpCreationForm" style="display:none; flex-direction:column; gap:10px;">
-          <div style="display:flex; align-items:center; margin-bottom:5px;">
-            <button id="cancelBuildBtn" class="icon-btn" style="font-size:16px; padding:0; margin-right:8px;">←</button>
-            <h4 id="hpCreationTitle" style="margin:0; font-size:14px;">Review & Upload</h4>
-          </div>
-
-          <input type="text" id="hpBuilderName" placeholder="Builder (e.g. Yishama)" class="hp-input">
-          <input type="text" id="hpScaleName" placeholder="Scale Name (e.g. D Kurd 9)" class="hp-input">
-
-          <div class="file-upload-group" style="margin-bottom:10px;">
-            <label style="display:block; font-size:12px; color:var(--text-secondary); margin-bottom:4px;">Top Image
-              (Required)</label>
-            <div style="display:flex; align-items:center; gap:10px;">
-              <button type="button" class="secondary-btn small-btn"
-                onclick="document.getElementById('hpTopImage').click()">Choose File</button>
-              <span id="hpTopFileName" style="font-size:12px; color:var(--text); opacity:0.8;">No file chosen</span>
-              <input type="file" id="hpTopImage" accept="image/*" style="display:none"
-                onchange="document.getElementById('hpTopFileName').textContent = this.files[0]?.name || 'No file chosen'">
-            </div>
-            <div id="hpTopCurrent"
-              style="display:none; font-size:11px; color:#2ecc71; margin-top:5px; font-style:italic;"></div>
-          </div>
-
-          <div class="file-upload-group" style="margin-bottom:10px;">
-            <label style="display:block; font-size:12px; color:var(--text-secondary); margin-bottom:4px;">Bottom Image
-              (Optional)</label>
-            <div style="display:flex; align-items:center; gap:10px;">
-              <button type="button" class="secondary-btn small-btn"
-                onclick="document.getElementById('hpBottomImage').click()">Choose File</button>
-              <span id="hpBottomFileName" style="font-size:12px; color:var(--text); opacity:0.8;">No file chosen</span>
-              <input type="file" id="hpBottomImage" accept="image/*" style="display:none"
-                onchange="document.getElementById('hpBottomFileName').textContent = this.files[0]?.name || 'No file chosen'">
-            </div>
-            <div id="hpBottomCurrent"
-              style="display:none; font-size:11px; color:#2ecc71; margin-top:5px; font-style:italic;"></div>
-          </div>
-
-          <button id="saveNewHandpanBtn" class="primary-btn small-btn" style="margin-top:5px;">Next:
-            Calibrate</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Profile Editor Modal -->
-  <div id="profileModal" class="profile-modal-overlay" aria-hidden="true">
-    <div class="profile-modal">
-      <div class="profile-header">
-        <h3>👤 Edit Profile</h3>
-        <button id="closeProfileBtn" class="close-btn">&times;</button>
-      </div>
-      <div id="profileError" class="profile-error" style="display: none;"></div>
-      <div class="profile-content">
-        <div class="profile-form-group">
-          <label for="profileFirstName">First Name</label>
-          <input type="text" id="profileFirstName" maxlength="30" placeholder="e.g. John">
-        </div>
-
-        <div class="profile-form-group">
-          <label for="profileLastName">Last Name</label>
-          <input type="text" id="profileLastName" maxlength="30" placeholder="e.g. Doe">
-        </div>
-
-        <div class="profile-form-group">
-          <label for="profileUsername">Username</label>
-          <input type="text" id="profileUsername" maxlength="20" placeholder="e.g. RhythmMaster">
-        </div>
-
-        <div class="profile-form-group">
-          <label for="profileBio">Bio</label>
-          <textarea id="profileBio" maxlength="150" placeholder="Tell us about your rhythm journey..."></textarea>
-        </div>
-        <div class="profile-actions">
-          <button id="saveProfileBtn">Save Profile</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Coaching Results Modal -->
-  <div id="coachingResultsModal" class="modal-overlay" aria-hidden="true">
-    <div class="modal coaching-results-modal">
-      <div class="modal-header">
-        <h2>Practice Session Complete!</h2>
-      </div>
-
-      <div class="results-summary">
-        <div class="score-circle">
-          <span id="overallScore" class="score-value">0%</span>
-          <span class="score-label">Overall</span>
-        </div>
-
-        <div class="score-breakdown">
-          <div class="score-item">
-            <span class="score-label">Note Accuracy</span>
-            <span id="noteAccuracy" class="score-value">0%</span>
-          </div>
-          <div class="score-item">
-            <span class="score-label">Timing Accuracy</span>
-            <span id="timingAccuracy" class="score-value">0%</span>
-          </div>
-        </div>
-      </div>
-
-      <div class="problem-areas">
-        <h3>Areas to Practice</h3>
-        <div id="problemMeasuresList"></div>
-      </div>
-
-      <!-- Phase 3: Session Recorded Audio Playback -->
-      <audio id="sessionAudioPlayer" style="display:none;"></audio>
-
-      <div class="modal-actions">
-        <button id="playReviewBtn" class="primary-btn play-review-btn"
-          style="display: none; width: 100%; margin-bottom: 10px;">Play Recording & Grid</button>
-      </div>
-
-      <div class="modal-actions dual-actions">
-        <button id="practiceAgainBtn" class="primary-btn">Practice Again</button>
-        <button id="saveSessionBtn" class="secondary-btn">Save Session</button>
-      </div>
-    </div>
-  </div>
-
-
-
-
-
-
-  <!-- Error Modal -->
-  <div id="errorModal" class="modal" aria-hidden="true" style="display:none;">
-    <div class="error-modal-content">
-      <h2>Oops... something went wrong</h2>
-      <p>We encountered an unexpected issue properly loading the application.</p>
-
-      <div class="error-actions">
-        <button id="errorRefreshBtn" class="error-btn btn-primary" onclick="location.reload()">Refresh Page</button>
-        <button id="errorContinueBtn" class="error-btn btn-secondary">Continue Anyway</button>
-      </div>
-
-      <br>
-      <details class="error-details">
-        <summary>View Technical Details</summary>
-        <pre id="errorStack">Loading stack trace...</pre>
-      </details>
-    </div>
-  </div>
-
-
-
-
-  <script>
-    // ===== CONFIG =====
-    const VERSION = 'v1.17.4 — Cleaner Hand Silhouette + Fix Right Position';
-
-    // Modes:
-    // - '8'  => 8 steps (eighth notes): 1 + 2 + 3 + 4 +
-    // - '16' => 16 steps (sixteenth notes): 1 e & a ...
-    let mode = '8';
-    let STEPS = 8;
-
-    // ===== STORAGE KEYS =====
-    const STORAGE_KEY = 'rhythm_visualizer_patterns_v1';
-    const LAST_USED_KEY = 'rhythm_visualizer_last_used';
-    const METRO_KEY = 'rhythm_visualizer_metronome';
-    const PRESENT_KEY = 'rhythm_visualizer_present';
-
-    // ===== ELEMENTS =====
-    const measuresEl = document.getElementById('measures');
-    const themeBtn = document.getElementById('themeBtn');
-    const handBtn = document.getElementById('handBtn');
-    const presentBtn = document.getElementById('presentBtn');
-    const exitPresent = document.getElementById('exitPresent');
-
-    const patternSelect = document.getElementById('patternSelect');
-    const saveBtn = document.getElementById('saveBtn');
-    const loadBtn = document.getElementById('loadBtn');
-    const renameBtn = document.getElementById('renameBtn');
-    const deleteBtn = document.getElementById('deleteBtn');
-    const exportBtn = document.getElementById('exportBtn');
-    const importBtn = document.getElementById('importBtn');
-
-    const openCourseModalBtn = document.getElementById('openCourseModalBtn');
-
-    // ===== GROOVE MODAL ELEMENTS =====
-    const grooveBtn = document.getElementById('grooveBtn');
-    const grooveModal = document.getElementById('grooveModal');
-    const grooveCancel = document.getElementById('grooveCancel');
-    const grooveGo = document.getElementById('grooveGo');
-    const dingCount = document.getElementById('dingCount');
-    const takCount = document.getElementById('takCount');
-    const slapCount = document.getElementById('slapCount');
-    const grooveHint = document.getElementById('grooveHint');
-    const complexitySelect = document.getElementById('complexitySelect');
-
-    // ===== AUTH ELEMENTS =====
-    const accountBtn = document.getElementById('accountBtn');
-    const accountStatus = document.getElementById('accountStatus');
-
-    const authModal = document.getElementById('authModal');
-    const authRegister = document.getElementById('authRegister');
-    const authLogin = document.getElementById('authLogin');
-    const authLogout = document.getElementById('authLogout');
-    const authEmail = document.getElementById('authEmail');
-    const authPass = document.getElementById('authPass');
-    const authHint = document.getElementById('authHint');
-
-    const handpanImg = document.getElementById('handpanImg');
-    const hideHandpanOptionsBtn = document.getElementById('hideHandpanOptionsBtn');
-    const numberPitchSelect = document.getElementById('numberPitchSelect');
-    const handpanSection = document.getElementById('handpanWrap');
-    const ghostNoteSection = document.getElementById('ghostNoteSection');
-    const lockBtn = document.getElementById('lockBtn');
-
-    // ===== RANGE SELECTION STATE =====
-    let anchorIndex = null;     // anchor for shift-click / long-press selection
-    let caretIndex = null;      // where paste starts (usually last clicked/selected)
-    let rangeStart = null;      // inclusive
-    let rangeEnd = null;        // inclusive
-    let selecting = false;      // selection mode (especially for mobile drag)
-    let beatClipboard = null;   // { type:'beats', steps:[{label}], length:n }
-
-    // Action bar elements
-    const selBar = document.getElementById('selBar');
-    const selBarText = document.getElementById('selBarText');
-    const selCopyBtn = document.getElementById('selCopyBtn');
-    const selPasteBtn = document.getElementById('selPasteBtn');
-    const selDeleteBtn = document.getElementById('selDeleteBtn');
-    const selCancelBtn = document.getElementById('selCancelBtn');
-
-    // ===== MEASURE ACTIONS STATE =====
-    let measureClipboard = null; // { type:'measure', steps:[{label}], stepsCount: STEPS }
-
-    const addMeasureBtn = document.getElementById('addMeasureBtn');
-    const delMeasureBtn = document.getElementById('delMeasureBtn');
-    const copyMeasureBtn = document.getElementById('copyMeasureBtn');
-    const pasteMeasureBtn = document.getElementById('pasteMeasureBtn');
-
-
-
-  </script>
-  <!-- External Dependencies (MIDI Parser) -->
-  <script src="https://cdn.jsdelivr.net/npm/midi-parser-js@4.0.4/src/main.min.js"></script>
-
-  <!-- Background List (Auto-generated) -->
-  <script src="/js/background-list.js"></script>
-
-  <!-- Vite Entry Point -->
-  <script type="module" src="/main.js"></script>
-
-  <!-- POTW MODAL -->
-  <div id="potwModal" class="modal-overlay" aria-hidden="true" style="display: none;">
-    <div class="modal-content potw-modal">
-      <div class="modal-header">
-        <h2>Pattern of the Week</h2>
-        <button class="close-modal-btn" id="closePotwBtn">&times;</button>
-      </div>
-
-      <!-- TABS -->
-      <div class="potw-tabs">
-        <button class="potw-tab active" data-tab="potwSchedule">Schedule</button>
-        <button class="potw-tab" data-tab="potwManage">Manage & History</button>
-      </div>
-
-      <div class="modal-body">
-
-        <!-- SCHEDULE TAB -->
-        <div id="potwSchedule" class="potw-tab-content active">
-          <div class="potw-section">
-            <h3>Schedule Weekly Pattern</h3>
-            <p class="desc">Select a pattern from your saved library to feature.</p>
-
-            <div class="form-group">
-              <label>Saved Pattern</label>
-              <select id="potwPatternSelect" class="full-width">
-                <option value="">Loading...</option>
-              </select>
-            </div>
-
-            <div class="form-group">
-              <label>Launch Date</label>
-              <input type="date" id="potwLaunchDate" class="full-width" />
-            </div>
-
-            <div class="form-group">
-              <label>Difficulty (1-10)</label>
-              <input type="number" id="potwDifficulty" min="1" max="10" value="5" class="full-width" />
-            </div>
-
-            <div class="form-group">
-              <label>Description</label>
-              <textarea id="potwDesc" rows="3" placeholder="Why is this pattern cool?"></textarea>
-            </div>
-
-            <button id="potwScheduleBtn" class="primary-btn full-width">Schedule Pattern</button>
-            <div id="potwStatus" class="status-msg"></div>
-          </div>
-        </div>
-
-        <!-- MANAGE TAB -->
-        <div id="potwManage" class="potw-tab-content">
-          <div class="potw-section">
-            <h3>Upcoming Patterns</h3>
-            <div id="potwUpcomingList" class="potw-list">Loading...</div>
-          </div>
-
-          <div class="potw-section">
-            <h3>Active Now</h3>
-            <div id="potwActiveList" class="potw-list">Loading...</div>
-          </div>
-
-          <div class="potw-section">
-            <h3>History</h3>
-            <div id="potwHistoryList" class="potw-list">Loading...</div>
-          </div>
-        </div>
-
-      </div>
-    </div>
-  </div>
-
-  <!-- HANDPAN CALIBRATION OVERLAY -->
-  <div id="calibrationOverlay" class="cal-overlay" style="display: none;">
-    <div class="cal-header">
-      <div class="cal-title-group">
-        <h2 id="calHandpanName">Calibrating Handpan</h2>
-      </div>
-
-      <div id="calSaveStatus">Saved</div>
-
-      <div class="cal-actions">
-        <button id="calFlipBtn" class="cal-btn cal-btn-secondary" style="display:none;">Flip View</button>
-        <button id="headerAddTonefieldBtn" class="cal-btn cal-btn-primary" style="margin-right:8px;">＋ Add
-          Tonefield</button>
-        <button id="calDoneBtn" class="cal-btn cal-btn-secondary">Done</button>
-      </div>
-    </div>
-
-    <div class="cal-workspace">
-      <div id="calCanvasContainer" class="cal-canvas-container">
-        <img id="calHandpanImage" class="cal-bg-img" src="" alt="Handpan Reference">
-        <div id="calTonefieldsLayer" class="cal-layer"></div>
-      </div>
-
-      <div class="cal-instructions">
-        Drag to move • Click to select • Use Sidebar to adjust properties
-      </div>
-
-      <!-- Properties Sidebar -->
-      <aside id="calPropertiesPanel" class="cal-properties">
-        <h4 id="calPropTitle">Global Properties</h4>
-
-        <!-- Global Props -->
-        <div id="calGlobalProps">
-          <div class="prop-row">
-            <label>Image Rotation</label>
-            <input type="range" id="calImgRotInput" min="0" max="360" value="0">
-            <span id="valImgRot" style="font-size:11px; float:right;">0°</span>
-          </div>
-
-
-        </div>
-
-        <!-- Note Props -->
-        <div id="calNoteProps" style="display:none;">
-          <div class="prop-row">
-            <label>Pitch</label>
-            <div style="display:flex; gap:5px;">
-              <select id="calPitchSelect" style="flex:1"></select>
-              <select id="calOctaveSelect" style="width:60px;">
+      <!-- Control buttons -->
+      <div class="controls pattern-row">
+        <div class="controls-primary">
+          <button id="themeBtn" title="Toggle light / dark mode">☀︎ / ☾</button>
+          <button id="grooveBtn" title="Generate a random groove" style="display: none;">Give me a groove!</button>
+          <button id="labelNotationBtn" title="Toggle label notation (Musical vs Numeric)">1 2 3</button>
+          <button id="composeBtn"
+            title="Compose mode: writing advances to the next beat (Alt = write without advance)">🎼</button>
+          <button id="gridBtn" style="display:none;" title="Toggle between 8th and 16th grid">8ths</button>
+          <button id="handBtn" style="display: none;" class="active" title="Toggle left/right hand coloring">Left/Right:
+            Off</button>
+          <button id="stickingBtn" title="Edit Sticking Mode: Click cells to toggle Hand (R/L)">🤚</button>
+          <button id="dualModeBtn" title="Toggle Dual Grid Mode">👥</button>
+          <button id="flipHandsBtn" style="display:none;"
+            title="Flip Remaining: Inverts hands from current selection onwards">🔁</button>
+          <div class="control-group">
+            <!-- Time Signature -->
+            <div class="ts-wrapper">
+              <select id="tsNum" class="ts-select">
+                <option value="1">1</option>
                 <option value="2">2</option>
                 <option value="3">3</option>
-                <option value="4">4</option>
+                <option value="4" selected>4</option>
                 <option value="5">5</option>
+                <option value="6">6</option>
+                <option value="7">7</option>
+                <option value="8">8</option>
+                <option value="9">9</option>
+                <option value="10">10</option>
+                <option value="11">11</option>
+                <option value="12">12</option>
+                <option value="13">13</option>
+                <option value="14">14</option>
+                <option value="15">15</option>
+                <option value="16">16</option>
+                <option value="17">17</option>
+                <option value="18">18</option>
+                <option value="19">19</option>
+              </select>
+              <span class="ts-sep">/</span>
+              <select id="tsDen" class="ts-select">
+                <option value="2">2</option>
+                <option value="4" selected>4</option>
+                <option value="8">8</option>
               </select>
             </div>
           </div>
 
-          <div class="prop-row">
-            <label>Number (Optional)</label>
-            <select id="calNumberSelect"></select>
+          <button id="undoBtn" title="Undo (Cmd+Z)" disabled>↩️</button>
+          <button id="redoBtn" title="Redo (Cmd+Shift+Z)" style="display:none;" disabled>↪️</button>
+          <!-- Microphone -->
+          <div class="dropdown mic-dropdown">
+            <button id="micBtn" class="secondary-btn" title="Toggle mic (Click) / Settings (Auto-open)">🎤</button>
+            <div id="micDropdownMenu" class="dropdown-content">
+              <div style="padding: 8px 12px;">
+                <div class="setting-group" style="margin-bottom: 12px;">
+                  <label
+                    style="font-size: 13px; font-weight: 500; display:block; margin-bottom:4px;">Sensitivity</label>
+                  <div style="display:flex; align-items:center; gap:8px;">
+                    <input type="range" id="micSensInput" min="0.01" max="0.3" step="0.01" value="0.05"
+                      style="width:100px;">
+                    <span id="sensVal" style="font-size:12px; font-family:monospace;">0.05</span>
+                  </div>
+                </div>
+
+                <div class="setting-group" style="margin-bottom:12px;">
+                  <label style="font-size: 13px; font-weight: 500; display:block; margin-bottom:4px;">Latency
+                    Comp</label>
+                  <div style="display:flex; align-items:center; gap:8px;">
+                    <input type="range" id="micDelayInput" min="-100" max="100" step="1" value="0" style="width:100px;">
+                    <span id="delayVal" style="font-size:12px; font-family:monospace;">0ms</span>
+                  </div>
+                </div>
+
+                <button id="fullCalBtn" class="primary-btn" style="margin-bottom:8px; width: 100%;">Full Calibration
+                  (Recommended)</button>
+                <button id="micCalBtn">1. Pitch Calibration</button>
+                <button id="guidedCalBtn" style="margin-top:8px;">2. Sensitivity Calibration</button>
+                <button id="advancedCalBtn" style="margin-top:8px;" title="Manually adjust note thresholds">3. Advanced
+                  Calibration</button>
+              </div>
+            </div>
           </div>
+          <button id="coachModeBtn" class="secondary-btn" title="Practice with real-time feedback">🎯 Coach</button>
+          <button id="gamesModeBtn" class="secondary-btn" title="Play games with your handpan">⚄ Games</button>
+          <button id="clearBtn-A">Clear</button>
+          <button id="presentBtn" title="Toggle presentation mode (Esc exits)">⛶</button>
 
-          <div class="prop-row">
-            <label>Size</label>
-            <input type="range" id="calSizeInput" min="5" max="40" value="12">
-            <span id="valSize" style="font-size:11px; float:right;">12%</span>
-          </div>
-
-          <div class="prop-row">
-            <label>Shape (H/W Ratio)</label>
-            <input type="range" id="calShapeInput" min="0.5" max="1.5" step="0.05" value="1">
-            <span id="valShape" style="font-size:11px; float:right;">1.00</span>
-          </div>
-
-          <div class="prop-row">
-            <label>Rotation</label>
-            <input type="range" id="calRotInput" min="0" max="360" value="0">
-            <span id="valRot" style="font-size:11px; float:right;">0°</span>
-          </div>
-
-
-
-          <div class="prop-row">
-            <button id="deleteTonefieldBtn" class="danger-btn">Delete Note</button>
+          <div id="calibrationStatus" class="calibration-overlay" style="display:none;">
+            <div class="cal-progress-wrapper">
+              <svg class="cal-progress-svg" viewBox="0 0 36 36">
+                <circle class="cal-circle-bg" cx="18" cy="18" r="16"></circle>
+                <circle id="calProgressCircle" class="cal-circle-progress" cx="18" cy="18" r="16"></circle>
+              </svg>
+              <div class="cal-info">
+                <span class="cal-label">Tap Note</span>
+                <span id="targetNoteName" class="cal-note">Ding</span>
+              </div>
+            </div>
           </div>
         </div>
-      </aside>
+
+      </div>
+      <div class="controls-transport">
+        <div id="mainTransport-A" class="transport-container" data-grid="A">
+          <!-- Will be populated by TransportUI -->
+        </div>
+      </div>
+
+      <!-- Selection Action Bar (shows when a range is selected) -->
+      <div id="selBar" class="sel-bar" style="display:none;" aria-label="Selection actions">
+        <div class="sel-bar-left">
+          <span id="selBarText" class="sel-bar-text">0 selected</span>
+        </div>
+        <div class="sel-bar-actions">
+          <button id="selCopyBtn">Copy</button>
+          <button id="selDuplicateBtn">Duplicate</button>
+          <button id="selPasteBtn" disabled>Paste</button>
+          <button id="selDeleteBtn">Delete</button>
+          <button id="selCancelBtn">Cancel</button>
+        </div>
+      </div>
+
+      <!-- Lesson Player -->
+      <div id="lessonPlayer" style="display: none;" class="lesson-panel">
+        <div id="sectionHeader" class="section-header">
+          <h2 id="activeSectionTitle">Section Name</h2>
+        </div>
+        <div id="lessonHeader" class="lesson-header">
+          <h2 id="activeLessonTitle">Lesson Name</h2>
+        </div>
+        <div id="lessonContent" class="lesson-content">
+          <div id="lessonDescription" class="text-area" contenteditable="true"></div>
+          <div id="videoContainer" class="video-wrapper"></div>
+          <div id="activeLessonFooter" style="margin-top:24px;">
+            <div
+              style="display:grid; grid-template-columns: 180px auto; gap:16px; align-items:center; justify-content:center; margin-bottom:16px;">
+              <button id="lessonCompleteBtn" class="secondary-btn"
+                style="white-space:nowrap; width:100%; justify-content:center;">✅ Mark as Complete</button>
+              <button id="nextLessonBtn" class="primary-btn" style="white-space:nowrap;"><span class="desktop-text">Next
+                  Lesson&nbsp;</span>&rarr;</button>
+              <button id="closeLessonBtn" class="text-btn" style="color: var(--text-secondary); font-size: 0.9em;">❌
+                Exit Lesson</button>
+              <button id="prevLessonBtn" class="primary-btn"
+                style="white-space:nowrap; background-color: #f9e17f; justify-content:center;">&larr;</button>
+            </div>
+            <div id="lessonTransport" class="transport-container" data-grid="A">
+              <!-- Will be populated by TransportUI -->
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Grid -->
+      <div class="main">
+
+        <div class="left">
+          <div id="measures" class="measures" aria-label="Rhythm grid"></div>
+
+          <!-- Secondary Grid (Only shows in Dual Mode) -->
+          <div id="controls-B" class="controls secondary-controls" style="display:none;">
+            <div class="instance-label">Grid B</div>
+            <div id="mainTransport-B" class="transport-container" data-grid="B">
+              <!-- Will be populated by TransportUI -->
+            </div>
+            <button id="clearBtn-B">Clear</button>
+          </div>
+          <div id="measures-B" class="measures secondary-measures" style="display:none;"
+            aria-label="Secondary rhythm grid">
+          </div>
+
+          <!-- Measure Actions -->
+          <div class="measure-tools" id="measureTools">
+            <span class="measure-tools-label">Measure</span>
+            <button id="addMeasureBtn" title="Add a new measure">＋</button>
+            <button id="delMeasureBtn" title="Delete active measure">−</button>
+          </div>
+        </div>
+
+        <!-- HANDPAN OPTIONS -->
+        <aside class="handpan-panel" aria-label="Handpan map">
+          <!-- TABS -->
+          <div class="handpan-tabs">
+            <button class="tab-btn" data-tab="handpanSettingsDrawer" title="Settings">🛸</button>
+            <button class="tab-btn" data-tab="chordDrawer" title="Chords">🎶</button>
+            <button class="tab-btn" data-tab="customizeDrawer" title="Customize">⚙️</button>
+          </div>
+
+          <!-- TAB PANES -->
+
+          <!-- 1. SETTINGS -->
+          <div id="handpanSettingsDrawer" class="tab-pane">
+            <div class="drawer-content"> <!-- Keep wrapper for padding inheritance -->
+              <div class="setting-row">
+                <label>Scale:</label>
+                <select id="scaleSelect" title="Choose your handpan scale"></select>
+                <span id="scaleStatus" style="display:none; opacity:.7;font-size:13px;"></span>
+              </div>
+
+              <div class="setting-row">
+                <label>Color:</label>
+                <select id="handpanColorSelect" title="Choose your handpan color">
+                  <option value="Bronze">Bronze</option>
+                  <option value="Sketch">Sketch</option>
+                </select>
+              </div>
+
+              <div class="setting-row">
+                <label>Labels:</label>
+                <select id="numberPitchSelect" title="Display numbers or pitches">
+                  <option value="default">-----</option>
+                  <option value="Numbers">Numbers</option>
+                  <option value="Pitches">Pitches</option>
+                </select>
+              </div>
+
+              <div class="setting-row">
+                <label>Hands:</label>
+                <div class="toggle-wrapper" style="display:flex; align-items:center; gap:8px;">
+                  <input type="checkbox" id="vHandsToggle" checked style="width:auto;">
+                  <label for="vHandsToggle" style="font-size:12px; font-weight:400; cursor:pointer; margin:0;">Show
+                    Ghost
+                    Hands</label>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 2. CHORDS -->
+          <div id="chordDrawer" class="tab-pane">
+            <div id="chordList" class="drawer-content">
+              <!-- Chords injected here -->
+            </div>
+            <div class="drawer-meta" style="text-align:center; font-size:12px; margin-top:8px; opacity:0.7">
+              <span id="chordCount">0</span> chords available
+            </div>
+          </div>
+
+          <!-- 3. CUSTOMIZE -->
+          <div id="customizeDrawer" class="tab-pane">
+            <div id="hpCustomizeControls">
+              <div class="setting-row" style="margin-top: 5px;">
+                <button id="calBtn" class="secondary-btn small-btn" style="width:100%">Adjust Tonefields</button>
+              </div>
+              <div class="setting-row" style="margin-top: 5px;">
+                <button id="calibrateHandpanBtn" class="secondary-btn small-btn" style="width:100%">Calibrate
+                  Handpan</button>
+              </div>
+
+              <div class="setting-row"
+                style="margin-top: 10px; border-top: 1px solid var(--panel-border); padding-top: 10px;">
+                <button id="buildScaleBtn" class="primary-btn small-btn"
+                  style="width:100%; background: linear-gradient(135deg, #6366f1, #8b5cf6); border:none; color:white;">Build
+                  Custom Scale</button>
+              </div>
+            </div>
+
+            <!-- Creation Form Mode (Hidden initially) -->
+
+          </div>
+
+
+          <!-- HANDPAN WRAP -->
+          <div class="handpan-wrap" id="handpanWrap">
+            <div id="handpanLoading" class="hp-loading-overlay">
+              <div class="hp-loader"></div>
+              <span>Loading Scale...</span>
+            </div>
+            <div id="lockBtn" class="lock-btn" style="display:none;">
+              <img id="lockBtnImg" src="./assets/images/lock.png" alt="Lock handpan" />
+            </div>
+            <div id="handpanFlipBtnContainer" style="position:absolute; width:100%;">
+              <button id="flipSideBtn" class="flip-btn" style="display:none;" title="Flip to Bottom">🔄</button>
+            </div>
+            <img id="handpanImg" class="handpan-img" src="./assets/images/handpan-for-groovepan.png"
+              alt="Handpan note layout" />
+            <div class="handpan-overlay" id="handpanOverlay"></div>
+          </div>
+
+          <!-- DUAL VIEW: BOTTOM WRAP -->
+          <div class="handpan-wrap" id="handpanWrapBottom" style="display:none; margin-top: 5px;">
+            <img id="handpanImgBottom" class="handpan-img" src="" alt="Handpan Bottom" />
+            <div class="handpan-overlay" id="handpanOverlayBottom"></div>
+          </div>
+          <div id="ghostNoteSection" class="under-handpan">
+            <button id="ghostBtn"><img src="./assets/images/ghost.png" /></button>
+          </div><br />
+
+
+          <!-- PLAYBACK MENU -->
+          <div id="virtualHandpanPlaybackControls" class="transport-container" data-grid="A">
+            <!-- Will be populated by TransportUI -->
+          </div>
+
+          <!-- AUDIO EXPORT MENU -->
+          <div id="exportAudioBtnContainer"
+            style="display:none; text-align:center; margin-top:20px; transition: opacity 0.5s ease-in-out; opacity: 0;">
+            <button id="exportAudioBtn" class="primary-btn"
+              style="width:100%; font-size: 14px; padding: 10px; display: flex; align-items: center; justify-content: center; gap: 8px;">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+              </svg>
+              Download Audio
+            </button>
+          </div>
+          <!-- PLAYBACK MENU -->
+
+          <!-- Lesson Player -->
+          <br />
+
+        </aside>
+      </div>
+
+
+    </div> <!-- End Container -->
+
+    <!-- Legend -->
+    <div class="legend" aria-label="Legend">
+      <div class="legend-title">Legend</div>
+      <div class="legend-row">
+        <h3>Actions for Setting the Notes</h3><br />
+      </div>
+      <div class="legend-row">
+        <span><kbd>Click</kbd> Select A Note</span>
+        <span><kbd>D</kbd> Ding</span>
+        <span><kbd>T</kbd> Tak</span>
+        <span><kbd>S</kbd> Slap</span>
+        <span><kbd>0–9</kbd> Numbered Note</span>
+        <span><kbd>G</kbd> Ghost Note</span>
+        <span><kbd>M</kbd> Toggle metronome</span>
+        <span><kbd>Esc</kbd> Exit</span>
+      </div>
+      <div class="legend-row">
+        <h3>Labels</h3><br />
+      </div>
+      <div class="legend-row">
+        <span><kbd>Left/Right</kbd> Toggle hand icons</span>
+
+      </div>
+    </div>
+
+    <div id="countdownOverlay" class="countdown-overlay" style="display: none;">
+      <span id="countdownNumber">4</span>
+    </div>
+
+    <!-- Coaching HUD -->
+    <div id="coachingHUD" class="coaching-hud" style="display:none;">
+      <button id="closeCoachingHUDBtn" class="close-hud-btn" title="Close">×</button>
+      <div class="hud-score">
+        <span class="hud-label">Accuracy</span>
+        <span id="hudAccuracy" class="hud-value">0%</span>
+      </div>
+      <div class="hud-notes">
+        <span id="hudCorrect" class="hud-correct">0</span> /
+        <span id="hudTotal" class="hud-total">0</span>
+      </div>
+      <button id="stopCoachingBtn" class="hud-stop">Stop</button>
+    </div>
+
+    <!-- Games HUD -->
+    <div id="gameHUD" class="coaching-hud game-hud" style="display:none;">
+      <button id="closeGameHUDBtn" class="close-hud-btn" title="Close">×</button>
+      <div class="hud-score">
+        <span class="hud-label">Level</span>
+        <span id="gameLevel" class="hud-value">1</span>
+      </div>
+      <div class="hud-notes">
+        <span class="hud-label" style="font-size: 0.8em; opacity: 0.7; margin-bottom: 2px;">Streak</span>
+        <span id="gameStreak" class="hud-value" style="color: var(--primary);">0</span>
+      </div>
+      <button id="startGameBtn" class="hud-stop"
+        style="background-color: var(--success); margin-bottom: 8px;">Start</button>
+      <button id="stopGameBtn" class="hud-stop">Exit Game</button>
+    </div>
+
+    <!-- Calibration HUD -->
+    <div id="calibrationHUD" class="coaching-hud calibration-hud" style="display:none;">
+      <button id="closeCalibrationHUDBtn" class="close-hud-btn" title="Close">×</button>
+      <div class="hud-score">
+        <span class="hud-label">Calibration</span>
+        <span id="calibrationMode" class="hud-value">Review</span>
+      </div>
+      <div class="hud-notes">
+        <span class="hud-label" style="font-size: 0.8em; opacity: 0.7; margin-bottom: 2px;">Long-press steps to view
+          logs</span>
+      </div>
+      <button id="exitCalibrationBtn" class="hud-stop">Exit Calibration</button>
+    </div>
+
+    <div class="footer"></div>
+
+    <!-- Static Labels for Presentation Mode -->
+    <div id="static-measure-labels" class="static-labels" style="display: none;"></div>
+
+    <button id="exitPresent" class="present-exit" title="Exit presentation mode (Esc)">Exit</button>
+
+    <!-- PRESENTATION MODE PLAYBACK MENU -->
+    <div id="presentationControls" class="transport-container" data-grid="A">
+      <!-- Mode Selector -->
+      <div class="presentation-mode-select">
+        <label for="presentModeSelect">View:</label>
+        <select id="presentModeSelect">
+          <option value="stream">Stream</option>
+          <option value="measure">Measure</option>
+          <option value="gravity">Gravity</option>
+        </select>
+      </div>
+      <!-- Will be populated by TransportUI -->
+      <button id="dashboardBtn" class="icon-btn dashboard-toggle" title="Quick Settings">⚙️</button>
+    </div>
+
+    <!-- Immersive Dashboard -->
+    <div id="presentationDashboard" class="presentation-dashboard" style="display: none;">
+      <div class="dashboard-panel glass-panel">
+        <div class="dashboard-header">
+          <h3>Quick Settings</h3>
+          <button id="closeDashboardBtn" class="icon-btn">✕</button>
+        </div>
+
+        <div class="dashboard-grid">
+          <!-- Quick Toggles -->
+          <div class="dashboard-section">
+            <label>Live Interaction</label>
+            <div class="dash-row">
+              <button id="dashMicBtn" class="dash-pill">🎤 Listening</button>
+              <button id="dashCoachBtn" class="dash-pill">🎓 Coach</button>
+            </div>
+          </div>
+
+          <!-- Selectors -->
+          <div class="dashboard-section">
+            <label>Musical Controls</label>
+            <div class="dash-col">
+              <select id="dashPatternSelect" class="dash-select" title="Switch Pattern"></select>
+              <select id="dashScaleSelect" class="dash-select" title="Switch Scale"></select>
+            </div>
+          </div>
+
+          <!-- Aesthetics -->
+          <div class="dashboard-section">
+            <!-- Atmosphere Selector -->
+            <label style="font-size:1em">Atmosphere</label>
+            <div id="dashAtmosphereButtons" class="dash-aesthetic-grid">
+              <!-- Dynamic Category Buttons will be injected here -->
+            </div>
+            <select id="aestheticWorldSelect" class="dash-dropdown" style="display:none; margin-top:10px; width:100%;">
+              <option value="" disabled selected>Select Atmosphere...</option>
+            </select>
+          </div>
+          <div class="dashboard-section">
+            <label style="font-size:1em">FX</label>
+            <div class="dash-aesthetic-grid">
+              <button id="dashSparksBtn" class="dash-pill">✨ Sparks</button>
+            </div>
+            <label>Stream FX</label>
+            <div class="dash-aesthetic-grid">
+              <button id="dashGlowBtn" class="dash-pill">🌟 Glow</button>
+            </div>
+            <label>Gravity FX</label>
+            <div class="dash-aesthetic-grid">
+              <button id="dashProximityBtn" class="dash-pill">🎯 Targets</button>
+              <!-- <button id="dashColorsBtn" class="dash-pill">🌈 Colors</button> -->
+              <button id="dashStickingBtn" class="dash-pill">🔴 Right / 🔵 Left</button>
+            </div>
+            <div class="dash-aesthetic-grid">
+              <button id="dashCometsBtn" class="dash-pill active">☄️ Comets</button>
+              <button id="dashTrailsBtn" class="dash-pill">☄️ Trails</button>
+              <button id="dashIntervalBtn" class="dash-pill">⏭️ Interval</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- END PRESENTATION MODE PLAYBACK MENU -->
+
+    <!-- Groove Generator Modal -->
+    <div id="grooveModal" class="modal-overlay" aria-hidden="true">
+      <div class="modal">
+        <div class="modal-title">Give me a groove!</div>
+        <div class="modal-subtitle">Choose accents, or leave as Auto and hit Go.</div>
+
+        <select id="complexitySelect" title="Groove complexity">
+          <option value="1" selected>Simple</option>
+          <option value="2">Groovy</option>
+          <option value="3">Wild</option>
+          <option value="R">Completely Random</option>
+        </select>
+
+        <div class="modal-grid">
+          <label class="modal-row">
+            <span>Ding accents</span>
+            <input id="dingCount" type="number" min="0" max="8" placeholder="Auto" />
+          </label>
+
+          <label class="modal-row">
+            <span>Tak accents</span>
+            <input id="takCount" type="number" min="0" max="8" placeholder="Auto" />
+          </label>
+
+          <label class="modal-row">
+            <span>Slap accents</span>
+            <input id="slapCount" type="number" min="0" max="8" placeholder="Auto" />
+          </label>
+        </div>
+
+        <div class="modal-hint" id="grooveHint"></div>
+
+        <div class="modal-actions">
+          <button id="grooveCancel">Cancel</button>
+          <button id="grooveGo" class="active">Go!</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Auth Modal -->
+    <div id="authModal" class="modal-overlay" aria-hidden="true">
+      <div class="modal" role="dialog" aria-modal="true" aria-label="Account">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+          <div class="modal-title" style="margin:0;">Account</div>
+          <button id="closeAuthBtn" class="close-btn">&times;</button>
+        </div>
+        <div class="modal-subtitle">Sign in to save grooves to the cloud.</div>
+
+        <div class="modal-grid">
+          <label class="modal-row">
+            <span>Email</span>
+            <input id="authEmail" type="email" autocomplete="email" placeholder="you@example.com"
+              style="width:200px;padding:10px 12px;border-radius:999px;border:1px solid var(--panel-border);background:var(--panel);color:var(--text);" />
+          </label>
+
+          <label id="authCurrentPassRow" class="modal-row" style="display:none;">
+            <span>Current Password</span>
+            <input id="authCurrentPass" type="password" autocomplete="current-password"
+              placeholder="Confirm email change"
+              style="width:200px;padding:10px 12px;border-radius:999px;border:1px solid var(--panel-border);background:var(--panel);color:var(--text);" />
+          </label>
+
+          <label id="authPasswordRow" class="modal-row">
+            <span>Password</span>
+            <input id="authPass" type="password" autocomplete="current-password" placeholder="••••••••"
+              style="width:200px;padding:10px 12px;border-radius:999px;border:1px solid var(--panel-border);background:var(--panel);color:var(--text);" />
+          </label>
+
+          <label id="authPasswordConfirmRow" class="modal-row" style="display:none;">
+            <span>Confirm Password</span>
+            <input id="authPassConfirm" type="password" autocomplete="new-password" placeholder="Confirm new password"
+              style="width:200px;padding:10px 12px;border-radius:999px;border:1px solid var(--panel-border);background:var(--panel);color:var(--text);" />
+          </label>
+          <label id="authOtpRow" class="modal-row" style="display:none;">
+            <span>Verfication Code</span>
+            <input id="authOtp" type="text" autocomplete="one-time-code" placeholder="12345678"
+              style="width:200px;padding:10px 12px;border-radius:999px;border:1px solid var(--panel-border);background:var(--panel);color:var(--text);text-align:center;letter-spacing:0.2em;font-size:16px;"
+              maxlength="8" />
+          </label>
+        </div>
+
+        <div class="modal-hint" id="authHint">Tip: Use Register once, then Sign in.</div>
+
+        <div style="text-align: right; margin-bottom: 15px;">
+          <button id="authForgotPassword"
+            style="background:none; border:none; color:var(--text-secondary); font-size:12px; cursor:pointer; text-decoration:underline;">Forgot
+            Password?</button>
+          <button id="authTogglePasswordBtn"
+            style="display:none; background:none; border:none; color:var(--text-secondary); font-size:12px; cursor:pointer; text-decoration:underline;">Change
+            Password</button>
+        </div>
+
+        <div class="modal-actions">
+          <button id="authRegister">Register</button>
+          <button id="authLogin" class="active">Sign in</button>
+          <button id="authUpdateEmail" style="display:none;" class="active">Update Email</button>
+          <button id="authUpdatePassword" style="display:none;" class="active">Update Password</button>
+          <button id="authLogout" style="display:none;">Sign out</button>
+          <button id="authVerifyOtp" style="display:none;" class="active">Verify Code</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Course Creator Modal -->
+    <div id="courseModal" class="modal-overlay" aria-hidden="true">
+      <div class="modal course-modal">
+        <div class="modal-header">
+          <h2 class="modal-title">Course Creator</h2>
+          <button id="closeCourseModal" class="close-btn">&times;</button>
+        </div>
+
+        <div class="course-form">
+          <input type="text" id="courseTitle" placeholder="Course Title (e.g., Intro to D-Kurd)" class="full-width">
+          <textarea id="courseDesc" placeholder="Course Description"></textarea>
+
+          <div id="courseStructure">
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <span id="courseSaveStatus" class="status-msg"
+            style="margin-right: auto; color: #2ecc71; font-weight: bold; opacity: 0; transition: opacity 0.3s; pointer-events: none;">Saved!</span>
+          <button id="addSectionBtn" class="secondary-btn">+ Add Section</button>
+          <button id="saveAndContinueBtn" class="secondary-btn">Save & Continue</button>
+          <button id="saveCourseBtn" class="primary-btn">Save Course</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Community Feed Modal -->
+    <div id="feedModal" class="modal-overlay" aria-hidden="true">
+      <div class="modal feed-modal">
+        <div class="feed-main-header">
+          <div class="feed-nav-group">
+            <button id="navDiscussionBtn" class="feed-main-tab active">Discussion</button>
+            <button id="navCompositionsBtn" class="feed-main-tab">Compositions</button>
+          </div>
+          <button id="closeFeedBtn" class="close-btn">&times;</button>
+        </div>
+
+        <!-- COMPOSITIONS VIEW -->
+        <div id="compositionsView" class="feed-view" style="display:none;">
+          <div class="feed-filters">
+            <button class="feed-filter-tab active" data-filter="newest">Newest</button>
+            <button class="feed-filter-tab" data-filter="top">Top Rated</button>
+            <button class="feed-filter-tab" data-filter="mine">My Shares</button>
+          </div>
+          <div id="feedGrid" class="feed-grid">
+            <div class="loading-spinner">Loading...</div>
+          </div>
+        </div>
+
+        <!-- DISCUSSION VIEW -->
+        <div id="discussionView" class="feed-view active">
+          <div id="createPostContainer" class="create-post-container">
+            <!-- Dynamic Input Area -->
+          </div>
+          <div id="postsFeed" class="posts-feed">
+            <div class="loading-spinner">Loading discussion...</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Course Marketplace Modal -->
+    <div id="marketplaceModal" class="modal-overlay" aria-hidden="true">
+      <div class="modal marketplace-modal">
+        <div class="market-header">
+          <h2 class="market-title">Course Marketplace</h2>
+          <button id="closeMarketBtn" class="close-btn">&times;</button>
+        </div>
+        <div class="market-subtitle">Master the handpan with premium and free courses.</div>
+        <div id="marketGrid" class="market-grid">
+          <!-- Course Cards injected here -->
+          <div class="loading-spinner">Loading courses...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Song Library Modal -->
+    <div id="songLibraryModal" class="modal-overlay" aria-hidden="true">
+      <div class="modal song-library-modal">
+        <div class="modal-header">
+          <h2 class="modal-title">Song Library</h2>
+          <button id="closeSongLibBtn" class="close-btn">&times;</button>
+        </div>
+        <div class="modal-subtitle">Select a song to load. Colors indicate compatibility with your current scale.</div>
+        <div id="songLibraryList" class="song-list-container">
+          <div class="loading-spinner">Loading songs...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Guided Calibration Modal -->
+    <div id="guidedCalModal" class="modal-overlay" style="display: none;">
+      <div class="modal-content">
+        <h2>Sensitivity Calibration</h2>
+        <p id="guidedCalInstruction">Strike this note when the circle turns green.</p>
+
+        <div class="calibration-guide">
+          <div id="guideNoteBox" class="guide-note-box" style="--cal-color: hsl(0, 70%, 50%)">D</div>
+          <div class="progress-bar-container">
+            <div id="guideProgress" class="progress-bar"></div>
+          </div>
+        </div>
+
+        <div class="modal-actions">
+          <button id="startGuidedBtn" class="primary-btn">Begin</button>
+          <button id="closeGuidedBtn" class="text-btn">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Advanced Calibration Modal -->
+    <div id="advancedCalModal" class="modal-overlay" style="display: none;">
+      <div class="modal-content advanced-cal-modal" style="max-width: 600px;">
+        <div class="modal-header">
+          <h2>Advanced Calibration</h2>
+          <button id="closeAdvancedCalBtn" class="close-btn">&times;</button>
+        </div>
+
+        <div class="modal-body" style="max-height: 60vh; overflow-y: auto; padding-right: 10px;">
+          <p style="color: var(--text-secondary); margin-top: 0; margin-bottom: 20px;">
+            Manually tweak sensitivity multipliers and threshold baseline profiles for each note.
+            Use carefully!
+          </p>
+
+          <!-- Dynamic Note Rows will be injected here -->
+          <div id="advancedCalList" class="advanced-cal-list">
+            <div class="loading-spinner">Loading...</div>
+          </div>
+
+        </div>
+
+        <div class="modal-actions" style="justify-content: space-between; margin-top: 20px;">
+          <button id="resetAdvancedCalBtn" class="text-btn danger-text">Reset to Defaults</button>
+          <div style="display: flex; gap: 10px;">
+            <button id="cancelAdvancedCalBtn" class="secondary-btn">Cancel</button>
+            <button id="saveAdvancedCalBtn" class="primary-btn">Save Changes</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Custom Confirmation Modal -->
+    <div id="confirmModal" class="modal-overlay" aria-hidden="true" style="z-index: 2000;">
+      <div class="modal" style="width: min(400px, 90%); text-align: center;">
+        <h3 class="modal-title" id="confirmTitle">Confirm Action</h3>
+        <div class="modal-subtitle" id="confirmMessage" style="font-size: 15px; margin: 15px 0 25px;">Are you sure?
+        </div>
+        <div class="modal-actions" style="justify-content: center; gap: 15px;">
+          <button id="confirmCancelBtn" class="secondary-btn">Cancel</button>
+          <button id="confirmOkBtn" class="primary-btn"
+            style="background: #e74c3c; border-color: #c0392b; color: white;">Delete</button>
+        </div>
+      </div>
+    </div>
+    <div id="countdownOverlay" class="countdown-overlay" style="display:none;">
+      <div id="countdownNumber"></div>
+    </div>
+    <div id="micVisualizer" class="mic-meter" style="display:none;">
+      <div id="micLevel" class="mic-level-bar"></div>
+    </div>
+
+    <!-- Calibration Optimization Prompt -->
+    <div id="calOptimizationModal" class="modal-overlay" aria-hidden="true" style="z-index: 2500;">
+      <div class="modal" style="width: min(450px, 90%); text-align: center; border: 2px solid var(--accent-glow);">
+        <div class="modal-title" style="color: var(--accent-glow); margin-bottom: 20px;">👂 Optimize Your Experience
+        </div>
+        <div class="modal-subtitle" style="font-size: 15px; margin-bottom: 25px; line-height: 1.5;">
+          Coach mode works best when calibrated to your specific instrument's unique frequencies.
+          <br><br>
+          Would you like to take 20 seconds to calibrate now for <strong>maximum accuracy</strong>?
+        </div>
+        <div class="modal-actions" style="flex-direction: column; gap: 10px;">
+          <button id="calNowBtn" class="primary-btn active" style="width: 100%;">🎯 Calibrate Now</button>
+          <button id="calSkipBtn" class="secondary-btn" style="width: 100%; border: none; opacity: 0.7;">Continue
+            anyway</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Courses View -->
+    <div id="courseSidebar" class="sidebar" aria-hidden="true">
+      <div class="sidebar-header">
+        <h3>Course Library</h3>
+        <button id="closeSidebar" class="close-btn">&times;</button>
+      </div><br />
+      <div class="sidebar-search">
+        <input type="text" id="courseSearchInput" placeholder="Search lessons or scales...">
+      </div>
+      <div id="courseList">
+        <p class="loading">Loading courses...</p>
+      </div>
+    </div>
+
+    <!-- Practice Sidebar -->
+    <div id="practiceSidebar" class="sidebar" aria-hidden="true">
+      <div class="sidebar-header">
+        <h3>Daily Practice</h3>
+        <button id="closePracticeSidebar" class="close-btn">&times;</button>
+      </div>
+      <div class="sidebar-search">
+        <div style="display:flex; gap:10px;">
+          <button id="startPracticeBtn" class="primary-btn" style="flex:1;">▶ Start</button>
+          <button id="refreshPracticeBtn" class="secondary-btn" title="Refresh">↻</button>
+        </div>
+      </div>
+      <div id="practiceList" class="sidebar-content">
+        <!-- Items go here -->
+      </div>
+    </div>
+
+    <!-- AI Assistant UI -->
+    <div id="aiFab" title="AI Assistant">
+      <svg viewBox="0 0 24 24">
+        <path
+          d="M19 9l1.25-2.75L23 5l-2.75-1.25L19 1l-1.25 2.75L15 5l2.75 1.25L19 9zm-7.5.5L9 4 6.5 9.5 1 12l5.5 2.5L9 20l2.5-5.5L17 12l-5.5-2.5zM19 15l-1.25 2.75L15 19l2.75 1.25L19 23l1.25-2.75L23 19l-2.75-1.25L19 15z" />
+      </svg>
+    </div>
+
+    <div id="aiChatContainer">
+      <div class="ai-header">
+        <h3>Rhythm Assistant</h3>
+        <button class="close-ai-btn">✕</button>
+      </div>
+      <div class="ai-messages"></div>
+      <div class="ai-input-area">
+        <input type="text" id="aiInput" placeholder="Ask for a beat or change..." autocomplete="off">
+        <button id="sendAiBtn">
+          <svg viewBox="0 0 24 24">
+            <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- My Scales Management Modal -->
+    <div id="myScalesModal" class="profile-modal-overlay" aria-hidden="true" style="display:none;">
+      <div class="profile-modal">
+        <div class="profile-header">
+          <h3>My Handpans</h3>
+          <button id="closeMyScalesBtn" class="close-btn">&times;</button>
+        </div>
+        <div class="profile-content">
+          <div id="myScalesList" class="my-scales-list">
+            <!-- Dynamically populated -->
+          </div>
+
+          <!-- Creation Form Mode (Moved from settings) -->
+          <div id="hpCreationForm" style="display:none; flex-direction:column; gap:10px;">
+            <div style="display:flex; align-items:center; margin-bottom:5px;">
+              <button id="cancelBuildBtn" class="icon-btn"
+                style="font-size:16px; padding:0; margin-right:8px;">←</button>
+              <h4 id="hpCreationTitle" style="margin:0; font-size:14px;">Review & Upload</h4>
+            </div>
+
+            <input type="text" id="hpBuilderName" placeholder="Builder (e.g. Yishama)" class="hp-input">
+            <input type="text" id="hpScaleName" placeholder="Scale Name (e.g. D Kurd 9)" class="hp-input">
+
+            <div class="file-upload-group" style="margin-bottom:10px;">
+              <label style="display:block; font-size:12px; color:var(--text-secondary); margin-bottom:4px;">Top Image
+                (Required)</label>
+              <div style="display:flex; align-items:center; gap:10px;">
+                <button type="button" class="secondary-btn small-btn"
+                  onclick="document.getElementById('hpTopImage').click()">Choose File</button>
+                <span id="hpTopFileName" style="font-size:12px; color:var(--text); opacity:0.8;">No file chosen</span>
+                <input type="file" id="hpTopImage" accept="image/*" style="display:none"
+                  onchange="document.getElementById('hpTopFileName').textContent = this.files[0]?.name || 'No file chosen'">
+              </div>
+              <div id="hpTopCurrent"
+                style="display:none; font-size:11px; color:#2ecc71; margin-top:5px; font-style:italic;"></div>
+            </div>
+
+            <div class="file-upload-group" style="margin-bottom:10px;">
+              <label style="display:block; font-size:12px; color:var(--text-secondary); margin-bottom:4px;">Bottom Image
+                (Optional)</label>
+              <div style="display:flex; align-items:center; gap:10px;">
+                <button type="button" class="secondary-btn small-btn"
+                  onclick="document.getElementById('hpBottomImage').click()">Choose File</button>
+                <span id="hpBottomFileName" style="font-size:12px; color:var(--text); opacity:0.8;">No file
+                  chosen</span>
+                <input type="file" id="hpBottomImage" accept="image/*" style="display:none"
+                  onchange="document.getElementById('hpBottomFileName').textContent = this.files[0]?.name || 'No file chosen'">
+              </div>
+              <div id="hpBottomCurrent"
+                style="display:none; font-size:11px; color:#2ecc71; margin-top:5px; font-style:italic;"></div>
+            </div>
+
+            <button id="saveNewHandpanBtn" class="primary-btn small-btn" style="margin-top:5px;">Next:
+              Calibrate</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Profile Editor Modal -->
+    <div id="profileModal" class="profile-modal-overlay" aria-hidden="true">
+      <div class="profile-modal">
+        <div class="profile-header">
+          <h3>👤 Edit Profile</h3>
+          <button id="closeProfileBtn" class="close-btn">&times;</button>
+        </div>
+        <div id="profileError" class="profile-error" style="display: none;"></div>
+        <div class="profile-content">
+          <div class="profile-form-group">
+            <label for="profileFirstName">First Name</label>
+            <input type="text" id="profileFirstName" maxlength="30" placeholder="e.g. John">
+          </div>
+
+          <div class="profile-form-group">
+            <label for="profileLastName">Last Name</label>
+            <input type="text" id="profileLastName" maxlength="30" placeholder="e.g. Doe">
+          </div>
+
+          <div class="profile-form-group">
+            <label for="profileUsername">Username</label>
+            <input type="text" id="profileUsername" maxlength="20" placeholder="e.g. RhythmMaster">
+          </div>
+
+          <div class="profile-form-group">
+            <label for="profileBio">Bio</label>
+            <textarea id="profileBio" maxlength="150" placeholder="Tell us about your rhythm journey..."></textarea>
+          </div>
+          <div class="profile-actions">
+            <button id="saveProfileBtn">Save Profile</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Coaching Results Modal -->
+    <div id="coachingResultsModal" class="modal-overlay" aria-hidden="true">
+      <div class="modal coaching-results-modal">
+        <div class="modal-header">
+          <h2>Practice Session Complete!</h2>
+        </div>
+
+        <div class="results-summary">
+          <div class="score-circle">
+            <span id="overallScore" class="score-value">0%</span>
+            <span class="score-label">Overall</span>
+          </div>
+
+          <div class="score-breakdown">
+            <div class="score-item">
+              <span class="score-label">Note Accuracy</span>
+              <span id="noteAccuracy" class="score-value">0%</span>
+            </div>
+            <div class="score-item">
+              <span class="score-label">Timing Accuracy</span>
+              <span id="timingAccuracy" class="score-value">0%</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="problem-areas">
+          <h3>Areas to Practice</h3>
+          <div id="problemMeasuresList"></div>
+        </div>
+
+        <!-- Phase 3: Session Recorded Audio Playback -->
+        <audio id="sessionAudioPlayer" style="display:none;"></audio>
+
+        <div class="modal-actions">
+          <button id="playReviewBtn" class="primary-btn play-review-btn"
+            style="display: none; width: 100%; margin-bottom: 10px;">Play Recording & Grid</button>
+        </div>
+
+        <div class="modal-actions dual-actions">
+          <button id="practiceAgainBtn" class="primary-btn">Practice Again</button>
+          <button id="saveSessionBtn" class="secondary-btn">Save Session</button>
+        </div>
+      </div>
+    </div>
+
+
+
+
+
+
+    <!-- Error Modal -->
+    <div id="errorModal" class="modal" aria-hidden="true" style="display:none;">
+      <div class="error-modal-content">
+        <h2>Oops... something went wrong</h2>
+        <p>We encountered an unexpected issue properly loading the application.</p>
+
+        <div class="error-actions">
+          <button id="errorRefreshBtn" class="error-btn btn-primary" onclick="location.reload()">Refresh Page</button>
+          <button id="errorContinueBtn" class="error-btn btn-secondary">Continue Anyway</button>
+        </div>
+
+        <br>
+        <details class="error-details">
+          <summary>View Technical Details</summary>
+          <pre id="errorStack">Loading stack trace...</pre>
+        </details>
+      </div>
+    </div>
+
+
+
+
+    <script>
+      // ===== CONFIG =====
+      const VERSION = 'v1.17.4 — Cleaner Hand Silhouette + Fix Right Position';
+
+      // Modes:
+      // - '8'  => 8 steps (eighth notes): 1 + 2 + 3 + 4 +
+      // - '16' => 16 steps (sixteenth notes): 1 e & a ...
+      let mode = '8';
+      let STEPS = 8;
+
+      // ===== STORAGE KEYS =====
+      const STORAGE_KEY = 'rhythm_visualizer_patterns_v1';
+      const LAST_USED_KEY = 'rhythm_visualizer_last_used';
+      const METRO_KEY = 'rhythm_visualizer_metronome';
+      const PRESENT_KEY = 'rhythm_visualizer_present';
+
+      // ===== ELEMENTS =====
+      const measuresEl = document.getElementById('measures');
+      const themeBtn = document.getElementById('themeBtn');
+      const handBtn = document.getElementById('handBtn');
+      const presentBtn = document.getElementById('presentBtn');
+      const exitPresent = document.getElementById('exitPresent');
+
+      const patternSelect = document.getElementById('patternSelect');
+      const saveBtn = document.getElementById('saveBtn');
+      const loadBtn = document.getElementById('loadBtn');
+      const renameBtn = document.getElementById('renameBtn');
+      const deleteBtn = document.getElementById('deleteBtn');
+      const exportBtn = document.getElementById('exportBtn');
+      const importBtn = document.getElementById('importBtn');
+
+      const openCourseModalBtn = document.getElementById('openCourseModalBtn');
+
+      // ===== GROOVE MODAL ELEMENTS =====
+      const grooveBtn = document.getElementById('grooveBtn');
+      const grooveModal = document.getElementById('grooveModal');
+      const grooveCancel = document.getElementById('grooveCancel');
+      const grooveGo = document.getElementById('grooveGo');
+      const dingCount = document.getElementById('dingCount');
+      const takCount = document.getElementById('takCount');
+      const slapCount = document.getElementById('slapCount');
+      const grooveHint = document.getElementById('grooveHint');
+      const complexitySelect = document.getElementById('complexitySelect');
+
+      // ===== AUTH ELEMENTS =====
+      const accountBtn = document.getElementById('accountBtn');
+      const accountStatus = document.getElementById('accountStatus');
+
+      const authModal = document.getElementById('authModal');
+      const authRegister = document.getElementById('authRegister');
+      const authLogin = document.getElementById('authLogin');
+      const authLogout = document.getElementById('authLogout');
+      const authEmail = document.getElementById('authEmail');
+      const authPass = document.getElementById('authPass');
+      const authHint = document.getElementById('authHint');
+
+      const handpanImg = document.getElementById('handpanImg');
+      const hideHandpanOptionsBtn = document.getElementById('hideHandpanOptionsBtn');
+      const numberPitchSelect = document.getElementById('numberPitchSelect');
+      const handpanSection = document.getElementById('handpanWrap');
+      const ghostNoteSection = document.getElementById('ghostNoteSection');
+      const lockBtn = document.getElementById('lockBtn');
+
+      // ===== RANGE SELECTION STATE =====
+      let anchorIndex = null;     // anchor for shift-click / long-press selection
+      let caretIndex = null;      // where paste starts (usually last clicked/selected)
+      let rangeStart = null;      // inclusive
+      let rangeEnd = null;        // inclusive
+      let selecting = false;      // selection mode (especially for mobile drag)
+      let beatClipboard = null;   // { type:'beats', steps:[{label}], length:n }
+
+      // Action bar elements
+      const selBar = document.getElementById('selBar');
+      const selBarText = document.getElementById('selBarText');
+      const selCopyBtn = document.getElementById('selCopyBtn');
+      const selPasteBtn = document.getElementById('selPasteBtn');
+      const selDeleteBtn = document.getElementById('selDeleteBtn');
+      const selCancelBtn = document.getElementById('selCancelBtn');
+
+      // ===== MEASURE ACTIONS STATE =====
+      let measureClipboard = null; // { type:'measure', steps:[{label}], stepsCount: STEPS }
+
+      const addMeasureBtn = document.getElementById('addMeasureBtn');
+      const delMeasureBtn = document.getElementById('delMeasureBtn');
+      const copyMeasureBtn = document.getElementById('copyMeasureBtn');
+      const pasteMeasureBtn = document.getElementById('pasteMeasureBtn');
+
+
+
+    </script>
+    <!-- External Dependencies (MIDI Parser) -->
+    <script src="https://cdn.jsdelivr.net/npm/midi-parser-js@4.0.4/src/main.min.js"></script>
+
+    <!-- Background List (Auto-generated) -->
+    <script src="/js/background-list.js"></script>
+
+    <!-- Vite Entry Point -->
+    <script type="module" src="/main.js"></script>
+
+    <!-- POTW MODAL -->
+    <div id="potwModal" class="modal-overlay" aria-hidden="true" style="display: none;">
+      <div class="modal-content potw-modal">
+        <div class="modal-header">
+          <h2>Pattern of the Week</h2>
+          <button class="close-modal-btn" id="closePotwBtn">&times;</button>
+        </div>
+
+        <!-- TABS -->
+        <div class="potw-tabs">
+          <button class="potw-tab active" data-tab="potwSchedule">Schedule</button>
+          <button class="potw-tab" data-tab="potwManage">Manage & History</button>
+        </div>
+
+        <div class="modal-body">
+
+          <!-- SCHEDULE TAB -->
+          <div id="potwSchedule" class="potw-tab-content active">
+            <div class="potw-section">
+              <h3>Schedule Weekly Pattern</h3>
+              <p class="desc">Select a pattern from your saved library to feature.</p>
+
+              <div class="form-group">
+                <label>Saved Pattern</label>
+                <select id="potwPatternSelect" class="full-width">
+                  <option value="">Loading...</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label>Launch Date</label>
+                <input type="date" id="potwLaunchDate" class="full-width" />
+              </div>
+
+              <div class="form-group">
+                <label>Difficulty (1-10)</label>
+                <input type="number" id="potwDifficulty" min="1" max="10" value="5" class="full-width" />
+              </div>
+
+              <div class="form-group">
+                <label>Description</label>
+                <textarea id="potwDesc" rows="3" placeholder="Why is this pattern cool?"></textarea>
+              </div>
+
+              <button id="potwScheduleBtn" class="primary-btn full-width">Schedule Pattern</button>
+              <div id="potwStatus" class="status-msg"></div>
+            </div>
+          </div>
+
+          <!-- MANAGE TAB -->
+          <div id="potwManage" class="potw-tab-content">
+            <div class="potw-section">
+              <h3>Upcoming Patterns</h3>
+              <div id="potwUpcomingList" class="potw-list">Loading...</div>
+            </div>
+
+            <div class="potw-section">
+              <h3>Active Now</h3>
+              <div id="potwActiveList" class="potw-list">Loading...</div>
+            </div>
+
+            <div class="potw-section">
+              <h3>History</h3>
+              <div id="potwHistoryList" class="potw-list">Loading...</div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- HANDPAN CALIBRATION OVERLAY -->
+    <div id="calibrationOverlay" class="cal-overlay" style="display: none;">
+      <div class="cal-header">
+        <div class="cal-title-group">
+          <h2 id="calHandpanName">Calibrating Handpan</h2>
+        </div>
+
+        <div id="calSaveStatus">Saved</div>
+
+        <div class="cal-actions">
+          <button id="calFlipBtn" class="cal-btn cal-btn-secondary" style="display:none;">Flip View</button>
+          <button id="headerAddTonefieldBtn" class="cal-btn cal-btn-primary" style="margin-right:8px;">＋ Add
+            Tonefield</button>
+          <button id="calDoneBtn" class="cal-btn cal-btn-secondary">Done</button>
+        </div>
+      </div>
+
+      <div class="cal-workspace">
+        <div id="calCanvasContainer" class="cal-canvas-container">
+          <img id="calHandpanImage" class="cal-bg-img" src="" alt="Handpan Reference">
+          <div id="calTonefieldsLayer" class="cal-layer"></div>
+        </div>
+
+        <div class="cal-instructions">
+          Drag to move • Click to select • Use Sidebar to adjust properties
+        </div>
+
+        <!-- Properties Sidebar -->
+        <aside id="calPropertiesPanel" class="cal-properties">
+          <h4 id="calPropTitle">Global Properties</h4>
+
+          <!-- Global Props -->
+          <div id="calGlobalProps">
+            <div class="prop-row">
+              <label>Image Rotation</label>
+              <input type="range" id="calImgRotInput" min="0" max="360" value="0">
+              <span id="valImgRot" style="font-size:11px; float:right;">0°</span>
+            </div>
+
+
+          </div>
+
+          <!-- Note Props -->
+          <div id="calNoteProps" style="display:none;">
+            <div class="prop-row">
+              <label>Pitch</label>
+              <div style="display:flex; gap:5px;">
+                <select id="calPitchSelect" style="flex:1"></select>
+                <select id="calOctaveSelect" style="width:60px;">
+                  <option value="2">2</option>
+                  <option value="3">3</option>
+                  <option value="4">4</option>
+                  <option value="5">5</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="prop-row">
+              <label>Number (Optional)</label>
+              <select id="calNumberSelect"></select>
+            </div>
+
+            <div class="prop-row">
+              <label>Size</label>
+              <input type="range" id="calSizeInput" min="5" max="40" value="12">
+              <span id="valSize" style="font-size:11px; float:right;">12%</span>
+            </div>
+
+            <div class="prop-row">
+              <label>Shape (H/W Ratio)</label>
+              <input type="range" id="calShapeInput" min="0.5" max="1.5" step="0.05" value="1">
+              <span id="valShape" style="font-size:11px; float:right;">1.00</span>
+            </div>
+
+            <div class="prop-row">
+              <label>Rotation</label>
+              <input type="range" id="calRotInput" min="0" max="360" value="0">
+              <span id="valRot" style="font-size:11px; float:right;">0°</span>
+            </div>
+
+
+
+            <div class="prop-row">
+              <button id="deleteTonefieldBtn" class="danger-btn">Delete Note</button>
+            </div>
+          </div>
+        </aside>
+        </aside>
+      </div>
+    </div>
+  </div> <!-- END view-freeplay -->
+
+  <!-- DASHBOARD VIEW -->
+  <div id="view-dashboard" class="route-view" style="display: none;">
+    <div class="container" style="padding: 40px; text-align: center;">
+      <h1 style="font-size: 32px; font-weight: 800; margin-bottom: 20px;">Welcome to GroovePan</h1>
+      <p style="color: var(--text-secondary); margin-bottom: 40px;">Select a mode to begin.</p>
+
+      <div style="display: flex; gap: 20px; justify-content: center; flex-wrap: wrap;">
+        <!-- Free Play Card -->
+        <div
+          style="background: var(--panel); border: 1px solid var(--panel-border); border-radius: 16px; padding: 30px; width: 300px; cursor: pointer; transition: all 0.2s ease;"
+          onclick="window.location.hash = '#freeplay'" onmouseover="this.style.borderColor='var(--primary)'"
+          onmouseout="this.style.borderColor='var(--panel-border)'">
+          <div style="font-size: 48px; margin-bottom: 16px;">🥁</div>
+          <h2 style="font-size: 20px; font-weight: 700; margin-bottom: 8px;">Free Play Engine</h2>
+          <p style="font-size: 14px; color: var(--text-secondary);">Compose, practice, and explore in our fully-featured
+            sequencer.</p>
+        </div>
+
+        <!-- Guided Composition Card -->
+        <div
+          style="background: var(--panel); border: 1px solid var(--panel-border); border-radius: 16px; padding: 30px; width: 300px; cursor: pointer; transition: all 0.2s ease; opacity: 0.7;"
+          onclick="window.location.hash = '#compose'" onmouseover="this.style.borderColor='var(--accent-glow)'"
+          onmouseout="this.style.borderColor='var(--panel-border)'">
+          <div style="font-size: 48px; margin-bottom: 16px;">🎼</div>
+          <h2 style="font-size: 20px; font-weight: 700; margin-bottom: 8px;">Guided Composition</h2>
+          <p style="font-size: 14px; color: var(--text-secondary);">Turn melodies into full multi-track arrangements
+            step by step.</p>
+          <div style="margin-top: 16px; font-size: 12px; font-weight: bold; color: var(--accent-glow);">Coming Soon
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 

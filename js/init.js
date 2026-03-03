@@ -32,6 +32,7 @@ import { initCourseMarketplace } from './course-marketplace.js';
 import { initCoachingMode } from './coaching-mode.js';
 import { initGames } from './games.js';
 import { initAdmin } from './admin.js';
+import { initRouter } from './router.js';
 
 /**
  * Main application initializer
@@ -69,6 +70,7 @@ async function init() {
     setupAudioUnlock();
     initNotePlayer();
     initNoteGrid();
+    initRouter();
 
     // 3. Launch safeInit (which handles pattern loading and final renders)
     safeInit();
