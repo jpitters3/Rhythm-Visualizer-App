@@ -86,8 +86,7 @@
           <div class="dropdown account-dropdown">
             <button id="accountBtn" title="Account">Account</button>
             <div id="accountDropdownMenu" class="dropdown-content right-aligned">
-              <button id="navDashboardBtn" onclick="window.location.hash = '#dashboard'"
-                style="font-weight:bold; color:var(--primary);">Dashboard</button>
+              <button id="navDashboardBtn" style="font-weight:bold; color:var(--primary);">Dashboard</button>
               <div class="dropdown-divider"></div>
               <button id="authBtn" style="display:none; font-weight:bold; color:var(--primary);">Sign In /
                 Register</button>
@@ -260,7 +259,37 @@
         </div>
       </div>
 
-      <div id="cwFreeplayOverlay" class="cw-freeplay-overlay" style="display:none;"></div>
+      <div id="cwFreeplayOverlay" class="cw-freeplay-overlay" style="display:none;">
+        <div id="cw-progress-tracker" class="cw-progress-tracker">
+          <!-- Step 1 -->
+          <div class="cw-step-indicator" id="cw-step-1">
+            <div class="cw-step-dot active"></div>
+            <div class="cw-step-label active">Step 1</div>
+          </div>
+          <div class="cw-step-line" id="cw-line-1"></div>
+
+          <!-- Step 2 -->
+          <div class="cw-step-indicator" id="cw-step-2">
+            <div class="cw-step-dot"></div>
+            <div class="cw-step-label">Step 2</div>
+          </div>
+          <div class="cw-step-line" id="cw-line-2"></div>
+
+          <!-- Step 3 -->
+          <div class="cw-step-indicator" id="cw-step-3">
+            <div class="cw-step-dot"></div>
+            <div class="cw-step-label">Step 3</div>
+          </div>
+          <div class="cw-step-line" id="cw-line-3"></div>
+
+          <!-- Step 4 -->
+          <div class="cw-step-indicator" id="cw-step-4">
+            <div class="cw-step-dot"></div>
+            <div class="cw-step-label">Step 4</div>
+          </div>
+        </div>
+
+      </div>
 
       <!-- Selection Action Bar (shows when a range is selected) -->
       <div id="selBar" class="sel-bar" style="display:none;" aria-label="Selection actions">
@@ -504,20 +533,12 @@
     <div id="view-compose" class="route-view" style="display: none; padding: 40px;">
       <div style="max-width: 1200px; margin: 0 auto;">
         <!-- Wizard Header -->
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
-          <div>
-            <h1 style="font-size: 28px; font-weight: 800; margin-bottom: 5px;">The Creation Current</h1>
-            <p style="color: var(--text-secondary);" id="cw-subtitle">Step 1: Foundation</p>
-          </div>
-          <div class="step-indicator" style="display: flex; gap: 10px; align-items: center;">
-            <div id="cw-step-1-dot"
-              style="width: 12px; height: 12px; border-radius: 50%; background: var(--accent-glow);"></div>
-            <div style="width: 40px; height: 2px; background: var(--panel-border);"></div>
-            <div id="cw-step-2-dot"
-              style="width: 12px; height: 12px; border-radius: 50%; background: var(--panel-border);"></div>
-            <div style="width: 40px; height: 2px; background: var(--panel-border);"></div>
-            <div id="cw-step-3-dot"
-              style="width: 12px; height: 12px; border-radius: 50%; background: var(--panel-border);"></div>
+        <div id="cw-wizard-header" class="cw-freeplay-overlay" style="margin: 0 0 30px 0; border-radius: 16px;">
+          <div class="cw-overlay-top">
+            <div>
+              <h1 style="margin:0; font-size: 30px; color: var(--accent-glow);">The Creation Current</h1>
+              <span class="cw-step-title" id="cw-subtitle">Step 1: Foundation</span>
+            </div>
           </div>
         </div>
 

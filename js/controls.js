@@ -28,6 +28,7 @@ const saveBtn = document.getElementById('saveBtn');
 const renameBtn = document.getElementById('renameBtn');
 const deleteBtn = document.getElementById('deleteBtn');
 const exportBtn = document.getElementById('exportBtn');
+const navDashboardBtn = document.getElementById('navDashboardBtn');
 const importBtn = document.getElementById('importBtn');
 const loadBtn = document.getElementById('loadBtn');
 
@@ -48,6 +49,22 @@ if (patternSelect) {
     } else {
       await loadPatternByName(selected);
       updatePatternButtons();
+    }
+  });
+}
+
+if (navDashboardBtn) {
+  navDashboardBtn.addEventListener('click', () => {
+    if (hasUnsavedChanges()) {
+      showConfirm(
+        'Unsaved Changes',
+        'You have unsaved changes in the current pattern. Discard them and return to the dashboard?',
+        () => {
+          window.location.hash = '#dashboard';
+        }
+      );
+    } else {
+      window.location.hash = '#dashboard';
     }
   });
 }

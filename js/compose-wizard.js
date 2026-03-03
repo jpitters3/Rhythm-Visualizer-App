@@ -30,9 +30,7 @@ export function initComposeWizard() {
   viewCompose = document.getElementById('view-compose');
   if (!viewCompose) return;
 
-  step1Dot = document.getElementById('cw-step-1-dot');
-  step2Dot = document.getElementById('cw-step-2-dot');
-  step3Dot = document.getElementById('cw-step-3-dot');
+  // Old dot queries removed, progress UI handled dynamically inside renderStep
   contentArea = document.getElementById('cw-content-area');
   prevBtn = document.getElementById('cw-prev-btn');
   nextBtn = document.getElementById('cw-next-btn');
@@ -75,22 +73,55 @@ function prevStep() {
 }
 
 function renderStep(stepIndex) {
-  // Update Header indicators
-  step1Dot.style.background = stepIndex >= 1 ? 'var(--accent-glow)' : 'var(--panel-border)';
-  step2Dot.style.background = stepIndex >= 2 ? 'var(--accent-glow)' : 'var(--panel-border)';
-  step3Dot.style.background = stepIndex >= 3 ? 'var(--accent-glow)' : 'var(--panel-border)';
+  // Update Progress Tracker Header
+  for (let i = 1; i <= 4; i++) {
+    const stepEl = document.getElementById(`cw-step-${i}`);
+    const dotEl = stepEl?.querySelector('.cw-step-dot');
+    const labelEl = stepEl?.querySelector('.cw-step-label');
+    const lineEl = document.getElementById(`cw-line-${i}`); // Lines 1 to 3 exist
+
+    // Reset all status classes
+    if (dotEl) dotEl.className = 'cw-step-dot';
+    if (labelEl) labelEl.className = 'cw-step-label';
+    if (lineEl) lineEl.className = 'cw-step-line';
+
+    if (i < stepIndex) {
+      // Completed Steps
+      if (dotEl) dotEl.classList.add('completed');
+      if (labelEl) labelEl.classList.add('completed');
+      if (lineEl) lineEl.classList.add('completed');
+    } else if (i === stepIndex) {
+      // Current Active Step
+      if (dotEl) dotEl.classList.add('active');
+      if (labelEl) labelEl.classList.add('active');
+    }
+  }
 
   // Reset content area styling if needed
   contentArea.innerHTML = '';
   prevBtn.style.display = stepIndex > 1 ? 'block' : 'none';
   nextBtn.style.display = 'block'; // Or hide based on validation later
 
+  let progressTracker = document.getElementById('cw-progress-tracker');
+
   if (stepIndex === 1) {
     renderStep1();
+    if (progressTracker && document.getElementById('cw-wizard-header')) {
+      document.getElementById('cw-wizard-header').appendChild(progressTracker);
+    }
   } else if (stepIndex === 2) {
-    renderStep2();
+    if (wizardState.basePatternId === 'CREATE_NEW') {
+      renderStep2();
+    } else {
+      renderStep3();
+    }
   } else if (stepIndex === 3) {
     renderStep3();
+  } else if (stepIndex === 4) {
+    renderStep4();
+    if (progressTracker && document.getElementById('cw-wizard-header')) {
+      document.getElementById('cw-wizard-header').appendChild(progressTracker);
+    }
   }
 }
 
@@ -299,29 +330,96 @@ async function renderStep2() {
   }
   overlay.style.display = 'flex';
 
+  let progressTracker = document.getElementById('cw-progress-tracker');
+
   overlay.innerHTML = `
-    <div>
-      <h3 style="margin:0; font-size: 20px; color: var(--accent-glow);">The Creation Current</h3>
-      <span style="font-size: 13px; color: var(--text-secondary);">
-        Step 2: ${wizardState.flowChoice === 'rhythm-first' ? 'Add Melody over your Rhythm' : 'Add Rhythm over your Melody'}. 
-        (💡 Use the Virtual Handpan to record)
-      </span>
-    </div>
-    <div style="display:flex; gap: 15px; justify-content: space-between;">
-      <button id="cw-step2-back" class="secondary-btn">Back to Step 1</button>
-      <button id="cw-step2-finish" class="primary-btn">Finish (To Step 3)</button>
+    <div class="cw-overlay-top">
+      <div>
+        <h3 style="margin:0; font-size: 30px; color: var(--accent-glow);">The Creation Current</h3>
+        <span class="cw-step-title">
+          Step 2: ${wizardState.flowChoice === 'rhythm-first' ? 'Lay down your Rhythm' : 'Lay down your Melody'}. 
+          (💡 Use the Virtual Handpan to record)
+        </span>
+      </div>
+      <div style="display:flex; gap: 15px; justify-content: space-between;">
+        <button id="cw-step1-back" class="secondary-btn">Back to Step 1</button>
+        <button id="cw-step3-next" class="primary-btn">Next (To Step 3)</button>
+      </div>
     </div>
   `;
+
+  if (progressTracker) {
+    overlay.appendChild(progressTracker);
+  }
   overlay.style.display = 'flex';
 
-  document.getElementById('cw-step2-back').onclick = () => {
+  document.getElementById('cw-step1-back').onclick = () => {
     overlay.style.display = 'none';
     window.location.hash = '#compose';
     viewCompose.style.display = 'block'; // Force visible since we navigated manually
     prevStep();
   };
 
-  document.getElementById('cw-step2-finish').onclick = () => {
+  document.getElementById('cw-step3-next').onclick = () => {
+    // Capture what the user composed on gridA
+    wizardState.overlaySequence = serializePattern(gridA);
+
+    overlay.style.display = 'none';
+    window.location.hash = '#freeplay';
+    viewCompose.style.display = 'block';
+    nextStep();
+  };
+
+  // Create new grid for rhythm or melody
+  setDualGrid(false);
+  clearGrid(gridA);
+  gridA.reset();
+  renderAllMeasures(gridA);
+}
+
+async function renderStep3() {
+  subtitle.textContent = "Step 3: Add Melody to your rhythm";
+
+  // Transition to freeplay view visually but keep wizard state active
+  window.location.hash = '#freeplay';
+
+  // Ensure the compose container looks inactive while in freeplay
+  viewCompose.style.display = 'none';
+
+  // Create overlay header in freeplay
+  let overlay = document.getElementById('cwFreeplayOverlay');
+  overlay.style.display = 'flex';
+  let progressTracker = document.getElementById('cw-progress-tracker');
+
+  overlay.innerHTML = `
+    <div class="cw-overlay-top">
+      <div>
+        <h3 style="margin:0; font-size: 20px; color: var(--accent-glow);">The Creation Current</h3>
+        <span style="font-size: 13px; color: var(--text-secondary);">
+          Step 3: Add Melody to your rhythm. 
+          (💡 Use the Virtual Handpan to record)
+        </span>
+      </div>
+      <div style="display:flex; gap: 15px; justify-content: space-between;">
+        <button id="cw-step2-back" class="secondary-btn">Back to Step 2</button>
+        <button id="cw-step4-next" class="primary-btn">Next (To Step 4)</button>
+      </div>
+    </div>
+  `;
+
+  if (progressTracker) {
+    overlay.appendChild(progressTracker);
+  }
+  overlay.style.display = 'flex';
+
+  document.getElementById('cw-step2-back').onclick = () => {
+    overlay.style.display = 'none';
+    window.location.hash = '#freeplay';
+    viewCompose.style.display = 'block'; // Force visible since we navigated manually
+    prevStep();
+  };
+
+  document.getElementById('cw-step4-next').onclick = () => {
     // Capture what the user composed on gridA
     wizardState.overlaySequence = serializePattern(gridA);
 
@@ -332,37 +430,32 @@ async function renderStep2() {
   };
 
   // Load Base Pattern into Grid B
-  if (wizardState.basePatternId !== 'CREATE_NEW') {
-    const allPatterns = [...cachedUserPatterns, ...cachedCommunitySongs];
-    const pattern = allPatterns.find(p => p.id === wizardState.basePatternId || p.name === wizardState.basePatternId);
+  const allPatterns = [...cachedUserPatterns, ...cachedCommunitySongs];
+  const pattern = allPatterns.find(p => p.id === wizardState.basePatternId || p.name === wizardState.basePatternId);
 
-    if (pattern) {
-      const dualModeBtn = document.getElementById('dualModeBtn');
-      if (dualModeBtn && !dualModeBtn.classList.contains('active')) {
-        setDualGrid(true);
-      }
-
-      // Apply pattern to Grid B
-      await applyPattern(pattern.data, gridB);
-
-      // Clear Grid A so user can create their own melody
-      clearGrid(gridA);
-      gridA.copyGrid(gridB);
-      gridA.reset();
-      renderAllMeasures(gridA);
-
-      // Select Grid A for the user to edit
-      const gridATab = document.getElementById('gridA-tab');
-      if (gridATab) gridATab.click();
+  if (pattern) {
+    const dualModeBtn = document.getElementById('dualModeBtn');
+    if (dualModeBtn && !dualModeBtn.classList.contains('active')) {
+      setDualGrid(true);
     }
-  } else {
-    // If they create new, ensure we're just acting on gridA
-    setDualGrid(false);
+
+    // Apply pattern to Grid B
+    await applyPattern(pattern.data, gridB);
+
+    // Clear Grid A so user can create their own melody
+    clearGrid(gridA);
+    gridA.copyGrid(gridB);
+    gridA.reset();
+    renderAllMeasures(gridA);
+
+    // Select Grid A for the user to edit
+    const gridATab = document.getElementById('gridA-tab');
+    if (gridATab) gridATab.click();
   }
 }
 
-function renderStep3() {
-  subtitle.textContent = "Step 3: Polish & Export";
+function renderStep4() {
+  subtitle.textContent = "Step 4: Polish & Export";
   contentArea.innerHTML = `
     <div style="text-align: center; margin-top: 50px;">
       <h2 style="font-size: 24px;">Your Song is Ready</h2>
