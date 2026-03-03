@@ -33,6 +33,7 @@ import { initCoachingMode } from './coaching-mode.js';
 import { initGames } from './games.js';
 import { initAdmin } from './admin.js';
 import { initRouter } from './router.js';
+import { initComposeWizard } from './compose-wizard.js';
 
 /**
  * Main application initializer
@@ -70,6 +71,7 @@ async function init() {
     setupAudioUnlock();
     initNotePlayer();
     initNoteGrid();
+    initComposeWizard();
     initRouter();
 
     // 3. Launch safeInit (which handles pattern loading and final renders)

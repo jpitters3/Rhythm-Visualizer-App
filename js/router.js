@@ -32,6 +32,12 @@ function handleHashChange() {
 
   currentRoute = hash;
 
+  // Sync body class for route-specific global styling
+  document.body.classList.forEach(cls => {
+    if (cls.startsWith('route-')) document.body.classList.remove(cls);
+  });
+  document.body.classList.add(`route-${hash}`);
+
   // Find all elements with the 'route-view' class
   const views = document.querySelectorAll('.route-view');
 

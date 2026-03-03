@@ -87,7 +87,6 @@ export function initShortcuts() {
 
       // Clear Selection
       clearSelection(activeGrid);
-      // clearGridDom(activeGrid); // Should not clear dom on escape, just selection
       clearRange(activeGrid);
       return;
     }

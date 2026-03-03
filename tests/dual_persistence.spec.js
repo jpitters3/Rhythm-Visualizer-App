@@ -131,7 +131,16 @@ test.describe('Dual Grid Persistence', () => {
     }, 'SingleGridPattern', { timeout: 10000 });
 
     await page.selectOption('#patternSelect', 'SingleGridPattern');
+
+    // Accept the "Unsaved Changes" modal that appears when changing patterns
+    const confirmModal = page.locator('#confirmModal');
+    if (await confirmModal.isVisible()) {
+      await page.click('#confirmOkBtn');
+    }
+
+    await ensureHeaderMenuOpen(page);
     await page.click('#fileDropdownBtn');
+
     await page.click('#loadBtn');
 
     // 5. Grid B should be hidden

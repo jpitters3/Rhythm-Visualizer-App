@@ -35,6 +35,16 @@ export async function dbListPatternNames() {
   return (data || []).map(r => r.name);
 }
 
+export async function dbListPatternsWithData() {
+  const { data, error } = await supabase
+    .from('patterns')
+    .select('name, data')
+    .order('updated_at', { ascending: false });
+
+  if (error) throw error;
+  return data || [];
+}
+
 export async function dbLoadPatternByName(name) {
   const { data, error } = await supabase
     .from('patterns')

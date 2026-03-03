@@ -44,8 +44,25 @@ export class GridContext {
     return Math.max(1, Math.ceil(this.innerLabels.length / this.stepsPerMeasure));
   }
 
-  set measures(val) {
-    this._measures = val;
+  copyGrid(otherGrid) {
+    this.innerLabels = otherGrid.innerLabels;
+    this.innerHands = otherGrid.innerHands;
+    this.step = otherGrid.step;
+    this.playing = otherGrid.playing;
+    this.bpm = otherGrid.bpm;
+    this.metronomeOn = otherGrid.metronomeOn;
+    this.isMuted = otherGrid.isMuted;
+    this.mode = otherGrid.mode;
+    this.transcriptionIndex = otherGrid.transcriptionIndex;
+    this.tags = otherGrid.tags;
+    this.timers = otherGrid.timers;
+    this.activeSubIndex = otherGrid.activeSubIndex;
+    this.caretIndex = otherGrid.caretIndex;
+    this.anchorIndex = otherGrid.anchorIndex;
+    this.rangeStart = otherGrid.rangeStart;
+    this.rangeEnd = otherGrid.rangeEnd;
+    this.selecting = otherGrid.selecting;
+    this._measures = otherGrid.measures;
   }
 
   // Helper to get DOM elements for this context

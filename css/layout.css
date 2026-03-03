@@ -247,3 +247,12 @@ div.container::after {
 select#patternSelect {
   max-width: 160px;
 }
+
+/* ===== ROUTE-SPECIFIC GLOBAL STYLING ===== */
+body.route-dashboard .grid-child.pattern-select {
+  display: none !important;
+}
+
+body.route-dashboard .header-menu-items {
+  justify-content: flex-end; 
+}

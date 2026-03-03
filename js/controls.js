@@ -2,7 +2,7 @@
 import { gridA, gridB, activeGrid } from './grid-context.js';
 import { isAuthed } from './auth.js';
 import { start, stop, ensureAudio, unlockAudio, setMode, addTickObserver } from './noteplayer.js';
-import { renderAllMeasures, invertRange, invertFollowing, setDualGrid } from './notegrid.js';
+import { renderAllMeasures, invertRange, invertFollowing, setDualGrid, clearGrid } from './notegrid.js';
 import { TransportRegistry, TransportUI } from './transport-ui.js';
 import {
   dbSavePattern, dbDeletePattern, dbRenamePattern, dbLoadPatternByName,
@@ -122,12 +122,7 @@ function setupGridControls(ctx) {
   }
 
   document.getElementById(`clearBtn-${ctx.id}`)?.addEventListener('click', () => {
-    if (HistoryManager) HistoryManager.pushState();
-    const s = ctx.stepsPerMeasure;
-    ctx.innerLabels = Array(ctx.measures * s).fill('');
-    ctx.innerHands = Array(ctx.measures * s).fill(null);
-    renderAllMeasures(ctx);
-    ctx.step = 0;
+    clearGrid(ctx);
   });
 
   if (mBtn) {

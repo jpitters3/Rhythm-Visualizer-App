@@ -311,6 +311,15 @@ export function renderAllMeasures(ctx = activeGrid) {
   }
 }
 
+export function clearGrid(ctx = activeGrid) {
+  if (HistoryManager) HistoryManager.pushState();
+  const s = ctx.stepsPerMeasure;
+  ctx.innerLabels = Array(ctx.measures * s).fill('');
+  ctx.innerHands = Array(ctx.measures * s).fill(null);
+  renderAllMeasures(ctx);
+  ctx.step = 0;
+}
+
 // ===== SELECTION ACTIONS ===== //
 
 export let beatClipboard = null;
