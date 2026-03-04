@@ -9,6 +9,7 @@ import { isListening, getSelectedScaleName, setSelectedScaleName, getScale, setC
 import { SCALE_KEY_LOCAL, SCALE_KEY_REMOTE, AUDIO_DELAY, VISUAL_HEADSTART, BASE_PATH } from './config.js';
 import { renderAllMeasures } from './notegrid.js';
 import { coachingSession, isCoaching, isReviewing } from './coaching-mode.js';
+import { turnOffMic } from './transcription.js';
 
 const SOUND_TAK = 'Tak';
 const SOUND_SLAP = 'Slap';
@@ -762,6 +763,9 @@ export function getPlaybackPosition(ctx) {
 }
 
 export function stop(ctx, isSync = true) {
+  turnOffMic();
+  hideCountdown();
+
   const c = ctx || activeGrid;
 
   c.playing = false;

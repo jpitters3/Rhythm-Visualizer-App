@@ -44,6 +44,22 @@ export class GridContext {
     return Math.max(1, Math.ceil(this.innerLabels.length / this.stepsPerMeasure));
   }
 
+  setMeasures(m) {
+    this._measures = m;
+    this.innerLabels = Array(m * this.stepsPerMeasure).fill('');
+    this.innerHands = Array(m * this.stepsPerMeasure).fill(null);
+  }
+
+  setBpm(bpm) {
+    this.bpm = bpm;
+
+    // Sync UI
+    const bpmInput = document.getElementById(`bpmInput-${this.id}`);
+    const bpmVal = document.getElementById(`bpmVal-${this.id}`);
+    if (bpmInput) bpmInput.value = bpm;
+    if (bpmVal) bpmVal.textContent = bpm;
+  }
+
   copyGrid(otherGrid) {
     this.innerLabels = otherGrid.innerLabels;
     this.innerHands = otherGrid.innerHands;

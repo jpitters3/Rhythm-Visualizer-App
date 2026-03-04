@@ -2,7 +2,7 @@ import { dbListPatternsWithData, getSavedPatterns, applyPattern, serializePatter
 import { supabase } from './supabase-client.js';
 import { gridA, gridB } from './grid-context.js';
 import { setDualGrid, clearGrid, renderAllMeasures } from './notegrid.js';
-import { start, stop } from './noteplayer.js';
+import { start, stop, setTimeSignature } from './noteplayer.js';
 import { turnOnMic, turnOffMic } from './transcription.js';
 import { isListening } from './state.js';
 
@@ -386,6 +386,8 @@ async function renderStep2() {
   // Create new grid for rhythm or melody
   setDualGrid(false);
   clearGrid(gridA);
+  setTimeSignature('4/4');
+  gridA.setMeasures(1);
   gridA.reset();
   renderAllMeasures(gridA);
 }
@@ -474,7 +476,6 @@ async function renderStep3() {
 
 async function startAutoAdvanceRecording() {
   if (isListening) {
-    // If clicked while already recording, stop everything
     turnOffMic();
     stop(gridA);
     if (gridB) stop(gridB);
@@ -482,14 +483,8 @@ async function startAutoAdvanceRecording() {
   }
 
   // 1. Slow down the BPM for comfortable live recording
-  gridA.bpm = 60;
-  if (gridB) gridB.bpm = 60;
-
-  // Sync UI
-  const bpmInput = document.getElementById(`bpmInput-${gridA.id}`);
-  const bpmVal = document.getElementById(`bpmVal-${gridA.id}`);
-  if (bpmInput) bpmInput.value = 60;
-  if (bpmVal) bpmVal.textContent = 60;
+  gridA.setBpm(60);
+  if (gridB) gridB.setBpm(60);
 
   // 2. Enable Metronome permanently to provide a rhythmic anchor
   const metroBtn = document.getElementById(`metroBtn-${gridA.id}`);
@@ -504,11 +499,6 @@ async function startAutoAdvanceRecording() {
 
   // 3. Turn on microphone for transcription
   await turnOnMic();
-
-  if (gridB) {
-    gridB.bpm = 60;
-    // ensure dual play triggers if B is visible, though start(gridA, true) should handle sync logic internally
-  }
 
   // 4. Start playback (triggers noteplayer's countdown and subsequent auto-advance)
   start(gridA, true, false);
