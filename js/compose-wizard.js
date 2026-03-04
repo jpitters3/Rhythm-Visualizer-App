@@ -335,13 +335,13 @@ async function renderStep2() {
   overlay.innerHTML = `
     <div class="cw-overlay-top">
       <div>
-        <h3 style="margin:0; font-size: 30px; color: var(--accent-glow);">The Creation Current</h3>
-        <span class="cw-step-title">
+        <h3 class="cw-step-title">The Creation Current</h3>
+        <span class="cw-step-subtitle">
           Step 2: ${wizardState.flowChoice === 'rhythm-first' ? 'Lay down your Rhythm' : 'Lay down your Melody'}. 
           (💡 Use the Virtual Handpan to record)
         </span>
       </div>
-      <div style="display:flex; gap: 15px; justify-content: space-between;">
+      <div class="cw-step-buttons">
         <button id="cw-step1-back" class="secondary-btn">Back to Step 1</button>
         <button id="cw-step3-next" class="primary-btn">Next (To Step 3)</button>
       </div>
@@ -410,17 +410,14 @@ async function renderStep3() {
   overlay.innerHTML = `
     <div class="cw-overlay-top">
       <div>
-        <h3 style="margin:0; font-size: 20px; color: var(--accent-glow);">The Creation Current</h3>
-        <span style="font-size: 13px; color: var(--text-secondary);">
+        <h3 class="cw-step-title">The Creation Current</h3>
+        <span class="cw-step-subtitle">
           Step 3: Add Melody to your rhythm. 
           (💡 Use the Virtual Handpan to record)
         </span>
       </div>
-      <div style="display:flex; gap: 15px; justify-content: space-between; align-items: center; width: 100%;">
+      <div class="cw-step-buttons">
         <button id="cw-step2-back" class="secondary-btn">Back to Step 2</button>
-        <button id="cw-auto-record" class="primary-btn" style="background: var(--danger); border-color: var(--danger); box-shadow: 0 0 10px rgba(255,50,50,0.4);">
-          🎤 Record
-        </button>
         <button id="cw-step4-next" class="primary-btn">Next (To Step 4)</button>
       </div>
     </div>
@@ -438,7 +435,15 @@ async function renderStep3() {
     prevStep();
   };
 
-  document.getElementById('cw-auto-record').onclick = startAutoAdvanceRecording;
+  let autoRecordSection = document.createElement('div');
+  autoRecordSection.innerHTML = `
+    <button id="cwAutoRecord" class="cw-auto-record primary-btn">
+      🎤 Record
+    </button>
+  `;
+  overlay.appendChild(autoRecordSection);
+
+  document.getElementById('cwAutoRecord').onclick = startAutoAdvanceRecording;
 
   const nextBtn4 = document.getElementById('cw-step4-next');
   nextBtn4.onclick = () => {

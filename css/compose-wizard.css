@@ -28,6 +28,7 @@
   width: auto;
   box-sizing: border-box;
   margin-bottom: 20px;
+  /* border-radius: 20px; */
 
   /* Layout and Sizing */
   padding: 15px 30px;
@@ -89,10 +90,24 @@
 
 /* The Title */
 .cw-step-title {
+  font-size: 28px;
+  font-weight: 500;
+  color: var(--accent-glow);
+  transition: color 0.3s ease;
+}
+
+.cw-step-subtitle {
   font-size: 22px;
   font-weight: 500;
   color: var(--text-secondary);
   transition: color 0.3s ease;
+}
+
+.cw-step-buttons {
+  display: flex;
+  gap: 15px;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .cw-step-indicator {
@@ -164,7 +179,7 @@
 
 .cw-auto-record {
   transition: all 0.3s ease;
-  margin-bottom: 10px;
+  margin-bottom: 20px;
 }
 
 .cw-auto-record.active {
