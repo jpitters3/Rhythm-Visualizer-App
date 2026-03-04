@@ -116,6 +116,9 @@
   transition: all 0.3s ease;
   position: relative;
   z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .cw-step-label.completed {
@@ -125,6 +128,13 @@
 .cw-step-dot.completed {
   background: var(--primary-color);
   /* Bright blue for completed */
+}
+
+.cw-step-dot.completed::after {
+  content: '✓';
+  color: black;
+  font-size: 11px;
+  font-weight: 800;
 }
 
 .cw-step-label.active {
@@ -154,6 +164,7 @@
 
 .cw-auto-record {
   transition: all 0.3s ease;
+  margin-bottom: 10px;
 }
 
 .cw-auto-record.active {

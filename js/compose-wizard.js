@@ -21,7 +21,7 @@ let cachedCommunitySongs = [];
 let viewCompose;
 let step1Dot, step2Dot, step3Dot;
 let contentArea;
-let prevBtn, nextBtn;
+let nextBtn;
 let subtitle;
 
 let isInitialized = false;
@@ -35,7 +35,6 @@ export function initComposeWizard() {
 
   // Old dot queries removed, progress UI handled dynamically inside renderStep
   contentArea = document.getElementById('cw-content-area');
-  prevBtn = document.getElementById('cw-prev-btn');
   nextBtn = document.getElementById('cw-next-btn');
   subtitle = document.getElementById('cw-subtitle');
 
@@ -48,7 +47,6 @@ export function initComposeWizard() {
   });
 
   // Setup Button Listeners
-  prevBtn.addEventListener('click', prevStep);
   nextBtn.addEventListener('click', nextStep);
 }
 
@@ -102,7 +100,6 @@ function renderStep(stepIndex) {
 
   // Reset content area styling if needed
   contentArea.innerHTML = '';
-  prevBtn.style.display = stepIndex > 1 ? 'block' : 'none';
   nextBtn.style.display = 'block'; // Or hide based on validation later
 
   let progressTracker = document.getElementById('cw-progress-tracker');
@@ -373,7 +370,8 @@ async function renderStep2() {
 
   document.getElementById('cwAutoRecord').onclick = startAutoAdvanceRecording;
 
-  document.getElementById('cw-step3-next').onclick = () => {
+  const nextBtn3 = document.getElementById('cw-step3-next');
+  nextBtn3.onclick = () => {
     // Capture what the user composed on gridA
     wizardState.overlaySequence = serializePattern(gridA);
 
@@ -382,6 +380,9 @@ async function renderStep2() {
     viewCompose.style.display = 'block';
     nextStep();
   };
+
+  // Require at least one note before proceeding
+  bindNextButtonToGrid(3);
 
   // Create new grid for rhythm or melody
   setDualGrid(false);
@@ -439,7 +440,8 @@ async function renderStep3() {
 
   document.getElementById('cw-auto-record').onclick = startAutoAdvanceRecording;
 
-  document.getElementById('cw-step4-next').onclick = () => {
+  const nextBtn4 = document.getElementById('cw-step4-next');
+  nextBtn4.onclick = () => {
     // Capture what the user composed on gridA
     wizardState.overlaySequence = serializePattern(gridA);
 
@@ -448,6 +450,9 @@ async function renderStep3() {
     viewCompose.style.display = 'block';
     nextStep();
   };
+
+  // Require at least one note before Next button is enabled
+  bindNextButtonToGrid(4);
 
   // Load Base Pattern into Grid B
   const allPatterns = [...cachedUserPatterns, ...cachedCommunitySongs];
@@ -517,4 +522,32 @@ function renderStep4() {
     // Return to dashboard
     window.location.hash = '#dashboard';
   };
+}
+
+/**
+ * Require at least one note on the grid before Next button is enabled
+ * @param {*} btnId - The next-step number
+ * @returns 
+ */
+function bindNextButtonToGrid(btnId) {
+  const btn = document.getElementById(`cw-step${btnId}-next`);
+  if (!btn) return;
+
+  btn.disabled = true;
+  btn.style.opacity = '0.5';
+
+  const checkInterval = setInterval(() => {
+    if (!document.getElementById(`cw-step${btnId}-next`)) {
+      clearInterval(checkInterval);
+      return;
+    }
+    const hasNotes = gridA.innerLabels.some(label => label !== '');
+    if (hasNotes && btn.disabled) {
+      btn.disabled = false;
+      btn.style.opacity = '1';
+    } else if (!hasNotes && !btn.disabled) {
+      btn.disabled = true;
+      btn.style.opacity = '0.5';
+    }
+  }, 500);
 }
