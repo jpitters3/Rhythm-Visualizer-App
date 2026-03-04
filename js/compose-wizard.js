@@ -2,6 +2,9 @@ import { dbListPatternsWithData, getSavedPatterns, applyPattern, serializePatter
 import { supabase } from './supabase-client.js';
 import { gridA, gridB } from './grid-context.js';
 import { setDualGrid, clearGrid, renderAllMeasures } from './notegrid.js';
+import { start, stop } from './noteplayer.js';
+import { turnOnMic, turnOffMic } from './transcription.js';
+import { isListening } from './state.js';
 
 let wizardState = {
   currentStep: 1,
@@ -360,6 +363,16 @@ async function renderStep2() {
     prevStep();
   };
 
+  let autoRecordSection = document.createElement('div');
+  autoRecordSection.innerHTML = `
+    <button id="cwAutoRecord" class="cw-auto-record primary-btn">
+      🎤 Record
+    </button>
+  `;
+  overlay.appendChild(autoRecordSection);
+
+  document.getElementById('cwAutoRecord').onclick = startAutoAdvanceRecording;
+
   document.getElementById('cw-step3-next').onclick = () => {
     // Capture what the user composed on gridA
     wizardState.overlaySequence = serializePattern(gridA);
@@ -400,8 +413,11 @@ async function renderStep3() {
           (💡 Use the Virtual Handpan to record)
         </span>
       </div>
-      <div style="display:flex; gap: 15px; justify-content: space-between;">
+      <div style="display:flex; gap: 15px; justify-content: space-between; align-items: center; width: 100%;">
         <button id="cw-step2-back" class="secondary-btn">Back to Step 2</button>
+        <button id="cw-auto-record" class="primary-btn" style="background: var(--danger); border-color: var(--danger); box-shadow: 0 0 10px rgba(255,50,50,0.4);">
+          🎤 Record
+        </button>
         <button id="cw-step4-next" class="primary-btn">Next (To Step 4)</button>
       </div>
     </div>
@@ -418,6 +434,8 @@ async function renderStep3() {
     viewCompose.style.display = 'block'; // Force visible since we navigated manually
     prevStep();
   };
+
+  document.getElementById('cw-auto-record').onclick = startAutoAdvanceRecording;
 
   document.getElementById('cw-step4-next').onclick = () => {
     // Capture what the user composed on gridA
@@ -452,6 +470,48 @@ async function renderStep3() {
     const gridATab = document.getElementById('gridA-tab');
     if (gridATab) gridATab.click();
   }
+}
+
+async function startAutoAdvanceRecording() {
+  if (isListening) {
+    // If clicked while already recording, stop everything
+    turnOffMic();
+    stop(gridA);
+    if (gridB) stop(gridB);
+    return;
+  }
+
+  // 1. Slow down the BPM for comfortable live recording
+  gridA.bpm = 60;
+  if (gridB) gridB.bpm = 60;
+
+  // Sync UI
+  const bpmInput = document.getElementById(`bpmInput-${gridA.id}`);
+  const bpmVal = document.getElementById(`bpmVal-${gridA.id}`);
+  if (bpmInput) bpmInput.value = 60;
+  if (bpmVal) bpmVal.textContent = 60;
+
+  // 2. Enable Metronome permanently to provide a rhythmic anchor
+  const metroBtn = document.getElementById(`metroBtn-${gridA.id}`);
+  if (metroBtn && !metroBtn.classList.contains('active')) {
+    metroBtn.click();
+  } else {
+    // Fallback if metro button logic structure differs
+    gridA.isMuted = false;
+    // Attempting internal flag if click() isn't perfect
+    document.getElementById(`metroBtn-${gridA.id}`)?.classList.add('active');
+  }
+
+  // 3. Turn on microphone for transcription
+  await turnOnMic();
+
+  if (gridB) {
+    gridB.bpm = 60;
+    // ensure dual play triggers if B is visible, though start(gridA, true) should handle sync logic internally
+  }
+
+  // 4. Start playback (triggers noteplayer's countdown and subsequent auto-advance)
+  start(gridA, true, false);
 }
 
 function renderStep4() {

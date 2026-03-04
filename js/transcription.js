@@ -134,6 +134,7 @@ export async function turnOffMic() {
     setIsListening(false);
     micBtn.textContent = "🎤";
     micBtn.classList.remove('active');
+    document.getElementById('cwAutoRecord')?.classList.remove('active');
     meter.style.display = 'none';
     if (micStream) micStream.getTracks().forEach(t => t.stop());
 }
@@ -250,7 +251,7 @@ function transcriptionLoop() {
     if (currentIndex !== lastFrameTranscriptionIndex) {
         logCoachingEvent(`--- Step Boundary: ${lastFrameTranscriptionIndex} -> ${currentIndex} ---`, currentIndex);
 
-        const notesInCurrentStep = gridLabels[currentIndex];
+        const notesInCurrentStep = activeGrid.innerLabels[currentIndex];
         logCoachingEvent(`Expected Notes: ${notesInCurrentStep}`, currentIndex);
 
         tally = {};
