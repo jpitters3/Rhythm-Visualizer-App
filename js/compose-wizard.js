@@ -5,6 +5,7 @@ import { setDualGrid, clearGrid, renderAllMeasures } from './notegrid.js';
 import { start, stop, setTimeSignature } from './noteplayer.js';
 import { turnOnMic, turnOffMic } from './transcription.js';
 import { isListening } from './state.js';
+import { saveAudioClip, getAudioClip, deleteAudioClip } from './audio-storage.js';
 
 let wizardState = {
   currentStep: 1,
@@ -126,42 +127,75 @@ function renderStep(stepIndex) {
 }
 
 function renderStep1() {
-  subtitle.textContent = "Step 1: Foundation";
 
-  contentArea.innerHTML = `
-    <div style="text-align: center; margin-top: 50px;" id="cw-flow-selection">
-      <h2 style="font-size: 24px; margin-bottom: 20px;">Choose Your Path</h2>
-      <div style="display: flex; gap: 20px; justify-content: center;">
-        <div id="flow-rhythm-btn" class="secondary-btn" style="padding: 20px; font-size: 18px; cursor: pointer; width: 250px;">
-          🥁 Start with a Rhythm
-        </div>
-        <div id="flow-melody-btn" class="secondary-btn" style="padding: 20px; font-size: 18px; cursor: pointer; width: 250px;">
-          🎹 Start with a Melody
-        </div>
+  subtitle.textContent = "Step 1: Motif";
+
+  // Transition to freeplay view visually but keep wizard state active
+  window.location.hash = '#freeplay';
+
+  // Ensure the compose container looks inactive while in freeplay
+  viewCompose.style.display = 'none';
+
+  // Create overlay header in freeplay
+  let overlay = document.getElementById('cwFreeplayOverlay');
+  overlay.style.display = 'flex';
+  let progressTracker = document.getElementById('cw-progress-tracker');
+
+  overlay.innerHTML = `
+    <div class="cw-overlay-top">
+      <div>
+        <h3 class="cw-step-title">The Creation Current</h3>
+        <span class="cw-step-subtitle">
+          Step 1: The Motif. Lay down the foundation of your song.
+        </span>
       </div>
-    </div>
-    
-    <div id="cw-pattern-selection" style="display: none; margin-top: 40px;">
-      <h3 id="cw-pattern-list-title" style="font-size: 20px; margin-bottom: 15px; border-bottom: 1px solid var(--panel-border); padding-bottom: 10px;">Select a Foundation</h3>
-      <div id="cw-pattern-list" style="display: flex; flex-direction: column; gap: 10px; max-height: 300px; overflow-y: auto;">
-        <!-- Loaded via JS -->
+      <div class="cw-step-buttons">
+        <button id="cw-load-motif" class="secondary-btn">Load from Library</button>
+        <button id="cw-step2-next" class="primary-btn">Next (To Step 2)</button>
       </div>
     </div>
   `;
 
-  // Temporary Next logic:
-  nextBtn.textContent = 'Next Step';
-  nextBtn.disabled = true;
+  if (progressTracker) {
+    overlay.appendChild(progressTracker);
+  }
 
-  document.getElementById('flow-rhythm-btn').addEventListener('click', (e) => {
-    wizardState.flowChoice = 'rhythm-first';
-    selectFlow(document.getElementById('flow-rhythm-btn'));
-  });
+  let autoRecordSection = document.createElement('div');
+  autoRecordSection.innerHTML = `
+    <div style="display:flex; gap: 10px;">
+      <button id="cwAutoRecord" class="cw-auto-record primary-btn">
+        🎤 Auto-Record
+      </button>
+      <button id="cwRawAudioRecord" class="cw-auto-record secondary-btn" style="background:var(--panel-bg);">
+        🎙️ Record Raw Audio
+      </button>
+    </div>
+  `;
+  overlay.appendChild(autoRecordSection);
 
-  document.getElementById('flow-melody-btn').addEventListener('click', (e) => {
-    wizardState.flowChoice = 'melody-first';
-    selectFlow(document.getElementById('flow-melody-btn'));
-  });
+  document.getElementById('cwAutoRecord').onclick = startAutoAdvanceRecording;
+
+  document.getElementById('cwRawAudioRecord').onclick = () => toggleRawAudioRecording(1, 'cwRawAudioRecord');
+  // document.getElementById('cw-load-motif').onclick = showLoadMotifModal; // To be implemented
+
+  const nextBtn2 = document.getElementById('cw-step2-next');
+  nextBtn2.onclick = () => {
+    // Capture what the user composed on gridA
+    wizardState.motifPattern = serializePattern(gridA);
+    // Proceed to Step 2
+    nextStep();
+  };
+
+  // Require at least one note (or an audio clip) before proceeding
+  bindNextButtonToGrid(2);
+
+  // Set up Grid A for Motif creation
+  setDualGrid(false);
+  clearGrid(gridA);
+  setTimeSignature('4/4');
+  gridA.setMeasures(1);
+  gridA.reset();
+  renderAllMeasures(gridA);
 }
 
 async function selectFlow(clickedBtn) {
@@ -547,12 +581,125 @@ function bindNextButtonToGrid(btnId) {
       return;
     }
     const hasNotes = gridA.innerLabels.some(label => label !== '');
-    if (hasNotes && btn.disabled) {
+
+    // Check if there's audio recorded for this step
+    let hasAudio = false;
+    if (btnId === 2 && wizardState.motifAudioId) hasAudio = true;
+    if (btnId === 3 && wizardState.melodyAudioId) hasAudio = true;
+    if (btnId === 4 && wizardState.verseAAudioId) hasAudio = true;
+    if (btnId === 5 && wizardState.verseBAudioId) hasAudio = true;
+
+    if ((hasNotes || hasAudio) && btn.disabled) {
       btn.disabled = false;
       btn.style.opacity = '1';
-    } else if (!hasNotes && !btn.disabled) {
+    } else if (!hasNotes && !hasAudio && !btn.disabled) {
       btn.disabled = true;
       btn.style.opacity = '0.5';
     }
   }, 500);
+}
+
+let isRecordingRawAudioUI = false;
+
+async function toggleRawAudioRecording(stepNum, btnId) {
+  const btn = document.getElementById(btnId);
+  if (!btn) return;
+
+  if (isRecordingRawAudioUI) {
+    // Stop recording
+    stopRawAudioRecording();
+    isRecordingRawAudioUI = false;
+    btn.innerHTML = '🎙️ Record Raw Audio';
+    btn.classList.remove('active');
+  } else {
+    // Start recording
+    btn.innerHTML = '🛑 Stop Recording';
+    btn.classList.add('active');
+
+    // Determine the ID to save under based on step
+    let audioId = '';
+    if (stepNum === 1) audioId = 'motif_audio';
+    else if (stepNum === 2) audioId = 'melody_audio';
+    else if (stepNum === 3) audioId = 'verseA_audio';
+    else if (stepNum === 4) audioId = 'verseB_audio';
+
+    const success = await startRawAudioRecording(async (audioBlob) => {
+      // Called when stopped
+      if (audioBlob) {
+        await saveAudioClip(audioId, audioBlob);
+
+        // Update state
+        if (stepNum === 1) wizardState.motifAudioId = audioId;
+        else if (stepNum === 2) wizardState.melodyAudioId = audioId;
+        else if (stepNum === 3) wizardState.verseAAudioId = audioId;
+        else if (stepNum === 4) wizardState.verseBAudioId = audioId;
+
+        // Show audio preview UI
+        renderAudioPreview(stepNum);
+      }
+    });
+
+    if (success) {
+      isRecordingRawAudioUI = true;
+    } else {
+      btn.innerHTML = '🎙️ Record Raw Audio';
+      btn.classList.remove('active');
+    }
+  }
+}
+
+function resetStepAudio(stepNum) {
+  document.getElementById(`cw-audio-preview-${stepNum}`).remove();
+  if (stepNum === 1) wizardState.motifAudioId = null;
+  else if (stepNum === 2) wizardState.melodyAudioId = null;
+  else if (stepNum === 3) wizardState.verseAAudioId = null;
+  else if (stepNum === 4) wizardState.verseBAudioId = null;
+}
+
+async function renderAudioPreview(stepNum) {
+  let audioId = '';
+  if (stepNum === 1) audioId = wizardState.motifAudioId;
+  else if (stepNum === 2) audioId = wizardState.melodyAudioId;
+  else if (stepNum === 3) audioId = wizardState.verseAAudioId;
+  else if (stepNum === 4) audioId = wizardState.verseBAudioId;
+
+  if (!audioId) return;
+
+  // Find container to append to
+  let previewContainer = document.getElementById(`cw-audio-preview-${stepNum}`);
+  if (!previewContainer) {
+    // Find the wrapper element. On step 1, the button is in a .cw-auto-record inside autoRecordSection
+    const rawBtn = document.getElementById('cwRawAudioRecord');
+    if (!rawBtn) return;
+
+    const autoRecSec = rawBtn.parentElement.parentElement;
+    previewContainer = document.createElement('div');
+    previewContainer.id = `cw-audio-preview-${stepNum}`;
+    previewContainer.style.marginTop = '10px';
+    previewContainer.style.display = 'flex';
+    previewContainer.style.alignItems = 'center';
+    previewContainer.style.gap = '10px';
+    autoRecSec.appendChild(previewContainer);
+  }
+
+  const blob = await getAudioClip(audioId);
+  if (blob) {
+    const url = URL.createObjectURL(blob);
+    previewContainer.innerHTML = `
+      <audio src="${url}" controls style="height: 35px;"></audio>
+      <button id="cw-audio-preview-delete" class="secondary-btn small-btn" data-step="${stepNum}" data-id="${audioId}" style="padding: 5px 10px;">🗑️</button>
+    `;
+  }
+
+  // Event listeners 
+
+  // Delete audio clip for the current step when delete button is clicked
+  const deletePreviewAudioBtn = document.getElementById('cw-audio-preview-delete');
+  if (deletePreviewAudioBtn) {
+    deletePreviewAudioBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      deleteAudioClip(audioId);
+      resetStepAudio(stepNum);
+    });
+  }
 }
