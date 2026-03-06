@@ -6,6 +6,7 @@ import { start, stop, setTimeSignature } from './noteplayer.js';
 import { turnOnMic, turnOffMic } from './transcription.js';
 import { isListening } from './state.js';
 import { saveAudioClip, getAudioClip, deleteAudioClip } from './audio-storage.js';
+import { startRawAudioRecording, stopRawAudioRecording } from './audio-recorder.js';
 
 let wizardState = {
   currentStep: 1,
@@ -24,6 +25,8 @@ let step1Dot, step2Dot, step3Dot;
 let contentArea;
 let nextBtn;
 let subtitle;
+let overlay;
+let progressTracker;
 
 let isInitialized = false;
 
@@ -75,55 +78,57 @@ function prevStep() {
 }
 
 function renderStep(stepIndex) {
-  // Update Progress Tracker Header
-  for (let i = 1; i <= 4; i++) {
-    const stepEl = document.getElementById(`cw-step-${i}`);
-    const dotEl = stepEl?.querySelector('.cw-step-dot');
-    const labelEl = stepEl?.querySelector('.cw-step-label');
-    const lineEl = document.getElementById(`cw-line-${i}`); // Lines 1 to 3 exist
+  // Reset content area styling if needed (This will display the contentArea)
+  // contentArea.innerHTML = '';
 
-    // Reset all status classes
-    if (dotEl) dotEl.className = 'cw-step-dot';
-    if (labelEl) labelEl.className = 'cw-step-label';
-    if (lineEl) lineEl.className = 'cw-step-line';
+  // Transition to freeplay view visually but keep wizard state active
+  window.location.hash = '#freeplay';
 
-    if (i < stepIndex) {
-      // Completed Steps
-      if (dotEl) dotEl.classList.add('completed');
-      if (labelEl) labelEl.classList.add('completed');
-      if (lineEl) lineEl.classList.add('completed');
-    } else if (i === stepIndex) {
-      // Current Active Step
-      if (dotEl) dotEl.classList.add('active');
-      if (labelEl) labelEl.classList.add('active');
-    }
-  }
+  // Ensure the compose container looks inactive while in freeplay
+  viewCompose.style.display = 'none';
 
-  // Reset content area styling if needed
-  contentArea.innerHTML = '';
   nextBtn.style.display = 'block'; // Or hide based on validation later
 
-  let progressTracker = document.getElementById('cw-progress-tracker');
+  wizardState.step1Subtitle = "Step 1: Verse A";
+  wizardState.step2Subtitle = "Step 2: Verse B";
+  wizardState.step3Subtitle = "Step 3: Intro";
+  wizardState.step4Subtitle = "Step 4: Arrange";
 
-  if (stepIndex === 1) {
-    renderStep1();
-    if (progressTracker && document.getElementById('cw-wizard-header')) {
-      document.getElementById('cw-wizard-header').appendChild(progressTracker);
-    }
-  } else if (stepIndex === 2) {
-    if (wizardState.basePatternId === 'CREATE_NEW') {
-      renderStep2();
-    } else {
-      renderStep3();
-    }
-  } else if (stepIndex === 3) {
-    renderStep3();
-  } else if (stepIndex === 4) {
-    renderStep4();
-    if (progressTracker && document.getElementById('cw-wizard-header')) {
-      document.getElementById('cw-wizard-header').appendChild(progressTracker);
-    }
-  }
+  subtitle.textContent = wizardState[`step${stepIndex}Subtitle`];
+
+  updateOverlay();
+  updateNextButton();
+  updateProgressTracker();
+  updateAudioRecordSection();
+  bindNextButtonToGrid();
+
+  // Set up Grid A for Motif creation
+  setDualGrid(false);
+  clearGrid(gridA);
+  setTimeSignature('4/4');
+  gridA.setMeasures(1);
+  gridA.reset();
+  renderAllMeasures(gridA);
+
+  // if (stepIndex === 1) {
+  // renderStep1();
+  //   if (progressTracker && document.getElementById('cw-wizard-header')) {
+  //     document.getElementById('cw-wizard-header').appendChild(progressTracker);
+  //   }
+  // } else if (stepIndex === 2) {
+  //   if (wizardState.basePatternId === 'CREATE_NEW') {
+  //     renderStep2();
+  //   } else {
+  //     renderStep3();
+  //   }
+  // } else if (stepIndex === 3) {
+  //   renderStep3();
+  // } else if (stepIndex === 4) {
+  //   renderStep4();
+  //   if (progressTracker && document.getElementById('cw-wizard-header')) {
+  //     document.getElementById('cw-wizard-header').appendChild(progressTracker);
+  //   }
+  // }
 }
 
 function renderStep1() {
@@ -136,58 +141,11 @@ function renderStep1() {
   // Ensure the compose container looks inactive while in freeplay
   viewCompose.style.display = 'none';
 
-  // Create overlay header in freeplay
-  let overlay = document.getElementById('cwFreeplayOverlay');
-  overlay.style.display = 'flex';
-  let progressTracker = document.getElementById('cw-progress-tracker');
-
-  overlay.innerHTML = `
-    <div class="cw-overlay-top">
-      <div>
-        <h3 class="cw-step-title">The Creation Current</h3>
-        <span class="cw-step-subtitle">
-          Step 1: The Motif. Lay down the foundation of your song.
-        </span>
-      </div>
-      <div class="cw-step-buttons">
-        <button id="cw-load-motif" class="secondary-btn">Load from Library</button>
-        <button id="cw-step2-next" class="primary-btn">Next (To Step 2)</button>
-      </div>
-    </div>
-  `;
-
-  if (progressTracker) {
-    overlay.appendChild(progressTracker);
-  }
-
-  let autoRecordSection = document.createElement('div');
-  autoRecordSection.innerHTML = `
-    <div style="display:flex; gap: 10px;">
-      <button id="cwAutoRecord" class="cw-auto-record primary-btn">
-        🎤 Auto-Record
-      </button>
-      <button id="cwRawAudioRecord" class="cw-auto-record secondary-btn" style="background:var(--panel-bg);">
-        🎙️ Record Raw Audio
-      </button>
-    </div>
-  `;
-  overlay.appendChild(autoRecordSection);
-
-  document.getElementById('cwAutoRecord').onclick = startAutoAdvanceRecording;
-
-  document.getElementById('cwRawAudioRecord').onclick = () => toggleRawAudioRecording(1, 'cwRawAudioRecord');
-  // document.getElementById('cw-load-motif').onclick = showLoadMotifModal; // To be implemented
-
-  const nextBtn2 = document.getElementById('cw-step2-next');
-  nextBtn2.onclick = () => {
-    // Capture what the user composed on gridA
-    wizardState.motifPattern = serializePattern(gridA);
-    // Proceed to Step 2
-    nextStep();
-  };
-
-  // Require at least one note (or an audio clip) before proceeding
-  bindNextButtonToGrid(2);
+  updateOverlay();
+  updateNextButton();
+  updateProgressTracker();
+  updateAudioRecordSection();
+  bindNextButtonToGrid();
 
   // Set up Grid A for Motif creation
   setDualGrid(false);
@@ -336,17 +294,19 @@ function renderPatternList() {
   });
 }
 
-async function renderStep2() {
-  subtitle.textContent = "Step 2: Overlay & Recording";
 
-  // Transition to freeplay view visually but keep wizard state active
-  window.location.hash = '#freeplay';
+function updateOverlay() {
+  if (!wizardState || !wizardState.currentStep) {
+    console.log('No current wizardState.currentStep');
+    return;
+  }
 
-  // Ensure the compose container looks inactive while in freeplay
-  viewCompose.style.display = 'none';
+  const stepNum = wizardState.currentStep;
+  const backStepNum = stepNum == 1 ? 1 : stepNum - 1;
+  const nextStepNum = stepNum + 1;
 
   // Create overlay header in freeplay
-  let overlay = document.getElementById('cwFreeplayOverlay');
+  overlay = document.getElementById('cwFreeplayOverlay');
   if (!overlay) {
     overlay = document.createElement('div');
     overlay.id = 'cwFreeplayOverlay';
@@ -364,158 +324,102 @@ async function renderStep2() {
   }
   overlay.style.display = 'flex';
 
-  let progressTracker = document.getElementById('cw-progress-tracker');
+  wizardState.step1Title = 'Verse A';
 
-  overlay.innerHTML = `
-    <div class="cw-overlay-top">
+  let overlayTop = overlay.querySelector('.cw-overlay-top');
+  if (!overlayTop) {
+    overlayTop = document.createElement('div');
+    overlayTop.className = 'cw-overlay-top';
+    overlay.insertBefore(overlayTop, overlay.firstChild);
+  }
+
+  overlayTop.innerHTML = `
       <div>
         <h3 class="cw-step-title">The Creation Current</h3>
         <span class="cw-step-subtitle">
-          Step 2: ${wizardState.flowChoice === 'rhythm-first' ? 'Lay down your Rhythm' : 'Lay down your Melody'}. 
-          (💡 Use the Virtual Handpan to record)
+          Step ${stepNum}: ${wizardState[`step${stepNum}Title`]}
         </span>
       </div>
       <div class="cw-step-buttons">
-        <button id="cw-step1-back" class="secondary-btn">Back to Step 1</button>
-        <button id="cw-step3-next" class="primary-btn">Next (To Step 3)</button>
+        <button id="cw-step-back" class="secondary-btn" data-step="${stepNum}">Back to Step ${backStepNum}</button>
+        <button id="cw-step-next" class="primary-btn" data-step="${stepNum}">Next (To Step ${nextStepNum})</button>
       </div>
-    </div>
   `;
 
-  if (progressTracker) {
-    overlay.appendChild(progressTracker);
-  }
-  overlay.style.display = 'flex';
-
-  document.getElementById('cw-step1-back').onclick = () => {
-    overlay.style.display = 'none';
-    window.location.hash = '#compose';
-    viewCompose.style.display = 'block'; // Force visible since we navigated manually
-    prevStep();
-  };
-
-  let autoRecordSection = document.createElement('div');
-  autoRecordSection.innerHTML = `
-    <button id="cwAutoRecord" class="cw-auto-record primary-btn">
-      🎤 Record
-    </button>
-  `;
-  overlay.appendChild(autoRecordSection);
-
-  document.getElementById('cwAutoRecord').onclick = startAutoAdvanceRecording;
-
-  const nextBtn3 = document.getElementById('cw-step3-next');
-  nextBtn3.onclick = () => {
-    // Capture what the user composed on gridA
-    wizardState.overlaySequence = serializePattern(gridA);
-
-    overlay.style.display = 'none';
-    window.location.hash = '#freeplay';
-    viewCompose.style.display = 'block';
-    nextStep();
-  };
-
-  // Require at least one note before proceeding
-  bindNextButtonToGrid(3);
-
-  // Create new grid for rhythm or melody
-  setDualGrid(false);
-  clearGrid(gridA);
-  setTimeSignature('4/4');
-  gridA.setMeasures(1);
-  gridA.reset();
-  renderAllMeasures(gridA);
+  return overlay;
 }
 
-async function renderStep3() {
-  subtitle.textContent = "Step 3: Add Melody to your rhythm";
+function updateNextButton() {
+  if (!wizardState || !wizardState.currentStep) {
+    console.log('No current wizardState.currentStep');
+    return;
+  }
 
-  // Transition to freeplay view visually but keep wizard state active
-  window.location.hash = '#freeplay';
+  const stepNum = wizardState.currentStep;
+  const nextBtn = document.getElementById('cw-step-next');
+  nextBtn.onclick = () => {
+    // Capture what the user composed on gridA
+    wizardState[`step${stepNum}Pattern`] = serializePattern(gridA);
+    // Proceed to next step
+    nextStep();
+  };
+}
 
-  // Ensure the compose container looks inactive while in freeplay
-  viewCompose.style.display = 'none';
+function updateProgressTracker() {
+  const stepIndex = wizardState.currentStep;
 
-  // Create overlay header in freeplay
-  let overlay = document.getElementById('cwFreeplayOverlay');
-  overlay.style.display = 'flex';
-  let progressTracker = document.getElementById('cw-progress-tracker');
+  // Update Progress Tracker Elements
+  for (let i = 1; i <= 4; i++) {
+    const stepEl = document.getElementById(`cw-step-${i}`);
+    const dotEl = stepEl?.querySelector('.cw-step-dot');
+    const labelEl = stepEl?.querySelector('.cw-step-label');
+    const lineEl = document.getElementById(`cw-line-${i}`); // Lines 1 to 3 exist
 
-  overlay.innerHTML = `
-    <div class="cw-overlay-top">
-      <div>
-        <h3 class="cw-step-title">The Creation Current</h3>
-        <span class="cw-step-subtitle">
-          Step 3: Add Melody to your rhythm. 
-          (💡 Use the Virtual Handpan to record)
-        </span>
-      </div>
-      <div class="cw-step-buttons">
-        <button id="cw-step2-back" class="secondary-btn">Back to Step 2</button>
-        <button id="cw-step4-next" class="primary-btn">Next (To Step 4)</button>
-      </div>
-    </div>
-  `;
+    // Reset all status classes
+    if (dotEl) dotEl.className = 'cw-step-dot';
+    if (labelEl) labelEl.className = 'cw-step-label';
+    if (lineEl) lineEl.className = 'cw-step-line';
+
+    if (i < stepIndex) {
+      // Completed Steps
+      if (dotEl) dotEl.classList.add('completed');
+      if (labelEl) labelEl.classList.add('completed');
+      if (lineEl) lineEl.classList.add('completed');
+    } else if (i === stepIndex) {
+      // Current Active Step
+      if (dotEl) dotEl.classList.add('active');
+      if (labelEl) labelEl.classList.add('active');
+    }
+  }
+
+  progressTracker = document.getElementById('cw-progress-tracker');
 
   if (progressTracker) {
     overlay.appendChild(progressTracker);
   }
-  overlay.style.display = 'flex';
+}
 
-  document.getElementById('cw-step2-back').onclick = () => {
-    overlay.style.display = 'none';
-    window.location.hash = '#freeplay';
-    viewCompose.style.display = 'block'; // Force visible since we navigated manually
-    prevStep();
-  };
-
-  let autoRecordSection = document.createElement('div');
-  autoRecordSection.innerHTML = `
-    <button id="cwAutoRecord" class="cw-auto-record primary-btn">
-      🎤 Record
-    </button>
-  `;
-  overlay.appendChild(autoRecordSection);
+function updateAudioRecordSection() {
+  let autoRecordSection = document.getElementById('cw-audio-record-section');
+  if (!autoRecordSection) {
+    autoRecordSection = document.createElement('div');
+    autoRecordSection.id = 'cw-audio-record-section';
+    autoRecordSection.innerHTML = `
+      <div style="display:flex; gap: 10px;">
+        <button id="cwAutoRecord" class="cw-auto-record primary-btn">
+          🎤 Record to Grid
+        </button>
+        <button id="cwRawAudioRecord" class="cw-auto-record secondary-btn" style="background:var(--panel-bg);">
+          🎙️ Record Raw Audio
+        </button>
+      </div>
+    `;
+    overlay.appendChild(autoRecordSection);
+  }
 
   document.getElementById('cwAutoRecord').onclick = startAutoAdvanceRecording;
 
-  const nextBtn4 = document.getElementById('cw-step4-next');
-  nextBtn4.onclick = () => {
-    // Capture what the user composed on gridA
-    wizardState.overlaySequence = serializePattern(gridA);
-
-    overlay.style.display = 'none';
-    window.location.hash = '#compose';
-    viewCompose.style.display = 'block';
-    nextStep();
-  };
-
-  // Require at least one note before Next button is enabled
-  bindNextButtonToGrid(4);
-
-  // Load Base Pattern into Grid B
-  const allPatterns = [...cachedUserPatterns, ...cachedCommunitySongs];
-  const pattern = allPatterns.find(p => p.id === wizardState.basePatternId || p.name === wizardState.basePatternId);
-
-  if (pattern) {
-    const dualModeBtn = document.getElementById('dualModeBtn');
-    if (dualModeBtn && !dualModeBtn.classList.contains('active')) {
-      setDualGrid(true);
-    }
-
-    // Apply pattern to Grid B
-    await applyPattern(pattern.data, gridB);
-
-    // Clear Grid A so user can create their own melody
-    clearGrid(gridA);
-    gridA.copyGrid(gridB);
-    gridA.reset();
-    renderAllMeasures(gridA);
-
-    // Select Grid A for the user to edit
-    const gridATab = document.getElementById('gridA-tab');
-    if (gridATab) gridATab.click();
-  }
+  document.getElementById('cwRawAudioRecord').onclick = () => toggleRawAudioRecording('cwRawAudioRecord');
 }
 
 async function startAutoAdvanceRecording() {
@@ -564,19 +468,21 @@ function renderStep4() {
 }
 
 /**
- * Require at least one note on the grid before Next button is enabled
+ * Require at least one note on the grid OR raw audio recording before Next button is enabled
  * @param {*} btnId - The next-step number
  * @returns 
  */
-function bindNextButtonToGrid(btnId) {
-  const btn = document.getElementById(`cw-step${btnId}-next`);
+function bindNextButtonToGrid() {
+  const btn = document.getElementById(`cw-step-next`);
   if (!btn) return;
 
   btn.disabled = true;
   btn.style.opacity = '0.5';
 
+  const stepNum = wizardState.currentStep;
+
   const checkInterval = setInterval(() => {
-    if (!document.getElementById(`cw-step${btnId}-next`)) {
+    if (!document.getElementById(`cw-step-next`)) {
       clearInterval(checkInterval);
       return;
     }
@@ -584,10 +490,7 @@ function bindNextButtonToGrid(btnId) {
 
     // Check if there's audio recorded for this step
     let hasAudio = false;
-    if (btnId === 2 && wizardState.motifAudioId) hasAudio = true;
-    if (btnId === 3 && wizardState.melodyAudioId) hasAudio = true;
-    if (btnId === 4 && wizardState.verseAAudioId) hasAudio = true;
-    if (btnId === 5 && wizardState.verseBAudioId) hasAudio = true;
+    if (wizardState[`step${stepNum}AudioId`]) hasAudio = true;
 
     if ((hasNotes || hasAudio) && btn.disabled) {
       btn.disabled = false;
@@ -601,7 +504,7 @@ function bindNextButtonToGrid(btnId) {
 
 let isRecordingRawAudioUI = false;
 
-async function toggleRawAudioRecording(stepNum, btnId) {
+async function toggleRawAudioRecording(btnId) {
   const btn = document.getElementById(btnId);
   if (!btn) return;
 
@@ -616,12 +519,10 @@ async function toggleRawAudioRecording(stepNum, btnId) {
     btn.innerHTML = '🛑 Stop Recording';
     btn.classList.add('active');
 
+    const stepNum = wizardState.currentStep;
+
     // Determine the ID to save under based on step
-    let audioId = '';
-    if (stepNum === 1) audioId = 'motif_audio';
-    else if (stepNum === 2) audioId = 'melody_audio';
-    else if (stepNum === 3) audioId = 'verseA_audio';
-    else if (stepNum === 4) audioId = 'verseB_audio';
+    let audioId = `step_${stepNum}_audio`;
 
     const success = await startRawAudioRecording(async (audioBlob) => {
       // Called when stopped
@@ -629,10 +530,7 @@ async function toggleRawAudioRecording(stepNum, btnId) {
         await saveAudioClip(audioId, audioBlob);
 
         // Update state
-        if (stepNum === 1) wizardState.motifAudioId = audioId;
-        else if (stepNum === 2) wizardState.melodyAudioId = audioId;
-        else if (stepNum === 3) wizardState.verseAAudioId = audioId;
-        else if (stepNum === 4) wizardState.verseBAudioId = audioId;
+        wizardState[`step${stepNum}AudioId`] = audioId;
 
         // Show audio preview UI
         renderAudioPreview(stepNum);
@@ -650,18 +548,11 @@ async function toggleRawAudioRecording(stepNum, btnId) {
 
 function resetStepAudio(stepNum) {
   document.getElementById(`cw-audio-preview-${stepNum}`).remove();
-  if (stepNum === 1) wizardState.motifAudioId = null;
-  else if (stepNum === 2) wizardState.melodyAudioId = null;
-  else if (stepNum === 3) wizardState.verseAAudioId = null;
-  else if (stepNum === 4) wizardState.verseBAudioId = null;
+  wizardState[`step${stepNum}AudioId`] = null;
 }
 
 async function renderAudioPreview(stepNum) {
-  let audioId = '';
-  if (stepNum === 1) audioId = wizardState.motifAudioId;
-  else if (stepNum === 2) audioId = wizardState.melodyAudioId;
-  else if (stepNum === 3) audioId = wizardState.verseAAudioId;
-  else if (stepNum === 4) audioId = wizardState.verseBAudioId;
+  let audioId = wizardState[`step${stepNum}AudioId`]
 
   if (!audioId) return;
 

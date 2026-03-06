@@ -4,6 +4,8 @@
  */
 
 import fixWebmDuration from 'fix-webm-duration';
+import { getAudioCtx, unlockAudio } from './noteplayer.js';
+import { micStream } from './transcription.js';
 
 let rawAudioRecorder = null;
 let rawAudioChunks = [];
@@ -15,9 +17,59 @@ let recordingStartTime = 0;
  * @param {Function} onStop - Callback triggered when recording stops. Passed the resulting audio Blob.
  * @returns {Promise<boolean>} True if successful, false if mic permission denied
  */
-async function startRawAudioRecording(onStop) {
+export async function startRawAudioRecording(onStop) {
   try {
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    // Ensure the global AudioContext is initialized and wait a moment for Mac CoreAudio hardware lock to settle.
+    // If we request the mic at the exact moment AudioContext starts, Mac hardware returns NotFoundError.
+    await unlockAudio();
+    await new Promise(resolve => setTimeout(resolve, 300));
+
+    const audioCtx = getAudioCtx();
+
+    let constraints = {
+      audio: {
+        echoCancellation: false,
+        autoGainControl: false,
+        noiseSuppression: false
+      }
+    };
+
+    if (audioCtx && audioCtx.sampleRate) {
+      constraints.audio.sampleRate = audioCtx.sampleRate;
+    }
+
+    let stream;
+    let isBorrowedStream = false;
+
+    // First try to reuse the existing transcription mic stream to avoid hardware conflicts
+    if (micStream && micStream.active) {
+      stream = micStream;
+      isBorrowedStream = true;
+    } else {
+      try {
+        // First try with exact sample rate to prevent CoreAudio reset freezes on Mac
+        stream = await navigator.mediaDevices.getUserMedia(constraints);
+      } catch (e) {
+        console.warn("Could not get matching sample rate, trying default settings", e);
+        // Fallback 1: remove the sampleRate constraint
+        constraints = {
+          audio: {
+            echoCancellation: false,
+            autoGainControl: false,
+            noiseSuppression: false
+          }
+        };
+
+        try {
+          stream = await navigator.mediaDevices.getUserMedia(constraints);
+        } catch (e2) {
+          console.warn("Could not disable processing, trying bare minimum", e2);
+          // Fallback 2: The device rejects specific processing constraints entirely
+          stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        }
+      }
+    }
+
     rawAudioRecorder = new MediaRecorder(stream);
     rawAudioChunks = [];
 
@@ -40,12 +92,16 @@ async function startRawAudioRecording(onStop) {
       try {
         // Inject duration and seek cues into the WebM header so the browser doesn't hang on playback
         const fixedBlob = await fixWebmDuration(audioBlob, duration);
-        stream.getTracks().forEach(track => track.stop());
+        if (!isBorrowedStream) {
+          stream.getTracks().forEach(track => track.stop());
+        }
         rawAudioRecorder = null;
         if (onStop) onStop(fixedBlob);
       } catch (e) {
         console.error("Failed to fix webm duration. Falling back to original blob.", e);
-        stream.getTracks().forEach(track => track.stop());
+        if (!isBorrowedStream) {
+          stream.getTracks().forEach(track => track.stop());
+        }
         rawAudioRecorder = null;
         if (onStop) onStop(audioBlob);
       }
@@ -64,12 +120,9 @@ async function startRawAudioRecording(onStop) {
 /**
  * Stops the active recording
  */
-function stopRawAudioRecording() {
+export function stopRawAudioRecording() {
   if (rawAudioRecorder && rawAudioRecorder.state !== "inactive") {
     rawAudioRecorder.stop();
   }
   isRawRecordingActive = false;
 }
-
-window.startRawAudioRecording = startRawAudioRecording;
-window.stopRawAudioRecording = stopRawAudioRecording;
