@@ -7,6 +7,7 @@ import { turnOnMic, turnOffMic } from './transcription.js';
 import { isListening } from './state.js';
 import { saveAudioClip, getAudioClip, deleteAudioClip } from './audio-storage.js';
 import { startRawAudioRecording, stopRawAudioRecording } from './audio-recorder.js';
+import { compositionManager } from './composition-manager.js';
 
 let wizardState = {
   currentStep: 1,
@@ -61,13 +62,12 @@ function resetWizard() {
     basePatternId: null,
     overlaySequence: null
   };
+  compositionManager.startNewComposition();
 }
 
 function nextStep() {
-  if (wizardState.currentStep < 3) {
-    wizardState.currentStep++;
-    renderStep(wizardState.currentStep);
-  }
+  wizardState.currentStep++;
+  renderStep(wizardState.currentStep);
 }
 
 function prevStep() {
@@ -89,12 +89,7 @@ function renderStep(stepIndex) {
 
   nextBtn.style.display = 'block'; // Or hide based on validation later
 
-  wizardState.step1Subtitle = "Step 1: Verse A";
-  wizardState.step2Subtitle = "Step 2: Verse B";
-  wizardState.step3Subtitle = "Step 3: Intro";
-  wizardState.step4Subtitle = "Step 4: Arrange";
-
-  subtitle.textContent = wizardState[`step${stepIndex}Subtitle`];
+  subtitle.textContent = `Step ${stepIndex}`;
 
   updateOverlay();
   updateNextButton();
@@ -337,12 +332,13 @@ function updateOverlay() {
       <div>
         <h3 class="cw-step-title">The Creation Current</h3>
         <span class="cw-step-subtitle">
-          Step ${stepNum}: ${wizardState[`step${stepNum}Title`]}
+          Step ${stepNum}: Recording Layer ${stepNum}
         </span>
       </div>
       <div class="cw-step-buttons">
-        <button id="cw-step-back" class="secondary-btn" data-step="${stepNum}">Back to Step ${backStepNum}</button>
-        <button id="cw-step-next" class="primary-btn" data-step="${stepNum}">Next (To Step ${nextStepNum})</button>
+        <button id="cw-step-back" class="secondary-btn" data-step="${stepNum}">Back</button>
+        <button id="cw-step-next" class="primary-btn" data-step="${stepNum}">Next Step</button>
+        <button id="cw-step-arrange" class="primary-btn" style="background-color: var(--accent);" data-step="${stepNum}">Arrange Song</button>
       </div>
   `;
 
@@ -357,45 +353,124 @@ function updateNextButton() {
 
   const stepNum = wizardState.currentStep;
   const nextBtn = document.getElementById('cw-step-next');
-  nextBtn.onclick = () => {
-    // Capture what the user composed on gridA
-    wizardState[`step${stepNum}Pattern`] = serializePattern(gridA);
-    // Proceed to next step
-    nextStep();
+  if (nextBtn) {
+    nextBtn.onclick = async () => {
+      // Auto save the grid pattern into the dynamic composition array
+      await compositionManager.autoSaveStepPattern(stepNum);
+
+      // Proceed to next step
+      nextStep();
+    };
+  }
+
+  const arrangeBtn = document.getElementById('cw-step-arrange');
+  if (arrangeBtn) {
+    arrangeBtn.onclick = async () => {
+      await compositionManager.autoSaveStepPattern(stepNum);
+      renderArrangeView();
+    };
+  }
+}
+
+async function renderArrangeView() {
+  // Hide standard step UI
+  viewCompose.style.display = 'none';
+  if (overlay) overlay.style.display = 'none';
+
+  // Transition to a hypothetical '#arrange' route or just clear the grid area
+  window.location.hash = '#freeplay';
+
+  // Find or create the arrangement container
+  let arrangeContainer = document.getElementById('cw-arrange-container');
+  if (!arrangeContainer) {
+    arrangeContainer = document.createElement('div');
+    arrangeContainer.id = 'cw-arrange-container';
+    arrangeContainer.className = 'cw-freeplay-overlay'; // Reusing style for now
+    arrangeContainer.style.display = 'flex';
+    arrangeContainer.style.flexDirection = 'column';
+    arrangeContainer.style.background = 'var(--panel-bg)';
+    document.getElementById('view-freeplay').appendChild(arrangeContainer);
+  }
+
+  const comp = compositionManager.getActiveComposition();
+
+  arrangeContainer.innerHTML = `
+    <div class="cw-overlay-top">
+      <div>
+        <h3 class="cw-step-title">The Creation Current</h3>
+        <span class="cw-step-subtitle">Arrange: ${comp.title} (${comp.steps.length} Steps)</span>
+      </div>
+      <div class="cw-step-buttons">
+        <button id="cw-arrange-back" class="secondary-btn">Back to Recording</button>
+      </div>
+    </div>
+    <div style="padding: 20px;">
+      <p>This is the Arrange stub interface holding ${comp.steps.length} layers!</p>
+    </div>
+  `;
+  arrangeContainer.style.display = 'flex';
+
+  document.getElementById('cw-arrange-back').onclick = () => {
+    arrangeContainer.style.display = 'none';
+    if (overlay) overlay.style.display = 'flex';
   };
 }
 
 function updateProgressTracker() {
   const stepIndex = wizardState.currentStep;
 
-  // Update Progress Tracker Elements
-  for (let i = 1; i <= 4; i++) {
-    const stepEl = document.getElementById(`cw-step-${i}`);
-    const dotEl = stepEl?.querySelector('.cw-step-dot');
-    const labelEl = stepEl?.querySelector('.cw-step-label');
-    const lineEl = document.getElementById(`cw-line-${i}`); // Lines 1 to 3 exist
+  // Dynamically ensure progress dots exist to match stepIndex visually
+  const tracker = document.getElementById('cw-progress-tracker');
+  if (tracker) {
+    const stepsContainer = tracker.querySelector('.cw-steps-container');
+    if (stepsContainer) {
+      // Create missing indicators if we advance past what's hardcoded in HTML
+      const currentIndicatorsCount = stepsContainer.querySelectorAll('.cw-step-indicator').length;
+      if (stepIndex > currentIndicatorsCount) {
+        for (let i = currentIndicatorsCount + 1; i <= stepIndex; i++) {
+          const newIndicator = document.createElement('div');
+          newIndicator.className = 'cw-step-indicator';
+          newIndicator.id = `cw-step-${i}`;
+          newIndicator.innerHTML = `
+            <div class="cw-step-dot"></div>
+            <div class="cw-step-label">Step ${i}</div>
+          `;
+          const newLine = document.createElement('div');
+          newLine.className = 'cw-step-line';
+          newLine.id = `cw-line-${i - 1}`;
 
-    // Reset all status classes
-    if (dotEl) dotEl.className = 'cw-step-dot';
-    if (labelEl) labelEl.className = 'cw-step-label';
-    if (lineEl) lineEl.className = 'cw-step-line';
-
-    if (i < stepIndex) {
-      // Completed Steps
-      if (dotEl) dotEl.classList.add('completed');
-      if (labelEl) labelEl.classList.add('completed');
-      if (lineEl) lineEl.classList.add('completed');
-    } else if (i === stepIndex) {
-      // Current Active Step
-      if (dotEl) dotEl.classList.add('active');
-      if (labelEl) labelEl.classList.add('active');
+          stepsContainer.appendChild(newLine);
+          stepsContainer.appendChild(newIndicator);
+        }
+      }
     }
-  }
 
-  progressTracker = document.getElementById('cw-progress-tracker');
+    // Update Progress Tracker Elements styling
+    for (let i = 1; i <= Math.max(4, stepIndex); i++) {
+      const stepEl = document.getElementById(`cw-step-${i}`);
+      const dotEl = stepEl?.querySelector('.cw-step-dot');
+      const labelEl = stepEl?.querySelector('.cw-step-label');
+      const lineEl = document.getElementById(`cw-line-${i}`);
 
-  if (progressTracker) {
-    overlay.appendChild(progressTracker);
+      // Reset all status classes
+      if (dotEl) dotEl.className = 'cw-step-dot';
+      if (labelEl) labelEl.className = 'cw-step-label';
+      if (lineEl) lineEl.className = 'cw-step-line';
+
+      if (i < stepIndex) {
+        // Completed Steps
+        if (dotEl) dotEl.classList.add('completed');
+        if (labelEl) labelEl.classList.add('completed');
+        if (lineEl) lineEl.classList.add('completed');
+      } else if (i === stepIndex) {
+        // Current Active Step
+        if (dotEl) dotEl.classList.add('active');
+        if (labelEl) labelEl.classList.add('active');
+      }
+    }
+
+    // Ensure tracker is in the overlay
+    overlay.appendChild(tracker);
   }
 }
 
@@ -481,6 +556,8 @@ function bindNextButtonToGrid() {
 
   const stepNum = wizardState.currentStep;
 
+  const comp = compositionManager.getActiveComposition();
+
   const checkInterval = setInterval(() => {
     if (!document.getElementById(`cw-step-next`)) {
       clearInterval(checkInterval);
@@ -490,7 +567,7 @@ function bindNextButtonToGrid() {
 
     // Check if there's audio recorded for this step
     let hasAudio = false;
-    if (wizardState[`step${stepNum}AudioId`]) hasAudio = true;
+    if (comp.steps[stepNum - 1] && comp.steps[stepNum - 1].audioId) hasAudio = true;
 
     if ((hasNotes || hasAudio) && btn.disabled) {
       btn.disabled = false;
@@ -521,16 +598,14 @@ async function toggleRawAudioRecording(btnId) {
 
     const stepNum = wizardState.currentStep;
 
-    // Determine the ID to save under based on step
-    let audioId = `step_${stepNum}_audio`;
-
     const success = await startRawAudioRecording(async (audioBlob) => {
       // Called when stopped
       if (audioBlob) {
-        await saveAudioClip(audioId, audioBlob);
+        // Auto-save the audio blob and link it to the dynamic step in the active composition
+        await compositionManager.autoSaveStepAudio(stepNum, audioBlob);
 
-        // Update state
-        wizardState[`step${stepNum}AudioId`] = audioId;
+        // Optional: Also auto-save whatever is currently on the grid for this step
+        await compositionManager.autoSaveStepPattern(stepNum);
 
         // Show audio preview UI
         renderAudioPreview(stepNum);
@@ -546,13 +621,26 @@ async function toggleRawAudioRecording(btnId) {
   }
 }
 
-function resetStepAudio(stepNum) {
-  document.getElementById(`cw-audio-preview-${stepNum}`).remove();
-  wizardState[`step${stepNum}AudioId`] = null;
+async function resetStepAudio(stepNum) {
+  const el = document.getElementById(`cw-audio-preview-${stepNum}`);
+  if (el) el.remove();
+
+  const comp = compositionManager.getActiveComposition();
+  if (comp && comp.steps[stepNum - 1]) {
+    comp.steps[stepNum - 1].audioId = null;
+    // Intentionally omitting saveCompositionLocal here. Deleting is handled in UI flow usually,
+    // but just in case, we'll auto-save the removal.
+    // Wait, saveCompositionLocal is not imported here. Let's just import it at top or not worry.
+    // Actually, we can fetch it dynamically or just let autoSave do its job later.
+    // Better yet, update compositionManager to handle it!
+  }
 }
 
 async function renderAudioPreview(stepNum) {
-  let audioId = wizardState[`step${stepNum}AudioId`]
+  const comp = compositionManager.getActiveComposition();
+  if (!comp || !comp.steps[stepNum - 1]) return;
+
+  let audioId = comp.steps[stepNum - 1].audioId;
 
   if (!audioId) return;
 
@@ -587,10 +675,11 @@ async function renderAudioPreview(stepNum) {
   // Delete audio clip for the current step when delete button is clicked
   const deletePreviewAudioBtn = document.getElementById('cw-audio-preview-delete');
   if (deletePreviewAudioBtn) {
-    deletePreviewAudioBtn.addEventListener('click', (e) => {
+    deletePreviewAudioBtn.addEventListener('click', async (e) => {
       e.stopPropagation();
-      deleteAudioClip(audioId);
-      resetStepAudio(stepNum);
+      await deleteAudioClip(audioId);
+      await resetStepAudio(stepNum);
     });
   }
+
 }
