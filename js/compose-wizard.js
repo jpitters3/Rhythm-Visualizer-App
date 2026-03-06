@@ -3,9 +3,10 @@ import { supabase } from './supabase-client.js';
 import { gridA, gridB } from './grid-context.js';
 import { setDualGrid, clearGrid, renderAllMeasures } from './notegrid.js';
 import { start, stop, setTimeSignature } from './noteplayer.js';
-import { turnOnMic, turnOffMic } from './transcription.js';
+import { getAudioCtx, unlockAudio } from './noteplayer.js';
+import { micStream, turnOnMic, turnOffMic } from './transcription.js';
 import { isListening } from './state.js';
-import { saveAudioClip, getAudioClip, deleteAudioClip } from './audio-storage.js';
+import { saveAudioClip, getAudioClip, deleteAudioClip, getAllCompositionsLocal, getCompositionLocal, saveCompositionLocal } from './audio-storage.js';
 import { startRawAudioRecording, stopRawAudioRecording } from './audio-recorder.js';
 import { compositionManager } from './composition-manager.js';
 
@@ -336,9 +337,10 @@ function updateOverlay() {
         </span>
       </div>
       <div class="cw-step-buttons">
+        <button id="cw-step-load" class="secondary-btn">Load Composition</button>
         <button id="cw-step-back" class="secondary-btn" data-step="${stepNum}">Back</button>
         <button id="cw-step-next" class="primary-btn" data-step="${stepNum}">Next Step</button>
-        <button id="cw-step-arrange" class="primary-btn" style="background-color: var(--accent);" data-step="${stepNum}">Arrange Song</button>
+        <button id="cw-step-arrange" class="primary-btn" style="background-color: var(--primary-color, #ffd166); color: #000;" data-step="${stepNum}">Arrange Song</button>
       </div>
   `;
 
@@ -370,50 +372,458 @@ function updateNextButton() {
       renderArrangeView();
     };
   }
+
+  const loadBtn = document.getElementById('cw-step-load');
+  if (loadBtn) {
+    loadBtn.onclick = () => showLoadCompositionModal();
+  }
+}
+
+async function showLoadCompositionModal() {
+  const comps = await getAllCompositionsLocal();
+
+  let modalOverlay = document.getElementById('cw-load-modal');
+  if (!modalOverlay) {
+    modalOverlay = document.createElement('div');
+    modalOverlay.id = 'cw-load-modal';
+    modalOverlay.className = 'modal-overlay';
+    document.body.appendChild(modalOverlay);
+  }
+
+  let contentHtml = `
+    <div class="modal">
+      <h3 class="modal-title" style="border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 15px; margin-top: 0;">Load Composition</h3>
+      <div style="max-height: 50vh; overflow-y: auto; margin-bottom: 15px;">
+  `;
+
+  if (comps.length === 0) {
+    contentHtml += `<p style="color: var(--text-secondary);">No saved compositions found.</p>`;
+  } else {
+    // Sort newest first
+    comps.sort((a, b) => b.data.createdAt - a.data.createdAt).forEach(cObj => {
+      const comp = cObj.data;
+      const dateStr = new Date(comp.createdAt).toLocaleString();
+      contentHtml += `
+        <div class="cw-load-item" data-id="${comp.id}" style="padding: 15px; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; margin-bottom: 10px; cursor: pointer; transition: background 0.2s;">
+          <div style="font-weight: 600;">${comp.title}</div>
+          <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 5px;">${comp.steps.length} Steps • ${dateStr}</div>
+        </div>
+      `;
+    });
+  }
+
+  contentHtml += `
+      </div>
+      <div class="modal-actions">
+        <button id="cw-load-cancel" class="secondary-btn">Cancel</button>
+      </div>
+    </div>
+  `;
+
+  modalOverlay.innerHTML = contentHtml;
+  modalOverlay.classList.add('open');
+
+  document.getElementById('cw-load-cancel').onclick = () => modalOverlay.classList.remove('open');
+
+  const items = modalOverlay.querySelectorAll('.cw-load-item');
+  items.forEach(item => {
+    item.onmouseenter = () => item.style.background = 'rgba(255,255,255,0.05)';
+    item.onmouseleave = () => item.style.background = 'transparent';
+    item.onclick = async () => {
+      modalOverlay.classList.remove('open');
+      await loadCompositionToWizard(item.dataset.id);
+    };
+  });
+}
+
+async function loadCompositionToWizard(compId) {
+  try {
+    const comp = await compositionManager.loadComposition(compId);
+
+    // Jump to the step following their last recorded action, or the first step
+    let targetStep = 1;
+    if (comp.steps && comp.steps.length > 0) {
+      targetStep = comp.steps.length;
+    }
+
+    wizardState.currentStep = targetStep;
+
+    // Wait for the render to complete before injecting patterns
+    renderStep(targetStep);
+
+    // If there's a pattern saved for this step, load it into gridA
+    if (comp.steps[targetStep - 1] && comp.steps[targetStep - 1].pattern) {
+      applyPattern(comp.steps[targetStep - 1].pattern, gridA);
+    }
+
+    // Refresh audio previews specifically for this step
+    updateAudioRecordSection();
+    renderAudioPreview(targetStep);
+  } catch (e) {
+    console.error("Failed to load composition:", e);
+    alert("Could not load that composition.");
+  }
 }
 
 async function renderArrangeView() {
-  // Hide standard step UI
-  viewCompose.style.display = 'none';
-  if (overlay) overlay.style.display = 'none';
-
-  // Transition to a hypothetical '#arrange' route or just clear the grid area
-  window.location.hash = '#freeplay';
+  // We want the grid visible, so we don't go to #freeplay. We stay where we are.
+  // Hide standard wizard overlay content to show just arrangement and grid.
+  if (overlay) {
+    const top = overlay.querySelector('.cw-overlay-top');
+    if (top) top.style.display = 'none';
+    const tracker = document.getElementById('cw-progress-tracker');
+    if (tracker) tracker.style.display = 'none';
+    const autoRec = document.getElementById('cw-audio-record-section');
+    if (autoRec) autoRec.style.display = 'none';
+  }
 
   // Find or create the arrangement container
   let arrangeContainer = document.getElementById('cw-arrange-container');
   if (!arrangeContainer) {
     arrangeContainer = document.createElement('div');
     arrangeContainer.id = 'cw-arrange-container';
-    arrangeContainer.className = 'cw-freeplay-overlay'; // Reusing style for now
-    arrangeContainer.style.display = 'flex';
-    arrangeContainer.style.flexDirection = 'column';
-    arrangeContainer.style.background = 'var(--panel-bg)';
-    document.getElementById('view-freeplay').appendChild(arrangeContainer);
+    arrangeContainer.style.cssText = `
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 50vh;
+      background: rgba(20, 20, 25, 0.95);
+      border-top: 2px solid var(--accent);
+      z-index: 1000;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 -10px 30px rgba(0,0,0,0.5);
+      backdrop-filter: blur(10px);
+    `;
+    document.body.appendChild(arrangeContainer);
   }
 
   const comp = compositionManager.getActiveComposition();
 
   arrangeContainer.innerHTML = `
-    <div class="cw-overlay-top">
+    <div style="padding: 15px 25px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.1);">
       <div>
-        <h3 class="cw-step-title">The Creation Current</h3>
-        <span class="cw-step-subtitle">Arrange: ${comp.title} (${comp.steps.length} Steps)</span>
+        <h3 class="cw-step-title" style="margin: 0; font-size: 1.2rem;">Arrangement: ${comp.title}</h3>
       </div>
-      <div class="cw-step-buttons">
-        <button id="cw-arrange-back" class="secondary-btn">Back to Recording</button>
+      <div style="display: flex; gap: 15px; align-items: center;">
+        <button id="cw-arrange-save" class="secondary-btn">Save Arrangement</button>
+        <button id="cw-arrange-play" class="primary-btn" style="background-color: var(--primary-color, #ffd166); color: #000;">▶ Play Song</button>
+        <button id="cw-arrange-back" class="secondary-btn">Close Arrangement</button>
       </div>
     </div>
-    <div style="padding: 20px;">
-      <p>This is the Arrange stub interface holding ${comp.steps.length} layers!</p>
+    <div style="position: relative; flex: 1; display: flex; flex-direction: column; overflow: hidden; background: #fdfdfd; color: #333;">
+      <div id="cw-arrange-timeline" style="position: relative; flex: 1; overflow-y: auto; overflow-x: auto; padding: 20px; display: flex; flex-direction: column; gap: 15px;">
+        <div id="cw-arrange-playhead" style="position: absolute; left: 100px; top: 0; height: 5000px; width: 2px; background: var(--primary-color, #ffd166); z-index: 50; display: none; pointer-events: none;"></div>
+        <!-- Tracks injected here -->
+      </div>
     </div>
   `;
   arrangeContainer.style.display = 'flex';
 
   document.getElementById('cw-arrange-back').onclick = () => {
     arrangeContainer.style.display = 'none';
-    if (overlay) overlay.style.display = 'flex';
+    if (overlay) {
+      const top = overlay.querySelector('.cw-overlay-top');
+      if (top) top.style.display = 'flex';
+      const tracker = document.getElementById('cw-progress-tracker');
+      if (tracker) tracker.style.display = 'flex';
+      const autoRec = document.getElementById('cw-audio-record-section');
+      if (autoRec) autoRec.style.display = 'flex';
+    }
   };
+
+  const saveBtn = document.getElementById('cw-arrange-save');
+  saveBtn.onclick = async () => {
+    saveBtn.textContent = 'Saving...';
+
+    // Go track by track and extract clip offsets
+    const tracks = arrangeContainer.querySelectorAll('.cw-arrange-track');
+    tracks.forEach((track, idx) => {
+      // Find matching step index
+      const stepIndex = parseInt(track.dataset.stepIndex, 10);
+      if (isNaN(stepIndex) || !comp.steps[stepIndex]) return;
+
+      const clips = track.querySelectorAll('.cw-arrange-clip');
+      const positions = Array.from(clips).map(clip => parseInt(clip.style.left || '0', 10));
+
+      comp.steps[stepIndex].arrangement = positions;
+    });
+
+    try {
+      await saveCompositionLocal(comp.id, comp);
+      saveBtn.textContent = 'Saved!';
+      setTimeout(() => saveBtn.textContent = 'Save Arrangement', 2000);
+    } catch (e) {
+      console.error("Failed to save arrangement", e);
+      saveBtn.textContent = 'Error';
+    }
+  };
+
+  const timelineContainer = document.getElementById('cw-arrange-timeline');
+  const trackColors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEEAD', '#D4A5A5', '#9B59B6', '#3498DB'];
+
+  let draggingClip = null;
+  let startX = 0;
+  let initialLeft = 0;
+
+  arrangeContainer.onmousedown = (e) => {
+    const clip = e.target.closest('.cw-arrange-clip');
+    if (clip && !e.target.closest('.cw-duplicate-btn')) {
+      draggingClip = clip;
+      startX = e.clientX;
+      initialLeft = parseInt(draggingClip.style.left || '0', 10);
+      draggingClip.style.zIndex = 10;
+    }
+  };
+
+  arrangeContainer.onmousemove = (e) => {
+    if (draggingClip) {
+      let dx = e.clientX - startX;
+      let newLeft = Math.max(0, initialLeft + dx);
+      draggingClip.style.left = newLeft + 'px';
+      draggingClip.dataset.left = newLeft;
+    }
+  };
+
+  const endDrag = () => {
+    if (draggingClip) {
+      draggingClip.style.zIndex = 1;
+      draggingClip = null;
+    }
+  };
+  arrangeContainer.onmouseup = endDrag;
+  arrangeContainer.onmouseleave = endDrag;
+
+  // We will store all audio elements here to play them back
+  const arrangementClips = [];
+
+  // Build tracks for steps with audio
+  for (let index = 0; index < comp.steps.length; index++) {
+    const step = comp.steps[index];
+    if (!step.audioId) continue;
+
+    const color = trackColors[index % trackColors.length];
+
+    // Fetch blob logic for playback
+    const blob = await getAudioClip(step.audioId);
+    let url = null;
+    if (blob) {
+      url = URL.createObjectURL(blob);
+    }
+
+    // Create Track Row
+    const trackRow = document.createElement('div');
+    trackRow.className = 'cw-arrange-track';
+    trackRow.dataset.stepIndex = index; // Used for saving back arrangement data
+    trackRow.style.cssText = `
+      position: relative;
+      height: 70px;
+      background: rgba(0,0,0,0.04);
+      border-radius: 6px;
+      border: 1px solid rgba(0,0,0,0.1);
+      width: 100%;
+      min-width: 2000px;
+      overflow: visible;
+    `;
+
+    // Track Label
+    const trackLabel = document.createElement('div');
+    trackLabel.style.cssText = `
+      position: absolute;
+      left: -80px;
+      width: 70px;
+      text-align: right;
+      color: #666;
+      font-size: 0.8rem;
+      top: 25px;
+      font-weight: 500;
+    `;
+    trackLabel.textContent = `Track ${index + 1}`;
+
+    // Wrapping timeline row to allow label outside
+    const trackWrapper = document.createElement('div');
+    trackWrapper.style.cssText = 'position: relative; margin-left: 80px;';
+    trackWrapper.appendChild(trackLabel);
+    trackWrapper.appendChild(trackRow);
+
+    // Initial Clip Function
+    const createClip = (leftPx) => {
+      const clip = document.createElement('div');
+      clip.className = 'cw-arrange-clip';
+      clip.dataset.left = leftPx;
+      clip.dataset.played = "false";
+
+      // Hidden audio element for this specific clip instance
+      const audioEl = new Audio(url);
+      clip.audioElement = audioEl;
+
+      const pixelsPerSecond = 4;
+
+      audioEl.addEventListener('loadedmetadata', () => {
+        let duration = audioEl.duration;
+        if (duration && duration !== Infinity) {
+          const widthPx = Math.max(30, duration * pixelsPerSecond);
+          clip.style.width = widthPx + 'px';
+        }
+      });
+
+      arrangementClips.push(clip);
+
+      clip.style.cssText = `
+        position: absolute;
+        top: 10px;
+        left: ${leftPx}px;
+        height: 50px;
+        width: 150px; /* Default width before metadata loads */
+        background: ${color};
+        border-radius: 4px;
+        cursor: grab;
+        user-select: none;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 10px;
+        color: #000;
+        font-weight: 500;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+        z-index: 1;
+      `;
+
+      const titleSpan = document.createElement('span');
+      titleSpan.textContent = `Audio ${index + 1}`;
+      titleSpan.style.pointerEvents = 'none';
+
+      // Duplicate Button
+      const dupBtn = document.createElement('button');
+      dupBtn.className = 'cw-duplicate-btn';
+      dupBtn.textContent = '➕';
+      dupBtn.style.cssText = `
+        background: rgba(255,255,255,0.3);
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        padding: 4px 6px;
+        font-size: 0.8rem;
+      `;
+
+      dupBtn.onclick = (e) => {
+        e.stopPropagation();
+        const currentLeft = parseInt(clip.style.left || '0', 10);
+        const currentWidth = parseInt(clip.style.width || '150', 10);
+        createClip(currentLeft + currentWidth + 10); // Duplicate right next to it
+      };
+
+      clip.appendChild(titleSpan);
+      clip.appendChild(dupBtn);
+
+      clip.onmousedown = () => clip.style.cursor = 'grabbing';
+      clip.onmouseup = () => clip.style.cursor = 'grab';
+
+      trackRow.appendChild(clip);
+    };
+
+    // Instantiate clips based on saved arrangement arrays, or default to 0
+    if (step.arrangement && Array.isArray(step.arrangement) && step.arrangement.length > 0) {
+      step.arrangement.forEach(offset => createClip(offset));
+    } else {
+      createClip(0);
+    }
+
+    timelineContainer.appendChild(trackWrapper);
+  }
+
+  if (timelineContainer.children.length === 0) {
+    timelineContainer.innerHTML = '<p style="color: var(--text-muted);">No audio tracks recorded yet. Go back and record some audio to arrange it.</p>';
+  }
+
+  // ==== Playback Logic ====
+  let isPlayingArrangement = false;
+  let playheadX = 0;
+  let playheadAnimation;
+  const playhead = document.getElementById('cw-arrange-playhead');
+  const playBtn = document.getElementById('cw-arrange-play');
+  const pixelsPerSecond = 4; // Timeline speed
+
+  let lastTime = 0;
+
+  const playLoop = (timestamp) => {
+    if (!lastTime) lastTime = timestamp;
+    const delta = (timestamp - lastTime) / 1000; // seconds
+    lastTime = timestamp;
+
+    if (isPlayingArrangement) {
+      playheadX += pixelsPerSecond * delta;
+      playhead.style.left = (100 + playheadX) + 'px'; // 100px offset for padding+labels
+
+      // Check clips to see if they should trigger
+      arrangementClips.forEach(clip => {
+        const clipLeft = parseInt(clip.dataset.left || '0', 10);
+        if (clip.dataset.played === "false" && playheadX >= clipLeft) {
+          clip.dataset.played = "true";
+          if (clip.audioElement) {
+            clip.audioElement.currentTime = 0;
+            clip.audioElement.play().catch(e => console.error("Playback prevented", e));
+
+            // Visual feedback
+            clip.style.filter = 'brightness(1.5)';
+            setTimeout(() => clip.style.filter = 'none', 300);
+          }
+        }
+      });
+
+      // Simple auto-stop if playhead reaches way past content (e.g., 20 seconds = 2000px)
+      if (playheadX > 2500) {
+        stopArrangement();
+        return;
+      }
+
+      playheadAnimation = requestAnimationFrame(playLoop);
+    }
+  };
+
+  const stopArrangement = () => {
+    isPlayingArrangement = false;
+    cancelAnimationFrame(playheadAnimation);
+    playBtn.innerHTML = '▶ Play Song';
+    playBtn.classList.remove('active');
+    playhead.style.display = 'none';
+
+    // Stop all audio
+    arrangementClips.forEach(clip => {
+      if (clip.audioElement) {
+        clip.audioElement.pause();
+        clip.audioElement.currentTime = 0;
+      }
+    });
+  };
+
+  const startArrangement = () => {
+    isPlayingArrangement = true;
+    playBtn.innerHTML = '🛑 Stop';
+    playBtn.classList.add('active');
+
+    // Reset playhead
+    playheadX = 0;
+    playhead.style.left = '100px';
+    playhead.style.display = 'block';
+    lastTime = 0;
+
+    // Reset clip triggers
+    arrangementClips.forEach(clip => clip.dataset.played = "false");
+
+    playheadAnimation = requestAnimationFrame(playLoop);
+  };
+
+  if (playBtn) {
+    playBtn.onclick = () => {
+      if (isPlayingArrangement) {
+        stopArrangement();
+      } else {
+        startArrangement();
+      }
+    }
+  }
 }
 
 function updateProgressTracker() {
@@ -530,11 +940,11 @@ async function startAutoAdvanceRecording() {
 function renderStep4() {
   subtitle.textContent = "Step 4: Polish & Export";
   contentArea.innerHTML = `
-    <div style="text-align: center; margin-top: 50px;">
+      <div style="text-align: center; margin-top: 50px;">
       <h2 style="font-size: 24px;">Your Song is Ready</h2>
       <p style="color: var(--text-secondary);">Fine tune, save, or export your composition.</p>
     </div>
-  `;
+      `;
   nextBtn.textContent = 'Finish';
   nextBtn.onclick = () => {
     // Return to dashboard

@@ -31,6 +31,19 @@ class CompositionManager {
   }
 
   /**
+   * Loads a complete composition by ID and sets it as active
+   * @param {string} compId - The ID of the composition to load
+   * @returns {Promise<Object>} The loaded composition
+   */
+  async loadComposition(compId) {
+    const { getCompositionLocal } = await import('./audio-storage.js');
+    const comp = await getCompositionLocal(compId);
+    if (!comp) throw new Error("Composition not found");
+    this.activeComposition = comp;
+    return comp;
+  }
+
+  /**
    * Auto-saves the currently exported grid pattern into the specified step
    * @param {number} stepIndex - The 1-based step index
    */
