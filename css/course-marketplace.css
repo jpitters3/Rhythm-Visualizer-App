@@ -89,7 +89,21 @@
   border-radius: 20px;
   font-size: 12px;
   font-weight: 700;
+  /* backdrop-filter: blur(4px); -> macOS CPU Fix */
+  z-index: 1;
+}
+
+.price-badge::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
   backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  z-index: -1;
+  transform: translateZ(0);
+  will-change: transform;
+  pointer-events: none;
 }
 
 .price-badge.free {

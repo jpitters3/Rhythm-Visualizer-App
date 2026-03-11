@@ -8,7 +8,7 @@ body {
   padding: 5px;
   font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
   background: var(--bg);
-  background-blend-mode: overlay;
+  /* background-blend-mode: overlay; -> REMOVED: massive GPU bottleneck on macOS */
   color: var(--text);
   min-height: 100vh;
   /* Ensure body fills screen */
@@ -19,18 +19,22 @@ body {
 body::after {
   content: "";
   background-image: url('../public/assets/images/backgrounds/river_wallpaper.jpg');
-  background-repeat: repeat-y;
-  background-attachment: scroll;
-  /* Standard tiling within fixed container */
+  /* background-attachment: scroll; -> REMOVED: causes full page repaints */
   background-position: center top;
-  background-size: 100% auto;
+  background-size: cover;
   opacity: 0.8;
+  /* Adjusted opacity to compensate for removed blend-mode */
   position: fixed;
   /* Fix layer to viewport */
   inset: 0;
   /* Full coverage */
   z-index: -1;
   pointer-events: none;
+  background-repeat: no-repeat;
+  will-change: transform;
+  /* Hardware acceleration hint */
+  transform: translateZ(0);
+  /* Force GPU compositing layer */
 }
 
 body.dark::after {

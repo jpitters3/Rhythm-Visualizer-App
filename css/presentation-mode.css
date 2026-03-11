@@ -213,13 +213,6 @@ body.present .handpan-panel {
   /* Let clicks pass through if needed */
 }
 
-/* Override Main Layout to remove Side-by-Side */
-body.present .main {
-  display: block !important;
-  /* Stack vertically */
-  width: 100%;
-}
-
 /* ==== END PRESENTATION MODE LAYOUT (in order of appearance) ==== */
 /* ==== END PRESENTATION MODE LAYOUT (in order of appearance) ==== */
 /* ==== END PRESENTATION MODE LAYOUT (in order of appearance) ==== */
@@ -373,8 +366,7 @@ body.present #presentationControls {
 .transport-container {
   /* Glassmorphic Container Style */
   background: rgba(var(--panel-rgb), 0.65);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  display: flex !important;
   padding: 12px 20px;
   border-radius: 999px;
   border: 1px solid rgba(255, 255, 255, 0.15);
@@ -383,18 +375,22 @@ body.present #presentationControls {
   z-index: 10;
 }
 
+.transport-container::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  z-index: -1;
+  transform: translateZ(0);
+  will-change: transform;
+  pointer-events: none;
+}
+
 body.present #presentationControls .bpm-control {
   transform: translateY(0);
   margin: 0px 5px;
-}
-
-body.present div.handpan-tabs {
-  display: none !important;
-}
-
-/* Hide ANY transport container in presentation mode EXCEPT the explicit presentationControls */
-body.present .transport-container:not(#presentationControls) {
-  display: none !important;
 }
 
 /* ===== MOBILE PRESENTATION FIXES ===== */
@@ -581,12 +577,26 @@ body.present.mode-gravity .stream-view {
   width: 100%;
   height: 100%;
   background: rgba(0, 0, 0, 0.4);
-  backdrop-filter: blur(4px);
+
   z-index: 10002;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 20px;
+}
+
+/* ===== IMMERSIVE DASHBOARD ===== */
+#presentationDashboard::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  z-index: -1;
+  transform: translateZ(0);
+  will-change: transform;
+  pointer-events: none;
 }
 
 /* ===== PLAY PULSE (@keyframes eliminates "hang") ===== */
@@ -616,16 +626,47 @@ body.present.mode-gravity .hp-dot.active::after {
   /* animation: none !important; */
 }
 
+/* Override Main Layout to remove Side-by-Side */
+body.present .main {
+  display: block !important;
+  /* Stack vertically */
+  width: 100%;
+}
+
+body.present div.handpan-tabs {
+  display: none !important;
+}
+
+/* Hide ANY transport container in presentation mode EXCEPT the explicit presentationControls */
+body.present .transport-container:not(#presentationControls) {
+  display: none !important;
+}
+
 .dashboard-panel {
+  position: relative;
+  /* Added by GPU Fix */
   width: 100%;
   max-width: 600px;
   background: rgba(var(--panel-rgb), 0.85);
-  backdrop-filter: blur(24px);
+
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 24px;
   padding: 32px;
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
   animation: dashPop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.dashboard-panel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  z-index: -1;
+  transform: translateZ(0);
+  will-change: transform;
+  pointer-events: none;
 }
 
 @keyframes dashPop {

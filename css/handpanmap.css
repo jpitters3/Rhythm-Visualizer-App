@@ -456,14 +456,41 @@ body.dark .icon-btn.active {
 }
 
 .tab-pane {
+  z-index: 1;
+  /* Added for GPU Fix pseudo behind */
+  position: relative;
+  /* Added by GPU Fix */
   display: none;
   background: var(--offwhite);
   border: 1px solid var(--offwhite);
   border-radius: 12px;
   padding: 16px;
-  backdrop-filter: blur(10px);
+
   animation: fadeIn 0.2s ease;
   overflow: hidden;
+}
+
+.tab-pane::before {
+  content: "";
+  position: absolute;
+  /* Glass Light */
+  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  position: relative;
+  z-index: 1;
+}
+
+.course-progress-overlay::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  z-index: -1;
+  transform: translateZ(0);
+  will-change: transform;
+  pointer-events: none;
 }
 
 .tab-pane.active {
@@ -597,8 +624,8 @@ body.dark .chord-chip.minor .chord-root {
   position: absolute;
   inset: 14px;
   background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+
+
   border-radius: 14px;
   display: flex;
   flex-direction: column;
@@ -610,6 +637,20 @@ body.dark .chord-chip.minor .chord-root {
   transition: opacity 0.3s ease;
   color: var(--text);
   font-weight: 600;
+}
+
+/* Loading Overlay */
+.hp-loading-overlay::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: -1;
+  transform: translateZ(0);
+  will-change: transform;
+  pointer-events: none;
 }
 
 .hp-loading-overlay.active {
@@ -644,7 +685,7 @@ body.dark .hp-loader {
   left: 10px;
   z-index: 100;
   background: rgba(255, 255, 255, 0.2);
-  backdrop-filter: blur(5px);
+
   border: 1px solid rgba(255, 255, 255, 0.3);
   border-radius: 50%;
   width: 36px;
@@ -655,6 +696,19 @@ body.dark .hp-loader {
   cursor: pointer;
   font-size: 18px;
   transition: background 0.2s;
+}
+
+.flip-btn::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+  z-index: -1;
+  transform: translateZ(0);
+  will-change: transform;
+  pointer-events: none;
 }
 
 .flip-btn:hover {

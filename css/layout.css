@@ -211,11 +211,44 @@ div.container {
   padding: 50px;
   max-width: 1200px;
   /* Glassmorphism Update */
-  background: rgba(245, 245, 245, 0.7);
+  background: rgba(var(--panel-rgb), 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(255, 255, 255, 0.2) inset;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  /* Full width items */
+  gap: 16px;
+  position: relative;
+}
+
+.auth-panel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.4);
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.2) inset;
+  z-index: -1;
+  transform: translateZ(0);
+  will-change: transform;
+  pointer-events: none;
+}
+
+.container::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  z-index: -1;
+  transform: translateZ(0);
+  /* Force GPU Layer */
+  will-change: transform;
+  /* Prevent compositor thrashing */
+  pointer-events: none;
 }
 
 body.dark div.container {
@@ -254,5 +287,5 @@ body.route-dashboard .grid-child.pattern-select {
 }
 
 body.route-dashboard .header-menu-items {
-  justify-content: flex-end; 
+  justify-content: flex-end;
 }
