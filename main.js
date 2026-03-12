@@ -28,6 +28,7 @@ import './css/pattern-of-the-week.css';
 import './css/games.css';
 import './css/calibration.css';
 import './css/compose-wizard.css';
+import './css/glossary.css';
 
 // Import JS (Ordered Dependencies)
 // Using raw imports for side-effect scripts that populate 'window'

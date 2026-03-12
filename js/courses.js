@@ -7,6 +7,7 @@ import { updateAdminUI } from './auth.js';
 import { isItemInPractice, togglePracticeItem } from './practice.js';
 import { loadCourseToEdit } from './course-creator.js';
 import { openMarketplace } from './course-marketplace.js';
+import { autoLinkText } from './glossary.js';
 
 // ===== SIDEBAR LOGIC (OWNED COURSES) =====
 
@@ -377,12 +378,42 @@ export function loadLesson(lessonId) {
 
     const descEl = document.getElementById('lessonDescription');
     if (descEl) {
-      descEl.textContent = lesson.description || '';
-      // Toggle readonly based on admin status
+      const rawDesc = lesson.description || '';
+
+      // Ensure we have an edit textarea available
+      let editArea = document.getElementById('editLessonDescription');
+      if (!editArea) {
+        editArea = document.createElement('textarea');
+        editArea.id = 'editLessonDescription';
+        editArea.style.width = '100%';
+        editArea.style.minHeight = '150px';
+        editArea.style.padding = '12px';
+        editArea.style.borderRadius = '8px';
+        editArea.style.border = '1px dashed var(--accent-glow)';
+        editArea.style.background = 'rgba(0,0,0,0.1)';
+        editArea.style.color = 'var(--text)';
+        editArea.style.fontFamily = 'inherit';
+        editArea.style.fontSize = '15px';
+        editArea.style.resize = 'vertical';
+        descEl.parentNode.insertBefore(editArea, descEl.nextSibling);
+      }
+
+      // Toggle edit mode vs view mode based on admin status
       if (isAdminUser(currentUser)) {
-        descEl.setAttribute('contenteditable', 'true');
+        descEl.style.display = 'none';
+        editArea.style.display = 'block';
+        editArea.value = rawDesc;
       } else {
+        editArea.style.display = 'none';
+        descEl.style.display = 'block';
         descEl.setAttribute('contenteditable', 'false');
+
+        // Render Glossary Links and preserve newlines for students!
+        let formattedDesc = rawDesc;
+        if (typeof autoLinkText === 'function') {
+          formattedDesc = autoLinkText(formattedDesc);
+        }
+        descEl.innerHTML = formattedDesc.replace(/\n/g, '<br>');
       }
     }
 
@@ -621,8 +652,8 @@ export async function updateLessonFromGrid(lessonId) {
 
   try {
     const pattern_json = serializePattern();
-    const descEl = document.getElementById('lessonDescription');
-    const newDescription = descEl ? descEl.textContent : (lesson.description || '');
+    const editArea = document.getElementById('editLessonDescription');
+    const newDescription = editArea ? editArea.value : (lesson.description || '');
 
     // 1. Save to User Pattern Library
     if (typeof dbSavePattern === 'function') {
@@ -878,6 +909,13 @@ export function initCourses() {
   Bus.on(BUS_EVENT.REQUEST_LOAD_LESSON, (e) => {
     if (e.detail?.lessonId) {
       loadLesson(e.detail.lessonId);
+    }
+  });
+
+  Bus.on(BUS_EVENT.OPEN_COURSE, (e) => {
+    if (e.detail?.courseId) {
+      setActiveCourse(e.detail.courseId);
+      openSidebar();
     }
   });
 }

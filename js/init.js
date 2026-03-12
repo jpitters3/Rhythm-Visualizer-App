@@ -34,6 +34,7 @@ import { initGames } from './games.js';
 import { initAdmin } from './admin.js';
 import { initRouter } from './router.js';
 import { initComposeWizard } from './compose-wizard.js';
+import { initGlossary } from './glossary.js';
 
 /**
  * Main application initializer
@@ -72,6 +73,7 @@ async function init() {
     initNotePlayer();
     initNoteGrid();
     initComposeWizard();
+    initGlossary();
     initRouter();
 
     // 3. Launch safeInit (which handles pattern loading and final renders)

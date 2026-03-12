@@ -1,6 +1,7 @@
 export const BUS_EVENT = {
   AUTH_LOGOUT: 'auth:logout',
   AUTH_LOGIN: 'auth:login',
+  OPEN_COURSE: 'course:open',
   COURSE_UNLOCKED: 'course:unlocked',
   REQUEST_LOAD_LESSON: 'lesson:load',
   SIDEBAR_CLOSE_ALL: 'sidebar:close-all',
