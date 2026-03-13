@@ -373,6 +373,9 @@ body.present #presentationControls {
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
   position: relative;
   z-index: 10;
+  max-width: 500px;
+  justify-content: center;
+  justify-self: center;
 }
 
 .transport-container::before {
