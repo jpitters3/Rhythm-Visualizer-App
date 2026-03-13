@@ -29,6 +29,13 @@ export async function initCourseCopier() {
       if (e.target.id === 'courseCopierModal') closeCourseCopier();
     });
 
+  // Search bar — renders rich results panel
+  document.getElementById('copierSearch')
+    ?.addEventListener('input', (e) => {
+      const term = e.target.value.trim();
+      renderSearchResults(term);
+    });
+
   // Course selects
   document.getElementById('copierSelectLeft')
     ?.addEventListener('change', (e) => loadSide('left', e.target.value));
@@ -56,7 +63,10 @@ export async function openCourseCopier() {
   modal.setAttribute('aria-hidden', 'false');
 
   allAdminCourses = await fetchAllCourses();
-  populateDropdowns();
+  populateDropdowns(allAdminCourses);
+  const searchEl = document.getElementById('copierSearch');
+  if (searchEl) searchEl.value = '';
+  renderSearchResults(''); // clear any previous results
 
   // Reset columns
   state.left  = { courseId: null, sections: [] };
@@ -89,14 +99,135 @@ async function fetchAllCourses() {
   return data || [];
 }
 
-function populateDropdowns() {
+/** Returns true if a course matches the search query anywhere in its titles. */
+function courseMatchesSearch(course, term) {
+  if (course.title.toLowerCase().includes(term)) return true;
+  return (course.sections || []).some(s => {
+    if (s.title.toLowerCase().includes(term)) return true;
+    return (s.lessons || []).some(l => l.title.toLowerCase().includes(term));
+  });
+}
+
+/**
+ * Wrap every occurrence of `term` in `text` with a <mark> highlight.
+ * Returns plain text if no term.
+ */
+function highlightMatch(text, term) {
+  if (!term) return escHtml(text);
+  const escaped = escHtml(text);
+  const escapedTerm = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return escaped.replace(new RegExp(`(${escapedTerm})`, 'gi'), '<mark class="copier-hl">$1</mark>');
+}
+
+/**
+ * Build / hide the rich search results panel.
+ * When term is blank, hide the panel and show the regular dropdown.
+ */
+function renderSearchResults(term) {
+  const panel = document.getElementById('copierSearchResults');
+  const dropdown = document.getElementById('copierSelectLeft');
+  const query = term.toLowerCase();
+
+  if (!term) {
+    if (panel) panel.style.display = 'none';
+    if (dropdown) dropdown.style.display = '';
+    populateDropdowns(allAdminCourses);
+    return;
+  }
+
+  // Hide the plain dropdown while results are showing
+  if (dropdown) dropdown.style.display = 'none';
+
+  const matched = allAdminCourses.filter(c => courseMatchesSearch(c, query));
+
+  if (!panel) return;
+
+  if (matched.length === 0) {
+    panel.innerHTML = '<div class="csr-empty">No courses, sections, or lessons matched.</div>';
+    panel.style.display = 'block';
+    return;
+  }
+
+  panel.innerHTML = '';
+  panel.style.display = 'block';
+
+  matched.forEach(course => {
+    const courseNode = document.createElement('div');
+    courseNode.className = 'csr-course';
+
+    const titleMatchesCourse = course.title.toLowerCase().includes(query);
+
+    // Course title row — clicking selects this course into the left column
+    const titleRow = document.createElement('div');
+    titleRow.className = 'csr-course-title';
+    titleRow.innerHTML = highlightMatch(course.title, term);
+    titleRow.title = 'Click to load this course';
+    titleRow.addEventListener('click', () => {
+      // Select in dropdown and load on the left
+      const sel = document.getElementById('copierSelectLeft');
+      if (sel) {
+        // Restore dropdown visibility and select value
+        sel.style.display = '';
+        panel.style.display = 'none';
+        document.getElementById('copierSearch').value = '';
+        sel.value = course.id;
+        loadSide('left', course.id);
+        populateDropdowns(allAdminCourses);
+        sel.value = course.id; // ensure selected after repopulate
+      }
+    });
+    courseNode.appendChild(titleRow);
+
+    // Sections that match (or all sections if the course title matched)
+    const sortedSections = [...(course.sections || [])].sort((a, b) => a.order_index - b.order_index);
+    sortedSections.forEach(section => {
+      const sectionMatchesTerm = section.title.toLowerCase().includes(query);
+      const matchingLessons = (section.lessons || []).filter(l => l.title.toLowerCase().includes(query));
+
+      // Show this section if: course title matched (show all), or section itself matched, or a lesson inside matched
+      if (!titleMatchesCourse && !sectionMatchesTerm && matchingLessons.length === 0) return;
+
+      const sectionNode = document.createElement('div');
+      sectionNode.className = 'csr-section';
+
+      const sectionTitle = document.createElement('div');
+      sectionTitle.className = 'csr-section-title';
+      sectionTitle.innerHTML = '📂 ' + highlightMatch(section.title, sectionMatchesTerm ? term : '');
+      sectionNode.appendChild(sectionTitle);
+
+      // Show matching lessons (always show all if section title matched or course title matched)
+      const lessonsToShow = (titleMatchesCourse || sectionMatchesTerm)
+        ? [...(section.lessons || [])].sort((a, b) => a.order_index - b.order_index)
+        : matchingLessons.sort((a, b) => a.order_index - b.order_index);
+
+      lessonsToShow.forEach(lesson => {
+        const lessonNode = document.createElement('div');
+        lessonNode.className = 'csr-lesson';
+        const lessonMatches = lesson.title.toLowerCase().includes(query);
+        lessonNode.innerHTML = '• ' + highlightMatch(lesson.title, lessonMatches ? term : '');
+        sectionNode.appendChild(lessonNode);
+      });
+
+      courseNode.appendChild(sectionNode);
+    });
+
+    panel.appendChild(courseNode);
+  });
+}
+
+function populateDropdowns(courses = allAdminCourses) {
   ['Left', 'Right'].forEach(side => {
     const sel = document.getElementById(`copierSelect${side}`);
     if (!sel) return;
-    sel.innerHTML = '<option value="">— Select a Course —</option>'
-      + allAdminCourses.map(c =>
-          `<option value="${c.id}">${escHtml(c.title)}</option>`
-        ).join('');
+    const currentVal = sel.value; // preserve current selection if possible
+    sel.innerHTML = courses.length === 0
+      ? '<option value="">— No matches —</option>'
+      : '<option value="">— Select a Course —</option>'
+        + courses.map(c =>
+            `<option value="${c.id}">${escHtml(c.title)}</option>`
+          ).join('');
+    // Restore previous selection if still in list
+    if (courses.some(c => c.id === currentVal)) sel.value = currentVal;
   });
 }
 

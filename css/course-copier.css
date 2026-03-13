@@ -64,6 +64,28 @@ body.dark .copier-col-header {
   box-shadow: 0 0 0 3px var(--play-glow);
 }
 
+.copier-search-input {
+  width: 100%;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--panel-border);
+  background: var(--panel);
+  color: var(--text);
+  font-size: 13px;
+  font-family: inherit;
+  box-sizing: border-box;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  margin-bottom: 0 !important; /* override global input margin */
+}
+
+.copier-search-input::placeholder { opacity: 0.5; }
+
+.copier-search-input:focus {
+  outline: none;
+  border-color: var(--btn-active);
+  box-shadow: 0 0 0 3px var(--play-glow);
+}
+
 .copier-col-body {
   flex: 1;
   overflow-y: auto;
@@ -183,4 +205,74 @@ body.dark .copier-col-header {
 #copierSectionsRight p {
   text-align: center;
   padding: 20px 10px;
+}
+
+/* ── Search Results Panel ── */
+.copier-search-results {
+  max-height: 280px;
+  overflow-y: auto;
+  border: 1px solid var(--panel-border);
+  border-radius: 10px;
+  background: var(--panel);
+  margin-bottom: 8px;
+  padding: 6px 0;
+}
+
+.csr-empty {
+  padding: 14px 16px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  opacity: 0.7;
+  text-align: center;
+}
+
+.csr-course {
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--panel-border);
+  margin-bottom: 2px;
+}
+
+.csr-course:last-child { border-bottom: none; margin-bottom: 0; }
+
+.csr-course-title {
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: background 0.15s ease;
+  margin: 2px 4px;
+}
+
+.csr-course-title:hover {
+  background: rgba(241,196,15,0.12);
+  color: var(--btn-active);
+}
+
+.csr-section {
+  padding: 2px 14px 2px 24px;
+}
+
+.csr-section-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  padding: 3px 0;
+}
+
+.csr-lesson {
+  font-size: 12px;
+  color: var(--text-secondary);
+  opacity: 0.75;
+  padding: 2px 0 2px 16px;
+}
+
+/* Highlighted match text */
+.copier-hl {
+  background: rgba(241,196,15,0.35);
+  color: var(--text);
+  border-radius: 3px;
+  padding: 0 2px;
+  font-weight: 600;
+  font-style: normal;
 }
