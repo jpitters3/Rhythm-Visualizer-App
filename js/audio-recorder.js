@@ -3,7 +3,7 @@
  * Handles the MediaRecorder API for capturing raw user audio clips directly from the microphone.
  */
 
-import fixWebmDuration from 'fix-webm-duration';
+import fixWebmDuration from './fix-webm-duration.js';
 import { getAudioCtx, unlockAudio } from './noteplayer.js';
 import { micStream } from './transcription.js';
 
