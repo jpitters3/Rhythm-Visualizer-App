@@ -23,6 +23,7 @@
   <link rel="stylesheet" href="./css/action-bar.css">
   <link rel="stylesheet" href="./css/measure-actions.css">
   <link rel="stylesheet" href="./css/course-creator.css">
+  <link rel="stylesheet" href="./css/course-copier.css">
   <link rel="stylesheet" href="./css/courses.css">
   <link rel="stylesheet" href="./css/mic-mode.css">
   <link rel="stylesheet" href="./css/ai-assistant.css">
@@ -841,6 +842,53 @@
         <button id="addSectionBtn" class="secondary-btn">+ Add Section</button>
         <button id="saveAndContinueBtn" class="secondary-btn">Save & Continue</button>
         <button id="saveCourseBtn" class="primary-btn">Save Course</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Course Copier Modal (Admin Only) -->
+  <div id="courseCopierModal" class="modal-overlay" aria-hidden="true">
+    <div class="modal course-modal" style="max-width: 960px; width: 95vw;">
+      <div class="modal-header">
+        <h2 class="modal-title">📋 Copy Sections Between Courses</h2>
+        <button id="closeCourseCopierModal" class="close-btn">&times;</button>
+      </div>
+
+      <div class="copier-status-bar" id="copierStatusBar" style="display:none; margin: 0 0 12px 0; padding: 8px 14px; border-radius: 6px; background: rgba(46,204,113,0.12); border: 1px solid rgba(46,204,113,0.3); color: #2ecc71; font-size: 13px;"></div>
+
+      <div style="display:flex; gap:16px; overflow:hidden; flex:1; min-height:0;">
+        <!-- LEFT COLUMN (source) -->
+        <div class="copier-col" id="copierColLeft">
+          <div class="copier-col-header">
+            <label style="font-size:12px; color:var(--text-secondary); display:block; margin-bottom:6px;">SOURCE COURSE</label>
+            <select id="copierSelectLeft" class="copier-course-select"></select>
+            <button id="copierEditLeft" class="secondary-btn" style="margin-top:8px; width:100%;">✏️ Edit Course</button>
+          </div>
+          <div class="copier-col-body" id="copierSectionsLeft">
+            <p style="opacity:0.5; font-size:13px; padding:10px;">Select a course above.</p>
+          </div>
+        </div>
+
+        <!-- Divider -->
+        <div style="display:flex; align-items:center; font-size:24px; color:var(--text-secondary); user-select:none; flex-shrink:0;">→</div>
+
+        <!-- RIGHT COLUMN (destination) -->
+        <div class="copier-col" id="copierColRight">
+          <div class="copier-col-header">
+            <label style="font-size:12px; color:var(--text-secondary); display:block; margin-bottom:6px;">DESTINATION COURSE</label>
+            <select id="copierSelectRight" class="copier-course-select"></select>
+            <button id="copierEditRight" class="secondary-btn" style="margin-top:8px; width:100%;">✏️ Edit Course</button>
+          </div>
+          <div class="copier-col-body" id="copierSectionsRight">
+            <p style="opacity:0.5; font-size:13px; padding:10px;">Select a course above.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer" style="margin-top:16px;">
+        <span id="copierSaveStatus" class="status-msg" style="margin-right:auto; color:#2ecc71; font-weight:bold; opacity:0; transition:opacity 0.3s; pointer-events:none;">Saved!</span>
+        <button id="copierSaveBtn" class="secondary-btn">Save</button>
+        <button id="copierSaveCloseBtn" class="primary-btn">Save &amp; Close</button>
       </div>
     </div>
   </div>

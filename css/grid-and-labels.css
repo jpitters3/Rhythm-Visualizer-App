@@ -124,6 +124,15 @@
   cursor: pointer;
 }
 
+
+/* Larger sub-dots for 4 beats per measure */
+.four-beats .sub-dot {
+  width: 80px;
+  height: 80px;
+  font-size: 50px;
+}
+
+
 /* Larger sub-dots for 6/8 or fewer beats per measure */
 .fewer-beats .sub-dot {
   width: 50px;

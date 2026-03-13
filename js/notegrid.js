@@ -153,7 +153,8 @@ export function renderAllMeasures(ctx = activeGrid) {
     row.className = 'measure-row';
     if (s >= 16) row.classList.add('sixteen-beats');
     else if (s >= 12) row.classList.add('twelve-beats');
-    if (s <= 6) row.classList.add('fewer-beats');
+    if (s > 4 && s <= 6) row.classList.add('fewer-beats');
+    if (s <= 4) row.classList.add('four-beats');
 
     const header = document.createElement('div');
     header.className = 'measure-header';

@@ -9,6 +9,7 @@ import { supabase } from './supabase-client.js';
 import { dbListPatternNames, dbLoadPatternByName, dbSavePattern, applyPattern } from './pattern-crud.js';
 import { start, stop } from './noteplayer.js';
 import { GridContext } from './grid-context.js';
+import { initCourseCopier, openCourseCopier } from './course-copier.js';
 
 let isAdmin = false;
 let patternOrgModal = null;
@@ -35,6 +36,7 @@ export async function initAdmin() {
 
     injectAdminButton();
     setupModals();
+    initCourseCopier();
   }
 }
 
@@ -87,12 +89,14 @@ function setupModals() {
 
 function openAdminMenu() {
   // Simple menu to choose tool
-  const choice = prompt("Admin Tools:\n1. Pattern Organization (Tagging)\n2. Game Configuration", "1");
+  const choice = prompt("Admin Tools:\n1. Pattern Organization (Tagging)\n2. Game Configuration\n3. Copy Sections Between Courses", "1");
 
   if (choice === '1') {
     openPatternOrgModal();
   } else if (choice === '2') {
     alert("Game Config coming soon!");
+  } else if (choice === '3') {
+    openCourseCopier();
   }
 }
 

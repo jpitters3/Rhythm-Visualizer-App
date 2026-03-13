@@ -1,0 +1,185 @@
+/* Glossary Modals & UI Styles */
+
+/* Base Overlay properties required for glossary UI */
+.modal-overlay {
+  display: flex;
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 9999;
+  justify-content: center;
+  align-items: center;
+  transition: all 0.3s ease;
+}
+
+.modal-overlay.open {
+  visibility: visible;
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.modal-content {
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  border-radius: 16px;
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.3);
+  width: 90%;
+  max-width: 600px;
+  max-height: 90vh;
+  overflow-y: auto;
+  position: relative;
+  transform: translateY(20px) scale(0.95);
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.modal-overlay.open .modal-content {
+  transform: translateY(0) scale(1);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--panel-border);
+  position: sticky;
+  top: 0;
+  background: var(--panel);
+  z-index: 10;
+  border-radius: 16px 16px 0 0;
+}
+
+.modal-title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.close-modal-btn {
+  background: transparent;
+  border: none;
+  font-size: 28px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  line-height: 1;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s;
+}
+
+.close-modal-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text);
+}
+
+.glossary-link {
+  color: var(--primary);
+  text-decoration: underline;
+  text-decoration-style: dashed;
+  text-underline-offset: 4px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.glossary-link:hover {
+  color: var(--accent-glow);
+  text-decoration-style: solid;
+  background: rgba(var(--primary-rgb), 0.1);
+  border-radius: 4px;
+  padding: 0 2px;
+}
+
+.glossary-term-item {
+  padding: 10px 15px;
+  border-radius: 8px;
+  cursor: pointer;
+  margin-bottom: 5px;
+  transition: all 0.2s ease;
+  border: 1px solid transparent;
+}
+
+.glossary-term-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.glossary-term-item.active {
+  background: rgba(var(--primary-rgb), 0.15);
+  border: 1px solid var(--primary);
+  font-weight: bold;
+}
+
+/* Checkbox styling inside the course selector */
+.glossary-course-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.glossary-course-checkbox:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.glossary-course-checkbox input[type="checkbox"] {
+  accent-color: var(--primary);
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+/* Markdown Rendering inside the Glossary Viewer */
+#gvDefinition p {
+  margin-top: 0;
+  margin-bottom: 1em;
+}
+
+#gvDefinition strong {
+  font-weight: bold;
+  color: var(--text);
+}
+
+#gvDefinition em {
+  font-style: italic;
+  color: var(--text-secondary);
+}
+
+#gvDefinition ul,
+#gvDefinition ol {
+  margin-top: 0;
+  margin-bottom: 1em;
+  padding-left: 20px;
+}
+
+#gvDefinition li {
+  margin-bottom: 0.5em;
+}
+
+#gvDefinition blockquote {
+  border-left: 4px solid var(--primary);
+  padding-left: 15px;
+  margin-left: 0;
+  margin-right: 0;
+  color: var(--text-secondary);
+  font-style: italic;
+  background: rgba(255, 255, 255, 0.02);
+  padding: 10px 15px;
+  border-radius: 0 8px 8px 0;
+}
