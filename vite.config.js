@@ -11,4 +11,7 @@ export default defineConfig({
     assetsDir: 'assets',
     sourcemap: true,
   },
+  optimizeDeps: {
+    include: ['fix-webm-duration'],
+  },
 });
