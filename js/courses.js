@@ -498,7 +498,7 @@ export function loadLesson(lessonId) {
       if (lesson.video_url) {
         const videoId = extractYouTubeId(lesson.video_url);
         if (videoId) {
-          videoCont.innerHTML = `<iframe src="https://www.youtube.com/embed/${videoId}" frameborder="0" allowfullscreen></iframe>`;
+          videoCont.innerHTML = `<iframe src="https://www.youtube.com/embed/${videoId}?rel=0" frameborder="0" allowfullscreen></iframe>`;
         } else {
           // Direct URL (Supabase storage or other)
           videoCont.innerHTML = `<video src="${lesson.video_url}" controls playsinline style="width: 100%; border-radius: 8px;"></video>`;
@@ -543,7 +543,7 @@ export function openSidebar() {
 }
 
 function extractYouTubeId(url) {
-  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=|shorts\/)([^#\&\?]*).*/;
   const match = url.match(regExp);
   return (match && match[2].length === 11) ? match[2] : null;
 }

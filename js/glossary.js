@@ -429,6 +429,11 @@ export async function openGlossaryTerm(slug) {
       let embedUrl = termObj.video_url;
       if (embedUrl.includes('watch?v=')) {
         embedUrl = embedUrl.replace('watch?v=', 'embed/');
+      } else if (embedUrl.includes('/shorts/')) {
+        embedUrl = embedUrl.replace('/shorts/', '/embed/');
+      }
+      if (!embedUrl.includes('rel=0')) {
+        embedUrl += (embedUrl.includes('?') ? '&' : '?') + 'rel=0';
       }
       gvVideoFrame.src = embedUrl;
     } else {
