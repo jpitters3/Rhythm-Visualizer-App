@@ -1,7 +1,7 @@
 import { gridA, gridB } from './grid-context.js';
 import { activeGrid, setActiveGrid } from './state.js';
 import { getTimeSignature, calculateSteps } from './rhythm-core.js';
-import { stop } from './noteplayer.js';
+import { stop, setTimeSignature } from './noteplayer.js';
 import { getScale } from './state.js';
 import { setCaret, setRange, clearRange, getRange, updateDragSelectionOver, startLongPress, cancelLongPress } from './range-selection.js';
 import { HistoryManager } from './history.js';
@@ -136,6 +136,15 @@ export function clearSelection(ctx = activeGrid) {
 export function applySelection(i, ctx = activeGrid) {
   ctx.caretIndex = i;
   cells(ctx).forEach((c, idx) => c.classList.toggle('selected', idx === i));
+}
+
+export function resetGridToDefault(ctx = activeGrid) {
+  ctx.innerHands = [];
+  setDualGrid(false);
+  clearGrid(ctx);
+  setTimeSignature('4/4');
+  ctx.setMeasures(2);
+  renderAllMeasures(ctx);
 }
 
 export function renderAllMeasures(ctx = activeGrid) {

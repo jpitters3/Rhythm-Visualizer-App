@@ -2,7 +2,7 @@
 import { gridA, gridB, activeGrid } from './grid-context.js';
 import { isAuthed } from './auth.js';
 import { start, stop, ensureAudio, unlockAudio, setMode, addTickObserver } from './noteplayer.js';
-import { renderAllMeasures, invertRange, invertFollowing, setDualGrid, clearGrid } from './notegrid.js';
+import { renderAllMeasures, invertRange, invertFollowing, setDualGrid, clearGrid, resetGridToDefault } from './notegrid.js';
 import { TransportRegistry, TransportUI } from './transport-ui.js';
 import {
   dbSavePattern, dbDeletePattern, dbRenamePattern, dbLoadPatternByName,
@@ -20,6 +20,7 @@ import { HistoryManager } from './history.js';
 const patternSelect = document.getElementById('patternSelect');
 const gridBtn = document.getElementById('gridBtn');
 const handBtn = document.getElementById('handBtn');
+const resetBtn = document.getElementById('resetBtn');
 const themeBtn = document.getElementById('themeBtn');
 const presentBtn = document.getElementById('presentBtn');
 const exitPresent = document.getElementById('exitPresent');
@@ -216,6 +217,20 @@ if (flipHandsBtn) {
     if (navigator.vibrate) navigator.vibrate([50, 50, 50]);
   });
 }
+
+resetBtn?.addEventListener('click', () => {
+  if (hasUnsavedChanges()) {
+    showConfirm(
+      'Unsaved Changes',
+      'You have unsaved changes in the current pattern. Discard them and reset the grid?',
+      () => {
+        resetGridToDefault(activeGrid);
+      }
+    );
+  } else {
+    resetGridToDefault(activeGrid);
+  }
+});
 
 themeBtn?.addEventListener('click', () => {
   document.body.classList.toggle('dark');

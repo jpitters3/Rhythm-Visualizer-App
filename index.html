@@ -159,6 +159,7 @@
       <!-- Control buttons -->
       <div class="controls pattern-row">
         <div class="controls-primary">
+          <button id="resetBtn" title="Reset">🔄</button>
           <button id="themeBtn" title="Toggle light / dark mode">☀︎ / ☾</button>
           <button id="grooveBtn" title="Generate a random groove" style="display: none;">Give me a groove!</button>
           <button id="labelNotationBtn" title="Toggle label notation (Musical vs Numeric)">1 2 3</button>
@@ -1088,11 +1089,13 @@
     </div>
     <div class="sidebar-content" style="padding: 24px;">
       <div class="hud-score" style="text-align: center; margin-bottom: 24px;">
-        <span class="hud-label" style="display: block; font-size: 14px; color: var(--text-secondary); margin-bottom: 8px;">Accuracy</span>
+        <span class="hud-label"
+          style="display: block; font-size: 14px; color: var(--text-secondary); margin-bottom: 8px;">Accuracy</span>
         <span id="hudAccuracy" class="hud-accuracy">0%</span>
       </div>
-      <div class="hud-notes-container" style="text-align: center; margin-bottom: 32px; font-size: 18px; font-weight: 600;">
-        <span id="hudCorrect" class="hud-correct" style="color: #2ecc71;">0</span> 
+      <div class="hud-notes-container"
+        style="text-align: center; margin-bottom: 32px; font-size: 18px; font-weight: 600;">
+        <span id="hudCorrect" class="hud-correct" style="color: #2ecc71;">0</span>
         <span style="opacity: 0.4; margin: 0 4px;">/</span>
         <span id="hudTotal" class="hud-total" style="color: var(--text-secondary);">0</span>
       </div>
@@ -1106,7 +1109,7 @@
       <h3>Session Results</h3>
       <button id="closeResultsSidebar" class="close-btn">&times;</button>
     </div>
-    
+
     <div class="sidebar-tabs">
       <button class="sidebar-tab active" data-tab="result">Result</button>
       <button class="sidebar-tab" data-tab="history">History</button>
@@ -1136,8 +1139,10 @@
       </div>
       <div id="sidebar-coachingTipsContainer"></div>
       <div class="modal-actions" style="margin-top: 24px;">
-        <button id="sidebar-playReviewBtn" class="primary-btn" style="display: none; width: 100%; margin-bottom: 12px;">Play Recording</button>
-        <button id="sidebar-practiceAgainBtn" class="primary-btn" style="width: 100%; margin-bottom: 12px;">Practice Again</button>
+        <button id="sidebar-playReviewBtn" class="primary-btn"
+          style="display: none; width: 100%; margin-bottom: 12px;">Play Recording</button>
+        <button id="sidebar-practiceAgainBtn" class="primary-btn" style="width: 100%; margin-bottom: 12px;">Practice
+          Again</button>
         <button id="sidebar-saveSessionBtn" class="secondary-btn" style="width: 100%;">Save Session</button>
       </div>
     </div>
