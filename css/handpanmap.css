@@ -2,13 +2,16 @@
 .main {
   display: flex;
   gap: 24px;
-  align-items: flex-start;
+  align-items: stretch;
+  flex: 1;
+  min-height: 0;
 }
 
 .left {
-  flex: 0 0 60%;
-  max-width: 60%;
-  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
 }
 
 /* Mobile */
@@ -20,11 +23,13 @@
 }
 
 .handpan-panel {
-  flex: 0 0 40%;
-  max-width: 40%;
+  flex: 0 0 400px; /* Fixed width for the sidebar */
+  max-width: 400px;
   position: sticky;
   top: 16px;
   align-self: flex-start;
+  display: flex;
+  flex-direction: column;
 }
 
 .handpan-wrap {

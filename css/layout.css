@@ -212,9 +212,10 @@ div.grid-child.handpan-options.select {
 div.container {
   margin: 0 auto;
   width: 98%;
-  max-height: 98vh;
+  height: 98vh;
+  min-height: 600px;
   overflow-y: hidden;
-  padding: 50px;
+  padding: 40px 50px 0 50px; /* Reduced bottom padding to align with grid */
   max-width: 1200px;
   /* Glassmorphism Update */
   background: rgba(var(--panel-rgb), 0.7);
@@ -228,6 +229,31 @@ div.container {
   gap: 16px;
   position: relative;
   transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.route-view {
+  display: none; /* Hidden by default */
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.route-view.active {
+  display: flex !important;
+}
+
+.main {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  gap: 20px;
+}
+
+.left {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
 }
 
 .auth-panel::before {

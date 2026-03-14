@@ -37,36 +37,37 @@ export function initGridAutoscroll() {
       fixedSlotTop = rows[2].offsetTop;
     }
 
-    updateScrollFades(measuresEl);
-
     const stepsPerMeasure = ctx.stepsPerMeasure;
     if (stepsPerMeasure <= 0) return;
 
     const currentMeasureIndex = Math.floor(ctx.step / stepsPerMeasure);
 
-    // Logic: Scroll after each 2 measures.
+    // Only attempt scroll if we moved to a new measure to avoid fighting manual scroll
+    if (currentMeasureIndex === lastScrolledMeasure) return;
+    lastScrolledMeasure = currentMeasureIndex;
+
+    // Logic: Scroll in 2-measure chunks.
     // measures 1-4 (index 0-3) stay at top (targetScroll = 0).
     // measures 5-6 (index 4-5) scroll up to start at slot 3.
-    // measures 7-8 (index 6-7) scroll up another 2-measure chunk.
+    // etc.
     
     let targetScroll = 0;
     if (currentMeasureIndex >= 4) {
       // Find the start of the current 2-measure chunk (4, 6, 8, etc.)
       const chunkStart = currentMeasureIndex - (currentMeasureIndex % 2);
       const chunkRow = rows[chunkStart];
+      
       if (chunkRow && fixedSlotTop >= 0) {
         targetScroll = chunkRow.offsetTop - fixedSlotTop;
       }
     }
 
-    // Apply scroll via native scrollTop.
-    // Using behavior: 'smooth' for the transition effect previously handled by CSS.
+    // Apply scroll via native scrollTo.
     if (measuresEl.scrollTop !== targetScroll) {
       measuresEl.scrollTo({
         top: targetScroll,
         behavior: 'smooth'
       });
-      // updateScrollFades will be called by the scroll event listener or next tick
     }
   });
 }

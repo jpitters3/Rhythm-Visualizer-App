@@ -45,9 +45,3 @@
   filter: grayscale(1);
   opacity: 0.3;
 }
-
-/* Ensure grids are scrollable if they overlap */
-.measures {
-  max-width: 100%;
-  overflow-x: visible;
-}

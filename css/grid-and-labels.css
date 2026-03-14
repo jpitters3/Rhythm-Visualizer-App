@@ -305,13 +305,18 @@
 /* ===== MULTI-MEASURE WRAP ===== */
 .measures {
   max-width: 900px;
-  max-height: 80vh; /* Adjust as needed */
+  flex: 1;
+  min-height: 0;
+  padding: 0 15px;
   overflow-y: auto;
   position: relative;
-  
+  z-index: 10;
+
   /* Hide scrollbar for Chrome, Safari and Opera */
-  -ms-overflow-style: none; /* IE and Edge */
-  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none;
+  /* IE and Edge */
+  scrollbar-width: none;
+  /* Firefox */
 
   /* Base mask setup for smooth transitions */
   mask-repeat: no-repeat;
@@ -335,7 +340,8 @@
 }
 
 .measures::-webkit-scrollbar {
-  display: none; /* Chrome, Safari and Opera */
+  display: none;
+  /* Chrome, Safari and Opera */
 }
 
 .measures-scroller {
