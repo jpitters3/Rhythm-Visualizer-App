@@ -93,9 +93,13 @@ export class TransportUI {
 
     if (this.metroBtn) {
       const isOn = this.ctx.metronomeOn;
-      this.metroBtn.classList.toggle('active', isOn);
-      this.metroBtn.style.opacity = isOn ? '1' : '0.5';
       const sound = getMetronomeSound();
+      
+      this.metroBtn.classList.toggle('active', isOn);
+      this.metroBtn.classList.toggle('metro-beeps', isOn && sound === 'Click');
+      this.metroBtn.classList.toggle('metro-shaker', isOn && sound === 'Shaker');
+      
+      this.metroBtn.style.opacity = isOn ? '1' : '0.5';
       this.metroBtn.title = isOn ? `Metronome: ${sound}` : 'Metronome: Off';
     }
 

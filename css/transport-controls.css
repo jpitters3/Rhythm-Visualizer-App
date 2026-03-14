@@ -83,3 +83,13 @@ body.present #presentationControls {
   transform: translateX(-50%);
   z-index: 1000;
 }
+/* --- Metronome Sound States --- */
+.t-metro-btn.metro-beeps {
+  background-color: #ffd166 !important;
+  color: #000 !important;
+}
+
+.t-metro-btn.metro-shaker {
+  background-color: #6366f1 !important;
+  color: #fff !important;
+}
