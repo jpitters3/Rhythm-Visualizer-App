@@ -23,7 +23,6 @@ export function initGridAutoscroll() {
 
     // Don't scroll if we're still in the same measure
     if (currentMeasure === lastScrolledMeasure) return;
-    lastScrolledMeasure = currentMeasure;
 
     const measuresEl = document.getElementById('measures');
     if (!measuresEl) return;
@@ -34,10 +33,17 @@ export function initGridAutoscroll() {
     const targetRow = rows[currentMeasure];
     if (!targetRow) return;
 
-    // Scroll the document so the measure is near the top with a small offset
-    const rowTop = targetRow.getBoundingClientRect().top + window.scrollY;
-    const offset = 80; // Space for any sticky headers above the grid
-    window.scrollTo({ top: rowTop - offset, behavior: 'smooth' });
+    // Check if the row is approaching the bottom of the viewport
+    const rect = targetRow.getBoundingClientRect();
+    const viewportHeight = window.innerHeight;
+    
+    // Threshold: 75% of the viewport. If the row is below this, scroll it up.
+    if (rect.bottom > viewportHeight * 0.75) {
+      lastScrolledMeasure = currentMeasure;
+      const rowTop = rect.top + window.scrollY;
+      const offset = 120; // Keep it a bit lower than the very top for context
+      window.scrollTo({ top: rowTop - offset, behavior: 'smooth' });
+    }
   });
 }
 
