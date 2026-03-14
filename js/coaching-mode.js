@@ -14,6 +14,7 @@ import { setInnerLabel, renderAllMeasures, cells } from './notegrid.js';
 import { CoachingSession } from './coaching-session.js';
 import { getSelectedPatternName } from './pattern-crud.js';
 import { loadCalibrationProfile, hasCalibrationForCurrentScale, turnOnMic, micStream, turnOffMic } from './transcription.js';
+import { updateBodySidebarClass, closeSidebar } from './courses.js';
 
 // Session state
 let coachingSession = null;
@@ -31,13 +32,25 @@ let gridLabels;
 let skipCalibrationCheck = {}; // scaleId -> true
 
 // UI elements
-let coachingHUD = null;
+let coachingSidebar = null;
 let hudAccuracy = null;
 let hudCorrect = null;
 let hudTotal = null;
 let stopCoachingBtn = null;
 let loopToggleBtn = null;
 let resultsModal = null;
+
+// Results Sidebar elements
+let coachResultsSidebar = null;
+let sidebarOverallScore = null;
+let sidebarNoteAccuracy = null;
+let sidebarTimingAccuracy = null;
+let sidebarProblemMeasuresList = null;
+let sidebarCoachingTipsContainer = null;
+let closeResultsSidebarBtn = null;
+let sidebarPlayReviewBtn = null;
+let sidebarPracticeAgainBtn = null;
+let sidebarSaveSessionBtn = null;
 
 const TIMING_SCORE_GREAT = 70;
 const TIMING_SCORE_GOOD = 50;
@@ -100,7 +113,35 @@ export function enterCoachingMode(ctx = activeGrid) {
   }
 
   isCoachingUIOpen = true;
-  showCoachingHUD(true); // show as "Ready"
+  showCoachingSidebar(true); // show as "Ready"
+}
+
+export function openCoachingSidebar() {
+  // Mutual exclusivity: Close other sidebars
+  closeSidebar();
+
+  if (!coachingSidebar) {
+    coachingSidebar = document.getElementById('coachingSidebar');
+    const closeBtn = document.getElementById('closeCoachingSidebar');
+    if (closeBtn) closeBtn.onclick = exitCoachingMode;
+  }
+  
+  if (coachingSidebar) {
+    coachingSidebar.classList.add('open');
+    coachingSidebar.setAttribute('aria-hidden', 'false');
+  }
+  updateBodySidebarClass();
+}
+
+/**
+ * Close Coaching Sidebar specifically
+ */
+export function closeCoachingSidebar() {
+  if (coachingSidebar) {
+    coachingSidebar.classList.remove('open');
+    coachingSidebar.setAttribute('aria-hidden', 'true');
+  }
+  updateBodySidebarClass();
 }
 
 /**
@@ -120,12 +161,9 @@ export function exitCoachingMode() {
   isCoachingUIOpen = false;
   isReviewActive = false;
 
-  // Hide UI
-  if (coachingHUD) coachingHUD.style.display = 'none';
-  if (resultsModal) {
-    resultsModal.style.display = 'none';
-    resultsModal.setAttribute('aria-hidden', 'true');
-  }
+  // Hide sidebars
+  closeCoachingSidebar();
+  closeCoachResultsSidebar();
 
   // Clear Grid
   clearCellHighlights(activeGrid);
@@ -336,41 +374,12 @@ function clearCellHighlights(ctx) {
 }
 
 /**
- * Show coaching HUD
- * @param {boolean} isReady - If true, show "Start" button. If false, show "Stop".
+ * UI: Inject Loop Toggle
  */
-function showCoachingHUD(isReady = false) {
-  if (!coachingHUD) {
-    coachingHUD = document.getElementById('coachingHUD');
-    hudAccuracy = document.getElementById('hudAccuracy');
-    hudCorrect = document.getElementById('hudCorrect');
-    hudTotal = document.getElementById('hudTotal');
-    stopCoachingBtn = document.getElementById('stopCoachingBtn');
-
-    // Create the button if it doesn't exist (it should)
-    // We will dynamically change its text and onclick
-  }
-
-  // Update Button Logic
-  if (stopCoachingBtn) {
-    // Remove old listeners to be safe (by cloning)
-    const newBtn = stopCoachingBtn.cloneNode(true);
-    stopCoachingBtn.parentNode.replaceChild(newBtn, stopCoachingBtn);
-    stopCoachingBtn = newBtn;
-
-    if (isReady) {
-      stopCoachingBtn.textContent = "Start";
-      stopCoachingBtn.style.backgroundColor = "var(--success)"; // Green
-      stopCoachingBtn.onclick = () => startCoachingSession(activeGrid);
-    } else {
-      stopCoachingBtn.textContent = "Stop";
-      stopCoachingBtn.style.backgroundColor = ""; // Default (usually red/warn)
-      stopCoachingBtn.onclick = endCoachingSession;
-    }
-  }
+function injectLoopToggle() {
 
   // Inject Loop Toggle if missing
-  if (coachingHUD && !coachingHUD.querySelector('.hud-loop-toggle')) {
+  if (coachingSidebar && !coachingSidebar.querySelector('.hud-loop-toggle')) {
     const loopToggle = document.createElement('div');
     loopToggle.className = 'hud-loop-toggle';
     loopToggle.innerHTML = `
@@ -380,10 +389,11 @@ function showCoachingHUD(isReady = false) {
       </button>
     `;
     // Insert before stop button
-    if (stopCoachingBtn) {
-      coachingHUD.insertBefore(loopToggle, stopCoachingBtn);
-    } else {
-      coachingHUD.appendChild(loopToggle);
+    const content = coachingSidebar.querySelector('.sidebar-content');
+    if (stopCoachingBtn && content) {
+      content.insertBefore(loopToggle, stopCoachingBtn);
+    } else if (content) {
+      content.appendChild(loopToggle);
     }
 
     // Add listener
@@ -401,58 +411,95 @@ function showCoachingHUD(isReady = false) {
       }
     }, 0);
   }
+}
 
-  // Inject Mixer Controls if missing
-  if (coachingHUD && !coachingHUD.querySelector('.hud-mix-controls')) {
+/**
+ * UI: Inject In-place Volume/Mix controls
+ * This allows users to adjust handpan vs grid volume while practicing
+ */
+function injectCoachMixControls() {
+  if (coachingSidebar && !coachingSidebar.querySelector('.hud-mix-controls')) {
     const mixControls = document.createElement('div');
     mixControls.className = 'hud-mix-controls';
     mixControls.innerHTML = `
-        <div class="mix-slider">
-          <span class="mix-icon" title="Instrument Volume">🎵</span>
-          <input type="range" min="0" max="1" step="0.1" value="${getVolume('instrument')}" id="hud-vol-inst">
-        </div>
-        <div class="mix-slider">
-          <span class="mix-icon" title="Metronome Volume">⏱️</span>
-          <input type="range" min="0" max="1" step="0.1" value="${getVolume('metronome')}" id="hud-vol-metro">
-        </div>
-      `;
-    // Insert before loop toggle or stop button
-    const loopToggle = coachingHUD.querySelector('.hud-loop-toggle');
-    if (loopToggle) {
-      coachingHUD.insertBefore(mixControls, loopToggle);
-    } else if (stopCoachingBtn) {
-      coachingHUD.insertBefore(mixControls, stopCoachingBtn);
-    } else {
-      coachingHUD.appendChild(mixControls);
+      <div class="mix-row">
+        <span>Mic</span>
+        <input type="range" class="hud-vol-input" id="coachMicVol" min="0" max="1.5" step="0.1" value="1">
+      </div>
+      <div class="mix-row">
+        <span>Grid</span>
+        <input type="range" class="hud-vol-input" id="coachGridVol" min="0" max="1" step="0.1" value="${getVolume()}">
+      </div>
+    `;
+
+    const stopCoachingBtn = document.getElementById('stopCoachingBtn');
+    const loopToggle = coachingSidebar.querySelector('.hud-loop-toggle');
+    const content = coachingSidebar.querySelector('.sidebar-content');
+
+    if (loopToggle && content) {
+      content.insertBefore(mixControls, loopToggle);
+    } else if (stopCoachingBtn && content) {
+      content.insertBefore(mixControls, stopCoachingBtn);
+    } else if (content) {
+      content.appendChild(mixControls);
     }
 
-    // Add listeners
-    setTimeout(() => {
-      const iVol = document.getElementById('hud-vol-inst');
-      const mVol = document.getElementById('hud-vol-metro');
-      if (iVol) iVol.addEventListener('input', (e) => setVolume('instrument', parseFloat(e.target.value)));
-      if (mVol) mVol.addEventListener('input', (e) => setVolume('metronome', parseFloat(e.target.value)));
-    }, 0);
+    // Bind listeners
+    document.getElementById('coachMicVol')?.addEventListener('input', (e) => {
+      // Logic for mic gain could go here
+    });
+    document.getElementById('coachGridVol')?.addEventListener('input', (e) => {
+      setVolume(parseFloat(e.target.value));
+    });
   }
+}
 
-  // Inject "Results" button (hidden by default)
-  if (coachingHUD && !coachingHUD.querySelector('#hudResultsBtn')) {
+/**
+ * UI: Inject "View Results" button into HUD
+ */
+function injectResultsButton() {
+  if (coachingSidebar && !coachingSidebar.querySelector('#hudResultsBtn')) {
     const resultsBtn = document.createElement('button');
     resultsBtn.id = 'hudResultsBtn';
-    resultsBtn.className = 'hud-stop'; // Re-use style
-    resultsBtn.style.marginTop = '8px';
-    resultsBtn.style.backgroundColor = 'var(--primary)';
-    resultsBtn.style.color = 'black';
-    resultsBtn.style.display = 'block'; // Always show
-    resultsBtn.textContent = '📓 Results';
-    resultsBtn.onclick = () => {
-      showResultsModal();
-    };
-    coachingHUD.appendChild(resultsBtn);
+    resultsBtn.className = 'secondary-btn';
+    resultsBtn.style.marginTop = '12px';
+    resultsBtn.style.width = '100%';
+    resultsBtn.textContent = '📊 View Results';
+    resultsBtn.onclick = () => showFinalResults(coachingSession);
+    const content = coachingSidebar.querySelector('.sidebar-content');
+    if (content) content.appendChild(resultsBtn);
+  }
+}
+function showCoachingSidebar(isReady = false) {
+  if (!coachingSidebar) {
+    coachingSidebar = document.getElementById('coachingSidebar');
+    hudAccuracy = document.getElementById('hudAccuracy');
+    hudCorrect = document.getElementById('hudCorrect');
+    hudTotal = document.getElementById('hudTotal');
+    stopCoachingBtn = document.getElementById('stopCoachingBtn');
   }
 
-  if (coachingHUD) {
-    coachingHUD.style.display = 'block';
+  // Ensure sidebar is open
+  openCoachingSidebar();
+
+  // Update Button Logic
+  if (stopCoachingBtn) {
+    if (isReady) {
+      stopCoachingBtn.textContent = "Start";
+      stopCoachingBtn.style.backgroundColor = "var(--btn-active)"; // Match theme active color
+      stopCoachingBtn.onclick = () => startCoachingSession(activeGrid);
+    } else {
+      stopCoachingBtn.textContent = "Stop";
+      stopCoachingBtn.style.backgroundColor = ""; // Default
+      stopCoachingBtn.onclick = endCoachingSession;
+    }
+  }
+
+  // Inject sub-components if missing
+  injectLoopToggle();
+  injectCoachMixControls();
+
+  if (coachingSidebar) {
     updateHUD();
   }
 }
@@ -509,7 +556,7 @@ export function endCoachingSession() {
   isReviewActive = true;
 
   // Show HUD in "Ready" state (Start button)
-  showCoachingHUD(true);
+  showCoachingSidebar(true);
 
   // Load results to grid immediately (Review Mode)
   loadSessionToGrid(coachingSession);
@@ -626,358 +673,294 @@ function identifyProblemMeasures() {
 }
 
 /**
- * Show results modal (Centered initially)
+ * Show results (Now directly opens sidebar)
  */
 function showResultsModal() {
-  isReviewActive = true; // Ensure Review Mode is active when viewing results
-  resultsModal = document.getElementById('coachingResultsModal');
-  if (!resultsModal) return;
+  isReviewActive = true;
+  openCoachResultsSidebar();
+}
 
-  const modalHeader = resultsModal.querySelector('.modal-header');
+/**
+ * Apply dynamic background colors and icons based on score
+ * @param {HTMLElement} container - The .results-summary container
+ * @param {number} score - The overall accuracy score
+ */
+function applyScoreAesthetics(container, score) {
+  if (!container) return;
 
-  // Reset to centered mode if opening fresh
-  resultsModal.classList.remove('sidebar-active');
-  const modalContent = resultsModal.querySelector('.coaching-results-modal');
-  if (modalContent) {
-    modalContent.classList.remove('sidebar-mode');
+  // 1. Reset classes
+  container.classList.remove('score-excellent', 'score-good', 'score-decent', 'score-needs-work');
 
-    // Inject Close/Minimize buttons if not present
-    if (!modalContent.querySelector('.results-header-actions')) {
-      const actions = document.createElement('div');
-      actions.className = 'results-header-actions';
-      actions.innerHTML = `
-            <button class="result-header-action" data-action="minimize" title="Minimize to Sidebar">↘</button>
-            <button class="result-header-action" data-action="close" title="Close">✕</button>
-          `;
-      modalContent.prepend(actions);
-
-      actions.querySelector('.result-header-action[data-action="minimize"]').onclick = minimizeResults;
-      actions.querySelector('.result-header-action[data-action="close"]').onclick = dismissResults;
-    }
-
-    // Inject Sidebar Tabs if not present
-    if (!modalContent.querySelector('.sidebar-tabs')) {
-      const tabs = document.createElement('div');
-      tabs.className = 'sidebar-tabs';
-      tabs.innerHTML = `
-            <button class="sidebar-tab active" data-tab="result">Current Result</button>
-            <button class="sidebar-tab" data-tab="history">History</button>
-            <button class="sidebar-tab" data-tab="settings">Settings</button>
-          `;
-
-      const existingChildren = Array.from(modalContent.children).filter(c => !c.classList.contains('results-header-actions'));
-
-      const resultTabContent = document.createElement('div');
-      resultTabContent.id = 'tab-result';
-      resultTabContent.className = 'sidebar-content active';
-
-      existingChildren.forEach(child => resultTabContent.appendChild(child));
-
-      const historyTabContent = document.createElement('div');
-      historyTabContent.id = 'tab-history';
-      historyTabContent.className = 'sidebar-content';
-      historyTabContent.innerHTML = `<div id="historyList" class="history-list"></div>`;
-
-      const settingsTabContent = document.createElement('div');
-      settingsTabContent.id = 'tab-settings';
-      settingsTabContent.className = 'sidebar-content';
-      settingsTabContent.innerHTML = `
-        <div class="settings-panel" style="padding: 15px; color: var(--text-primary);">
-            <h3 style="margin-top: 0; color: var(--text-secondary); text-transform: uppercase; font-size: 0.9em; letter-spacing: 1px;">Timing Calibration</h3>
-            <p style="font-size: 0.9em; color: var(--text-secondary); margin-bottom: 15px;">
-                Adjust if notes consistently feel early or late.
-            </p>
-            
-            <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 12px; text-align: center; margin-bottom: 15px;">
-                <div style="font-size: 0.85em; color: var(--text-secondary); margin-bottom: 10px;">Note vs. Accent Strictness</div>
-                <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px;">
-                    <span style="font-size:0.8em; opacity:0.7;">Forgiving</span>
-                    <input type="range" id="clarityThresholdSlider" min="0.3" max="0.7" step="0.05" style="flex:1">
-                    <span style="font-size:0.8em; opacity:0.7;">Strict</span>
-                </div>
-            </div>
-
-            <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 12px; text-align: center;">
-                <div style="font-size: 0.85em; color: var(--text-secondary); margin-bottom: 10px;">Current Offset</div>
-                <div id="timingOffsetDisplay" style="font-size: 2em; font-weight: bold; color: var(--primary); margin-bottom: 15px;">${userTimingOffset}ms</div>
-                
-                <div style="display: flex; justify-content: center; gap: 10px; margin-bottom: 15px;">
-                    <button id="btn-cal-minus" style="padding: 8px 16px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: var(--text-primary); border-radius: 8px; cursor: pointer;">-10ms</button>
-                    <button id="btn-cal-plus" style="padding: 8px 16px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: var(--text-primary); border-radius: 8px; cursor: pointer;">+10ms</button>
-                </div>
-
-                <button id="btn-cal-reset" style="width: 100%; padding: 10px; background: transparent; border: 1px solid var(--error-color, #ff4444); color: var(--error-color, #ff4444); border-radius: 8px; cursor: pointer; transition: all 0.2s;">
-                    Reset Calibration
-                </button>
-            </div>
-        </div>
-      `;
-
-      modalContent.appendChild(tabs);
-      modalContent.appendChild(resultTabContent);
-      modalContent.appendChild(historyTabContent);
-      modalContent.appendChild(settingsTabContent);
-
-      // Attach Event Listeners for Settings
-      setTimeout(() => {
-        // Calibration Buttons
-        const updateDisplay = () => {
-          const disp = document.getElementById('timingOffsetDisplay');
-          if (disp) disp.textContent = getTimingOffset() + 'ms';
-        };
-
-        const btnMinus = settingsTabContent.querySelector('#btn-cal-minus');
-        if (btnMinus) btnMinus.onclick = () => { applyCalibration(-10); updateDisplay(); };
-
-        const btnPlus = settingsTabContent.querySelector('#btn-cal-plus');
-        if (btnPlus) btnPlus.onclick = () => { applyCalibration(10); updateDisplay(); };
-
-        const btnReset = settingsTabContent.querySelector('#btn-cal-reset');
-        if (btnReset) btnReset.onclick = () => { resetCalibration(); updateDisplay(); };
-
-        // Accent Sensitivity Slider
-        const slider = settingsTabContent.querySelector('#clarityThresholdSlider');
-        if (slider) {
-          // Read current value from localStorage (shared with transcription.js)
-          slider.value = localStorage.getItem('gp_clarity_threshold') || 0.5;
-
-          slider.oninput = (e) => {
-            const val = parseFloat(e.target.value);
-            Bus.emit(BUS_EVENT.SET_ACCENT_SENSITIVITY, { threshold: val });
-          };
-        }
-      }, 0);
-
-      // Tab Logic
-      tabs.querySelectorAll('.sidebar-tab').forEach(tab => {
-        tab.onclick = () => {
-          // Remove active
-          tabs.querySelectorAll('.sidebar-tab').forEach(t => t.classList.remove('active'));
-          modalContent.querySelectorAll('.sidebar-content').forEach(c => c.classList.remove('active'));
-
-          // Set active
-          tab.classList.add('active');
-          const target = tab.dataset.tab;
-          document.getElementById(`tab-${target}`).classList.add('active');
-
-          if (target === 'history') {
-            renderHistoryList();
-          } else if (target === 'settings') {
-            // Refresh display on tab switch
-            const disp = document.getElementById('timingOffsetDisplay');
-            if (disp) disp.textContent = getTimingOffset() + 'ms';
-          }
-        };
-      });
-    }
-  }
-
-  if (!coachingSession) {
-    coachingSession = new CoachingSession();
-    endCoachingSession();
-    coachingSession.isRealSession = false;
-  }
-
-  // Populate scores
-  const overallScoreEl = document.getElementById('overallScore');
-  const noteAccuracyEl = document.getElementById('noteAccuracy');
-  const timingAccuracyEl = document.getElementById('timingAccuracy');
-
-  if (overallScoreEl) overallScoreEl.textContent = coachingSession.overallScore + '%';
-  if (noteAccuracyEl) noteAccuracyEl.textContent = coachingSession.noteAccuracy + '%';
-  if (timingAccuracyEl) timingAccuracyEl.textContent = coachingSession.timingAccuracy + '%';
-
-  // Show problem measures
-  const problemList = document.getElementById('problemMeasuresList');
-  if (problemList) {
-    if (coachingSession.problemMeasures.length > 0) {
-      problemList.innerHTML = coachingSession.problemMeasures
-        .map(m => `<div class="problem-measure">Measure ${m}</div>`)
-        .join('');
-    } else {
-      problemList.innerHTML = '<div class="no-problems">Great job! No problem areas detected.</div>';
-    }
-  }
-
-  // --- COACH'S TIPS (Diagnostics) ---
-  // We need to inject a container for tips if it doesn't represent
-  // Ideally, valid HTML structure should be present, or we create it.
-
-  // Let's assume we modify the modal HTML structure or inject it here.
-  // We'll inspect the modal structure first or just append it to results-summary
-
-  let tipsContainer = document.getElementById('coachingTipsContainer');
-
-  if (!tipsContainer) {
-    const resultsContent = resultsModal.querySelector('.results-summary');
-    if (resultsContent) {
-      // Use innerHTML/insertAdjacentHTML for consistency
-      const containerHTML = `
-        <div id="coachingTipsContainer" class="coaching-tips-container" 
-             style="margin-top: 20px; padding: 15px; background: rgba(255, 255, 255, 0.05); border-radius: 12px; display: none;">
-        </div>
-      `;
-      resultsContent.insertAdjacentHTML('beforeend', containerHTML);
-      tipsContainer = document.getElementById('coachingTipsContainer');
-
-      // Event Delegation
-      tipsContainer.addEventListener('click', (e) => {
-        if (e.target.matches('button[data-action="CALIBRATE"]')) {
-          const val = parseInt(e.target.dataset.value, 10);
-          applyCalibration(val);
-          e.target.disabled = true;
-          e.target.textContent = 'Fixed!';
-        }
-      });
-    }
-  }
-
-  if (tipsContainer) {
-    const suggestions = coachingSession.diagnostics ? coachingSession.diagnostics.analyze() : [];
-
-    if (suggestions.length > 0) {
-      tipsContainer.style.display = 'block';
-
-      let listHTML = `<h4 style="margin-top:0; margin-bottom:10px; color:var(--text-secondary); font-size:0.9em; text-transform:uppercase; letter-spacing:1px;">💡 Coach's Tips</h4>
-                      <ul class="coaching-tips-list" style="margin:0; padding-left:20px; color:var(--text-primary);">`;
-
-      suggestions.forEach(s => {
-        const text = typeof s === 'string' ? s : s.text;
-        const action = typeof s === 'object' ? s.action : null;
-
-        listHTML += `<li style="margin-bottom:5px; display: flex; align-items: center; justify-content: space-between;">
-                        <span>${text}</span>`;
-
-        if (action && action.type === 'CALIBRATE') {
-          listHTML += `<button data-action="CALIBRATE" data-value="${action.value}"
-                          style="margin-left: 10px; background: var(--primary); border: none; color: white; padding: 2px 8px; border-radius: 4px; cursor: pointer; font-size: 0.8em;">
-                          ${action.label}
-                        </button>`;
-        }
-
-        listHTML += `</li>`;
-      });
-
-      listHTML += `</ul>`;
-      tipsContainer.innerHTML = listHTML;
-
-    } else {
-      tipsContainer.style.display = 'none';
-    }
-  }
-
-  // Show
-  resultsModal.style.display = 'flex';
-
-  // Setup overlay click to minimize (not close)
-  resultsModal.onclick = (e) => {
-    if (e.target === resultsModal) {
-      minimizeResults();
-    }
-  };
-
-  // Phase 3: Show Recording Playback Button if available
-  const playReviewBtn = document.getElementById('playReviewBtn');
-  if (playReviewBtn) {
-    if (sessionAudioBlobUrl) {
-      playReviewBtn.style.display = 'block';
-    } else {
-      playReviewBtn.style.display = 'none';
-    }
-  }
-
-  // --- COACH'S TIPS (Diagnostics) ---
-  // (Already handled above)
-
-  // Show/Hide save button based on auth
-  const saveSessionBtn = document.getElementById('saveSessionBtn');
-  if (saveSessionBtn) {
-    if (!currentUser) {
-      saveSessionBtn.style.display = 'none';
-      // Optionally show a "Login to Save" hint
-      const hint = document.createElement('div');
-      hint.id = 'saveHint';
-      hint.className = 'save-hint';
-      hint.textContent = '💡 Sign in to save your progress!';
-      hint.style.fontSize = '12px';
-      hint.style.marginTop = '10px';
-      if (!document.getElementById('saveHint')) {
-        saveSessionBtn.parentNode.appendChild(hint);
-      }
-    } else {
-      saveSessionBtn.style.display = 'block';
-      const hint = document.getElementById('saveHint');
-      if (hint) hint.remove();
-    }
-  }
-
-  // Add celebration animation based on score
-  const score = coachingSession.overallScore;
-  const resultsContainer = resultsModal.querySelector('.results-summary');
-  resultsContainer.classList.remove('score-excellent', 'score-good', 'score-decent', 'score-needs-work');
-
-  // Remove any existing celebration elements
-  const existingCelebration = resultsContainer.querySelector('.celebration-container');
+  // 2. Remove existing celebration
+  const existingCelebration = container.querySelector('.celebration-container');
   if (existingCelebration) existingCelebration.remove();
 
-  // Create celebration element
+  // 3. Create new celebration
   const celebration = document.createElement('div');
   celebration.className = 'celebration-container';
 
   if (score >= 90) {
     celebration.innerHTML = '<div class="celebration-emoji">🎉</div>';
     celebration.classList.add('celebration-excellent');
-    resultsContainer.classList.add('score-excellent');
+    container.classList.add('score-excellent');
   } else if (score >= 80) {
     celebration.innerHTML = '<div class="thumbs-up-emoji">👍</div>';
     celebration.classList.add('celebration-good');
-    resultsContainer.classList.add('score-good');
+    container.classList.add('score-good');
   } else if (score >= 60) {
     celebration.innerHTML = '<div class="encouragement-emoji">💪</div>';
     celebration.classList.add('celebration-keep-trying');
-    resultsContainer.classList.add('score-decent');
+    container.classList.add('score-decent');
   } else {
     celebration.innerHTML = '<div class="try-again-emoji">🔄</div>';
     celebration.classList.add('celebration-try-again');
-    resultsContainer.classList.add('score-needs-work');
+    container.classList.add('score-needs-work');
   }
 
-  // Insert before score circle
-  const scoreCircle = resultsContainer.querySelector('.score-circle');
+  // 4. Insert before score circle
+  const scoreCircle = container.querySelector('.score-circle');
   if (scoreCircle) {
-    resultsContainer.insertBefore(celebration, scoreCircle);
+    container.insertBefore(celebration, scoreCircle);
   }
-
-  // Show
-  resultsModal.style.display = 'flex';
-
-  // Setup overlay click to minimize (not close)
-  resultsModal.onclick = (e) => {
-    if (e.target === resultsModal) {
-      minimizeResults();
-    }
-  };
 }
 
 /**
-* Close results modal (Minimize to sidebar)
-*/
+ * Close results modal (Minimize to sidebar)
+ */
 export function closeResultsModal() {
   minimizeResults();
 }
 
 /**
-* Minimize results to sidebar
-*/
+ * Minimize results to sidebar
+ */
 function minimizeResults() {
-  if (!resultsModal) return;
+  if (resultsModal) {
+    resultsModal.classList.remove('open');
+    resultsModal.setAttribute('aria-hidden', 'true');
+    setTimeout(() => {
+      resultsModal.style.display = 'none';
+    }, 300);
+  }
 
-  // Add classes for sidebar mode
-  resultsModal.classList.add('sidebar-active'); // Removes overlay background
+  openCoachResultsSidebar();
+}
 
-  const modalContent = resultsModal.querySelector('.coaching-results-modal');
-  if (modalContent) {
-    modalContent.classList.add('sidebar-mode');
+/**
+ * Generate session coaching tips
+ */
+function generateCoachingTips() {
+  if (!coachingSession || !coachingSession.diagnostics) return [];
+  return coachingSession.diagnostics.analyze() || [];
+}
+
+/**
+ * Open Coach Results Sidebar
+ */
+export function openCoachResultsSidebar() {
+  closeSidebar(); // Mutual exclusivity with other sidebars
+
+  if (!coachResultsSidebar) {
+    coachResultsSidebar = document.getElementById('coachResultsSidebar');
+    sidebarOverallScore = document.getElementById('sidebar-overallScore');
+    sidebarNoteAccuracy = document.getElementById('sidebar-noteAccuracy');
+    sidebarTimingAccuracy = document.getElementById('sidebar-timingAccuracy');
+    sidebarProblemMeasuresList = document.getElementById('sidebar-problemMeasuresList');
+    sidebarCoachingTipsContainer = document.getElementById('sidebar-coachingTipsContainer');
+    closeResultsSidebarBtn = document.getElementById('closeResultsSidebar');
+    sidebarPlayReviewBtn = document.getElementById('sidebar-playReviewBtn');
+    sidebarPracticeAgainBtn = document.getElementById('sidebar-practiceAgainBtn');
+    sidebarSaveSessionBtn = document.getElementById('sidebar-saveSessionBtn');
+
+    // Attach sidebar listeners
+    if (closeResultsSidebarBtn) closeResultsSidebarBtn.onclick = exitCoachingMode;
+    if (sidebarPracticeAgainBtn) sidebarPracticeAgainBtn.onclick = () => { closeCoachResultsSidebar(); startCoachingSession(); };
+    if (sidebarSaveSessionBtn) sidebarSaveSessionBtn.onclick = saveCoachingSession;
+    if (sidebarPlayReviewBtn) sidebarPlayReviewBtn.onclick = () => {
+      const playReviewBtn = document.getElementById('playReviewBtn');
+      if (playReviewBtn) playReviewBtn.click();
+    };
+
+    // Tab Logic for sidebar
+    const tabs = coachResultsSidebar.querySelector('.sidebar-tabs');
+    if (tabs) {
+      tabs.querySelectorAll('.sidebar-tab').forEach(tab => {
+        tab.onclick = () => {
+          tabs.querySelectorAll('.sidebar-tab').forEach(t => t.classList.remove('active'));
+          coachResultsSidebar.querySelectorAll('.sidebar-content').forEach(c => c.style.display = 'none');
+
+          tab.classList.add('active');
+          const target = tab.dataset.tab;
+          const content = document.getElementById(`sidebar-tab-${target}`);
+          if (content) content.style.display = 'block';
+
+          if (target === 'history') {
+            renderHistoryList(true); // true for sidebar mode
+          } else if (target === 'settings') {
+            injectSidebarSettings();
+          }
+        };
+      });
+    }
+  }
+
+  if (coachResultsSidebar) {
+    populateResultsSidebar();
+    coachResultsSidebar.classList.add('open');
+    coachResultsSidebar.setAttribute('aria-hidden', 'false');
+  }
+
+  updateBodySidebarClass();
+}
+
+/**
+ * Close Coach Results Sidebar
+ */
+export function closeCoachResultsSidebar() {
+  if (coachResultsSidebar) {
+    coachResultsSidebar.classList.remove('open');
+    coachResultsSidebar.setAttribute('aria-hidden', 'true');
+  }
+  updateBodySidebarClass();
+}
+
+/**
+ * Populate standard sidebar results
+ */
+function populateResultsSidebar() {
+  if (!coachingSession) return;
+
+  if (sidebarOverallScore) sidebarOverallScore.textContent = coachingSession.overallScore + '%';
+  if (sidebarNoteAccuracy) sidebarNoteAccuracy.textContent = coachingSession.noteAccuracy + '%';
+  if (sidebarTimingAccuracy) sidebarTimingAccuracy.textContent = coachingSession.timingAccuracy + '%';
+
+  // Apply Score Aesthetics directly to the sidebar results summary
+  const sidebarSummary = coachResultsSidebar?.querySelector('.results-summary');
+  if (sidebarSummary) {
+    applyScoreAesthetics(sidebarSummary, coachingSession.overallScore);
+  }
+
+  if (sidebarProblemMeasuresList) {
+    if (coachingSession.problemMeasures.length > 0) {
+      sidebarProblemMeasuresList.innerHTML = coachingSession.problemMeasures
+        .map(m => `<div class="problem-measure">Measure ${m}</div>`)
+        .join('');
+    } else {
+      sidebarProblemMeasuresList.innerHTML = '<div class="no-problems">Great job! No problem areas detected.</div>';
+    }
+  }
+
+  // Populate tips
+  if (sidebarCoachingTipsContainer) {
+    const tips = generateCoachingTips();
+    if (tips && tips.length > 0) {
+      let html = '<div class="coaching-tips"><h4 style="margin-top:0; margin-bottom:10px; color:var(--text-secondary); font-size:0.9em; text-transform:uppercase; letter-spacing:1px;">💡 Coach\'s Tips</h4><ul>';
+      tips.forEach(s => {
+        const text = typeof s === 'string' ? s : s.text;
+        const action = typeof s === 'object' ? s.action : null;
+
+        html += `<li style="margin-bottom:8px; display: flex; align-items: start; justify-content: space-between; font-size: 14px;">
+                        <span>${text}</span>`;
+
+        if (action && action.type === 'CALIBRATE') {
+          html += `<button data-action="CALIBRATE" data-value="${action.value}"
+                          class="primary-btn"
+                          style="margin-left: 10px; padding: 2px 8px; font-size: 0.75em; flex-shrink: 0;">
+                          ${action.label}
+                        </button>`;
+        }
+        html += `</li>`;
+      });
+      html += '</ul></div>';
+      sidebarCoachingTipsContainer.innerHTML = html;
+
+      // Add listener for sidebar tips
+      sidebarCoachingTipsContainer.onclick = (e) => {
+        if (e.target.matches('button[data-action="CALIBRATE"]')) {
+          const val = parseInt(e.target.dataset.value, 10);
+          applyCalibration(val);
+          e.target.disabled = true;
+          e.target.textContent = 'Fixed!';
+          // Update display if settings tab is open
+          const disp = document.getElementById('sidebar-timingOffsetDisplay');
+          if (disp) disp.textContent = getTimingOffset() + 'ms';
+        }
+      };
+    } else {
+      sidebarCoachingTipsContainer.innerHTML = '';
+    }
+  }
+
+  // Handle play recording button
+  if (sidebarPlayReviewBtn) {
+    sidebarPlayReviewBtn.style.display = sessionAudioBlobUrl ? 'block' : 'none';
+  }
+}
+
+/**
+ * Inject settings into the sidebar settings tab
+ */
+function injectSidebarSettings() {
+  const settingsTab = document.getElementById('sidebar-tab-settings');
+  if (!settingsTab) return;
+
+  settingsTab.innerHTML = `
+    <div class="settings-panel" style="color: var(--text-primary);">
+        <h3 style="margin-top: 0; color: var(--text-secondary); text-transform: uppercase; font-size: 0.9em; letter-spacing: 1px;">Timing Calibration</h3>
+        <p style="font-size: 0.9em; color: var(--text-secondary); margin-bottom: 20px;">
+            Adjust if notes consistently feel early or late.
+        </p>
+        
+        <div style="background: rgba(var(--panel-rgb), 0.1); padding: 16px; border-radius: 12px; text-align: center; margin-bottom: 16px; border: 1px solid rgba(var(--primary-rgb), 0.1);">
+            <div style="font-size: 0.85em; color: var(--text-secondary); margin-bottom: 10px;">Note vs. Accent Strictness</div>
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px;">
+                <span style="font-size:0.75em; opacity:0.7;">Forgiving</span>
+                <input type="range" id="sidebar-clarityThresholdSlider" min="0.3" max="0.7" step="0.05" style="flex:1">
+                <span style="font-size:0.75em; opacity:0.7;">Strict</span>
+            </div>
+        </div>
+
+        <div style="background: rgba(var(--panel-rgb), 0.1); padding: 16px; border-radius: 12px; text-align: center; border: 1px solid rgba(var(--primary-rgb), 0.1);">
+            <div style="font-size: 0.85em; color: var(--text-secondary); margin-bottom: 10px;">Current Offset</div>
+            <div id="sidebar-timingOffsetDisplay" style="font-size: 2.5em; font-weight: 800; color: var(--primary); margin-bottom: 15px;">${getTimingOffset()}ms</div>
+            
+            <div style="display: flex; justify-content: center; gap: 10px; margin-bottom: 15px;">
+                <button id="sidebar-btn-cal-minus" class="secondary-btn" style="flex:1;">-10ms</button>
+                <button id="sidebar-btn-cal-plus" class="secondary-btn" style="flex:1;">+10ms</button>
+            </div>
+
+            <button id="sidebar-btn-cal-reset" style="width: 100%; padding: 12px; background: transparent; border: 1px solid var(--error-color, #ff4444); color: var(--error-color, #ff4444); border-radius: 8px; cursor: pointer; transition: all 0.2s; font-weight: 600;">
+                Reset Calibration
+            </button>
+        </div>
+    </div>
+  `;
+
+  // Attach listeners
+  const updateDisplay = () => {
+    const disp = document.getElementById('sidebar-timingOffsetDisplay');
+    if (disp) disp.textContent = getTimingOffset() + 'ms';
+    // Sync with modal if open
+    const modalDisp = document.getElementById('timingOffsetDisplay');
+    if (modalDisp) modalDisp.textContent = getTimingOffset() + 'ms';
+  };
+
+  const btnMinus = settingsTab.querySelector('#sidebar-btn-cal-minus');
+  if (btnMinus) btnMinus.onclick = () => { applyCalibration(-10); updateDisplay(); };
+
+  const btnPlus = settingsTab.querySelector('#sidebar-btn-cal-plus');
+  if (btnPlus) btnPlus.onclick = () => { applyCalibration(10); updateDisplay(); };
+
+  const btnReset = settingsTab.querySelector('#sidebar-btn-cal-reset');
+  if (btnReset) btnReset.onclick = () => { resetCalibration(); updateDisplay(); };
+
+  const slider = settingsTab.querySelector('#sidebar-clarityThresholdSlider');
+  if (slider) {
+    slider.value = localStorage.getItem('gp_clarity_threshold') || 0.5;
+    slider.oninput = (e) => {
+      const val = parseFloat(e.target.value);
+      Bus.emit(BUS_EVENT.SET_ACCENT_SENSITIVITY, { threshold: val });
+    };
   }
 }
 
@@ -986,10 +969,17 @@ function minimizeResults() {
 */
 function dismissResults() {
   if (resultsModal) {
-    resultsModal.style.display = 'none';
-    resultsModal.classList.remove('sidebar-active');
-    const modalContent = resultsModal.querySelector('.coaching-results-modal');
-    if (modalContent) modalContent.classList.remove('sidebar-mode');
+    resultsModal.classList.remove('open');
+    resultsModal.setAttribute('aria-hidden', 'true');
+    
+    setTimeout(() => {
+      if (!resultsModal.classList.contains('open')) {
+        resultsModal.style.display = 'none';
+        resultsModal.classList.remove('sidebar-active');
+        const modalContent = resultsModal.querySelector('.coaching-results-modal');
+        if (modalContent) modalContent.classList.remove('sidebar-mode');
+      }
+    }, 300); // Wait for transition
   }
 
   // EXIT REVIEW MODE
@@ -1078,10 +1068,12 @@ export async function fetchHistory() {
 }
 
 /**
- * Render history list in sidebar
+ * Render history list
+ * @param {boolean} isSidebar - If true, render into sidebar historyList
  */
-export async function renderHistoryList() {
-  const listContainer = document.getElementById('historyList');
+export async function renderHistoryList(isSidebar = false) {
+  const containerId = isSidebar ? 'sidebar-historyList' : 'historyList';
+  const listContainer = document.getElementById(containerId);
   if (!listContainer) return;
 
   listContainer.innerHTML = '<div class="loading-spinner">Loading...</div>';
@@ -1208,10 +1200,11 @@ export function initCoachingMode() {
     enterCoachingMode(activeGrid);
   });
 
-  // Close HUD Button
-  const closeHudBtn = document.getElementById('closeCoachingHUDBtn');
-  closeHudBtn?.addEventListener('click', exitCoachingMode);
-
+  // Coaching Sidebar Close
+  const closeCoachingSidebarBtn = document.getElementById('closeCoachingSidebar');
+  closeCoachingSidebarBtn?.addEventListener('click', () => {
+    exitCoachingMode();
+  });
   const practiceAgainBtn = document.getElementById('practiceAgainBtn');
   practiceAgainBtn?.addEventListener('click', () => {
     if (resultsModal) {
@@ -1342,7 +1335,7 @@ async function startCoachingSessionActual(ctx = activeGrid) {
   }
 
   // Update HUD to "Running" state
-  showCoachingHUD(false);
+  showCoachingSidebar(false);
 
   // Register tick observer to detect loops
   const loopObserver = (grid, stepNotes, stepHands) => {

@@ -62,9 +62,13 @@ let audioCtx = null;
 let audioUnlocked = false;
 let samplesPreloaded = false;
 
-// Volume State (persisted)
-let volInstrument = parseFloat(localStorage.getItem('gp_vol_inst') || '1.0');
-let volMetronome = parseFloat(localStorage.getItem('gp_vol_metro') || '1.0');
+// Volume State (persisted with sanitization)
+const getStoredVol = (key) => {
+  const val = parseFloat(localStorage.getItem(key));
+  return isFinite(val) ? Math.max(0, Math.min(1, val)) : 1.0;
+};
+let volInstrument = getStoredVol('gp_vol_inst');
+let volMetronome = getStoredVol('gp_vol_metro');
 
 export function getVolume(type) {
   if (type === 'metronome') return volMetronome;
@@ -72,12 +76,13 @@ export function getVolume(type) {
 }
 
 export function setVolume(type, val) {
+  const sanitizedVal = isFinite(val) ? Math.max(0, Math.min(1, val)) : 1.0;
   if (type === 'metronome') {
-    volMetronome = Math.max(0, Math.min(1, val));
+    volMetronome = sanitizedVal;
     localStorage.setItem('gp_vol_metro', volMetronome);
     console.log('[Audio] Metronome volume set to:', volMetronome);
   } else {
-    volInstrument = Math.max(0, Math.min(1, val));
+    volInstrument = sanitizedVal;
     localStorage.setItem('gp_vol_inst', volInstrument);
     console.log('[Audio] Instrument volume set to:', volInstrument);
   }
@@ -95,7 +100,7 @@ export const samples = {};
 
 export function intervalMs(ctx) {
   const c = ctx || activeGrid;
-  const bpm = c.bpm;
+  const bpm = Math.max(1, c.bpm || 120); // Sanitize BPM
   const base = (c.mode === '16') ? 16 : 8;
   return (60000 / bpm) / (base / 4);
 }
@@ -176,7 +181,8 @@ function metroClick(kind, delay = 0) {
   ensureAudio();
   if (!audioCtx) return;
 
-  const t = audioCtx.currentTime + (delay || 0);
+  const t = audioCtx.currentTime + (isFinite(delay) ? delay : 0);
+  if (!isFinite(t)) return;
 
   if (currentMetroSound === 'Shaker') {
     // Shaker Synthesis (Filtered White Noise)
@@ -674,13 +680,19 @@ export function playNoteSample(n, delay = 0) {
   src.buffer = buffer;
 
   // Apply instrument volume
-  const targetVol = Math.max(0.0001, volInstrument);
-  const t = audioCtx.currentTime + delay;
-  gain.gain.setValueAtTime(targetVol, t);
+  const targetVol = Math.max(0.0001, volInstrument || 1.0);
+  const startTime = audioCtx.currentTime + (isFinite(delay) ? delay : 0);
+  
+  if (!isFinite(targetVol) || !isFinite(startTime)) {
+    console.error('[Audio] Non-finite value in playNoteSample:', { targetVol, startTime, delay });
+    return;
+  }
+
+  gain.gain.setValueAtTime(targetVol, startTime);
 
   src.connect(gain);
   gain.connect(audioCtx.destination);
-  src.start(t);
+  src.start(startTime);
 }
 
 

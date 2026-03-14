@@ -559,19 +559,6 @@
     <span id="countdownNumber">4</span>
   </div>
 
-  <!-- Coaching HUD -->
-  <div id="coachingHUD" class="coaching-hud" style="display:none;">
-    <button id="closeCoachingHUDBtn" class="close-hud-btn" title="Close">×</button>
-    <div class="hud-score">
-      <span class="hud-label">Accuracy</span>
-      <span id="hudAccuracy" class="hud-value">0%</span>
-    </div>
-    <div class="hud-notes">
-      <span id="hudCorrect" class="hud-correct">0</span> /
-      <span id="hudTotal" class="hud-total">0</span>
-    </div>
-    <button id="stopCoachingBtn" class="hud-stop">Stop</button>
-  </div>
 
   <!-- Games HUD -->
   <div id="gameHUD" class="coaching-hud game-hud" style="display:none;">
@@ -1093,6 +1080,77 @@
     </div>
   </div>
 
+  <!-- Coaching Sidebar -->
+  <div id="coachingSidebar" class="sidebar coaching-sidebar" aria-hidden="true">
+    <div class="sidebar-header">
+      <h3>Coach Mode</h3>
+      <button id="closeCoachingSidebar" class="close-btn">&times;</button>
+    </div>
+    <div class="sidebar-content" style="padding: 24px;">
+      <div class="hud-score" style="text-align: center; margin-bottom: 24px;">
+        <span class="hud-label" style="display: block; font-size: 14px; color: var(--text-secondary); margin-bottom: 8px;">Accuracy</span>
+        <span id="hudAccuracy" class="hud-accuracy">0%</span>
+      </div>
+      <div class="hud-notes-container" style="text-align: center; margin-bottom: 32px; font-size: 18px; font-weight: 600;">
+        <span id="hudCorrect" class="hud-correct" style="color: #2ecc71;">0</span> 
+        <span style="opacity: 0.4; margin: 0 4px;">/</span>
+        <span id="hudTotal" class="hud-total" style="color: var(--text-secondary);">0</span>
+      </div>
+      <button id="stopCoachingBtn" class="primary-btn" style="width: 100%; height: 54px; font-size: 18px;">Stop</button>
+    </div>
+  </div>
+
+  <!-- Coach Results Sidebar -->
+  <div id="coachResultsSidebar" class="sidebar coaching-results-sidebar" aria-hidden="true">
+    <div class="sidebar-header">
+      <h3>Session Results</h3>
+      <button id="closeResultsSidebar" class="close-btn">&times;</button>
+    </div>
+    
+    <div class="sidebar-tabs">
+      <button class="sidebar-tab active" data-tab="result">Result</button>
+      <button class="sidebar-tab" data-tab="history">History</button>
+      <button class="sidebar-tab" data-tab="settings">Settings</button>
+    </div>
+
+    <div class="sidebar-content" id="sidebar-tab-result" style="display: block; padding: 24px;">
+      <div class="results-summary">
+        <div class="score-circle">
+          <span id="sidebar-overallScore" class="score-value">0%</span>
+          <span class="score-label">Overall</span>
+        </div>
+        <div class="score-breakdown">
+          <div class="score-item">
+            <span class="score-label">Note Accuracy</span>
+            <span id="sidebar-noteAccuracy" class="score-value">0%</span>
+          </div>
+          <div class="score-item">
+            <span class="score-label">Timing Accuracy</span>
+            <span id="sidebar-timingAccuracy" class="score-value">0%</span>
+          </div>
+        </div>
+      </div>
+      <div class="problem-areas">
+        <h3>Areas to Practice</h3>
+        <div id="sidebar-problemMeasuresList"></div>
+      </div>
+      <div id="sidebar-coachingTipsContainer"></div>
+      <div class="modal-actions" style="margin-top: 24px;">
+        <button id="sidebar-playReviewBtn" class="primary-btn" style="display: none; width: 100%; margin-bottom: 12px;">Play Recording</button>
+        <button id="sidebar-practiceAgainBtn" class="primary-btn" style="width: 100%; margin-bottom: 12px;">Practice Again</button>
+        <button id="sidebar-saveSessionBtn" class="secondary-btn" style="width: 100%;">Save Session</button>
+      </div>
+    </div>
+
+    <div class="sidebar-content" id="sidebar-tab-history" style="display: none; padding: 24px;">
+      <div id="sidebar-historyList" class="history-list"></div>
+    </div>
+
+    <div class="sidebar-content" id="sidebar-tab-settings" style="display: none; padding: 24px;">
+      <!-- Calibration settings will be injected here -->
+    </div>
+  </div>
+
   <!-- AI Assistant UI -->
   <div id="aiFab" title="AI Assistant">
     <svg viewBox="0 0 24 24">
@@ -1210,50 +1268,7 @@
     </div>
   </div>
 
-  <!-- Coaching Results Modal -->
-  <div id="coachingResultsModal" class="modal-overlay" aria-hidden="true">
-    <div class="modal coaching-results-modal">
-      <div class="modal-header">
-        <h2>Practice Session Complete!</h2>
-      </div>
 
-      <div class="results-summary">
-        <div class="score-circle">
-          <span id="overallScore" class="score-value">0%</span>
-          <span class="score-label">Overall</span>
-        </div>
-
-        <div class="score-breakdown">
-          <div class="score-item">
-            <span class="score-label">Note Accuracy</span>
-            <span id="noteAccuracy" class="score-value">0%</span>
-          </div>
-          <div class="score-item">
-            <span class="score-label">Timing Accuracy</span>
-            <span id="timingAccuracy" class="score-value">0%</span>
-          </div>
-        </div>
-      </div>
-
-      <div class="problem-areas">
-        <h3>Areas to Practice</h3>
-        <div id="problemMeasuresList"></div>
-      </div>
-
-      <!-- Phase 3: Session Recorded Audio Playback -->
-      <audio id="sessionAudioPlayer" style="display:none;"></audio>
-
-      <div class="modal-actions">
-        <button id="playReviewBtn" class="primary-btn play-review-btn"
-          style="display: none; width: 100%; margin-bottom: 10px;">Play Recording & Grid</button>
-      </div>
-
-      <div class="modal-actions dual-actions">
-        <button id="practiceAgainBtn" class="primary-btn">Practice Again</button>
-        <button id="saveSessionBtn" class="secondary-btn">Save Session</button>
-      </div>
-    </div>
-  </div>
 
 
 

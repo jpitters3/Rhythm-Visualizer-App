@@ -296,7 +296,7 @@ function initDashboard() {
 
   const updateToggleUI = () => {
     const micActive = document.getElementById('micBtn')?.classList.contains('active');
-    const coachActive = document.getElementById('coachingHUD')?.style.display === 'block';
+    const coachActive = document.getElementById('coachingSidebar')?.classList.contains('open');
 
     if (micActive) isMicLoading = false;
 

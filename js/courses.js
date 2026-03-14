@@ -531,11 +531,14 @@ export async function editCourse(courseId) {
 }
 
 export function closeSidebar() {
-  const sb = document.getElementById('courseSidebar');
-  if (sb) {
+  const sidebars = document.querySelectorAll('.sidebar');
+  sidebars.forEach(sb => {
+    // Don't close the results modal if it's minimized as a sidebar
+    if (sb.id === 'coachingResultsModal' || sb.closest('#coachingResultsModal')) return;
+    
     sb.classList.remove('open');
     sb.setAttribute('aria-hidden', 'true');
-  }
+  });
   updateBodySidebarClass();
 }
 

@@ -55,58 +55,18 @@
   background: rgba(255, 255, 255, 0.05);
 }
 
-/* Coaching HUD */
-.coaching-hud {
-  position: fixed;
-  top: 20px;
-  right: 20px;
-  background: rgba(255, 255, 255, 0.75);
-  /* backdrop-filter: blur(12px); -> macOS CPU Fix */
-  border: 1px solid rgba(255, 255, 255, 0.4);
-  border-radius: 16px;
-  padding: 16px;
-  z-index: 1000;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.1);
-  min-width: 150px;
-  width: 320px;
+.coaching-sidebar .hud-accuracy {
+  font-size: 48px;
+  font-weight: 800;
+  display: block;
+  margin-bottom: 8px;
+  color: var(--primary);
 }
 
-.coaching-hud::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  z-index: -1;
-  transform: translateZ(0);
-  will-change: transform;
-  pointer-events: none;
-}
-
-.close-hud-btn {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  background: none;
-  border: none;
-  font-size: 20px;
-  color: var(--text-secondary);
-  cursor: pointer;
-  padding: 4px;
-  line-height: 1;
-  border-radius: 50%;
-  transition: all 0.2s ease;
-  width: 28px;
-  height: 28px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.close-hud-btn:hover {
-  background-color: rgba(0, 0, 0, 0.05);
-  color: var(--text);
+.coaching-sidebar .hud-notes-container {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 24px;
 }
 
 /* ... */
@@ -186,22 +146,21 @@
 
 /* ... */
 /* Tabs for Sidebar */
+/* Scoped to Results Modal to avoid conflict with main sidebar */
 .sidebar-tabs {
   display: flex;
   margin-bottom: 16px;
-  background: rgba(0, 0, 0, 0.05);
-  /* Slight dark tint container or white? User said light theme. */
   background: rgba(255, 255, 255, 0.4);
   padding: 4px;
-  border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 10px;
+  gap: 4px;
 }
 
 .sidebar-tab {
   flex: 1;
-  padding: 8px 12px;
-  background: transparent;
+  padding: 8px 4px;
   border: none;
+  background: transparent;
   color: var(--text-secondary);
   font-weight: 600;
   font-size: 13px;
@@ -213,13 +172,21 @@
 
 .sidebar-tab:hover {
   background: rgba(255, 255, 255, 0.5);
-  color: var(--primary);
+  color: var(--text-primary);
 }
 
 .sidebar-tab.active {
-  background: #fff;
+  background: white;
   color: var(--primary);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.coaching-results-modal .sidebar-content {
+  display: none;
+}
+
+.coaching-results-modal .sidebar-content.active {
+  display: block;
 }
 
 .coaching-hud button,
@@ -263,13 +230,15 @@
 
 .hud-stop {
   width: 100%;
-  padding: 8px;
+  padding: 10px 16px;
   background: var(--btn-bg);
   border: 1px solid var(--btn-border);
-  border-radius: 6px;
+  border-radius: 999px;
   color: var(--text);
   cursor: pointer;
-  font-size: 13px;
+  font-size: 14px;
+  font-weight: 600;
+  transition: all 0.2s ease;
 }
 
 .hud-stop:hover {
@@ -390,75 +359,59 @@
   border: 1px solid rgba(255, 255, 255, 0.4);
 }
 
-.coaching-results-modal.sidebar-mode::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  z-index: -1;
-  transform: translateZ(0);
-  will-change: transform;
-  pointer-events: none;
+/* Results Sidebar Specifics */
+.coaching-results-sidebar .score-circle {
+  width: 140px;
+  height: 140px;
+  margin: 10px auto 20px;
 }
 
-/* Hide the overlay background when in sidebar mode */
-#coachingResultsModal.sidebar-active {
-  background-color: transparent;
-  pointer-events: none;
-  /* Let clicks pass through to grid */
+.coaching-results-sidebar .score-circle .score-value {
+  font-size: 44px;
 }
 
-#coachingResultsModal.sidebar-active .modal-header {
-  display: none;
-}
-
-/* Re-enable pointer events on the modal itself */
-#coachingResultsModal.sidebar-active .coaching-results-modal {
-  pointer-events: auto;
-}
-
-/* Adjust content for sidebar */
-.coaching-results-modal.sidebar-mode .score-circle {
-  width: 120px;
-  height: 120px;
-  margin: 10px auto;
-}
-
-.coaching-results-modal.sidebar-mode .score-circle .score-value {
-  font-size: 40px;
-}
-
-.coaching-results-modal.sidebar-mode .score-circle .score-label {
+.coaching-results-sidebar .score-circle .score-label {
   font-size: 14px;
 }
 
-.coaching-results-modal.sidebar-mode .score-breakdown {
+.coaching-results-sidebar .score-breakdown {
+  display: grid;
   grid-template-columns: 1fr;
-  /* Stack items */
-  gap: 8px;
-  padding: 0px 10px 10px 10px;
+  gap: 12px;
+  margin-bottom: 24px;
 }
 
-.coaching-results-modal.sidebar-mode .score-item {
-  padding: 8px;
+.coaching-results-sidebar .score-item {
+  background: rgba(255, 255, 255, 0.4);
+  padding: 12px 16px;
+  border-radius: 12px;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
-.coaching-results-modal.sidebar-mode .score-item .score-label {
+.coaching-results-sidebar .score-item .score-label {
   margin-bottom: 0;
+  font-size: 14px;
+  color: var(--text-secondary);
 }
 
-.coaching-results-modal.sidebar-mode .score-item .score-value {
+.coaching-results-sidebar .score-item .score-value {
   font-size: 18px;
+  font-weight: 700;
+  color: var(--primary);
 }
 
-/* Adjust celebrations for sidebar */
-.coaching-results-modal.sidebar-mode .celebration-emoji {
-  font-size: 40px;
+.coaching-results-sidebar .problem-measure {
+  background: rgba(var(--error-rgb, 231, 76, 60), 0.1);
+  color: var(--error-color, #e74c3c);
+  border: 1px solid rgba(var(--error-rgb, 231, 76, 60), 0.2);
+  padding: 8px 12px;
+  border-radius: 8px;
+  margin-bottom: 8px;
+  font-size: 14px;
+  font-weight: 500;
 }
 
 /* Sidebar Header Controls */
@@ -479,20 +432,20 @@
 }
 
 /* Score-based background colors */
-.coaching-results-modal .score-excellent {
-  background: linear-gradient(0deg, rgba(34, 197, 94, 0.65), rgba(34, 197, 94, 0.0));
+.results-summary.score-excellent {
+  background: linear-gradient(0deg, rgba(34, 197, 94, 0.65), rgba(34, 197, 94, 0.0)) !important;
 }
 
-.coaching-results-modal .score-good {
-  background: linear-gradient(0deg, rgba(200, 234, 8, 0.55), rgba(200, 234, 8, 0.0));
+.results-summary.score-good {
+  background: linear-gradient(0deg, rgba(200, 234, 8, 0.55), rgba(200, 234, 8, 0.0)) !important;
 }
 
-.coaching-results-modal .score-decent {
-  background: linear-gradient(0deg, rgba(234, 179, 8, 0.55), rgba(234, 179, 8, 0.0));
+.results-summary.score-decent {
+  background: linear-gradient(0deg, rgba(234, 179, 8, 0.55), rgba(234, 179, 8, 0.0)) !important;
 }
 
-.coaching-results-modal .score-needs-work {
-  background: linear-gradient(0deg, rgba(232, 105, 36, 0.55), rgba(232, 105, 36, 0.0));
+.results-summary.score-needs-work {
+  background: linear-gradient(0deg, rgba(232, 105, 36, 0.55), rgba(232, 105, 36, 0.0)) !important;
 }
 
 .results-summary {
@@ -752,17 +705,18 @@
 
 .hud-loop-btn {
   width: 100%;
-  padding: 8px 12px;
+  padding: 10px 16px;
   background: var(--btn-bg);
   border: 1px solid var(--btn-border);
-  border-radius: 6px;
+  border-radius: 999px;
   color: var(--text);
   cursor: pointer;
-  font-size: 13px;
+  font-size: 14px;
+  font-weight: 600;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 8px;
   transition: all 0.2s ease;
 }
 
@@ -771,9 +725,9 @@
 }
 
 .hud-loop-btn.active {
-  background: var(--primary);
-  color: white;
-  border-color: var(--primary);
+  background: var(--btn-active);
+  color: var(--text);
+  border-color: var(--btn-active);
 }
 
 .loop-icon {
@@ -879,49 +833,7 @@
   color: var(--text-secondary);
 }
 
-/* Tabs for Sidebar - Glassmorphism Pills */
-.sidebar-tabs {
-  display: flex;
-  margin-bottom: 16px;
-  background: rgba(255, 255, 255, 0.4);
-  padding: 4px;
-  border-radius: 12px;
-  gap: 4px;
-  border: 1px solid rgba(255, 255, 255, 0.3);
-}
 
-.sidebar-tab {
-  flex: 1;
-  padding: 8px 12px;
-  background: transparent;
-  border: none;
-  color: var(--text-secondary);
-  font-weight: 600;
-  font-size: 13px;
-  cursor: pointer;
-  border-radius: 8px;
-  transition: all 0.2s ease;
-  text-align: center;
-}
-
-.sidebar-tab:hover {
-  background: rgba(255, 255, 255, 0.5);
-  color: var(--primary);
-}
-
-.sidebar-tab.active {
-  background: #fff;
-  color: var(--primary);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-}
-
-.sidebar-content {
-  display: none;
-}
-
-.sidebar-content.active {
-  display: block;
-}
 
 
 /* Coaching Mode Feedback Tooltip */
