@@ -18,9 +18,6 @@
   transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s, bottom 0.3s ease;
 }
 
-body.has-selection #aiFab {
-  bottom: 90px;
-}
 
 #aiFab:hover {
   transform: scale(1.1);
@@ -62,9 +59,6 @@ body.dark #aiFab svg {
   overflow: hidden;
 }
 
-body.has-selection #aiChatContainer {
-  bottom: 160px;
-}
 
 body.dark #aiChatContainer {
   background: rgba(30, 30, 40, 0.9);

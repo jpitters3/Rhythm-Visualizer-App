@@ -74,13 +74,13 @@ export function updateRangeUI(ctx) {
   }
 
   // Update action bar (global for now, but linked to activeGrid)
-  const selBar = document.getElementById('selBar');
+  const selectionTools = document.getElementById('selectionTools');
   const selBarText = document.getElementById('selBarText');
 
-  if (selBar && c === activeGrid) {
+  if (selectionTools && c === activeGrid) {
     const count = r ? r.length : 0;
-    const showBar = (count > 1);
-    selBar.style.display = showBar ? 'flex' : 'none';
+    const showBar = (count > 0);
+    selectionTools.classList.toggle('visible', showBar);
     document.body.classList.toggle('has-selection', showBar);
     if (selBarText) selBarText.textContent = `${count} selected`;
   }
@@ -141,7 +141,7 @@ export function updateDragSelectionOver(cellEl, ctx) {
 
 // Click outside to clear range
 window.addEventListener('click', (e) => {
-  if (hasRange(activeGrid) && !e.target.closest('.cell') && !e.target.closest('.sel-bar')) {
+  if (hasRange(activeGrid) && !e.target.closest('.cell') && !e.target.closest('.measure-tools')) {
     clearRange(activeGrid);
   }
 });

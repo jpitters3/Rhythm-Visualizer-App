@@ -40,6 +40,11 @@
   justify-content: center;
   padding: 12px 0 18px;
   pointer-events: none;
+  transition: bottom 0.3s ease; /* Smooth move up */
+}
+
+body.has-selection .controls-transport {
+  bottom: 60px; /* Move up when selection tools expand */
 }
 
 .controls-transport .transport-container {

@@ -169,9 +169,9 @@
           <button id="handBtn" style="display: none;" class="active" title="Toggle left/right hand coloring">Left/Right:
             Off</button>
           <button id="stickingBtn" title="Edit Sticking Mode: Click cells to toggle Hand (R/L)">🤚</button>
-          <button id="dualModeBtn" title="Toggle Dual Grid Mode">👥</button>
           <button id="flipHandsBtn" style="display:none;"
             title="Flip Remaining: Inverts hands from current selection onwards">🔁</button>
+          <button id="dualModeBtn" title="Toggle Dual Grid Mode">👥</button>
           <div class="control-group">
             <!-- Time Signature -->
             <div class="ts-wrapper">
@@ -298,19 +298,6 @@
         <div class="cw-step-record"></div>
       </div>
 
-      <!-- Selection Action Bar (shows when a range is selected) -->
-      <div id="selBar" class="sel-bar" style="display:none;" aria-label="Selection actions">
-        <div class="sel-bar-left">
-          <span id="selBarText" class="sel-bar-text">0 selected</span>
-        </div>
-        <div class="sel-bar-actions">
-          <button id="selCopyBtn">Copy</button>
-          <button id="selDuplicateBtn">Duplicate</button>
-          <button id="selPasteBtn" disabled>Paste</button>
-          <button id="selDeleteBtn">Delete</button>
-          <button id="selCancelBtn">Cancel</button>
-        </div>
-      </div>
 
 
       <!-- Grid -->
@@ -333,9 +320,21 @@
 
           <!-- Measure Actions -->
           <div class="measure-tools" id="measureTools">
-            <span class="measure-tools-label">Measure</span>
-            <button id="addMeasureBtn" title="Add a new measure">＋</button>
-            <button id="delMeasureBtn" title="Delete active measure">−</button>
+            <div class="measure-group">
+              <span class="measure-tools-label"></span>
+              <button id="addMeasureBtn" title="Add a new measure">＋</button>
+              <button id="delMeasureBtn" title="Delete active measure">−</button>
+            </div>
+
+            <div id="selectionTools" class="selection-group">
+              <div class="separator"></div>
+              <span id="selBarText" class="sel-bar-text">0 selected</span>
+              <button id="selCopyBtn">Copy</button>
+              <button id="selDuplicateBtn">Duplicate</button>
+              <button id="selPasteBtn" disabled>Paste</button>
+              <button id="selDeleteBtn">Delete</button>
+              <button id="selCancelBtn">Cancel</button>
+            </div>
           </div>
         </div>
 
