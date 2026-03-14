@@ -38,7 +38,8 @@
 }
 
 body.dark .sidebar {
-  background: rgba(20, 20, 25, 1); /* Solid for docked mode */
+  background: rgba(20, 20, 25, 1);
+  /* Solid for docked mode */
   border-right: 1px solid rgba(255, 255, 255, 0.08);
   box-shadow: 10px 0 40px rgba(0, 0, 0, 0.3);
   color: #eaeaf0;
@@ -368,13 +369,13 @@ body.dark .course-body {
 }
 
 .section-title {
-  padding: 12px 24px 6px;
+  padding: 12px 24px 12px;
   font-size: 14px;
   text-transform: uppercase;
   letter-spacing: 1px;
-  color: #fff;
+  color: #555555;
   font-weight: 600;
-  background-color: rgba(0, 0, 0, 0.3);
+  background-color: rgba(255, 255, 255, 0.5);
 }
 
 body.dark .section-title {

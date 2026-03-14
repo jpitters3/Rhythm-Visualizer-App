@@ -42,11 +42,12 @@
 
 /* CARD STYLES */
 .market-card {
+  margin-top: 30px;
+  padding-top: 20px;
   min-height: 300px;
   background: var(--panel);
   border: 1px solid var(--panel-border);
   border-radius: 16px;
-  overflow: scroll;
   display: flex;
   flex-direction: column;
   transition: transform 0.2s, box-shadow 0.2s;
