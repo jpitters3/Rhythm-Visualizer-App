@@ -156,6 +156,10 @@
   gap: 4px;
 }
 
+body.dark .sidebar-tabs {
+  background: rgba(0, 0, 0, 0.3);
+}
+
 .sidebar-tab {
   flex: 1;
   padding: 8px 4px;
@@ -179,6 +183,12 @@
   background: white;
   color: var(--primary);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+body.dark .sidebar-tab.active {
+  background: var(--panel);
+  color: var(--primary-color);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
 .coaching-results-modal .sidebar-content {
@@ -389,6 +399,11 @@
   justify-content: space-between;
   align-items: center;
   border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+body.dark .coaching-results-sidebar .score-item {
+  background: rgba(0, 0, 0, 0.2);
+  border-color: rgba(255, 255, 255, 0.1);
 }
 
 .coaching-results-sidebar .score-item .score-label {
@@ -864,4 +879,15 @@
   outline: 2px dashed rgba(255, 255, 255, 0.5) !important;
   outline-offset: -2px;
   background-color: rgba(255, 0, 0, 0.1) !important;
+}
+/* --- Dark Mode Overrides for Coaching Results --- */
+body.dark .coaching-results-modal {
+  background: rgba(var(--panel-rgb), 0.95);
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
+body.dark .coaching-results-modal.sidebar-mode {
+  background: rgba(var(--panel-rgb), 0.85);
+  border-color: rgba(255, 255, 255, 0.1);
 }
