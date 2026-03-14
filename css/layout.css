@@ -1,6 +1,7 @@
 /* ===== GLOBAL LAYOUT & HEADER ===== */
 body {
   transition: padding-left 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow-y: hidden;
 }
 
 .footer {
@@ -211,6 +212,8 @@ div.grid-child.handpan-options.select {
 div.container {
   margin: 0 auto;
   width: 98%;
+  max-height: 98vh;
+  overflow-y: hidden;
   padding: 50px;
   max-width: 1200px;
   /* Glassmorphism Update */
@@ -297,6 +300,7 @@ body.route-dashboard .header-menu-items {
 /* ===== SIDEBAR DOCKING (Large Screens Only) ===== */
 @media (min-width: 1201px) {
   body.sidebar-open {
-    padding-left: 360px; /* Width of the sidebar */
+    padding-left: 360px;
+    /* Width of the sidebar */
   }
 }

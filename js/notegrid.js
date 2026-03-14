@@ -155,7 +155,8 @@ export function renderAllMeasures(ctx = activeGrid) {
   const totalSteps = Array.isArray(ctx.innerLabels) ? ctx.innerLabels.length : 0;
   const measureCount = Math.max(1, Math.ceil(totalSteps / s));
 
-  measuresEl.innerHTML = '';
+  measuresEl.innerHTML = '<div class="measures-scroller"></div>';
+  const scroller = measuresEl.firstChild;
 
   for (let m = 0; m < measureCount; m++) {
     const row = document.createElement('div');
@@ -306,11 +307,11 @@ export function renderAllMeasures(ctx = activeGrid) {
     }
     row.appendChild(labels);
     row.appendChild(grid);
-    measuresEl.appendChild(row);
+    scroller.appendChild(row);
 
     // Horizontal line
     const hr = document.createElement('hr');
-    measuresEl.appendChild(hr);
+    scroller.appendChild(hr);
   }
 
   // Notify listeners (e.g. Presentation Mode) that DOM was rebuilt
