@@ -308,6 +308,7 @@ body.dark .course-item.collapsed:hover {
   justify-content: space-between;
   align-items: center;
   background: var(--primary-color);
+  cursor: pointer;
 }
 
 .course-header h4 {

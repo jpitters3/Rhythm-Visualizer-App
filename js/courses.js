@@ -12,6 +12,7 @@ import { autoLinkText } from './glossary.js';
 // ===== SIDEBAR LOGIC (OWNED COURSES) =====
 
 let activeCourseId = null;
+let activeCourseCollapsed = false; // true = active course is visually folded
 export let allCourses = [];
 export let allSections = [];
 export let allLessons = [];
@@ -33,11 +34,12 @@ export async function fetchCourses() {
 
     // 2. Fetch User's Enrolled Courses AND Completed Lessons
     const [enrollRes, progressRes] = await Promise.all([
-      supabase.from('user_courses').select('course_id').eq('user_id', currentUser.id),
+      supabase.from('user_courses').select('course_id, is_archived').eq('user_id', currentUser.id),
       supabase.from('user_lesson_progress').select('lesson_id').eq('user_id', currentUser.id)
     ]);
 
-    const enrolledIds = new Set(enrollRes.data?.map(e => e.course_id) || []);
+    const enrolledIds = new Set(enrollRes.data?.filter(e => !e.is_archived).map(e => e.course_id) || []);
+    const archivedIds = new Set(enrollRes.data?.filter(e => e.is_archived).map(e => e.course_id) || []);
     completedLessonIds = new Set(progressRes.data?.map(p => p.lesson_id) || []);
 
     // 3. Fetch ALL courses (we filter in memory or complicated query)
@@ -63,9 +65,11 @@ export async function fetchCourses() {
     const myCourses = allCoursesData.filter(c => {
       const isOwner = c.owner_id === currentUser.id;
       const isEnrolled = enrolledIds.has(c.id);
+      const isArchived = archivedIds.has(c.id);
       const canView = c.is_published || (isOwner && isAdmin);
 
-      return (isOwner || isEnrolled) && canView;
+      // Owners can always see their own courses (not archived);  enrolled must not be archived
+      return (isOwner || isEnrolled) && canView && !isArchived;
     });
 
     allCourses = myCourses;
@@ -128,6 +132,7 @@ export function renderCourseSidebar(courses) {
   // If no activeCourseId set, pick the first one
   if (!activeCourseId && courses.length > 0) {
     activeCourseId = courses[0].id;
+    activeCourseCollapsed = false; // auto-picked courses start expanded
   }
 
   const sortedCourses = [...courses].sort((a, b) => {
@@ -146,7 +151,8 @@ export function renderCourseSidebar(courses) {
 
   // 3. Render
   list.innerHTML = sortedCourses.map(course => {
-    const isActive = course.id === activeCourseId;
+    // The active course can be collapsed without losing its active status
+    const isActive = course.id === activeCourseId && !activeCourseCollapsed;
 
     if (isActive) {
       // === EXPANDED (ACTIVE) ===
@@ -160,7 +166,7 @@ export function renderCourseSidebar(courses) {
 
       return `
         <div class="course-item active" data-id="${course.id}">
-          <div class="course-header" style="justify-content: flex-start; gap: 8px;">
+          <div class="course-header" data-action="toggle-course" data-id="${course.id}" style="justify-content: flex-start; gap: 8px;">
             <button class="toggle-course-btn" data-action="toggle-course" data-id="${course.id}" style="background: none; border: none; cursor: pointer; padding: 0; display: flex; align-items: center; color: currentColor;">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="transform: rotate(90deg); transition: transform 0.2s;"><polyline points="9 18 15 12 9 6"></polyline></svg>
             </button>
@@ -251,9 +257,8 @@ export function renderCourseSidebar(courses) {
 }
 
 export async function setActiveCourse(courseId) {
-  if (activeCourseId === courseId) return;
-
   activeCourseId = courseId;
+  activeCourseCollapsed = false; // always expand when switching courses
 
   // Optimistic Render
   renderCourseSidebar(allCourses);
@@ -731,10 +736,12 @@ document.body.addEventListener('click', async (e) => {
       const toggleId = target.dataset.id;
       if (toggleId) {
         if (activeCourseId === toggleId) {
-          // Collapse if currently active
-          setActiveCourse(null);
+          // Toggle collapsed state of already-active course
+          activeCourseCollapsed = !activeCourseCollapsed;
+          renderCourseSidebar(allCourses);
         } else {
-          // Expand
+          // Switch to a different course (always expand it)
+          activeCourseCollapsed = false;
           setActiveCourse(toggleId);
         }
       }
@@ -902,8 +909,25 @@ export function initCourses() {
     fetchCourses();
   });
 
-  Bus.on(BUS_EVENT.COURSE_UNLOCKED, () => {
-    fetchCourses();
+  Bus.on(BUS_EVENT.COURSE_UNLOCKED, async (e) => {
+    const courseId = e.detail?.courseId;
+    // Eagerly set the target course and open sidebar before the network fetch
+    // so the user sees the response immediately.
+    if (courseId) {
+      activeCourseId = courseId;
+      closeSidebar();
+      openSidebar();
+    }
+    await fetchCourses();
+    // fetchCourses overwrites activeCourseId from the profile — restore it.
+    if (courseId) {
+      activeCourseId = courseId;
+      renderCourseSidebar(allCourses);
+      // Persist without waiting
+      if (currentUser) {
+        supabase.from('profiles').update({ current_course_id: courseId }).eq('user_id', currentUser.id);
+      }
+    }
   });
 
   Bus.on(BUS_EVENT.REQUEST_LOAD_LESSON, (e) => {

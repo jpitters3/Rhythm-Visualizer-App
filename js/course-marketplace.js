@@ -1,6 +1,7 @@
 import { supabase } from './supabase-client.js';
 import { Bus, BUS_EVENT } from './bus.js';
 import { currentUser, isAdminUser } from './state.js';
+import { fetchCourses, setActiveCourse, openSidebar } from './courses.js';
 
 let marketplaceModal = null;
 let closeMarketBtn = null;
@@ -23,16 +24,20 @@ export async function openMarketplace() {
 
     if (cErr) throw cErr;
 
-    // 2. Fetch User's Owned Courses
+    // 2. Fetch User's Owned Courses (with archive status)
     let ownedIds = new Set();
+    let archivedIds = new Set();
     if (currentUser) {
       const { data: result, error: uErr } = await supabase
         .from('user_courses')
-        .select('course_id')
+        .select('course_id, is_archived')
         .eq('user_id', currentUser.id);
 
       if (!uErr && result) {
-        result.forEach(r => ownedIds.add(r.course_id));
+        result.forEach(r => {
+          ownedIds.add(r.course_id);
+          if (r.is_archived) archivedIds.add(r.course_id);
+        });
       }
 
       // Also owner owns their own courses
@@ -41,7 +46,7 @@ export async function openMarketplace() {
       });
     }
 
-    renderMarketplace(allCourses || [], ownedIds);
+    renderMarketplace(allCourses || [], ownedIds, archivedIds);
 
   } catch (err) {
     console.error("Error loading marketplace:", err);
@@ -49,14 +54,14 @@ export async function openMarketplace() {
   }
 }
 
-function renderMarketplace(courses, ownedIds) {
+function renderMarketplace(courses, ownedIds, archivedIds = new Set()) {
   marketGrid.innerHTML = '';
 
   const isAdmin = typeof isAdminUser === 'function' ? isAdminUser(currentUser) : false;
 
   // Filter: If NOT admin, show only published
   const visibleCourses = courses.filter(c => {
-    if (isAdmin) return true; // Admins see everything
+    if (isAdmin) return true;
     return c.is_published === true;
   });
 
@@ -67,38 +72,38 @@ function renderMarketplace(courses, ownedIds) {
 
   visibleCourses.forEach(course => {
     const isOwned = ownedIds.has(course.id);
+    const isArchived = archivedIds.has(course.id);
     const isPaid = course.is_paid;
     const isPublished = course.is_published;
 
     // Badge
     let badgeClass = 'free';
     let badgeText = 'FREE';
-    if (isPaid) {
-      badgeClass = 'paid';
-      badgeText = `$${course.price}`;
-    }
+    if (isPaid) { badgeClass = 'paid'; badgeText = `$${course.price}`; }
+    if (isAdmin && !isPublished) { badgeClass = 'paid'; badgeText = 'DRAFT'; }
+    else if (isOwned && isPublished) { badgeClass = 'free'; badgeText = isArchived ? 'ARCHIVED' : 'OWNED'; }
 
-    // Admin Draft Badge override
-    if (isAdmin && !isPublished) {
-      badgeClass = 'paid';
-      badgeText = 'DRAFT';
-    } else if (isOwned && isPublished) {
-      badgeClass = 'free';
-      badgeText = 'OWNED';
-    }
-
-    // Button State
+    // Button
     let btnClass = 'market-btn get';
     let btnText = 'Get Course';
+    let btnAction = 'unlock-course';
+    let btnDisabled = '';
 
-    if (isPaid) {
+    if (isPaid && !isOwned) {
       btnClass = 'market-btn buy';
       btnText = 'Buy Course';
     }
 
     if (isOwned) {
-      btnClass = 'market-btn owned';
-      btnText = 'Owned';
+      if (isArchived) {
+        btnClass = 'market-btn get';
+        btnText = '✅ Activate';
+        btnAction = 'activate-course';
+      } else {
+        btnClass = 'market-btn';
+        btnText = '📦 Archive';
+        btnAction = 'archive-course';
+      }
     }
 
     const card = document.createElement('div');
@@ -137,9 +142,9 @@ function renderMarketplace(courses, ownedIds) {
       <div class="card-content">
         <h3 class="card-title">${course.title} ${(!isPublished && isAdmin) ? '(Draft)' : ''}</h3>
         <div class="card-desc">${course.description || 'No description provided.'}</div>
-        <button class="${btnClass}" 
-          ${isOwned ? 'disabled' : ''} 
-          data-action="unlock-course" data-id="${course.id}" data-paid="${isPaid}">
+        <button class="${btnClass}"
+          ${btnDisabled}
+          data-action="${btnAction}" data-id="${course.id}" data-paid="${isPaid}">
           ${btnText}
         </button>
         ${adminActions}
@@ -201,6 +206,43 @@ export async function deleteCourse(courseId) {
   }
 }
 
+export async function archiveCourse(courseId) {
+  if (!currentUser) return;
+  try {
+    const { error } = await supabase
+      .from('user_courses')
+      .update({ is_archived: true })
+      .eq('user_id', currentUser.id)
+      .eq('course_id', courseId);
+    if (error) throw error;
+    Bus.emit(BUS_EVENT.COURSE_DATA_CHANGED);
+    openMarketplace(); // Refresh to show Activate button
+  } catch (err) {
+    console.error('Archive failed:', err);
+    alert('Failed to archive course: ' + err.message);
+  }
+}
+
+export async function activateCourse(courseId) {
+  if (!currentUser) return;
+  try {
+    const { error } = await supabase
+      .from('user_courses')
+      .update({ is_archived: false })
+      .eq('user_id', currentUser.id)
+      .eq('course_id', courseId);
+    if (error) throw error;
+    alert("Course activated! Let's start learning.");
+    closeMarketplace();
+    await fetchCourses();
+    await setActiveCourse(courseId);
+    openSidebar();
+  } catch (err) {
+    console.error('Activate failed:', err);
+    alert('Failed to activate course: ' + err.message);
+  }
+}
+
 export async function unlockCourse(courseId, isPaid) {
   if (!currentUser) {
     alert("Please sign in to unlock courses.");
@@ -227,11 +269,13 @@ export async function unlockCourse(courseId, isPaid) {
 
     if (error) throw error;
 
-    // Success!
-    Bus.emit(BUS_EVENT.COURSE_UNLOCKED, { courseId });
-
-    alert("Course unlocked! It has been added to your library.");
+    // Success! COURSE_UNLOCKED event will refresh the sidebar and select the new course.
+    // Success — directly refresh sidebar and select the course.
     closeMarketplace();
+    await fetchCourses();
+    await setActiveCourse(courseId);
+    openSidebar();
+    Bus.emit(BUS_EVENT.COURSE_DATA_CHANGED); // notify any other listeners (e.g. glossary)
 
   } catch (err) {
     console.error("Unlock failed:", err);
@@ -270,6 +314,10 @@ export function initCourseMarketplace() {
       deleteCourse(id);
     } else if (action === 'unlock-course') {
       unlockCourse(id, isPaid);
+    } else if (action === 'archive-course') {
+      archiveCourse(id);
+    } else if (action === 'activate-course') {
+      activateCourse(id);
     }
   });
 
