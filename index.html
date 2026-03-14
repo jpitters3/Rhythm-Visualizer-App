@@ -37,7 +37,7 @@
   <link rel="stylesheet" href="./css/glossary.css">
 </head>
 
-<body>
+<body id="body">
   <template id="transport-template">
     <div class="transport-group">
       <button class="t-play-btn" title="Play/Stop">►</button>
@@ -65,7 +65,7 @@
     </div>
   </template>
 
-  <div class="container">
+  <div id="gridContainer" class="container">
     <div class="grid-container top-row">
       <div class="grid-child logo">
         <img class="logo-img" src="./assets/images/groovepan-logo.png" />
@@ -241,6 +241,8 @@
             </div>
           </div>
           <button id="clearBtn-A">Clear</button>
+          <button id="zoomOutBtn" title="Zoom Out" style="display:none;">🔎 −</button>
+          <button id="zoomInBtn" title="Zoom In" style="display:none;">🔎 ＋</button>
           <button id="presentBtn" title="Toggle presentation mode (Esc exits)">⛶</button>
 
           <div id="calibrationStatus" class="calibration-overlay" style="display:none;">
@@ -312,7 +314,7 @@
 
 
       <!-- Grid -->
-      <div class="main">
+      <div id="main" class="main">
 
         <div class="left">
           <div id="measures" class="measures" aria-label="Rhythm grid"></div>

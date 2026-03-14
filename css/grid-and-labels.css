@@ -347,6 +347,8 @@
 .measures-scroller {
   /* We no longer use transform for scrolling to allow manual interaction */
   will-change: transform;
+  zoom: var(--grid-zoom, 100%);
+  width: calc(100% / (var(--grid-zoom-raw, 100) / 100));
 }
 
 /* One measure = (labels row + grid row) + a + button column */
