@@ -132,6 +132,21 @@
               <button id="songLibraryBtn" title="Browse playable songs">Song Library</button>
               <button id="importMidiBtn" title="Import MIDI file">Import MIDI</button>
               <input type="file" id="midiFileInput" accept=".mid,.midi,.kar" style="display:none;">
+
+              <!-- Export Audio (moved from side menu) -->
+              <div id="exportAudioWrapper" style="display:none;">
+                <div class="dropdown-divider"></div>
+                <button id="exportAudioBtn" title="Download current pattern as WAV"
+                  style="display: flex; align-items: center; gap: 8px;">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="7 10 12 15 17 10"></polyline>
+                    <line x1="12" y1="15" x2="12" y2="3"></line>
+                  </svg>
+                  Download Audio
+                </button>
+              </div>
             </div>
           </div>
 
@@ -453,20 +468,6 @@
             <!-- Will be populated by TransportUI -->
           </div>
 
-          <!-- AUDIO EXPORT MENU -->
-          <div id="exportAudioBtnContainer"
-            style="display:none; text-align:center; margin-top:20px; transition: opacity 0.5s ease-in-out; opacity: 0;">
-            <button id="exportAudioBtn" class="primary-btn"
-              style="width:100%; font-size: 14px; padding: 10px; display: flex; align-items: center; justify-content: center; gap: 8px;">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
-                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                <polyline points="7 10 12 15 17 10"></polyline>
-                <line x1="12" y1="15" x2="12" y2="3"></line>
-              </svg>
-              Download Audio
-            </button>
-          </div>
           <!-- PLAYBACK MENU -->
 
           <!-- Lesson Player -->

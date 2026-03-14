@@ -613,7 +613,7 @@ function initControls() {
 }
 
 export function checkExportVisibility() {
-  const container = document.getElementById('exportAudioBtnContainer');
+  const container = document.getElementById('exportAudioWrapper');
   if (!container || !activeGrid || !activeGrid.innerLabels) return;
 
   const hasNotes = activeGrid.innerLabels.some(l => {
@@ -622,16 +622,9 @@ export function checkExportVisibility() {
   });
 
   if (hasNotes) {
-    if (container.style.display === 'none') {
-      container.style.display = 'block';
-      void container.offsetWidth; // Force reflow
-    }
-    container.style.opacity = '1';
+    container.style.display = 'block';
   } else {
-    container.style.opacity = '0';
-    setTimeout(() => {
-      if (container.style.opacity === '0') container.style.display = 'none';
-    }, 500);
+    container.style.display = 'none';
   }
 }
 
