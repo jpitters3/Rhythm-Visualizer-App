@@ -35,6 +35,7 @@ import { initAdmin } from './admin.js';
 import { initRouter } from './router.js';
 import { initComposeWizard } from './compose-wizard.js';
 import { initGlossary } from './glossary.js';
+import { initGridAutoscroll } from './grid-autoscroll.js';
 
 /**
  * Main application initializer
@@ -51,6 +52,7 @@ async function init() {
     initMobileMenu();
     initMeasureActions();
     initPresentation();
+    initGridAutoscroll();
     initPOTW();
     HistoryManager.init();
     ChordUI.init();

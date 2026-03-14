@@ -4,7 +4,7 @@ import { applyPattern, serializePattern, dbSavePattern, refreshPatternSelect, ha
 import { stop } from './noteplayer.js';
 import { supabase } from './supabase-client.js';
 import { updateAdminUI } from './auth.js';
-import { isItemInPractice, togglePracticeItem } from './practice.js';
+import { isItemInPractice, togglePracticeItem, closePracticeSidebar } from './practice.js';
 import { loadCourseToEdit } from './course-creator.js';
 import { openMarketplace } from './course-marketplace.js';
 import { autoLinkText } from './glossary.js';
@@ -92,7 +92,7 @@ export async function fetchCourses() {
 
 export function renderCourseSidebar(courses) {
   const list = document.getElementById('courseList');
-  const header = document.querySelector('.sidebar-header');
+  const header = document.querySelector('#courseSidebar .sidebar-header');
   if (!list || !header) return;
 
   // 1. Setup Header Button
@@ -297,8 +297,8 @@ export function loadLesson(lessonId) {
     const player = document.getElementById('lessonPlayer');
     if (!player) return;
 
-    // Force visible
-    player.style.display = 'block';
+    // Force visible as a sidebar
+    openLessonSidebar();
 
     // Add active lesson style to lesson-link
     const lessonLink = document.querySelector(`.lesson-link[data-id="${lessonId}"]`);
@@ -536,15 +536,54 @@ export function closeSidebar() {
     sb.classList.remove('open');
     sb.setAttribute('aria-hidden', 'true');
   }
+  updateBodySidebarClass();
+}
+
+export function openLessonSidebar() {
+  closeSidebar(); // mutually exclusive
+  const panel = document.getElementById('lessonPlayer');
+  if (panel) {
+    panel.classList.add('open');
+    panel.removeAttribute('aria-hidden');
+  }
+  updateBodySidebarClass();
+}
+
+export function closeLessonSidebar() {
+  const panel = document.getElementById('lessonPlayer');
+  if (panel) {
+    panel.classList.remove('open');
+    panel.setAttribute('aria-hidden', 'true');
+  }
+  updateBodySidebarClass();
 }
 
 export function openSidebar() {
+  closeLessonSidebar(); // mutually exclusive
   const sb = document.getElementById('courseSidebar');
   if (sb && !sb.classList.contains('open')) {
     sb.classList.add('open');
     sb.removeAttribute('aria-hidden');
     if (allCourses.length === 0) fetchCourses();
   }
+  updateBodySidebarClass();
+}
+
+export function toggleSidebar() {
+  // Toggle Course Sidebar but also close other sidebars
+  const sb = document.getElementById('courseSidebar');
+  const isOpen = sb?.classList.contains('open');
+  if (isOpen) {
+    closeSidebar();
+  } else {
+    // Note: openSidebar already calls closeLessonSidebar
+    openSidebar();
+  }
+}
+
+export function updateBodySidebarClass() {
+  const anyOpen = !!document.querySelector('.sidebar.open');
+  document.body.classList.toggle('sidebar-open', anyOpen);
 }
 
 function extractYouTubeId(url) {
@@ -755,8 +794,7 @@ document.body.addEventListener('click', async (e) => {
       if (updateLid) updateLessonFromGrid(updateLid);
       break;
     case 'open-sidebar-course':
-      const sideCid = target.dataset.courseId;
-      if (sideCid) setActiveCourse(sideCid);
+      closeLessonSidebar();
       openSidebar();
       break;
     case 'toggle-practice':
@@ -802,22 +840,8 @@ const navbarToggle = document.getElementById('toggleSidebarBtn');
 if (navbarToggle) {
   navbarToggle.addEventListener('click', () => {
     // Close Practice Sidebar if open
-    const practiceSb = document.getElementById('practiceSidebar');
-    if (practiceSb && practiceSb.classList.contains('open')) {
-      practiceSb.classList.remove('open');
-      practiceSb.setAttribute('aria-hidden', 'true');
-    }
-
-    const sidebarEl = document.getElementById('courseSidebar');
-    if (sidebarEl) {
-      const isOpen = sidebarEl.classList.toggle('open');
-      if (isOpen) {
-        sidebarEl.removeAttribute('aria-hidden');
-        if (allCourses.length === 0) fetchCourses();
-      } else {
-        sidebarEl.setAttribute('aria-hidden', 'true');
-      }
-    }
+    closePracticeSidebar();
+    toggleSidebar();
   });
 }
 
@@ -843,9 +867,14 @@ if (activeLessonHeader) {
 
 const closeLessonBtn = document.getElementById('closeLessonBtn');
 if (closeLessonBtn) {
-  closeLessonBtn.addEventListener('click', () => {
-    const player = document.getElementById('lessonPlayer');
-    if (player) player.style.display = 'none';
+  closeLessonBtn.addEventListener('click', closeLessonSidebar);
+}
+
+const lessonCoursesBtn = document.getElementById('lessonCoursesBtn');
+if (lessonCoursesBtn) {
+  lessonCoursesBtn.addEventListener('click', () => {
+    closeLessonSidebar();
+    openSidebar();
   });
 }
 

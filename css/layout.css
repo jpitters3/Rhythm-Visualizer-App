@@ -1,4 +1,7 @@
 /* ===== GLOBAL LAYOUT & HEADER ===== */
+body {
+  transition: padding-left 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
 
 .footer {
   margin-top: 18px;
@@ -221,6 +224,7 @@ div.container {
   /* Full width items */
   gap: 16px;
   position: relative;
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .auth-panel::before {
@@ -288,4 +292,11 @@ body.route-dashboard .grid-child.pattern-select {
 
 body.route-dashboard .header-menu-items {
   justify-content: flex-end;
+}
+
+/* ===== SIDEBAR DOCKING (Large Screens Only) ===== */
+@media (min-width: 1201px) {
+  body.sidebar-open {
+    padding-left: 360px; /* Width of the sidebar */
+  }
 }

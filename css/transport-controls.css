@@ -1,16 +1,11 @@
-body.present #presentationControls {
-  display: flex !important;
-  /* Force show when in present mode */
-  position: fixed;
-  bottom: 3vh;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 1000;
-}
+/* =============================================
+   TRANSPORT CONTROL STYLES
+   ============================================= */
 
+/* --- Glassmorphic container base --- */
 .transport-container {
-  /* Glassmorphic Container Style */
   background: rgba(var(--panel-rgb), 0.65);
+  display: flex;
   padding: 12px 20px;
   border-radius: 999px;
   border: 1px solid rgba(255, 255, 255, 0.15);
@@ -19,25 +14,6 @@ body.present #presentationControls {
   z-index: 10;
   justify-content: center;
   justify-self: center;
-}
-
-#presentationControls {
-  display: none;
-  /* hidden by default */
-}
-
-body.present #presentationControls {
-  display: flex !important;
-  /* only visible in presentation mode */
-  position: fixed;
-  bottom: 3vh;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 1000;
-}
-
-.lesson-controls .transport-container {
-  max-width: 500px;
 }
 
 .transport-container::before {
@@ -51,4 +27,54 @@ body.present #presentationControls {
   transform: translateZ(0);
   will-change: transform;
   pointer-events: none;
+}
+
+/* --- Main transport: pinned to bottom of viewport --- */
+.controls-transport {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 500;
+  display: flex;
+  justify-content: center;
+  padding: 12px 0 18px;
+  pointer-events: none;
+}
+
+.controls-transport .transport-container {
+  pointer-events: all;
+  max-width: 600px;
+}
+
+/* Give the page content room so the bottom measure isn't hidden */
+body {
+  padding-bottom: 88px;
+}
+
+/* --- Secondary transports: hidden but kept in DOM for functionality --- */
+#lessonTransport,
+#virtualHandpanPlaybackControls {
+  visibility: hidden;
+  height: 0;
+  min-height: 0;
+  overflow: hidden;
+  padding: 0;
+  margin: 0;
+  border: none;
+  pointer-events: none;
+}
+
+/* --- Presentation controls: hidden by default, only shown in present mode --- */
+#presentationControls {
+  display: none;
+}
+
+body.present #presentationControls {
+  display: flex !important;
+  position: fixed;
+  bottom: 3vh;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1000;
 }

@@ -309,35 +309,6 @@
         </div>
       </div>
 
-      <!-- Lesson Player -->
-      <div id="lessonPlayer" style="display: none;" class="lesson-panel">
-        <div id="sectionHeader" class="section-header">
-          <h2 id="activeSectionTitle">Section Name</h2>
-        </div>
-        <div id="lessonHeader" class="lesson-header">
-          <h2 id="activeLessonTitle">Lesson Name</h2>
-        </div>
-        <div id="lessonContent" class="lesson-content">
-          <div id="lessonDescription" class="text-area" contenteditable="true"></div>
-          <div id="videoContainer" class="video-wrapper"></div>
-        </div>
-        <div id="lessonControls" class="lesson-controls">
-          <div
-            style="display:grid; grid-template-columns: 180px auto; gap:16px; align-items:center; justify-content:center; margin-bottom:16px;">
-            <button id="lessonCompleteBtn" class="secondary-btn"
-              style="white-space:nowrap; width:100%; justify-content:center;">✅ Mark as Complete</button>
-            <button id="nextLessonBtn" class="primary-btn" style="white-space:nowrap;"><span class="desktop-text">Next
-                Lesson&nbsp;</span>&rarr;</button>
-            <button id="closeLessonBtn" class="text-btn" style="color: var(--text-secondary); font-size: 0.9em;">❌
-              Exit Lesson</button>
-            <button id="prevLessonBtn" class="primary-btn"
-              style="white-space:nowrap; background-color: #f9e17f; justify-content:center;">&larr;</button>
-          </div>
-          <div id="lessonTransport" class="transport-container" data-grid="A">
-            <!-- Will be populated by TransportUI -->
-          </div>
-        </div>
-      </div>
 
       <!-- Grid -->
       <div class="main">
@@ -1054,6 +1025,39 @@
         <button id="calNowBtn" class="primary-btn active" style="width: 100%;">🎯 Calibrate Now</button>
         <button id="calSkipBtn" class="secondary-btn" style="width: 100%; border: none; opacity: 0.7;">Continue
           anyway</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Lesson Sidebar (fixed left panel, same slot as courseSidebar) -->
+  <div id="lessonPlayer" class="sidebar lesson-sidebar" aria-hidden="true">
+    <div class="sidebar-header lesson-sidebar-header">
+      <div style="display:flex; flex-direction:column; gap:4px; min-width:0; flex:1;">
+        <button id="lessonCoursesBtn" class="lesson-courses-btn">📚 Courses</button>
+        <span id="activeSectionTitle" class="lesson-breadcrumb">Section Name</span>
+      </div>
+      <button id="closeLessonBtn" class="close-btn" title="Exit Lesson">✕</button>
+    </div>
+
+    <div class="lesson-sidebar-body">
+      <div id="lessonHeader" class="lesson-header">
+        <h3 id="activeLessonTitle">Lesson Name</h2>
+      </div>
+
+      <div id="lessonContent" class="lesson-content">
+        <div id="lessonDescription" class="text-area" contenteditable="false"></div>
+        <div id="videoContainer" class="video-wrapper"></div>
+      </div>
+
+      <div id="lessonControls" class="lesson-controls">
+        <div class="lesson-nav-grid">
+          <button id="prevLessonBtn" class="primary-btn lesson-prev-btn">&larr; Previous</button>
+          <button id="lessonCompleteBtn" class="secondary-btn" style="white-space:nowrap;">✅ Mark as Complete</button>
+          <button id="nextLessonBtn" class="primary-btn lesson-next-btn">Next Lesson &rarr;</button>
+        </div>
+        <div id="lessonTransport" class="transport-container" data-grid="A">
+          <!-- Populated by TransportUI — hidden by CSS for now -->
+        </div>
       </div>
     </div>
   </div>

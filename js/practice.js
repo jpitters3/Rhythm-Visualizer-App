@@ -2,6 +2,7 @@ import { Bus, BUS_EVENT } from './bus.js';
 import { currentUser } from './state.js';
 import { supabase } from './supabase-client.js';
 import { applyPattern } from './pattern-crud.js';
+import { openLessonSidebar, updateBodySidebarClass } from './courses.js';
 
 // State
 let practiceItems = [];
@@ -24,6 +25,7 @@ export async function togglePracticeSidebar() {
     sidebar.removeAttribute('aria-hidden');
     fetchPracticeItems();
   }
+  updateBodySidebarClass();
 }
 
 export function closePracticeSidebar() {
@@ -31,6 +33,7 @@ export function closePracticeSidebar() {
     sidebar.classList.remove('open');
     sidebar.setAttribute('aria-hidden', 'true');
   }
+  updateBodySidebarClass();
 }
 
 // Bindings
@@ -300,12 +303,11 @@ async function loadPracticeItem(type, id) {
     if (data && data.pattern_json) {
       applyPattern(data.pattern_json);
 
-      // Show in player panel (Legacy DOM manipulation, maybe move to controls/UI module?)
+      // Show in player panel
       const titleEl = document.getElementById('activeLessonTitle');
       if (titleEl) titleEl.textContent = "Practice: " + data.name;
 
-      const player = document.getElementById('lessonPlayer');
-      if (player) player.style.display = 'block';
+      openLessonSidebar();
 
       const desc = document.getElementById('lessonDescription');
       if (desc) desc.textContent = "Practicing Community Pattern";
