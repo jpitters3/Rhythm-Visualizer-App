@@ -2,7 +2,7 @@ import { Bus, BUS_EVENT } from './bus.js';
 import { currentUser } from './state.js';
 import { supabase } from './supabase-client.js';
 import { applyPattern } from './pattern-crud.js';
-import { openLessonSidebar, updateBodySidebarClass } from './courses.js';
+import { openLessonSidebar, updateBodySidebarClass, closeSidebar } from './courses.js';
 
 // State
 let practiceItems = [];
@@ -14,18 +14,17 @@ const container = document.getElementById('practiceList');
 export async function togglePracticeSidebar() {
   const isOpen = sidebar.classList.contains('open');
 
-  // Close other sidebar if open
-  const courseSb = document.getElementById('courseSidebar');
-  if (courseSb) courseSb.classList.remove('open');
-
   if (isOpen) {
-    closePracticeSidebar();
+    closeSidebar({ reason: 'practice-close', source: 'practice' });
   } else {
+    // Close other sidebars first
+    closeSidebar({ reason: 'practice-open', source: 'practice' });
+    
     sidebar.classList.add('open');
     sidebar.removeAttribute('aria-hidden');
     fetchPracticeItems();
+    updateBodySidebarClass();
   }
-  updateBodySidebarClass();
 }
 
 export function closePracticeSidebar() {

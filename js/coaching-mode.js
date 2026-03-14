@@ -118,20 +118,34 @@ export function enterCoachingMode(ctx = activeGrid) {
 
 export function openCoachingSidebar() {
   // Mutual exclusivity: Close other sidebars
-  closeSidebar();
+  closeSidebar({ reason: 'coaching', source: 'coaching' });
 
   if (!coachingSidebar) {
     coachingSidebar = document.getElementById('coachingSidebar');
     const closeBtn = document.getElementById('closeCoachingSidebar');
     if (closeBtn) closeBtn.onclick = exitCoachingMode;
   }
-  
+
   if (coachingSidebar) {
     coachingSidebar.classList.add('open');
     coachingSidebar.setAttribute('aria-hidden', 'false');
   }
   updateBodySidebarClass();
 }
+
+// Global listener for sidebar closure (Mutual Exclusivity)
+Bus.on(BUS_EVENT.SIDEBAR_CLOSE_ALL, (e) => {
+  const { reason } = e.detail || {};
+  // If some OTHER sidebar is opening, or a general close-all triggered,
+  // we exit coaching mode entirely.
+  // We WHITELIST 'coaching' (HUD) and 'coaching-results' (Results Sidebar)
+  const isCoachingReason = reason === 'coaching' || reason === 'coaching-results';
+  
+  if (!isCoachingReason && isCoachingUIOpen) {
+    console.log(`Coaching Mode: Exiting due to ${reason}`);
+    exitCoachingMode();
+  }
+});
 
 /**
  * Close Coaching Sidebar specifically
@@ -758,7 +772,7 @@ function generateCoachingTips() {
  * Open Coach Results Sidebar
  */
 export function openCoachResultsSidebar() {
-  closeSidebar(); // Mutual exclusivity with other sidebars
+  closeSidebar({ reason: 'coaching-results', source: 'coaching' }); // Mutual exclusivity with other sidebars
 
   if (!coachResultsSidebar) {
     coachResultsSidebar = document.getElementById('coachResultsSidebar');
@@ -971,7 +985,7 @@ function dismissResults() {
   if (resultsModal) {
     resultsModal.classList.remove('open');
     resultsModal.setAttribute('aria-hidden', 'true');
-    
+
     setTimeout(() => {
       if (!resultsModal.classList.contains('open')) {
         resultsModal.style.display = 'none';

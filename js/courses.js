@@ -530,20 +530,27 @@ export async function editCourse(courseId) {
   if (window.innerWidth < 768) closeSidebar();
 }
 
-export function closeSidebar() {
+export function closeSidebar(options = {}) {
   const sidebars = document.querySelectorAll('.sidebar');
   sidebars.forEach(sb => {
     // Don't close the results modal if it's minimized as a sidebar
     if (sb.id === 'coachingResultsModal' || sb.closest('#coachingResultsModal')) return;
-    
+
     sb.classList.remove('open');
     sb.setAttribute('aria-hidden', 'true');
   });
+
+  // Emit event so other systems (like Coaching Mode) can respond
+  Bus.emit(BUS_EVENT.SIDEBAR_CLOSE_ALL, {
+    reason: options.reason || 'generic',
+    source: options.source || 'courses'
+  });
+
   updateBodySidebarClass();
 }
 
 export function openLessonSidebar() {
-  closeSidebar(); // mutually exclusive
+  closeSidebar({ reason: 'lesson-player', source: 'courses' }); // mutually exclusive
   const panel = document.getElementById('lessonPlayer');
   if (panel) {
     panel.classList.add('open');
@@ -562,7 +569,7 @@ export function closeLessonSidebar() {
 }
 
 export function openSidebar() {
-  closeLessonSidebar(); // mutually exclusive
+  closeSidebar({ reason: 'course-list', source: 'courses' }); // mutually exclusive
   const sb = document.getElementById('courseSidebar');
   if (sb && !sb.classList.contains('open')) {
     sb.classList.add('open');
@@ -579,7 +586,7 @@ export function toggleSidebar() {
   if (isOpen) {
     closeSidebar();
   } else {
-    // Note: openSidebar already calls closeLessonSidebar
+    // Note: openSidebar already calls closeSidebar
     openSidebar();
   }
 }
