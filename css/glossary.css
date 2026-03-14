@@ -11,7 +11,7 @@
   background: rgba(0, 0, 0, 0.6);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
-  z-index: 9999;
+  z-index: 10000;
   justify-content: center;
   align-items: center;
   transition: all 0.3s ease;

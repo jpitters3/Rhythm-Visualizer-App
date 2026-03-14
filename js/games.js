@@ -60,7 +60,13 @@ export function initGames() {
   // Button Listeners
   const gamesModeBtn = document.getElementById('gamesModeBtn');
   if (gamesModeBtn) {
-    gamesModeBtn.onclick = openGameSelection;
+    gamesModeBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      // Close dropdown
+      const menu = document.getElementById('accountDropdownMenu');
+      if (menu) menu.classList.remove('show');
+      openGameSelection();
+    });
   }
 
   const closeBtn = document.getElementById('closeGameSelectionBtn');
@@ -95,11 +101,13 @@ export function initGames() {
 function openGameSelection() {
   if (gameSelectionModal) {
     gameSelectionModal.style.display = 'flex';
+    gameSelectionModal.classList.add('open');
   }
 }
 
 function closeGameSelection() {
   if (gameSelectionModal) {
+    gameSelectionModal.classList.remove('open');
     gameSelectionModal.style.display = 'none';
   }
 }

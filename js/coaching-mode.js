@@ -1200,7 +1200,11 @@ export function initCoachingMode() {
   console.log('Coaching Mode: Initializing UI listeners');
   // Coach Mode button
   const coachModeBtn = document.getElementById('coachModeBtn');
-  coachModeBtn?.addEventListener('click', () => {
+  coachModeBtn?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    // Close dropdown
+    const menu = document.getElementById('accountDropdownMenu');
+    if (menu) menu.classList.remove('show');
     enterCoachingMode(activeGrid);
   });
 
