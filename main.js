@@ -8,6 +8,7 @@ import './css/legend.css';
 import './css/dual-grid.css';
 import './css/groove-modal.css';
 import './css/song-library.css';
+import './css/transport-controls.css';
 import './css/presentation-mode.css';
 import './css/handpanmap.css';
 import './css/handpan-overlays.css';
@@ -29,7 +30,6 @@ import './css/games.css';
 import './css/calibration.css';
 import './css/compose-wizard.css';
 import './css/glossary.css';
-import './css/transport-controls.css';
 
 // Import JS (Ordered Dependencies)
 // Using raw imports for side-effect scripts that populate 'window'

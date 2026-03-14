@@ -893,3 +893,8 @@ body.present .transport-container:not(#presentationControls) {
   /* Sandy bottom */
   pointer-events: none;
 }
+
+
+body.present div#exportAudioBtnContainer {
+  display: none;
+}

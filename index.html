@@ -640,7 +640,7 @@
   <button id="exitPresent" class="present-exit" title="Exit presentation mode (Esc)">Exit</button>
 
   <!-- PRESENTATION MODE PLAYBACK MENU -->
-  <div id="presentationControls" class="transport-container" data-grid="A">
+  <div id="presentationControls" class="transport-container" data-grid="A" style="display:none">
     <!-- Mode Selector -->
     <div class="presentation-mode-select">
       <label for="presentModeSelect">View:</label>
@@ -854,17 +854,22 @@
         <button id="closeCourseCopierModal" class="close-btn">&times;</button>
       </div>
 
-      <div class="copier-status-bar" id="copierStatusBar" style="display:none; margin: 0 0 12px 0; padding: 8px 14px; border-radius: 6px; background: rgba(46,204,113,0.12); border: 1px solid rgba(46,204,113,0.3); color: #2ecc71; font-size: 13px;"></div>
+      <div class="copier-status-bar" id="copierStatusBar"
+        style="display:none; margin: 0 0 12px 0; padding: 8px 14px; border-radius: 6px; background: rgba(46,204,113,0.12); border: 1px solid rgba(46,204,113,0.3); color: #2ecc71; font-size: 13px;">
+      </div>
 
       <div style="display:flex; gap:16px; overflow:hidden; flex:1; min-height:0;">
         <!-- LEFT COLUMN (source) -->
         <div class="copier-col" id="copierColLeft">
           <div class="copier-col-header">
-            <label style="font-size:12px; color:var(--text-secondary); display:block; margin-bottom:6px;">SOURCE COURSE</label>
-            <input id="copierSearch" type="text" placeholder="Search courses, sections, lessons…" class="copier-search-input" style="margin-bottom:8px;">
+            <label style="font-size:12px; color:var(--text-secondary); display:block; margin-bottom:6px;">SOURCE
+              COURSE</label>
+            <input id="copierSearch" type="text" placeholder="Search courses, sections, lessons…"
+              class="copier-search-input" style="margin-bottom:8px;">
             <div id="copierSearchResults" class="copier-search-results" style="display:none;"></div>
             <select id="copierSelectLeft" class="copier-course-select"></select>
-            <button id="copierEditLeft" class="secondary-btn" style="margin-top:8px; width:100%;">✏️ Edit Course</button>
+            <button id="copierEditLeft" class="secondary-btn" style="margin-top:8px; width:100%;">✏️ Edit
+              Course</button>
           </div>
           <div class="copier-col-body" id="copierSectionsLeft">
             <p style="opacity:0.5; font-size:13px; padding:10px;">Select a course above.</p>
@@ -872,14 +877,18 @@
         </div>
 
         <!-- Divider -->
-        <div style="display:flex; align-items:center; font-size:24px; color:var(--text-secondary); user-select:none; flex-shrink:0;">→</div>
+        <div
+          style="display:flex; align-items:center; font-size:24px; color:var(--text-secondary); user-select:none; flex-shrink:0;">
+          →</div>
 
         <!-- RIGHT COLUMN (destination) -->
         <div class="copier-col" id="copierColRight">
           <div class="copier-col-header">
-            <label style="font-size:12px; color:var(--text-secondary); display:block; margin-bottom:6px;">DESTINATION COURSE</label>
+            <label style="font-size:12px; color:var(--text-secondary); display:block; margin-bottom:6px;">DESTINATION
+              COURSE</label>
             <select id="copierSelectRight" class="copier-course-select"></select>
-            <button id="copierEditRight" class="secondary-btn" style="margin-top:8px; width:100%;">✏️ Edit Course</button>
+            <button id="copierEditRight" class="secondary-btn" style="margin-top:8px; width:100%;">✏️ Edit
+              Course</button>
           </div>
           <div class="copier-col-body" id="copierSectionsRight">
             <p style="opacity:0.5; font-size:13px; padding:10px;">Select a course above.</p>
@@ -888,7 +897,8 @@
       </div>
 
       <div class="modal-footer" style="margin-top:16px;">
-        <span id="copierSaveStatus" class="status-msg" style="margin-right:auto; color:#2ecc71; font-weight:bold; opacity:0; transition:opacity 0.3s; pointer-events:none;">Saved!</span>
+        <span id="copierSaveStatus" class="status-msg"
+          style="margin-right:auto; color:#2ecc71; font-weight:bold; opacity:0; transition:opacity 0.3s; pointer-events:none;">Saved!</span>
         <button id="copierSaveBtn" class="secondary-btn">Save</button>
         <button id="copierSaveCloseBtn" class="primary-btn">Save &amp; Close</button>
       </div>
