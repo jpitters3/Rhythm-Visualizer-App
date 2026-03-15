@@ -23,14 +23,9 @@ class AiAssistant {
   }
 
   async init() {
-    // Try to fetch key immediately if user is already logged in?
-    // We can also retry when they open the chat.
-    await this.fetchApiKeyFromDB();
-
     // Toggle Chat
     this.cursor?.addEventListener('click', () => {
       this.toggleChat();
-      if (!this.dbKey) this.fetchApiKeyFromDB(); // Retry on open
     });
 
     // Send Message
@@ -45,60 +40,9 @@ class AiAssistant {
     // Initial Welcome
     setTimeout(() => {
       if (this.messagesArea && this.messagesArea.children.length === 0) {
-        this.checkApiKeyAndWelcome();
+        this.addMessage("bot", "Hi! I'm your composition assistant. Tell me what kind of section you want (e.g., 'happy', 'melancholic', 'fast').");
       }
     }, 500);
-  }
-
-  async fetchApiKeyFromDB() {
-    if (this.dbKey) return; // already have it
-
-    // Check if Supabase client exists
-    if (typeof supabase === 'undefined') {
-      console.warn("Supabase client not validation yet.");
-      return;
-    }
-
-    // We can only read if authenticated (per our RLS policy)
-    // But currentUser might be null on page load.
-    // We'll try anyway; if RLS fails (null data), we handle it.
-    try {
-      const { data, error } = await supabase
-        .from('app_config')
-        .select('value')
-        .eq('key', 'gemini_api_key')
-        .maybeSingle();
-
-      if (error) {
-        console.warn("Error fetching AI key:", error.message);
-        return;
-      }
-
-      if (data && data.value) {
-        this.dbKey = data.value;
-        console.log("AI Assistant: API Key loaded from DB");
-        // If we were waiting for a key, update UI
-        // if (this.waitingForKey) {
-        //   this.waitingForKey = false;
-        //   this.addMessage("bot", "I've connected to the cloud! How can I help you?");
-        // }
-      }
-    } catch (err) {
-      console.warn("Exception fetching AI key:", err);
-    }
-  }
-
-  checkApiKeyAndWelcome() {
-    // Priority: DB Key -> Local Storage -> Manual Input
-    const key = this.dbKey || localStorage.getItem('gemini_api_key');
-
-    if (!key) {
-      this.addMessage("bot", "Hi! I'm your rhythm assistant. To get started, please sign in so I can access the cloud.");
-      this.waitingForKey = true;
-    } else {
-      this.addMessage("bot", "Hi! I'm your rhythm assistant. Tell me what kind of section you want (e.g., 'happy', 'melancholic', 'fast').");
-      this.waitingForKey = false;
-    }
   }
 
   toggleChat(forceState) {
@@ -163,21 +107,8 @@ class AiAssistant {
     if (!text) return;
 
     // UI: User Message
-    // Mask API key in UI if it looks like one (simple check)
-    if (this.waitingForKey && text.length > 20) {
-      this.addMessage('user', "••••••••••••••••••••");
-    } else {
-      this.addMessage('user', text);
-    }
-
+    this.addMessage('user', text);
     this.input.value = '';
-
-    if (this.waitingForKey) {
-      localStorage.setItem('gemini_api_key', text);
-      this.waitingForKey = false;
-      this.addMessage('bot', "API Key saved! How can I help you with your composition?");
-      return;
-    }
 
     this.processAiResponse(text);
   }
@@ -212,24 +143,6 @@ class AiAssistant {
     this.messagesArea.scrollTop = this.messagesArea.scrollHeight;
 
     try {
-      // 1. Get Key
-      const apiKey = this.dbKey || localStorage.getItem('gemini_api_key');
-
-      if (!apiKey) {
-        this.messagesArea.removeChild(loadingMsg);
-
-        // If not logged in, maybe prompt
-        if (!currentUser) {
-          this.addMessage('bot', "Please sign in to use the Cloud Assistant.");
-        } else {
-          this.addMessage('bot', "I couldn't find the configuration. Please check your network or contact admin.");
-          this.waitingForKey = true; // Fallback to asking
-        }
-
-        this.isProcessing = false;
-        return;
-      }
-
       // 1. Gather Context
       const scaleSelect = document.getElementById('scaleSelect');
       const scaleName = scaleSelect ? scaleSelect.value : "D Kurd";
@@ -271,76 +184,34 @@ Task: Generate a creative, musical pattern matching the request.
 Output ONLY valid JSON. No markdown formatting.
 `;
 
-      // 3. Call Gemini with Fallback
-      // 3. Call Gemini with Robust Fallback
-      // We try different models and API versions to find one that works.
-      const candidates = [
-        { model: 'gemini-2.5-flash', version: 'v1beta' },
-        { model: 'gemini-2.5-flash-latest', version: 'v1beta' },
-        { model: 'gemini-pro', version: 'v1' }, // Stable v1 often works best for older keys
-        { model: 'gemini-2.5-pro', version: 'v1beta' },
-        { model: 'gemini-2.5-flash-8b', version: 'v1beta' }
-      ];
-
-      let data = null;
-      let usedModel = '';
-
-      for (const candidate of candidates) {
-        const { model, version } = candidate;
-        try {
-          const url = `https://generativelanguage.googleapis.com/${version}/models/${model}:generateContent?key=${apiKey}`;
-
-          const response = await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              contents: [{ parts: [{ text: systemPrompt }] }]
-            })
-          });
-
-          const result = await response.json();
-
-          if (result.error) {
-            console.warn(`[AI] ${model} failed:`, result.error.message);
-
-            // If it's a "Not Found" or "Not Supported", we simply continue to the next candidate
-            const msg = result.error.message.toLowerCase();
-            if (result.error.code === 404 || msg.includes('not found') || msg.includes('not supported')) {
-              continue;
-            }
-            // If it's a permission/key error, we should probably stop and let the outer catch handle it, 
-            // BUT we re-throw to let the catch block decide.
-            throw result.error;
-          }
-
-          data = result;
-          usedModel = model;
-          break; // Success!
-
-        } catch (e) {
-          // Check if it's a critical auth error
-          if (e.code === 401 || e.code === 403 || e.status === 'PERMISSION_DENIED' || e.status === 'INVALID_ARGUMENT') {
-            // If "not found" was buried in a 400, strictly continue, otherwise throw
-            const msg = (e.message || '').toLowerCase();
-            if (!msg.includes('not found')) throw e;
-          }
-          console.warn(`[AI] Network/Other error for ${model}`, e);
-        }
-      }
+      // 3. Call Supabase Edge Function
+      const { data, error } = await supabase.functions.invoke('ai-assistant', {
+        body: { systemPrompt }
+      });
 
       this.messagesArea.removeChild(loadingMsg);
       this.isProcessing = false;
 
-      if (!data) {
-        this.addMessage('bot', "I couldn't connect to any AI model. Please check your internet or API Key permissions.");
+      if (error) {
+        console.error("Edge Function Error Details:", error);
+        let detailedMsg = error.message || "Unknown error";
+
+        // If it's a FunctionsHttpError, we can try to see if there's more info
+        if (error.context && typeof error.context.json === 'function') {
+          try {
+            const body = await error.context.json();
+            detailedMsg += `: ${JSON.stringify(body)}`;
+          } catch (e) { }
+        }
+
+        this.addMessage('bot', `Backend Error: ${detailedMsg}`);
         return;
       }
 
-      if (data.error) {
-        // Should be caught above, but just in case of logic slip
-        throw data.error;
+      if (!data) {
+        this.addMessage('bot', "No response from AI. Please try again.");
+        return;
       }
-
 
       const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text;
       if (!rawText) {
@@ -370,14 +241,7 @@ Output ONLY valid JSON. No markdown formatting.
       console.error(err);
       if (loadingMsg.parentNode) loadingMsg.parentNode.removeChild(loadingMsg);
       this.isProcessing = false;
-
-      if (err.code === 401 || err.status === 'INVALID_ARGUMENT') {
-        this.addMessage('bot', "The API Key seems invalid. Please paste it again.");
-        localStorage.removeItem('gemini_api_key');
-        this.waitingForKey = true;
-      } else {
-        this.addMessage('bot', `Error: ${err.message || 'Network error'}`);
-      }
+      this.addMessage('bot', `System Error: ${err.message || 'Network error'}`);
     }
   }
 
