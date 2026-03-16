@@ -33,12 +33,24 @@ export function measureRange(mIndex, ctx) {
 
 // ===== Add measure ===== //
 
-export function appendEmptyMeasure(ctx) {
+export function appendEmptyMeasure(ctx, skipHistory = false) {
   const c = ctx || activeGrid;
   const s = c.stepsPerMeasure;
+
+  if (!skipHistory && HistoryManager) HistoryManager.pushState();
+
   if (Array.isArray(c.innerLabels)) c.innerLabels.push(...Array(s).fill(''));
   if (Array.isArray(c.innerHands)) c.innerHands.push(...Array(s).fill(null));
   renderAllMeasures(c);
+
+  // Scroll to bottom so the user sees the new measure
+  const container = c.container;
+  if (container) {
+    container.scrollTo({
+      top: container.scrollHeight,
+      behavior: 'smooth'
+    });
+  }
 }
 
 // ===== Delete measure =====
@@ -48,6 +60,7 @@ export function deleteMeasure(mIndex, ctx) {
   const s = c.stepsPerMeasure;
   const totalMeasures = c.measures;
 
+
   if (totalMeasures <= 1) {
     alert('You must have at least 1 measure.');
     return;
@@ -55,6 +68,8 @@ export function deleteMeasure(mIndex, ctx) {
 
   const ok = confirm(`Delete measure ${mIndex + 1}?`);
   if (!ok) return;
+
+  if (HistoryManager) HistoryManager.pushState();
 
   const { start } = measureRange(mIndex, c);
   if (Array.isArray(c.innerLabels)) c.innerLabels.splice(start, s);
@@ -88,7 +103,7 @@ export function duplicateSelection(ctx) {
 
   // Append new measures to fit duplication
   for (let i = 0; i < measuresNeeded; i++) {
-    appendEmptyMeasure(c);
+    appendEmptyMeasure(c, true); // true = skip redundant history push
   }
 
   const oldTotalSteps = c.innerLabels.length - (measuresNeeded * s);
@@ -115,6 +130,8 @@ export function deleteMeasuresRange(startM, endM, ctx) {
   const countToDelete = (endM - startM + 1);
 
   if (!confirm(`Delete ${countToDelete} selected measure(s)?`)) return;
+
+  if (HistoryManager) HistoryManager.pushState();
 
   if (Array.isArray(c.innerLabels)) {
     c.innerLabels.splice(startM * s, countToDelete * s);

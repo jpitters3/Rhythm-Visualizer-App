@@ -38,13 +38,14 @@
   z-index: 500;
   display: flex;
   justify-content: center;
-  padding: 12px 0 18px;
   pointer-events: none;
-  transition: bottom 0.3s ease; /* Smooth move up */
+  transition: bottom 0.3s ease;
+  /* Smooth move up */
 }
 
 body.has-selection .controls-transport {
-  bottom: 60px; /* Move up when selection tools expand */
+  bottom: 60px;
+  /* Move up when selection tools expand */
 }
 
 .controls-transport .transport-container {
@@ -83,6 +84,7 @@ body.present #presentationControls {
   transform: translateX(-50%);
   z-index: 1000;
 }
+
 /* --- Metronome Sound States --- */
 .t-metro-btn.metro-beeps {
   background-color: #ffd166 !important;
