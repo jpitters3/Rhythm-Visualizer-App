@@ -31,26 +31,63 @@ serve(async (req) => {
       )
     }
 
-    // Call Gemini API
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
-    console.log("Supabase Function: Calling Gemini API...");
+    // Candidate models as requested by user
+    const candidates = [
+      { model: 'gemini-2.5-flash', version: 'v1beta' },
+      { model: 'gemini-2.5-flash-latest', version: 'v1beta' },
+      { model: 'gemini-pro', version: 'v1' },
+      { model: 'gemini-2.5-pro', version: 'v1beta' },
+      { model: 'gemini-2.5-flash-8b', version: 'v1beta' }
+    ];
 
-    const geminiResponse = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: systemPrompt }] }]
-      })
-    });
+    let lastError = null;
+    let result = null;
+    let finalStatus = 200;
 
-    const result = await geminiResponse.json();
-    console.log("Supabase Function: Gemini Response Status:", geminiResponse.status);
+    for (const cand of candidates) {
+      const url = `https://generativelanguage.googleapis.com/${cand.version}/models/${cand.model}:generateContent?key=${apiKey}`;
+      console.log(`Supabase Function: Trying model ${cand.model} (${cand.version})...`);
 
-    if (result.error) {
-      console.error("Supabase Function: Gemini Error:", result.error);
+      try {
+        const geminiResponse = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: systemPrompt }] }]
+          })
+        });
+
+        const data = await geminiResponse.json();
+        finalStatus = geminiResponse.status;
+
+        if (geminiResponse.ok && !data.error) {
+          console.log(`Supabase Function: Success with ${cand.model}`);
+          result = data;
+          break; // Success!
+        } else {
+          lastError = data.error || { message: 'Unknown error' };
+          console.warn(`Supabase Function: Model ${cand.model} failed with ${finalStatus}:`, lastError.message);
+          
+          // If it's something other than quota (429) or not found (404), maybe we should stop?
+          // Actually, let's keep trying other models regardless of the error type to be safe.
+          continue; 
+        }
+      } catch (err: any) {
+        console.error(`Supabase Function: Fetch error for ${cand.model}:`, err.message);
+        lastError = { message: err.message };
+        continue;
+      }
+    }
+
+    if (!result) {
+      console.error("Supabase Function: All models failed. Last error:", lastError);
       return new Response(
-        JSON.stringify({ error: result.error.message || 'Gemini API Error', details: result.error }),
-        { status: geminiResponse.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ 
+          error: lastError?.message || 'All Gemini models failed', 
+          details: lastError,
+          triedModels: candidates.map(c => c.model)
+        }),
+        { status: finalStatus || 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 

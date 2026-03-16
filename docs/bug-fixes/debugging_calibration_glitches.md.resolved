@@ -1,0 +1,71 @@
+# Case Study: Debugging Calibration Mode Glitches
+
+This document summarizes the technical issues encountered while implementing the Handpan Calibration feature, specifically focusing on drag-and-drop instability ("glitching") and visual rendering artifacts.
+
+## 1. The Dragging Glitch
+
+### Symptoms
+When dragging a tonefield:
+- The element would "stuck" or stop following the mouse if moved too quickly.
+- The cursor would sometimes change to a text-selection cursor.
+- The drag operation would unexpectedly end or lose focus.
+
+### Root Cause
+1.  **Event Loss**: Using `mousemove` attached to the element only works if the cursor stays *inside* the element. If the mouse moves faster than the browser can repaint (or if the element lags), the cursor exits the element, and the `mousemove` event stops firing.
+2.  **Native Interference**: Browsers have built-in behaviors for `mousedown`. If you click and drag, the browser often tries to:
+    - Select text.
+    - Drag the element as an image/link (ghost image).
+    This native behavior conflicts with our JavaScript logic, causing the "glitchy" feeling.
+3.  **Pointer Capture Failure**: We initially tried `setPointerCapture`, but in complex DOM structures or specific browser implementations, capture can be implicitly released or fail to engage correctly, leading to the same "lost drag" issue.
+
+### The Fix
+We implemented a **Global Pointer Tracking** strategy:
+
+1.  **Document-Level Listeners**:
+    Instead of listening for `mousemove` on the element, we attach `pointermove` and `pointerup` listeners to the `document` (or `window`) once dragging starts.
+    *   *Why?* Events bubble up. Even if your mouse is outside the browser window, the `document` still receives the move events for an active drag. This makes it impossible to "lose" the element.
+
+2.  **Pointer Events API**:
+    Switched from `MouseEvent` (`mousedown`) to `PointerEvent` (`pointerdown`). Pointer events unify mouse, touch, and pen interactions and offer better control.
+
+3.  **CSS Locking**:
+    We added CSS rules to explicitly disable native interference:
+    ```css
+    .tonefield {
+        touch-action: none; /* Disables browser scrolling/zooming on touch */
+        user-select: none;  /* Disables text selection */
+        -webkit-user-select: none;
+    }
+    ```
+
+## 2. The Rendering Glitch
+
+### Symptoms
+- "Ghost" elements from the background (like the main app's handpan) would bleed through the black overlay.
+- Flashing or flickering when dragging elements.
+- A duplicate "header" appeared in some frames.
+
+### Root Cause
+1.  **Stacking Context Conflicts**: We used `isolation: isolate` to try and create a new stacking context. On some GPU/Browser combinations, this property (combined with `position: fixed` and high `z-index`) caused compositing errors, leading to background layers confusing the renderer.
+2.  **Repaint Performance**: Dragging an element changes its `left` and [top](file:///Users/mac/Documents/GitHub/Rhythm%20Visualizer/js/noteplayer.js#527-551) properties every frame. This triggers a "Layout" and "Paint" calculation for the entire section, which can be slow and cause visual stuttering.
+
+### The Fix
+1.  **Hardware Acceleration (The "Hack")**:
+    We force the browser to promote the overlay and tonefields to their own GPU layers using a null 3D transform:
+    ```css
+    .cal-overlay, .tonefield {
+        transform: translateZ(0);
+        will-change: transform; /* Hint to browser to optimize */
+    }
+    ```
+    *   *Why?* `translateZ(0)` triggers a 3D context, which typically moves rendering to the GPU. This separates it cleanly from the background DOM, fixing the bleed-through.
+
+2.  **Removed Isolation**:
+    We removed `isolation: isolate` as it was the source of the compositing conflict. Standard `z-index` stacking was sufficient once the GPU layer was forced.
+
+## Summary Checklist for Future Drag-and-Drop
+When building custom drag interactions, always ensure:
+- [ ] **Global Listener**: Attach `move/up` events to `window` or `document`, not the element.
+- [ ] **Prevent Default**: Call `e.preventDefault()` on `pointerdown` to stop native text selection.
+- [ ] **CSS Locks**: Apply `user-select: none` and `touch-action: none`.
+- [ ] **Hardware Accel**: Use `transform: translateZ(0)` or `will-change` if you see flickering/tearing.
