@@ -27,48 +27,85 @@ export function initGridAutoscroll() {
     if (!measuresEl) return;
 
     const rows = measuresEl.getElementsByClassName('measure-row');
-    if (!rows || rows.length === 0) {
-      fixedSlotTop = -1;
-      return;
-    }
-
-    // Capture the "fixed slot" position (Top of Measure 3) once
-    if (fixedSlotTop < 0 && rows.length >= 3) {
-      fixedSlotTop = rows[2].offsetTop;
-    }
+    if (!rows || rows.length === 0) return;
 
     const stepsPerMeasure = ctx.stepsPerMeasure;
     if (stepsPerMeasure <= 0) return;
 
-    const currentMeasureIndex = Math.floor(ctx.step / stepsPerMeasure);
+    const currentStep = ctx.step;
+    const currentMeasureIndex = Math.floor(currentStep / stepsPerMeasure);
 
-    // Only attempt scroll if we moved to a new measure to avoid fighting manual scroll
+    // --- LIGHTWEIGHT CHECKS (Every Beat) ---
+
+    // 1. Instant Loop Hack
+    // We only need to check this if we haven't already scrolled to top for this loop
+    const lastActiveIndex = (() => {
+      // Small optimization: cache this calculation for the current pattern
+      if (ctx._lastActiveIndex !== undefined && ctx._lastLabelsLength === ctx.innerLabels.length) {
+        return ctx._lastActiveIndex;
+      }
+      let found = -1;
+      for (let i = ctx.innerLabels.length - 1; i >= 0; i--) {
+        const lbl = ctx.innerLabels[i];
+        if (Array.isArray(lbl)) {
+          if (lbl.some(l => l && l !== '')) { found = i; break; }
+        } else if (lbl && lbl !== '') {
+          found = i; break;
+        }
+      }
+      ctx._lastActiveIndex = found;
+      ctx._lastLabelsLength = ctx.innerLabels.length;
+      return found;
+    })();
+
+    if (currentStep > lastActiveIndex && lastActiveIndex >= 0) {
+      if (lastScrolledMeasure !== -2) { // Use -2 as a special state for "scrolled mid-measure"
+        measuresEl.scrollTo({ top: 0, behavior: 'smooth' });
+        lastScrolledMeasure = -2;
+      }
+      return;
+    }
+
+    // 2. Standard Loop-Back detection
+    if (currentMeasureIndex === 0 && lastScrolledMeasure > 0) {
+      measuresEl.scrollTo({ top: 0, behavior: 'instant' });
+      lastScrolledMeasure = 0;
+      return;
+    }
+
+    // --- PERFORMANCE GUARD (Once Per Measure) ---
+    // Heavily intensive layout/visibility logic only runs when measure changes
     if (currentMeasureIndex === lastScrolledMeasure) return;
-    lastScrolledMeasure = currentMeasureIndex;
 
-    // Logic: Scroll in 2-measure chunks.
-    // measures 1-4 (index 0-3) stay at top (targetScroll = 0).
-    // measures 5-6 (index 4-5) scroll up to start at slot 3.
-    // etc.
-    
-    let targetScroll = 0;
-    if (currentMeasureIndex >= 4) {
-      // Find the start of the current 2-measure chunk (4, 6, 8, etc.)
-      const chunkStart = currentMeasureIndex - (currentMeasureIndex % 2);
-      const chunkRow = rows[chunkStart];
-      
-      if (chunkRow && fixedSlotTop >= 0) {
-        targetScroll = chunkRow.offsetTop - fixedSlotTop;
+    // Visibility-aware look-ahead logic
+    const scrollTop = measuresEl.scrollTop;
+    const scrollHeight = measuresEl.clientHeight;
+    const scrollBottom = scrollTop + scrollHeight;
+
+    // Helper to find visible range
+    let lastFullyVisibleIndex = -1;
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      const rowTop = row.offsetTop;
+      const rowBottom = rowTop + row.offsetHeight;
+
+      if (rowTop >= scrollTop && rowBottom <= scrollBottom) {
+        lastFullyVisibleIndex = i;
       }
     }
 
-    // Apply scroll via native scrollTo.
-    if (measuresEl.scrollTop !== targetScroll) {
-      measuresEl.scrollTo({
-        top: targetScroll,
-        behavior: 'smooth'
-      });
+    // Trigger proactive scroll
+    if (currentMeasureIndex >= lastFullyVisibleIndex) {
+      const targetRow = rows[currentMeasureIndex];
+      if (targetRow) {
+        const targetScroll = targetRow.offsetTop;
+        if (measuresEl.scrollTop !== targetScroll) {
+          measuresEl.scrollTo({ top: targetScroll, behavior: 'smooth' });
+        }
+      }
     }
+    
+    lastScrolledMeasure = currentMeasureIndex;
   });
 }
 
@@ -77,7 +114,7 @@ export function initGridAutoscroll() {
  */
 function updateScrollFades(el) {
   if (!el) return;
-  
+
   const scrollTop = el.scrollTop;
   const scrollHeight = el.scrollHeight;
   const clientHeight = el.clientHeight;
