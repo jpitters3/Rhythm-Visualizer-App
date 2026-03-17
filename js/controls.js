@@ -1,7 +1,7 @@
 // ==== EVENTS FOR BUTTONS / CONTROLS ====
 import { gridA, gridB, activeGrid } from './grid-context.js';
 import { isAuthed, openAuthModal } from './auth.js';
-import { start, stop, ensureAudio, unlockAudio, setMode, addTickObserver } from './noteplayer.js';
+import { start, stop, setMode, addTickObserver } from './noteplayer.js';
 import { renderAllMeasures, invertRange, invertFollowing, setDualGrid, clearGrid, resetGridToDefault } from './notegrid.js';
 import { TransportRegistry, TransportUI } from './transport-ui.js';
 import {
@@ -81,8 +81,10 @@ function setupGridControls(ctx) {
     });
   }
 
-  document.getElementById(`clearBtn-${ctx.id}`)?.addEventListener('click', () => {
-    clearGrid(ctx);
+  document.getElementById(`clearBtn-${ctx.id}`)?.addEventListener('click', async () => {
+    if (await confirm('Are you sure you want to clear the grid?')) {
+      clearGrid(ctx);
+    }
   });
 
   if (mBtn) {
@@ -127,9 +129,9 @@ export async function saveCurrentPatternAs(name) {
     const isNew = !existingNames.includes(trimmed);
 
     if (isNew && !canAccess(FEATURE.UNLIMITED_PATTERNS, { count: existingNames.length })) {
-      Bus.emit(BUS_EVENT.SHOW_UPGRADE_MODAL, { 
-        feature: FEATURE.UNLIMITED_PATTERNS, 
-        featureId: 'feat-storage' 
+      Bus.emit(BUS_EVENT.SHOW_UPGRADE_MODAL, {
+        feature: FEATURE.UNLIMITED_PATTERNS,
+        featureId: 'feat-storage'
       });
       return false;
     }
@@ -297,7 +299,7 @@ export function initControls() {
   // 5. Save / Load / Rename / Delete
   saveBtn?.addEventListener('click', async (e) => {
     if (e) e.stopPropagation();
-    
+
     // Close dropdown
     if (fileDropdownMenu) fileDropdownMenu.classList.remove('show');
 
@@ -319,7 +321,7 @@ export function initControls() {
       mode: 'prompt',
       defaultValue: getSelectedPatternName() || defaultName
     });
-    
+
     if (name) {
       await saveCurrentPatternAs(name);
     }
@@ -372,7 +374,7 @@ export function initControls() {
       mode: 'prompt',
       defaultValue: oldName
     });
-    
+
     if (!nextName) return;
 
     const trimmed = nextName.trim();
@@ -497,7 +499,7 @@ export function initControls() {
       message: 'Paste pattern JSON here:',
       mode: 'prompt'
     });
-    
+
     if (!raw) return;
 
     try {
@@ -509,7 +511,7 @@ export function initControls() {
         message: 'Loaded! Save this pattern to your cloud list?',
         mode: 'confirm'
       });
-      
+
       if (wantSave) {
         if (!(await isAuthed())) {
           await showCustomModal({
@@ -527,16 +529,16 @@ export function initControls() {
           mode: 'prompt',
           defaultValue: suggested
         });
-        
+
         if (name) {
           // PRO Gating: check count for NEW patterns
           const existingNames = await dbListPatternNames();
           const isNew = !existingNames.includes(name);
 
           if (isNew && !canAccess(FEATURE.UNLIMITED_PATTERNS, { count: existingNames.length })) {
-            Bus.emit(BUS_EVENT.SHOW_UPGRADE_MODAL, { 
-              feature: FEATURE.UNLIMITED_PATTERNS, 
-              featureId: 'feat-storage' 
+            Bus.emit(BUS_EVENT.SHOW_UPGRADE_MODAL, {
+              feature: FEATURE.UNLIMITED_PATTERNS,
+              featureId: 'feat-storage'
             });
             return;
           }
@@ -680,9 +682,9 @@ export function initControls() {
   const exportAudioBtn = document.getElementById('exportAudioBtn');
   exportAudioBtn?.addEventListener('click', async () => {
     if (!canAccess(FEATURE.DOWNLOAD_WAV)) {
-      Bus.emit(BUS_EVENT.SHOW_UPGRADE_MODAL, { 
-        feature: FEATURE.DOWNLOAD_WAV, 
-        featureId: 'feat-audio' 
+      Bus.emit(BUS_EVENT.SHOW_UPGRADE_MODAL, {
+        feature: FEATURE.DOWNLOAD_WAV,
+        featureId: 'feat-audio'
       });
       return;
     }

@@ -4,7 +4,7 @@
  * to preserve local storage space and bypass typical quota limits.
  */
 
-const DB_NAME = 'GroovePanAudioDB';
+const DB_NAME = 'PanafideAudioDB';
 const DB_VERSION = 2;
 const STORE_NAME = 'audioClips';
 const COMPOSITIONS_STORE = 'compositions';

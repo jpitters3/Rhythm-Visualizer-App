@@ -797,3 +797,23 @@ export function initNoteGrid() {
     clearRange(); // imported from range-selection.js
   });
 }
+
+// Listen for automation events (useful for tests without exposing globals)
+if (typeof window !== 'undefined') {
+  window.addEventListener('notegrid:setNote', (e) => {
+    const { index, note, ctx } = e.detail || {};
+    if (typeof index === 'number') {
+      if (typeof setInnerLabel === 'function') {
+        const targetGrid = ctx || (typeof activeGrid !== 'undefined' ? activeGrid : null);
+        setInnerLabel(index, note || '', targetGrid);
+      }
+    }
+  });
+
+  window.addEventListener('notegrid:render', (e) => {
+    if (typeof renderAllMeasures === 'function') {
+      const targetGrid = e.detail?.ctx || (typeof activeGrid !== 'undefined' ? activeGrid : null);
+      renderAllMeasures(targetGrid);
+    }
+  });
+}

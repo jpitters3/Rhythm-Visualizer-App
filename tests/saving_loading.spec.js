@@ -1,11 +1,19 @@
-// @ts-check
 const { test, expect } = require('@playwright/test');
+const { createTestUser, deleteTestUser, loginAsTestUser } = require('./utils/auth-helper');
 
 test.describe('Pattern Management', () => {
+  let testUser;
 
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
-    await page.waitForSelector('.measure-row');
+    testUser = await createTestUser();
+    await loginAsTestUser(page, testUser);
+  });
+
+  test.afterEach(async () => {
+    if (testUser?.user?.id) {
+      await deleteTestUser(testUser.user.id);
+    }
   });
 
   // Helper for mobile menu
@@ -50,16 +58,18 @@ test.describe('Pattern Management', () => {
     await expect(cell0.locator('.inner')).toHaveText('1');
 
     // 2. Save Pattern
-    // Handle Prompt
-    page.once('dialog', dialog => {
-      expect(dialog.message()).toContain('Save pattern as');
-      dialog.accept(uniqueName);
-    });
-
     await ensureMenuOpen(page); // OPEN MENU IF NEEDED
     await page.click('#fileDropdownBtn');
     await page.waitForSelector('.dropdown-content.show');
     await page.click('#saveBtn');
+
+    // Handle Custom Modal Prompt
+    const saveModal = page.locator('#confirmModal');
+    await expect(saveModal).toHaveClass(/open/);
+    await expect(page.locator('#confirmTitle')).toHaveText('Save Pattern');
+    await page.fill('#confirmInput', uniqueName);
+    await page.click('#confirmOkBtn');
+    await expect(saveModal).not.toHaveClass(/open/);
 
     // Wait for save logic (it might verify via alert or UI update)
     // patternSelect should have the new val
@@ -68,19 +78,27 @@ test.describe('Pattern Management', () => {
 
     // 3. Clear Grid
     await ensureMenuClosed(page); // Ensure menu is closed so we can click Clear
-    // Handle Clear Confirm
-    page.once('dialog', dialog => {
-      dialog.accept();
-    });
     await page.click('#clearBtn-A');
+
+    // Handle Custom Modal Confirm
+    const clearModal = page.locator('#confirmModal');
+    await expect(clearModal).toHaveClass(/open/);
+    await page.click('#confirmOkBtn');
+    await expect(clearModal).not.toHaveClass(/open/);
     await expect(cell0.locator('.inner')).toBeEmpty();
 
     // 4. Load Pattern
-    // Select is already set to uniqueName from save, but let's Ensure
-    await ensureMenuOpen(page); // Ensure menu is visible to select pattern
-    await select.selectOption(uniqueName);
+    await ensureMenuOpen(page);
+    await page.click('#fileDropdownBtn');
+    await page.waitForSelector('.dropdown-content.show');
+    await page.click('#loadBtn');
 
-    // Handle "Unsaved Changes" check
+    // Handle "Unsaved Changes" confirm modal (since we cleared the grid)
+    const loadConfirmModal = page.locator('#confirmModal');
+    await expect(loadConfirmModal).toHaveClass(/open/);
+    await expect(page.locator('#confirmTitle')).toHaveText('Unsaved Changes');
+    await page.click('#confirmOkBtn');
+    await expect(loadConfirmModal).not.toHaveClass(/open/);
 
     // 5. Verify Restoration
     await expect(cell0.locator('.inner')).toHaveText('1');
@@ -90,21 +108,28 @@ test.describe('Pattern Management', () => {
     const uniqueName = `Delete Me ${Date.now()}`;
 
     // 1. Save dummy pattern
-    page.once('dialog', dialog => dialog.accept(uniqueName));
-
     await ensureMenuOpen(page); // OPEN MENU IF NEEDED
     await page.click('#fileDropdownBtn');
     await page.waitForSelector('.dropdown-content.show');
     await page.click('#saveBtn');
 
-    // 2. Click Delete
-    // Handle Confirm
+    // Custom Modal
+    await page.fill('#confirmInput', uniqueName);
+    await page.click('#confirmOkBtn');
+    await expect(page.locator('#confirmModal')).not.toHaveClass(/open/);
 
+    // 2. Click Delete
     await ensureMenuOpen(page); // OPEN MENU IF NEEDED
     await page.click('#fileDropdownBtn');
     await page.waitForSelector('.dropdown-content.show');
     await page.click('#deleteBtn');
+
+    // Handle Delete Confirm Modal
+    const deleteModal = page.locator('#confirmModal');
+    await expect(deleteModal).toHaveClass(/open/);
+    await expect(page.locator('#confirmTitle')).toHaveText('Delete Pattern');
     await page.click('#confirmOkBtn');
+    await expect(deleteModal).not.toHaveClass(/open/);
 
     // 3. Verify Removal
     // The select should no longer have this option (retry until update happens)

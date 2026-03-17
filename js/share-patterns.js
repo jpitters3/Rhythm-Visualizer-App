@@ -147,7 +147,7 @@ export async function loadSharedFromURL() {
 
   if (clearSelection) clearSelection();
 
-  if (data.name) document.title = `GroovePan — ${data.name}`;
+  if (data.name) document.title = `Panafide — ${data.name}`;
 
   return true;
 }

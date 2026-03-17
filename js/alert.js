@@ -95,9 +95,9 @@ class CustomAlert {
 const alertInstance = new CustomAlert();
 
 // Export as async functions to mimic native behavior (requiring await)
-export const alert = (message, title = 'GroovePan') => alertInstance.show({ type: 'alert', title, message });
-export const confirm = (message, title = 'GroovePan') => alertInstance.show({ type: 'confirm', title, message });
-export const prompt = (message, defaultValue = '', title = 'GroovePan') => alertInstance.show({ type: 'prompt', title, message, defaultValue });
+export const alert = (message, title = 'Panafide') => alertInstance.show({ type: 'alert', title, message });
+export const confirm = (message, title = 'Panafide') => alertInstance.show({ type: 'confirm', title, message });
+export const prompt = (message, defaultValue = '', title = 'Panafide') => alertInstance.show({ type: 'prompt', title, message, defaultValue });
 
 // Also expose globally for legacy scripts not using modules yet
 window._customAlert = alert;

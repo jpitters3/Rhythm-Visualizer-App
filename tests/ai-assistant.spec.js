@@ -5,6 +5,10 @@ const { waitForPageReady } = require('./utils/page-helper');
 test.describe('AI Assistant', () => {
   test.beforeEach(async ({ page }) => {
     await waitForPageReady(page);
+    // Enable AI Assistant for tests
+    await page.evaluate(() => {
+      document.documentElement.setAttribute('data-gp-test-mode', 'true');
+    });
   });
 
   test('should open and show welcome message', async ({ page }) => {
@@ -67,6 +71,7 @@ test.describe('AI Assistant', () => {
 
   // test: should insert pattern into the grid
   test('should insert pattern into the grid', async ({ page }) => {
+    test.setTimeout(120000);
     // 0. Wait ten seconds to avoid gemini api rate limiting
     await page.waitForTimeout(10000);
 
@@ -85,7 +90,7 @@ test.describe('AI Assistant', () => {
     // 4. Wait for bot response with 'Add to Grid' button
     // Note: If using real backend, this may take a few seconds
     const botResponse = page.locator('.ai-messages .bot', { has: page.locator('button', { hasText: 'Add to Grid' }) }).first();
-    await expect(botResponse).toBeVisible({ timeout: 45000 });
+    await expect(botResponse).toBeVisible({ timeout: 120000 });
 
     // 5. Check if it says something
     const text = await botResponse.innerText();
@@ -99,6 +104,6 @@ test.describe('AI Assistant', () => {
     // 7. Verify there are at least 4 measures in the grid
     // Each measure has class .measure-row
     const measures = page.locator('.measure-row');
-    await expect(measures.count()).toBeGreaterThan(3);
+    await expect(await measures.count()).toBeGreaterThan(3);
   });
 });

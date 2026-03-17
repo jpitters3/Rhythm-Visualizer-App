@@ -10,7 +10,7 @@ import { alert, confirm } from './alert.js';
 export async function loadPatternFromFeed(json, name) {
   if (await confirm(`Load pattern "${name}"? Unsaved changes will be lost.`)) {
     await applyPattern(json);
-    document.title = `GroovePan — ${name}`;
+    document.title = `Panafide — ${name}`;
   }
 }
 
