@@ -1,14 +1,11 @@
-import { ADMIN_EMAILS, SCALE_KEY_LOCAL, SCALES } from './config.js';
-import { preloadScaleSamples } from './noteplayer.js';
 import { supabase } from './supabase-client.js';
 import { Bus, BUS_EVENT } from './bus.js';
-import { currentUser, setCurrentUser, setSelectedScaleName, isAdminUser } from './state.js';
-import { loadScaleRemote, loadScaleLocal } from './handpanmap.js';
+import { currentUser, setCurrentUser, isAdminUser } from './state.js';
+import { loadCurrentProfile } from './profile.js';
 
 export async function isAuthed() {
   if (typeof supabase === 'undefined' || !supabase.auth) return false;
   try {
-    // Check session validity (token refresh if needed)
     const { data } = await supabase.auth.getUser();
     return !!(data?.user);
   } catch (e) {
@@ -240,6 +237,7 @@ export async function initAuthSession() {
   // 1. Initial Synchronous Check (to block init)
   const { data } = await supabase.auth.getUser();
   setCurrentUser(data?.user ?? null);
+  await loadCurrentProfile();
   updateAccountUI();
   updateAdminUI();
 
@@ -252,7 +250,6 @@ export async function initAuthSession() {
     // Ensure accurate global state
     const prevUser = currentUser;
     setCurrentUser(session?.user ?? null);
-
     updateAccountUI();
     updateAdminUI();
 
@@ -302,6 +299,8 @@ export async function initAuth() {
   const authCurrentPass = document.getElementById('authCurrentPass');
   authOtpRow = document.getElementById('authOtpRow');
   authVerifyOtp = document.getElementById('authVerifyOtp');
+
+  Bus.on(BUS_EVENT.OPEN_AUTH_MODAL, openAuthModal);
 
   // New Logic: Click Account -> If Signed In (Toggle Dropdown) ELSE (Open Modal)
   accountBtn?.addEventListener('click', (e) => {

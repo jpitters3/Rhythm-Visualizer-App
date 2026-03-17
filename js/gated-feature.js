@@ -1,0 +1,40 @@
+import { currentUser, isAdminUser } from './state.js';
+import { currentProfile } from './profile.js';
+
+class GatedFeature {
+  constructor(slug, name) {
+    this.slug = slug;
+    this.name = name;
+  }
+  getName() { return this.name; }
+  getSlug() { return this.slug; }
+  toString() { return this.slug; }
+}
+
+export const FEATURE = {
+  AI_ASSISTANT: new GatedFeature('ai_assistant', 'AI Assistant'),
+  CUSTOM_SCALES: new GatedFeature('custom_scales', 'Custom Handpan Scales'),
+  UNLIMITED_PATTERNS: new GatedFeature('unlimited_patterns', 'Unlimited Cloud Patterns'),
+  MIDI_EXPORT: new GatedFeature('midi_export', 'MIDI Export'),
+  DOWNLOAD_WAV: new GatedFeature('download_wav', 'Download Audio')
+};
+
+export function canAccess(feature, context = {}) {
+  const slug = (typeof feature === 'string') ? feature : feature?.slug;
+  if (!slug) return true;
+
+  if (isAdminUser(currentUser)) return true;
+
+  const tier = currentProfile?.subscription_tier || 'free';
+  if (tier === 'pro') return true;
+
+  const accessMap = {
+    [FEATURE.AI_ASSISTANT.slug]: false,
+    [FEATURE.CUSTOM_SCALES.slug]: false,
+    [FEATURE.MIDI_EXPORT.slug]: false,
+    [FEATURE.DOWNLOAD_WAV.slug]: false,
+    [FEATURE.UNLIMITED_PATTERNS.slug]: (context.count || 0) < 5
+  };
+
+  return accessMap[slug] ?? true;
+}

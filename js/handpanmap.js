@@ -1,16 +1,16 @@
-import { currentUser } from './state.js';
 import { setCaret } from './range-selection.js';
 import { updateUserLabelPreference } from './profile.js';
 import { writeToSelected, clampIndex, getComposeOn } from './compose-mode.js';
 import { preloadScaleSamples, noteForLabel, isDownbeatStep, registerHighlighter, playNoteByLabel, intervalMs } from './noteplayer.js';
 import { SCALES, SCALE_KEY_LOCAL, BASE_PATH } from './config.js';
-import { getScale, getSelectedScaleName, setSelectedScaleName, setCurrentScale } from './state.js';
+import { currentUser, getScale, getSelectedScaleName, setSelectedScaleName, setCurrentScale } from './state.js';
 import { supabase } from './supabase-client.js';
 import { enterCalibrationMode } from './calibration.js';
 import { activeGrid } from './grid-context.js';
 import { Bus, BUS_EVENT } from './bus.js';
 import { setBeatToGhost, renderAllMeasures } from './notegrid.js';
 import { isAuthed } from './auth.js';
+import { canAccess, FEATURE } from './gated-feature.js';
 
 // DOM Elements (previously globals)
 let handpanImg, scaleSelect, scaleStatus, handpanColorSelect, numberPitchSelect, ghostBtn, lockBtn, composeBtn, handpanSection, handpanOverlay;
@@ -30,20 +30,6 @@ const HANDPAN_MAP_SKETCH = {
   "T": { x: 60.3, y: 56.9, r: 5 },
   "S": { x: 94.1, y: 45.7, r: 7 },
 };
-
-// const HANDPAN_MAP_BRONZE = {
-//   "Ding": { x: 48.1, y: 45.6, r: 12 },
-//   "1": { x: 59.6, y: 76.6, r: 10 },
-//   "2": { x: 34.4, y: 75.3, r: 10 },
-//   "3": { x: 78.4, y: 59.9, r: 10 },
-//   "4": { x: 17.4, y: 57.3, r: 10 },
-//   "5": { x: 78, y: 33.9, r: 9 },
-//   "6": { x: 21.8, y: 32.8, r: 9 },
-//   "7": { x: 61.4, y: 18.1, r: 8 },
-//   "8": { x: 37.8, y: 17.9, r: 8 },
-//   "T": { x: 61.1, y: 56.3, r: 7 },
-//   "S": { x: 93.3, y: 47.9, r: 6 },
-// };
 
 const HANDPAN_MAP_BRONZE = {
   "Ding": { x: 48.1, y: 45.6, r: 12 },
@@ -546,6 +532,10 @@ function renderMyScalesList() {
   createBtn.className = 'primary-btn small-btn';
   createBtn.textContent = '+ Create New Handpan';
   createBtn.onclick = () => {
+    if (!canAccess(FEATURE.CUSTOM_SCALES)) {
+      Bus.emit(BUS_EVENT.SHOW_UPGRADE_MODAL, FEATURE.CUSTOM_SCALES);
+      return;
+    }
     openHandpanForm(null);
   };
   createContainer.appendChild(createBtn);
@@ -608,6 +598,10 @@ function renderMyScalesList() {
     mapBtn.textContent = 'Edit Map';
     mapBtn.className = 'edit-map-btn';
     mapBtn.onclick = () => {
+      if (!canAccess(FEATURE.CUSTOM_SCALES)) {
+        Bus.emit(BUS_EVENT.SHOW_UPGRADE_MODAL, FEATURE.CUSTOM_SCALES);
+        return;
+      }
       closeMyScalesModal();
       if (enterCalibrationMode) {
         enterCalibrationMode(hp, () => {
@@ -1460,14 +1454,7 @@ export function initHandpanMap() {
   });
 
   buildScaleBtn?.addEventListener('click', () => {
-    // If user has scales, open list ("Manage My Handpans")
-    // If not, open creation form directly
-    if (customHandpansCache.length > 0) {
-      openMyScalesModal('list');
-    } else {
-      openMyScalesModal('form');
-      openHandpanForm(null); // Reset form
-    }
+    openMyScalesModal('list');
   });
 
   cancelBuildBtn?.addEventListener('click', () => {

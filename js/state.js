@@ -49,9 +49,6 @@ export function setIsCalibrationMode(v) { isCalibrationMode = v; }
 export let currentUser = null;
 export function setCurrentUser(u) { currentUser = u; }
 
-export let currentProfile = null;
-export function setCurrentProfile(p) { currentProfile = p; }
-
 export function isAdminUser(user) {
   const email = user?.email?.toLowerCase?.() || "";
   const isMetadataAdmin = user?.user_metadata?.is_admin === true;

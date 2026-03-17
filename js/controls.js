@@ -1,11 +1,11 @@
 // ==== EVENTS FOR BUTTONS / CONTROLS ====
 import { gridA, gridB, activeGrid } from './grid-context.js';
-import { isAuthed } from './auth.js';
+import { isAuthed, openAuthModal } from './auth.js';
 import { start, stop, ensureAudio, unlockAudio, setMode, addTickObserver } from './noteplayer.js';
 import { renderAllMeasures, invertRange, invertFollowing, setDualGrid, clearGrid, resetGridToDefault } from './notegrid.js';
 import { TransportRegistry, TransportUI } from './transport-ui.js';
 import {
-  dbSavePattern, dbDeletePattern, dbRenamePattern, dbLoadPatternByName,
+  dbSavePattern, dbDeletePattern, dbRenamePattern, dbLoadPatternByName, dbListPatternNames,
   serializePattern, applyPattern, getSavedPatterns, setSavedPatterns,
   getSelectedPatternName, refreshPatternSelect, updatePatternButtons, ensureHasSelection,
   LAST_USED_KEY, hasUnsavedChanges
@@ -13,68 +13,18 @@ import {
 import { setPresentation } from './presentation-mode.js';
 import { getRange } from './range-selection.js';
 import { exportAudioWav } from './audio-export.js';
-import { editHandsMode, setEditHandsMode } from './state.js';
+import { editHandsMode, setEditHandsMode, labelNotation, setLabelNotation } from './state.js';
 import { updateUserGridLabelNotation } from './profile.js';
 import { HistoryManager } from './history.js';
+import { Bus, BUS_EVENT } from './bus.js';
+import { canAccess, FEATURE } from './gated-feature.js';
 
-const patternSelect = document.getElementById('patternSelect');
-const gridBtn = document.getElementById('gridBtn');
-const handBtn = document.getElementById('handBtn');
-const resetBtn = document.getElementById('resetBtn');
-const themeBtn = document.getElementById('themeBtn');
-const presentBtn = document.getElementById('presentBtn');
-const exitPresent = document.getElementById('exitPresent');
-const micBtn = document.getElementById('micBtn');
-const saveBtn = document.getElementById('saveBtn');
-const renameBtn = document.getElementById('renameBtn');
-const deleteBtn = document.getElementById('deleteBtn');
-const exportBtn = document.getElementById('exportBtn');
-const navDashboardBtn = document.getElementById('navDashboardBtn');
-const importBtn = document.getElementById('importBtn');
-const loadBtn = document.getElementById('loadBtn');
+// Global references assigned in initControls
+let patternSelect, gridBtn, handBtn, resetBtn, themeBtn, presentBtn, exitPresent, micBtn, saveBtn, renameBtn, deleteBtn, exportBtn, navDashboardBtn, importBtn, loadBtn;
 
-if (patternSelect) {
-  patternSelect.addEventListener('change', async () => {
-    const selected = getSelectedPatternName();
-    if (!selected) return;
-
-    if (hasUnsavedChanges()) {
-      showConfirm(
-        'Unsaved Changes',
-        'You have unsaved changes in the current pattern. Discard them and load the new pattern?',
-        async () => {
-          await loadPatternByName(selected);
-          updatePatternButtons();
-        }
-      );
-    } else {
-      await loadPatternByName(selected);
-      updatePatternButtons();
-    }
-  });
-}
-
-if (navDashboardBtn) {
-  navDashboardBtn.addEventListener('click', () => {
-    if (hasUnsavedChanges()) {
-      showConfirm(
-        'Unsaved Changes',
-        'You have unsaved changes in the current pattern. Discard them and return to the dashboard?',
-        () => {
-          window.location.hash = '#dashboard';
-        }
-      );
-    } else {
-      window.location.hash = '#dashboard';
-    }
-  });
-}
-
-// Dropdown Logic
-const dropdownBtn = document.getElementById('fileDropdownBtn');
-const dropdownMenu = document.getElementById('fileDropdownMenu');
-const micDropdownMenu = document.getElementById('micDropdownMenu');
-
+/**
+ * Dropdown toggle helper
+ */
 function setupDropdown(btn, menu) {
   if (!btn || !menu) return;
   btn.addEventListener('click', (e) => {
@@ -90,32 +40,11 @@ function setupDropdown(btn, menu) {
   });
 }
 
-setupDropdown(dropdownBtn, dropdownMenu);
-
-// Close dropdown when clicking outside
-window.addEventListener('click', (e) => {
-  if (dropdownBtn && dropdownMenu && !dropdownBtn.contains(e.target) && !dropdownMenu.contains(e.target)) {
-    dropdownMenu.classList.remove('show');
-  }
-  if (micBtn && micDropdownMenu && !micBtn.contains(e.target) && !micDropdownMenu.contains(e.target)) {
-    micDropdownMenu.classList.remove('show');
-  }
-});
-
-// Warm up audio on controls hover
-const controlPanel = document.querySelector('.control-panel');
-if (controlPanel) {
-  controlPanel.addEventListener('mouseenter', () => {
-    unlockAudio();
-  }, { once: true });
-  controlPanel.addEventListener('touchstart', () => unlockAudio(), { once: true });
-}
-
 function setupGridControls(ctx) {
-  const pBtn = ctx.playBtn;
-  const bInput = ctx.bpmInput;
+  const pBtn = document.getElementById(`playBtn-${ctx.id}`);
+  const bInput = document.getElementById(`bpm-${ctx.id}`);
   const bVal = document.getElementById(`bpmVal-${ctx.id}`);
-  const mBtn = ctx.muteBtn;
+  const mBtn = document.getElementById(`muteBtn-${ctx.id}`);
 
   if (pBtn) {
     pBtn.addEventListener('click', (e) => {
@@ -152,173 +81,16 @@ function setupGridControls(ctx) {
   }
 }
 
-setupGridControls(gridA);
-setupGridControls(gridB);
-
-document.getElementById('dualModeBtn')?.addEventListener('click', () => {
-  const visible = document.getElementById('measures-B').style.display !== 'none';
-  setDualGrid(!visible);
-});
-
-document.addEventListener('visibilitychange', () => {
-  if (document.hidden) {
-    if (gridA.playing) stop(gridA);
-    if (gridB.playing) stop(gridB);
-  }
-});
-
-gridBtn?.addEventListener('click', () => {
-  const ctx = activeGrid;
-  setMode(ctx.mode === '8' ? '16' : '8', ctx);
-});
-
-handBtn?.addEventListener('click', () => {
-  const on = !document.body.classList.contains('handSplit');
-  document.body.classList.toggle('handSplit', on);
-  localStorage.setItem('handSplit', on ? 'on' : 'off');
-
-  handBtn.classList.toggle('active', on);
-  handBtn.textContent = on ? 'Left/Right: On' : 'Left/Right: Off';
-});
-
-// Sticking Mode
-const stickingBtn = document.getElementById('stickingBtn');
-const flipHandsBtn = document.getElementById('flipHandsBtn');
-
-if (stickingBtn) {
-  stickingBtn.addEventListener('click', () => {
-    setEditHandsMode(!editHandsMode);
-    stickingBtn.classList.toggle('active', editHandsMode);
-
-    if (editHandsMode) {
-      document.body.dataset.cursor = 'hand';
-      if (flipHandsBtn) flipHandsBtn.style.display = 'inline-block';
-    } else {
-      delete document.body.dataset.cursor;
-      if (flipHandsBtn) flipHandsBtn.style.display = 'none';
-    }
-  });
-}
-
-if (flipHandsBtn) {
-  flipHandsBtn.addEventListener('click', () => {
-    const r = (typeof getRange === 'function') ? getRange() : null;
-
-    if (r) {
-      if (HistoryManager) HistoryManager.pushState();
-      invertRange(r.start, r.end);
-    } else {
-      // Fallback to Flip Following from Caret
-      const idx = activeGrid.caretIndex ?? 0;
-      if (HistoryManager) HistoryManager.pushState();
-      invertFollowing(idx);
-    }
-
-    if (navigator.vibrate) navigator.vibrate([50, 50, 50]);
-  });
-}
-
-resetBtn?.addEventListener('click', () => {
-  if (hasUnsavedChanges()) {
-    showConfirm(
-      'Unsaved Changes',
-      'You have unsaved changes in the current pattern. Discard them and reset the grid?',
-      () => {
-        resetGridToDefault(activeGrid);
-      }
-    );
-  } else {
-    resetGridToDefault(activeGrid);
-  }
-});
-
-themeBtn?.addEventListener('click', () => {
-  document.body.classList.toggle('dark');
-  localStorage.setItem('theme', document.body.classList.contains('dark') ? 'dark' : 'light');
-});
-
-presentBtn?.addEventListener('click', () => {
-  const on = !document.body.classList.contains('present');
-  if (setPresentation) {
-    setPresentation(on);
-  }
-});
-
-exitPresent?.addEventListener('click', () => setPresentation(false));
-
-import { labelNotation, setLabelNotation } from './state.js';
-
 function updateNotationUI() {
   const btn = document.getElementById('labelNotationBtn');
   if (!btn) return;
   btn.textContent = (labelNotation === 'musical') ? '1 2 3' : '1 & 2';
   btn.title = (labelNotation === 'musical') ? 'Switch to Numeric Notation' : 'Switch to Musical Notation';
 }
-updateNotationUI();
 
-// Toggle Button
-document.getElementById('labelNotationBtn')?.addEventListener('click', () => {
-  const newVal = (labelNotation === 'musical') ? 'numeric' : 'musical';
-  setLabelNotation(newVal);
-  updateNotationUI();
-  renderAllMeasures(gridA);
-  renderAllMeasures(gridB);
-
-  // Persist to profile if signed in
-  if (typeof updateUserGridLabelNotation === 'function') {
-    updateUserGridLabelNotation(newVal);
-  }
-});
-
-// Event Listener for External Updates (e.g. Profile)
-document.addEventListener('labelNotationChanged', (e) => {
-  const newVal = e.detail;
-  if (newVal && newVal !== labelNotation) {
-    setLabelNotation(newVal);
-    updateNotationUI();
-    renderAllMeasures(gridA);
-    renderAllMeasures(gridB);
-  }
-});
-
-saveBtn?.addEventListener('click', async (e) => {
-  if (e) e.stopPropagation();
-  const defaultName = `Pattern ${new Date().toLocaleString()}`;
-  const name = prompt('Save pattern as:', getSelectedPatternName() || defaultName);
-
-  const menu = document.getElementById('fileDropdownMenu');
-  if (menu) menu.classList.remove('show');
-
-  if (!name) return;
-  saveCurrentPatternAs(name);
-});
-
-loadBtn?.addEventListener('click', async (e) => {
-  if (e) e.stopPropagation();
-  const selected = getSelectedPatternName();
-  if (!selected) {
-    alert('Please select a pattern to load.');
-    return;
-  }
-
-  const menu = document.getElementById('fileDropdownMenu');
-  if (menu) menu.classList.remove('show');
-
-  if (hasUnsavedChanges()) {
-    showConfirm(
-      'Unsaved Changes',
-      'You have unsaved changes in the current pattern. Discard them and load the new pattern?',
-      async () => {
-        await loadPatternByName(selected);
-        updatePatternButtons();
-      }
-    );
-  } else {
-    await loadPatternByName(selected);
-    updatePatternButtons();
-  }
-});
-
+/**
+ * Main Save Logic with Gating
+ */
 export async function saveCurrentPatternAs(name) {
   if (!name) return false;
 
@@ -326,34 +98,44 @@ export async function saveCurrentPatternAs(name) {
   if (!trimmed) return false;
 
   try {
-    if (await isAuthed()) {
-      await dbSavePattern(trimmed, serializePattern());
-      localStorage.setItem(LAST_USED_KEY, trimmed);
-      await refreshPatternSelect(trimmed);
-      return;
+    // Check auth
+    if (!(await isAuthed())) {
+      alert('Please sign in or create an account to save patterns.');
+      openAuthModal();
+      return false;
     }
 
-    // local fallback
-    const saved = getSavedPatterns();
-    saved[trimmed] = serializePattern();
+    // PRO Gating: check count for NEW patterns
+    const existingNames = await dbListPatternNames();
+    const isNew = !existingNames.includes(trimmed);
+
+    console.log(`[DEBUG] Save attempt: "${trimmed}", isNew: ${isNew}, existing count: ${existingNames.length}`);
+
+    if (isNew && !canAccess(FEATURE.UNLIMITED_PATTERNS, { count: existingNames.length })) {
+      console.log('[DEBUG] Access DENIED: triggering upgrade modal.');
+      Bus.emit(BUS_EVENT.SHOW_UPGRADE_MODAL, FEATURE.UNLIMITED_PATTERNS);
+      return false;
+    }
+
+    await dbSavePattern(trimmed, serializePattern());
     localStorage.setItem(LAST_USED_KEY, trimmed);
-    setSavedPatterns(saved);
     await refreshPatternSelect(trimmed);
     return true;
   } catch (err) {
     console.error(err);
     alert(`Save failed: ${err?.message || err}`);
+    return false;
   }
 }
 
+/**
+ * Main Load Logic
+ */
 export async function loadPatternByName(pattern) {
   try {
     // CLOUD MODE
     if (await isAuthed()) {
-      if (!pattern) {
-        alert('Select a saved pattern first.');
-        return;
-      }
+      if (!pattern) return;
       const state = await dbLoadPatternByName(pattern);
       if (!state) {
         alert('Could not load that pattern.');
@@ -364,254 +146,26 @@ export async function loadPatternByName(pattern) {
       return;
     }
 
-    // LOCAL MODE
+    // LOCAL MODE (Fallback)
     const saved = getSavedPatterns();
     const names = Object.keys(saved);
-    if (names.length === 0) {
-      alert('No saved patterns yet. Click Save to store one.');
-      return;
-    }
+    if (names.length === 0) return;
 
     let name = pattern || getSelectedPatternName();
-    if (!name) {
-      const lastUsed = localStorage.getItem(LAST_USED_KEY) || '';
-      name = (lastUsed && saved[lastUsed]) ? lastUsed : names.sort((a, b) => a.localeCompare(b))[0];
-      patternSelect.value = name;
-      updatePatternButtons();
-    }
+    if (!name) return;
 
     if (!saved[name]) return;
     applyPattern(saved[name]);
     localStorage.setItem(LAST_USED_KEY, name);
-
-    // Sync presentation view (handled by observers now)
-    // Note: older code had manual update check here.
   } catch (err) {
     console.error(err);
     alert(`Load failed: ${err?.message || err}`);
   }
 }
 
-renameBtn?.addEventListener('click', async (e) => {
-  if (e) e.stopPropagation();
-  if (!ensureHasSelection()) return;
-
-  const oldName = getSelectedPatternName();
-  const nextName = prompt('Rename pattern to:', oldName);
-
-  const menu = document.getElementById('fileDropdownMenu');
-  if (menu) menu.classList.remove('show');
-
-  if (!nextName) return;
-  const trimmed = nextName.trim();
-  if (!trimmed || trimmed === oldName) return;
-
-  try {
-    if (await isAuthed()) {
-      await dbRenamePattern(oldName, trimmed);
-      localStorage.setItem(LAST_USED_KEY, trimmed);
-      await refreshPatternSelect(trimmed);
-      return;
-    }
-
-    // local
-    const saved = getSavedPatterns();
-    if (!saved[oldName]) return;
-
-    if (saved[trimmed]) {
-      const ok = confirm('A pattern with that name already exists. Overwrite it?');
-      if (!ok) return;
-    }
-
-    saved[trimmed] = saved[oldName];
-    delete saved[oldName];
-    localStorage.setItem(LAST_USED_KEY, trimmed);
-    setSavedPatterns(saved);
-    await refreshPatternSelect(trimmed);
-  } catch (err) {
-    console.error(err);
-    alert(`Rename failed: ${err?.message || err}`);
-  }
-});
-
-// Custom Confirmation Modal Logic
-const confirmModal = document.getElementById('confirmModal');
-const confirmTitle = document.getElementById('confirmTitle');
-const confirmMessage = document.getElementById('confirmMessage');
-const confirmOkBtn = document.getElementById('confirmOkBtn');
-const confirmCancelBtn = document.getElementById('confirmCancelBtn');
-let confirmCallback = null;
-
-function showConfirm(title, message, onConfirm) {
-  if (!confirmModal) {
-    if (confirm(message)) onConfirm();
-    return;
-  }
-  confirmTitle.textContent = title;
-  confirmMessage.textContent = message;
-  confirmCallback = onConfirm;
-
-  confirmModal.classList.add('open');
-  confirmModal.setAttribute('aria-hidden', 'false');
-  confirmOkBtn.focus();
-}
-
-function closeConfirmModal() {
-  if (confirmModal) {
-    confirmModal.classList.remove('open');
-    confirmModal.setAttribute('aria-hidden', 'true');
-  }
-  confirmCallback = null;
-}
-
-confirmCancelBtn?.addEventListener('click', closeConfirmModal);
-confirmOkBtn?.addEventListener('click', () => {
-  if (confirmCallback) confirmCallback();
-  closeConfirmModal();
-});
-confirmModal?.addEventListener('click', (e) => {
-  if (e.target === confirmModal) closeConfirmModal();
-});
-
-
-deleteBtn?.addEventListener('click', (e) => {
-  if (e) {
-    e.preventDefault();
-    e.stopPropagation();
-  }
-
-  const menu = document.getElementById('fileDropdownMenu');
-  if (menu) menu.classList.remove('show');
-
-  setTimeout(() => {
-    if (!ensureHasSelection()) return;
-
-    const name = getSelectedPatternName();
-
-    showConfirm(
-      'Delete Pattern',
-      `Are you sure you want to delete "${name}"? This cannot be undone.`,
-      async () => {
-        try {
-          if (await isAuthed()) {
-            await dbDeletePattern(name);
-            if (localStorage.getItem(LAST_USED_KEY) === name) localStorage.removeItem(LAST_USED_KEY);
-            await refreshPatternSelect();
-            return;
-          }
-
-          // local
-          const saved = getSavedPatterns();
-          if (!saved[name]) return;
-
-          delete saved[name];
-          setSavedPatterns(saved);
-          if (localStorage.getItem(LAST_USED_KEY) === name) localStorage.removeItem(LAST_USED_KEY);
-          await refreshPatternSelect();
-        } catch (err) {
-          console.error(err);
-          alert(`Delete failed: ${err?.message || err}`);
-        }
-      }
-    );
-  }, 50);
-});
-
-
-exportBtn?.addEventListener('click', async (e) => {
-  if (e) e.stopPropagation();
-  const data = JSON.stringify(serializePattern(), null, 2);
-  try {
-    await navigator.clipboard.writeText(data);
-    alert('Pattern JSON copied to clipboard.');
-  } catch {
-    prompt('Copy this JSON:', data);
-  }
-
-  const menu = document.getElementById('fileDropdownMenu');
-  if (menu) menu.classList.remove('show');
-});
-
-importBtn?.addEventListener('click', async (e) => {
-  if (e) e.stopPropagation();
-  if (hasUnsavedChanges()) {
-    if (!confirm('You have unsaved changes. Discard them?')) return;
-  }
-
-  const raw = prompt('Paste pattern JSON here:');
-
-  const menu = document.getElementById('fileDropdownMenu');
-  if (menu) menu.classList.remove('show');
-
-  if (!raw) return;
-  try {
-    const obj = JSON.parse(raw);
-    applyPattern(obj);
-
-    const wantSave = confirm('Loaded! Save this pattern to your list?');
-    if (wantSave) {
-      const suggested = obj.name || `Imported ${new Date().toLocaleString()}`;
-      const name = prompt('Save imported pattern as:', suggested);
-      if (name) {
-        if (await isAuthed()) {
-          await dbSavePattern(name, obj);
-          await refreshPatternSelect(name);
-        } else {
-          const saved = getSavedPatterns();
-          saved[name] = obj;
-          setSavedPatterns(saved);
-          await refreshPatternSelect(name);
-        }
-      }
-    }
-  } catch {
-    alert('That did not parse as JSON.');
-  }
-});
-
-// === VIRTUAL PLAYBACK CONTROLS ===
-export function setupAllTransports() {
-  const containers = document.querySelectorAll('.transport-container');
-  const template = document.getElementById('transport-template');
-  if (!template) return;
-
-  containers.forEach(container => {
-    // Check if we already have transport controls to avoid duplication
-    if (container.querySelector('.t-play-btn')) return;
-
-    // Append, don't clear (preserves Mode Selector)
-    const clone = template.content.cloneNode(true);
-    container.appendChild(clone);
-
-    const gridId = container.dataset.grid || 'A';
-    const ctx = (gridId === 'B') ? gridB : gridA;
-    new TransportUI(ctx, container);
-  });
-}
-
-// Sync function (Legacy compatibility or triggered broadcast)
-export function syncVirtualHandpanControls() {
-  TransportRegistry.updateAll(gridA);
-}
-
-// Init Transports & Observers
-function initControls() {
-  setupAllTransports();
-
-  // Subscribe to Tick to sync UI
-  addTickObserver((ctx, notes, hands) => {
-    if (ctx) TransportRegistry.updateAll(ctx);
-    else TransportRegistry.updateAll(gridA);
-  });
-
-  // Handle external playback state changes
-  document.addEventListener('playbackStateChange', (e) => {
-    const ctx = e.detail?.grid || gridA;
-    TransportRegistry.updateAll(ctx);
-    if (ctx.id === 'A') syncVirtualHandpanControls();
-  });
-}
-
+/**
+ * Checks if the grid has notes and shows/hides the export wrapper
+ */
 export function checkExportVisibility() {
   const container = document.getElementById('exportAudioWrapper');
   if (!container || !activeGrid || !activeGrid.innerLabels) return;
@@ -628,36 +182,367 @@ export function checkExportVisibility() {
   }
 }
 
-// Attach export audio click listener
-document.addEventListener('DOMContentLoaded', () => {
-  const exportAudioBtn = document.getElementById('exportAudioBtn');
-  if (exportAudioBtn) {
-    exportAudioBtn.addEventListener('click', async () => {
-      const originalHtml = exportAudioBtn.innerHTML;
-      exportAudioBtn.disabled = true;
-      exportAudioBtn.innerHTML = '⏳ Rendering...';
-      try {
-        const blob = await exportAudioWav();
-        if (blob) {
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          const name = document.getElementById('patternSelect')?.value || 'Pattern';
-          a.download = `${name}.wav`;
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-          URL.revokeObjectURL(url);
-        }
-      } catch (err) {
-        console.error(err);
-        alert('Error exporting audio: ' + (err.message || err));
-      } finally {
-        exportAudioBtn.disabled = false;
-        exportAudioBtn.innerHTML = originalHtml;
-      }
-    });
-  }
-});
+/**
+ * Sync function (Legacy compatibility or triggered broadcast)
+ */
+export function syncVirtualHandpanControls() {
+  TransportRegistry.updateAll(gridA);
+}
 
-export { initControls };
+/**
+ * Initialize all controls and listeners
+ */
+export function initControls() {
+  // 1. Get Elements
+  patternSelect = document.getElementById('patternSelect');
+  gridBtn = document.getElementById('gridBtn');
+  handBtn = document.getElementById('handBtn');
+  resetBtn = document.getElementById('resetBtn');
+  themeBtn = document.getElementById('themeBtn');
+  presentBtn = document.getElementById('presentBtn');
+  exitPresent = document.getElementById('exitPresent');
+  micBtn = document.getElementById('micBtn');
+  saveBtn = document.getElementById('saveBtn');
+  renameBtn = document.getElementById('renameBtn');
+  deleteBtn = document.getElementById('deleteBtn');
+  exportBtn = document.getElementById('exportBtn');
+  navDashboardBtn = document.getElementById('navDashboardBtn');
+  importBtn = document.getElementById('importBtn');
+  loadBtn = document.getElementById('loadBtn');
+
+  // 2. Dropdown Setup
+  const fileDropdownBtn = document.getElementById('fileDropdownBtn');
+  const fileDropdownMenu = document.getElementById('fileDropdownMenu');
+  setupDropdown(fileDropdownBtn, fileDropdownMenu);
+
+  const micDropdownMenu = document.getElementById('micDropdownMenu');
+  setupDropdown(micBtn, micDropdownMenu);
+
+  // Close dropdowns on outside click
+  window.addEventListener('click', (e) => {
+    if (fileDropdownBtn && fileDropdownMenu && !fileDropdownBtn.contains(e.target) && !fileDropdownMenu.contains(e.target)) {
+      fileDropdownMenu.classList.remove('show');
+    }
+    if (micBtn && micDropdownMenu && !micBtn.contains(e.target) && !micDropdownMenu.contains(e.target)) {
+      micDropdownMenu.classList.remove('show');
+    }
+  });
+
+  // 3. Grid Controls
+  setupGridControls(gridA);
+  setupGridControls(gridB);
+
+  document.getElementById('dualModeBtn')?.addEventListener('click', () => {
+    const visible = document.getElementById('measures-B').style.display !== 'none';
+    setDualGrid(!visible);
+  });
+
+  // 4. Pattern Select
+  patternSelect?.addEventListener('change', async () => {
+    const selected = getSelectedPatternName();
+    if (!selected) return;
+
+    if (hasUnsavedChanges()) {
+      showConfirm(
+        'Unsaved Changes',
+        'You have unsaved changes. Discard them and load the new pattern?',
+        async () => {
+          await loadPatternByName(selected);
+          updatePatternButtons();
+        }
+      );
+    } else {
+      await loadPatternByName(selected);
+      updatePatternButtons();
+    }
+  });
+
+  // 5. Save / Load / Rename / Delete
+  saveBtn?.addEventListener('click', async (e) => {
+    if (e) e.stopPropagation();
+    
+    // Auth Check BEFORE prompt
+    if (!(await isAuthed())) {
+      alert('Please sign in or create an account to save patterns.');
+      openAuthModal();
+      return;
+    }
+
+    const defaultName = `Pattern ${new Date().toLocaleString()}`;
+    const name = prompt('Save pattern as:', getSelectedPatternName() || defaultName);
+    if (!name) return;
+
+    await saveCurrentPatternAs(name);
+  });
+
+  loadBtn?.addEventListener('click', async (e) => {
+    if (e) e.stopPropagation();
+    const selected = getSelectedPatternName();
+    if (!selected) {
+      alert('Please select a pattern to load.');
+      return;
+    }
+
+    if (hasUnsavedChanges()) {
+      showConfirm(
+        'Unsaved Changes',
+        'You have unsaved changes. Discard them and load the new pattern?',
+        async () => {
+          await loadPatternByName(selected);
+          updatePatternButtons();
+        }
+      );
+    } else {
+      await loadPatternByName(selected);
+      updatePatternButtons();
+    }
+  });
+
+  renameBtn?.addEventListener('click', async (e) => {
+    if (e) e.stopPropagation();
+    if (!ensureHasSelection()) return;
+
+    const oldName = getSelectedPatternName();
+    const nextName = prompt('Rename pattern to:', oldName);
+    if (!nextName) return;
+
+    const trimmed = nextName.trim();
+    if (!trimmed || trimmed === oldName) return;
+
+    try {
+      if (await isAuthed()) {
+        await dbRenamePattern(oldName, trimmed);
+        localStorage.setItem(LAST_USED_KEY, trimmed);
+        await refreshPatternSelect(trimmed);
+      } else {
+        alert('Please sign in to rename patterns.');
+        openAuthModal();
+      }
+    } catch (err) {
+      console.error(err);
+      alert(`Rename failed: ${err.message || err}`);
+    }
+  });
+
+  deleteBtn?.addEventListener('click', async (e) => {
+    if (e) e.stopPropagation();
+    if (!ensureHasSelection()) return;
+
+    const name = getSelectedPatternName();
+    if (!confirm(`Are you sure you want to delete "${name}"?`)) return;
+
+    try {
+      if (await isAuthed()) {
+        await dbDeletePattern(name);
+        await refreshPatternSelect();
+      } else {
+        const saved = getSavedPatterns();
+        delete saved[name];
+        setSavedPatterns(saved);
+        await refreshPatternSelect();
+      }
+    } catch (err) {
+      console.error(err);
+      alert(`Delete failed: ${err.message || err}`);
+    }
+  });
+
+  importBtn?.addEventListener('click', async (e) => {
+    if (e) e.stopPropagation();
+    const raw = prompt('Paste pattern JSON here:');
+    if (!raw) return;
+
+    try {
+      const obj = JSON.parse(raw);
+      applyPattern(obj);
+
+      const wantSave = confirm('Loaded! Save this pattern to your list?');
+      if (wantSave) {
+        if (!(await isAuthed())) {
+          alert('Please sign in or create an account to save patterns.');
+          openAuthModal();
+          return;
+        }
+        const suggested = obj.name || `Imported ${new Date().toLocaleString()}`;
+        const name = prompt('Save imported pattern as:', suggested);
+        if (name) {
+          // PRO Gating: check count for NEW patterns
+          const existingNames = await dbListPatternNames();
+          const isNew = !existingNames.includes(name);
+
+          if (isNew && !canAccess(FEATURE.UNLIMITED_PATTERNS, { count: existingNames.length })) {
+            Bus.emit(BUS_EVENT.SHOW_UPGRADE_MODAL, FEATURE.UNLIMITED_PATTERNS);
+            return;
+          }
+
+          await dbSavePattern(name, obj);
+          await refreshPatternSelect(name);
+        }
+      }
+    } catch {
+      alert('That did not parse as JSON.');
+    }
+  });
+
+  // 6. Generic Controls
+  gridBtn?.addEventListener('click', () => {
+    const ctx = activeGrid;
+    setMode(ctx.mode === '8' ? '16' : '8', ctx);
+  });
+
+  handBtn?.addEventListener('click', () => {
+    const on = !document.body.classList.contains('handSplit');
+    document.body.classList.toggle('handSplit', on);
+    localStorage.setItem('handSplit', on ? 'on' : 'off');
+    handBtn.classList.toggle('active', on);
+    handBtn.textContent = on ? 'Left/Right: On' : 'Left/Right: Off';
+  });
+
+  resetBtn?.addEventListener('click', () => {
+    if (hasUnsavedChanges()) {
+      showConfirm(
+        'Unsaved Changes',
+        'Discard changes and reset?',
+        () => resetGridToDefault(activeGrid)
+      );
+    } else {
+      resetGridToDefault(activeGrid);
+    }
+  });
+
+  themeBtn?.addEventListener('click', () => {
+    document.body.classList.toggle('dark');
+    localStorage.setItem('theme', document.body.classList.contains('dark') ? 'dark' : 'light');
+  });
+
+  presentBtn?.addEventListener('click', () => {
+    const on = !document.body.classList.contains('present');
+    setPresentation(on);
+  });
+
+  exitPresent?.addEventListener('click', () => setPresentation(false));
+
+  const labelNotationBtn = document.getElementById('labelNotationBtn');
+  labelNotationBtn?.addEventListener('click', () => {
+    const newVal = (labelNotation === 'musical') ? 'numeric' : 'musical';
+    setLabelNotation(newVal);
+    updateNotationUI();
+    renderAllMeasures(gridA);
+    renderAllMeasures(gridB);
+    if (typeof updateUserGridLabelNotation === 'function') {
+      updateUserGridLabelNotation(newVal);
+    }
+  });
+
+  document.addEventListener('labelNotationChanged', (e) => {
+    const newVal = e.detail;
+    if (newVal && newVal !== labelNotation) {
+      setLabelNotation(newVal);
+      updateNotationUI();
+      renderAllMeasures(gridA);
+      renderAllMeasures(gridB);
+    }
+  });
+
+  navDashboardBtn?.addEventListener('click', () => {
+    if (hasUnsavedChanges()) {
+      showConfirm('Unsaved Changes', 'Discard changes and return to dashboard?', () => {
+        window.location.hash = '#dashboard';
+      });
+    } else {
+      window.location.hash = '#dashboard';
+    }
+  });
+
+  // 7. Sticking Mode
+  const stickingBtn = document.getElementById('stickingBtn');
+  const flipHandsBtn = document.getElementById('flipHandsBtn');
+  stickingBtn?.addEventListener('click', () => {
+    setEditHandsMode(!editHandsMode);
+    stickingBtn.classList.toggle('active', editHandsMode);
+    if (editHandsMode) {
+      document.body.dataset.cursor = 'hand';
+      if (flipHandsBtn) flipHandsBtn.style.display = 'inline-block';
+    } else {
+      delete document.body.dataset.cursor;
+      if (flipHandsBtn) flipHandsBtn.style.display = 'none';
+    }
+  });
+
+  flipHandsBtn?.addEventListener('click', () => {
+    const r = getRange();
+    if (HistoryManager) HistoryManager.pushState();
+    if (r) invertRange(r.start, r.end);
+    else invertFollowing(activeGrid.caretIndex || 0);
+  });
+
+  // 8. Transports Logic
+  const setupAllTransports = () => {
+    const containers = document.querySelectorAll('.transport-container');
+    const template = document.getElementById('transport-template');
+    if (!template) return;
+    containers.forEach(container => {
+      if (container.querySelector('.t-play-btn')) return;
+      const clone = template.content.cloneNode(true);
+      container.appendChild(clone);
+      const gridId = container.dataset.grid || 'A';
+      const ctx = (gridId === 'B') ? gridB : gridA;
+      new TransportUI(ctx, container);
+    });
+  };
+
+  setupAllTransports();
+
+  addTickObserver((ctx) => {
+    TransportRegistry.updateAll(ctx || gridA);
+  });
+
+  document.addEventListener('playbackStateChange', (e) => {
+    const ctx = e.detail?.grid || gridA;
+    TransportRegistry.updateAll(ctx);
+  });
+
+  // 9. Export Audio
+  const exportAudioBtn = document.getElementById('exportAudioBtn');
+  exportAudioBtn?.addEventListener('click', async () => {
+    if (!canAccess(FEATURE.DOWNLOAD_WAV)) {
+      Bus.emit(BUS_EVENT.SHOW_UPGRADE_MODAL, FEATURE.DOWNLOAD_WAV);
+      return;
+    }
+    const originalHtml = exportAudioBtn.innerHTML;
+    exportAudioBtn.disabled = true;
+    exportAudioBtn.innerHTML = '⏳ Rendering...';
+    try {
+      const blob = await exportAudioWav();
+      if (blob) {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        const name = patternSelect?.value || 'Pattern';
+        a.download = `${name}.wav`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Error exporting audio: ' + (err.message || err));
+    } finally {
+      exportAudioBtn.disabled = false;
+      exportAudioBtn.innerHTML = originalHtml;
+    }
+  });
+
+  updateNotationUI();
+  updatePatternButtons();
+}
+
+/**
+ * Utility to show custom confirm (placeholder, uses window.confirm for now)
+ */
+function showConfirm(title, msg, onOk) {
+  if (confirm(`${title}\n\n${msg}`)) {
+    onOk();
+  }
+}

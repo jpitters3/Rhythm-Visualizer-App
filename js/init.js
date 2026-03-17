@@ -15,8 +15,8 @@ import { currentUser } from './state.js';
 import { initAuth } from './auth.js';
 import { STEPS } from './rhythm-core.js';
 import { supabase } from './supabase-client.js';
-import { initCourses } from './courses.js'; // Initialize course sidebar and listeners
-import { initPractice } from './practice.js'; // Initialize practice sidebar
+import { initCourses } from './courses.js';
+import { initPractice } from './practice.js';
 import { initMobileMenu } from './mobile-menu.js';
 import { initShortcuts } from './keyboard-shortcuts.js';
 import { initMeasureActions } from './measure-actions.js';
@@ -37,6 +37,7 @@ import { initComposeWizard } from './compose-wizard.js';
 import { initGlossary } from './glossary.js';
 import { initGridAutoscroll } from './grid-autoscroll.js';
 import { initGridZoom } from './grid-zoom.js';
+import { initMonetization } from './monetization.js';
 
 /**
  * Main application initializer
@@ -78,6 +79,7 @@ async function init() {
     initNoteGrid();
     initComposeWizard();
     initGlossary();
+    initMonetization();
     initRouter();
 
     // 3. Launch safeInit (which handles pattern loading and final renders)

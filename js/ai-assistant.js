@@ -1,8 +1,6 @@
-import { SCALES } from './config.js';
-import { currentUser } from './state.js';
-import { renderAllMeasures } from './notegrid.js';
-import { supabase } from './supabase-client.js';
-import { gridA } from './grid-context.js';
+import { gridA } from './state.js';
+import { canAccess, FEATURE } from './gated-feature.js';
+import { Bus, BUS_EVENT } from './bus.js';
 
 class AiAssistant {
   constructor() {
@@ -46,13 +44,15 @@ class AiAssistant {
   }
 
   toggleChat(forceState) {
-    if (typeof forceState === 'boolean') {
-      this.isOpen = forceState;
-    } else {
-      this.isOpen = !this.isOpen;
+    if (!canAccess(FEATURE.AI_ASSISTANT)) {
+      // Trigger upgrade modal via Bus
+      Bus.emit(BUS_EVENT.SHOW_UPGRADE_MODAL, FEATURE.AI_ASSISTANT);
+      return;
     }
 
-    if (this.isOpen) {
+    const nextState = (typeof forceState === 'boolean') ? forceState : !this.chatContainer.classList.contains('open');
+
+    if (nextState) {
       this.chatContainer.classList.add('open');
       this.input.focus();
       // Refresh suggestions (remove old, add new to trigger animation)
