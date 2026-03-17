@@ -1,2 +1,15 @@
 body.composeOn .handpan-overlay { pointer-events: auto; }
 body.composeOn .hp-dot { cursor: pointer; }
+
+/* Allow scrolling when composing, overriding layout.css locks */
+body.composeOn {
+  overflow-y: auto !important;
+  height: auto !important;
+  min-height: 100vh;
+}
+
+body.composeOn div.container {
+  overflow-y: auto !important;
+  height: auto !important;
+  min-height: 100vh;
+}

@@ -20,8 +20,6 @@ export function updateComposeUI() {
   // Lock the handpan section on mobile
   if (handpanSection) handpanSection.classList.toggle('locked', composeOn);
   if (ghostNoteSection) ghostNoteSection.classList.toggle('locked', composeOn);
-
-  scrollToPatternGrid(composeOn);
 }
 
 if (composeBtn) {
@@ -51,13 +49,6 @@ export function advanceSelection(delta = 1, ctx) {
 
   setCaret(next, c);
   clearRange(c);
-
-  // Nice UX: keep selection visible when you have many measures
-  const s = c.stepsPerMeasure;
-  const gridCells = cells(c);
-  let cell = gridCells[next - s]; // Scroll to one measure before the next cell
-  cell = cell ? cell : gridCells[next];
-  cell?.scrollIntoView({ block: 'start', behavior: 'smooth' });
 }
 
 export function writeToSelected(label, { advance = true } = {}, ctx) {
@@ -75,15 +66,6 @@ export function writeToSelected(label, { advance = true } = {}, ctx) {
 
   // Compose advance unless Alt is held
   if (composeOn && advance) advanceSelection(1, c);
-}
-
-function scrollToPatternGrid(composeOn, ctx) {
-  const c = ctx || activeGrid;
-  if (composeOn) {
-    const i = c.caretIndex ? c.caretIndex : 0;
-    let cell = cells(c)[i];
-    cell?.scrollIntoView({ block: 'center', behavior: 'smooth' });
-  }
 }
 
 // Expose for other modules
