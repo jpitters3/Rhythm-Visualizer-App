@@ -3,18 +3,22 @@ import { currentUser } from './state.js';
 import { supabase } from './supabase-client.js';
 import { Bus, BUS_EVENT } from './bus.js';
 
-const upgradeModal = document.getElementById('upgradeModal');
-const closeUpgradeBtn = document.getElementById('closeUpgradeBtn');
-const checkoutBtn = document.getElementById('checkoutBtn');
-const congratsModal = document.getElementById('congratsModal');
-const closeCongratsBtn = document.getElementById('closeCongratsBtn');
-const startGroovingBtn = document.getElementById('startGroovingBtn');
+let upgradeModal, congratsModal;
 
 export function initMonetization() {
+    // Late-bound DOM references
+    upgradeModal = document.getElementById('upgradeModal');
+    const closeUpgradeBtn = document.getElementById('closeUpgradeBtn');
+    const checkoutBtn = document.getElementById('checkoutBtn');
+    congratsModal = document.getElementById('congratsModal');
+    const closeCongratsBtn = document.getElementById('closeCongratsBtn');
+    const startGroovingBtn = document.getElementById('startGroovingBtn');
+
     // Listen for Gating Events via Bus
     Bus.on(BUS_EVENT.SHOW_UPGRADE_MODAL, (e) => {
-        const feature = e.detail; // Now sends the whole GatedFeature object
-        openUpgradeModal(feature);
+        // detail can be the feature object itself or a string/object containing { feature, featureId }
+        const payload = e.detail;
+        openUpgradeModal(payload);
     });
 
     Bus.on(BUS_EVENT.SHOW_CONGRATS_MODAL, openCongratsModal);
@@ -29,21 +33,38 @@ export function initMonetization() {
         if (e.target === congratsModal) closeCongratsModal();
     });
 
-    checkoutBtn?.addEventListener('click', handleUpgradeClick);
+    checkoutBtn?.addEventListener('click', () => handleUpgradeClick(checkoutBtn));
 
     // Check for success redirect
     checkUpgradeSuccess();
 }
 
-function openUpgradeModal(feature) {
+function openUpgradeModal(payload) {
     if (!upgradeModal) return;
     
+    // Support both direct feature object or payload { feature, featureId }
+    const feature = payload?.feature || payload;
+    const featureId = payload?.featureId;
+
     const featureName = (typeof feature === 'string') ? feature : feature?.getName?.() || feature?.name;
 
-    // Update title or description if needed based on feature
+    // Clear previous highlights
+    upgradeModal.querySelectorAll('.feature-item').forEach(item => item.classList.remove('highlight'));
+
+    // Apply new highlight if ID provided
+    if (featureId) {
+        const target = document.getElementById(featureId);
+        if (target) {
+            target.classList.add('highlight');
+            // Ensure visible if modal content is long (though current isn't)
+            target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+    }
+
+    // Update title or description based on feature
     const intro = upgradeModal.querySelector('.upgrade-intro');
     if (intro && featureName) {
-        intro.innerHTML = `You've reached a feature reserved for <strong>GroovePan Pro</strong> members: <em>${featureName}</em>`;
+        intro.innerHTML = `Get instant access to <strong>${featureName}</strong>, and everything else in the <strong>Pro Bundle</strong>, by upgrading today!`;
     }
 
     upgradeModal.classList.add('open');
@@ -60,9 +81,6 @@ function openCongratsModal() {
     if (!congratsModal) return;
     congratsModal.classList.add('open');
     congratsModal.setAttribute('aria-hidden', 'false');
-    
-    // Confetti or celebratory effects could go here
-    console.log("Congrats! You're a Pro member now.");
 }
 
 function closeCongratsModal() {
@@ -80,25 +98,24 @@ function checkUpgradeSuccess() {
     const params = new URLSearchParams(window.location.search);
     if (params.get('upgrade') === 'success') {
         openCongratsModal();
-        // Force refresh profile/state to see new status
         Bus.emit(BUS_EVENT.PROFILE_LOAD_NEEDED);
     }
 }
 
-async function handleUpgradeClick() {
+async function handleUpgradeClick(btn) {
     if (!currentUser) {
         alert("Please sign in or register to upgrade to Pro.");
-        // Redirect to auth via Bus
         Bus.emit(BUS_EVENT.OPEN_AUTH_MODAL);
         closeUpgradeModal();
         return;
     }
 
-    checkoutBtn.disabled = true;
-    checkoutBtn.textContent = "Connecting to Stripe...";
+    if (btn) {
+        btn.disabled = true;
+        btn.textContent = "Connecting to Stripe...";
+    }
 
     try {
-        // Call Supabase Edge Function to get Stripe Checkout URL
         const { data, error } = await supabase.functions.invoke('stripe-checkout', {
             body: { 
                 userId: currentUser.id,
@@ -117,7 +134,9 @@ async function handleUpgradeClick() {
     } catch (err) {
         console.error("Payment error:", err);
         alert("Sorry, we couldn't start the checkout process. Please try again later.");
-        checkoutBtn.disabled = false;
-        checkoutBtn.textContent = "Upgrade to Pro";
+        if (btn) {
+            btn.disabled = false;
+            btn.textContent = "Upgrade to Pro";
+        }
     }
 }

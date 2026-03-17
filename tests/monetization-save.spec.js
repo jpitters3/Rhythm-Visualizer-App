@@ -1,6 +1,7 @@
 // @ts-check
 const { test, expect } = require('@playwright/test');
-const { createTestUser } = require('./utils/auth-helper');
+const { createTestUser, deleteTestUser, loginAsTestUser } = require('./utils/auth-helper');
+
 
 /**
  * Test case for the guest-to-pro pattern saving flow:
@@ -12,40 +13,60 @@ const { createTestUser } = require('./utils/auth-helper');
  */
 test.describe('Monetization Save Gating', () => {
 
+  let testUser;
+
+  test.beforeEach(async ({ page, isMobile }) => {
+    // 0. Create unique test user
+    testUser = await createTestUser();
+
+    // 1. Initial Load as Guest
+    await page.goto('/');
+  });
+
+  test.afterEach(async ({ page }) => {
+    // Clear browser session to prevent test interference
+    await page.context().clearCookies();
+    await page.evaluate(() => localStorage.clear());
+
+    if (testUser) {
+      await deleteTestUser(testUser.user.id);
+    }
+  });
+
+
   test('should enforce authentication and 5-pattern limit', async ({ page }) => {
     // Pipe browser logs to terminal
     page.on('console', msg => console.log(`[BROWSER] ${msg.text()}`));
 
-    // 1. Initial Load as Guest
-    await page.goto('/');
-    
     // Ensure grid is ready
     await page.waitForSelector('.measure-row');
 
-    // 2. Add some notes to the grid to make it a valid pattern
+    // 3. Add some notes to the grid to make it a valid pattern
     const cell0 = page.locator('.cell').nth(0);
     await cell0.click();
     await page.keyboard.type('D');
 
-    // 3. Attempt to save as Guest
+    // 4. Attempt to save as Guest
     console.log('[TEST] Checking guest save blocking...');
-    
-    // Set up dialog listener before click
-    const dialogPromise = page.waitForEvent('dialog');
-    
+
     // Open File dropdown and click Save
     await page.click('#fileDropdownBtn');
     await page.click('#saveBtn');
-    
-    const dialog = await dialogPromise;
-    expect(dialog.message()).toContain('Please sign in or create an account to save patterns');
-    await dialog.accept();
+
+    // Wait for Custom Confirm Modal (Alert mode for guest check)
+    const confirmModal = page.locator('#confirmModal');
+    await expect(confirmModal).toHaveClass(/open/);
+    await expect(confirmModal).toContainText('Please sign in or create an account to save patterns');
+
+    // Click OK on custom modal
+    await confirmModal.locator('#confirmOkBtn').click();
+    await expect(confirmModal).not.toHaveClass(/open/);
 
     // Verify Auth Modal automatically opened
     const authModal = page.locator('#authModal');
     await expect(authModal).toHaveClass(/open/);
 
-    // 4. Sign In with a fresh test user
+    // 5. Sign In with a fresh test user
     console.log('[TEST] Creating test user and signing in...');
     const user = await createTestUser();
     await page.locator('#authEmail').fill(user.email);
@@ -56,36 +77,51 @@ test.describe('Monetization Save Gating', () => {
     await expect(authModal).not.toHaveClass(/open/, { timeout: 15000 });
     console.log('[TEST] Signed in successfully.');
 
-    // 5. Save 5 patterns (the free limit)
+    // 6. Save 5 patterns (the free limit)
     for (let i = 1; i <= 5; i++) {
-        console.log(`[TEST] Saving pattern ${i}/5...`);
-        const patternName = `Sample Pattern ${i}`;
-        
-        const promptPromise = page.waitForEvent('dialog');
-        await page.click('#fileDropdownBtn');
-        await page.click('#saveBtn');
-        const promptDialog = await promptPromise;
-        await promptDialog.accept(patternName);
-        
-        // Wait for the select dropdown to reflect the new pattern
-        const patternSelect = page.locator('#patternSelect');
-        await expect(patternSelect).toContainText(patternName, { timeout: 10000 });
+      console.log(`[TEST] Saving pattern ${i}/5...`);
+      const patternName = `Sample Pattern ${i}`;
+
+      await page.click('#fileDropdownBtn');
+      await page.click('#saveBtn');
+
+      // Wait for Custom Confirm Modal (Prompt mode)
+      await expect(confirmModal).toHaveClass(/open/);
+      await confirmModal.locator('#confirmInput').fill(patternName);
+      await confirmModal.locator('#confirmOkBtn').click();
+      await expect(confirmModal).not.toHaveClass(/open/);
+
+      // Wait for the select dropdown to reflect the new pattern
+      const patternSelect = page.locator('#patternSelect');
+      await expect(patternSelect).toContainText(patternName, { timeout: 10000 });
     }
 
-    // 6. Attempt to save 6th pattern -> Upgrade Modal should appear
+    // 7. Attempt to save 6th pattern -> Upgrade Modal should appear
     console.log('[TEST] Attempting to save 6th pattern (over the limit)...');
-    const sixthPromptPromise = page.waitForEvent('dialog');
     await page.click('#fileDropdownBtn');
     await page.click('#saveBtn');
-    const sixthPrompt = await sixthPromptPromise;
-    await sixthPrompt.accept('The Pro Pattern');
+
+    // Custom Modal (Prompt mode for 6th save)
+    await expect(confirmModal).toHaveClass(/open/);
+    await confirmModal.locator('#confirmInput').fill('The Pro Pattern');
+    await confirmModal.locator('#confirmOkBtn').click();
+    await expect(confirmModal).not.toHaveClass(/open/);
 
     // Verify Upgrade Modal is shown
     const upgradeModal = page.locator('#upgradeModal');
     await expect(upgradeModal).toHaveClass(/open/, { timeout: 10000 });
+    
+    // Specifically verify the 'Unlimited Cloud Storage' feature is highlighted
+    const highlightedFeature = upgradeModal.locator('#feat-storage');
+    await expect(highlightedFeature).toHaveClass(/highlight/);
+    
+    // Capture screenshot for visual validation in walkthrough
+    await page.screenshot({ path: 'upgrade_modal_highlight.png' });
+    console.log('[TEST] Captured screenshot: upgrade_modal_highlight.png');
+
     await expect(upgradeModal).toContainText('Unlock Pro Features');
     await expect(upgradeModal).toContainText('Unlimited Cloud Storage');
-    
-    console.log('[TEST] Verified: 6th pattern save triggered upgrade modal.');
+
+    console.log('[TEST] Verified: 6th pattern save triggered upgrade modal with feature highlight.');
   });
 });

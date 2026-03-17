@@ -982,19 +982,6 @@
     </div>
   </div>
 
-  <!-- Custom Confirmation Modal -->
-  <div id="confirmModal" class="modal-overlay" aria-hidden="true" style="z-index: 2000;">
-    <div class="modal" style="width: min(400px, 90%); text-align: center;">
-      <h3 class="modal-title" id="confirmTitle">Confirm Action</h3>
-      <div class="modal-subtitle" id="confirmMessage" style="font-size: 15px; margin: 15px 0 25px;">Are you sure?
-      </div>
-      <div class="modal-actions" style="justify-content: center; gap: 15px;">
-        <button id="confirmCancelBtn" class="secondary-btn">Cancel</button>
-        <button id="confirmOkBtn" class="primary-btn"
-          style="background: #e74c3c; border-color: #c0392b; color: white;">Delete</button>
-      </div>
-    </div>
-  </div>
   <div id="countdownOverlay" class="countdown-overlay" style="display:none;">
     <div id="countdownNumber"></div>
   </div>
@@ -1788,29 +1775,34 @@
       <div class="upgrade-content">
         <p class="upgrade-intro">You've reached a feature reserved for <strong>GroovePan Pro</strong> members.</p>
 
+        <div class="pro-bundle-header">
+          <span class="vibrant-badge">PRO BUNDLE</span>
+          <strong>Included in GroovePan Pro:</strong>
+        </div>
+
         <div class="feature-list">
-          <div class="feature-item">
+          <div id="feat-composition" class="feature-item">
             <span class="feature-icon">🎵</span>
             <div class="feature-details">
               <strong>Composition Assistant</strong>
               <span>Instantly generate new musical patterns and ideas specific to your handpan.</span>
             </div>
           </div>
-          <div class="feature-item">
+          <div id="feat-scales" class="feature-item">
             <span class="feature-icon">🛸</span>
             <div class="feature-details">
               <strong>Custom Handpan Scales</strong>
               <span>Calibrate and save your own unique handpan layouts.</span>
             </div>
           </div>
-          <div class="feature-item">
+          <div id="feat-storage" class="feature-item">
             <span class="feature-icon">☁️</span>
             <div class="feature-details">
               <strong>Unlimited Cloud Storage</strong>
               <span>Save as many patterns as you want. (Free tier limited to 5 saves).</span>
             </div>
           </div>
-          <div class="feature-item">
+          <div id="feat-audio" class="feature-item">
             <span class="feature-icon">⬇️</span>
             <div class="feature-details">
               <strong>Download Audio</strong>
@@ -1838,28 +1830,28 @@
         <p class="upgrade-intro">You've successfully upgraded. Everything is now fully unlocked!</p>
 
         <div class="feature-list">
-          <div class="feature-item">
+          <div id="congrats-feat-composition" class="feature-item">
             <span class="feature-icon">🎵</span>
             <div class="feature-details">
               <strong>Composition Assistant</strong>
               <span>Instantly generate new musical patterns and ideas specific to your handpan.</span>
             </div>
           </div>
-          <div class="feature-item">
+          <div id="congrats-feat-scales" class="feature-item">
             <span class="feature-icon">🛸</span>
             <div class="feature-details">
               <strong>Custom Handpan Scales</strong>
               <span>Calibrate and save your own unique handpan layouts.</span>
             </div>
           </div>
-          <div class="feature-item">
+          <div id="congrats-feat-storage" class="feature-item">
             <span class="feature-icon">☁️</span>
             <div class="feature-details">
               <strong>Unlimited Cloud Storage</strong>
               <span>Save as many patterns as you want across all devices.</span>
             </div>
           </div>
-          <div class="feature-item">
+          <div id="congrats-feat-audio" class="feature-item">
             <span class="feature-icon">⬇️</span>
             <div class="feature-details">
               <strong>Download Audio</strong>
@@ -1871,6 +1863,24 @@
         <div class="upgrade-cta">
           <button id="startGroovingBtn" class="primary-btn pulse-animation">Start Grooving</button>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Custom Confirmation / Alert / Prompt Modal -->
+  <div id="confirmModal" class="modal-overlay" aria-hidden="true">
+    <div class="modal glass-panel">
+      <div id="confirmTitle" class="modal-title vibrant-text">Confirm</div>
+      <div id="confirmMessage" class="modal-subtitle">Are you sure?</div>
+
+      <div id="confirmInputWrapper" style="display:none; margin: 15px 0;">
+        <input id="confirmInput" type="text" placeholder="Enter value..."
+          style="width:100%; padding:12px 15px; border-radius:12px; border:1px solid var(--panel-border); background:rgba(0,0,0,0.2); color:var(--text); font-size: 16px; outline: none;" />
+      </div>
+
+      <div class="modal-actions">
+        <button id="confirmCancelBtn" class="secondary-btn">Cancel</button>
+        <button id="confirmOkBtn" class="primary-btn active">OK</button>
       </div>
     </div>
   </div>

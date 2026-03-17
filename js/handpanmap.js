@@ -533,7 +533,10 @@ function renderMyScalesList() {
   createBtn.textContent = '+ Create New Handpan';
   createBtn.onclick = () => {
     if (!canAccess(FEATURE.CUSTOM_SCALES)) {
-      Bus.emit(BUS_EVENT.SHOW_UPGRADE_MODAL, FEATURE.CUSTOM_SCALES);
+      Bus.emit(BUS_EVENT.SHOW_UPGRADE_MODAL, {
+        feature: FEATURE.CUSTOM_SCALES,
+        featureId: 'feat-scales'
+      });
       return;
     }
     openHandpanForm(null);
@@ -599,7 +602,10 @@ function renderMyScalesList() {
     mapBtn.className = 'edit-map-btn';
     mapBtn.onclick = () => {
       if (!canAccess(FEATURE.CUSTOM_SCALES)) {
-        Bus.emit(BUS_EVENT.SHOW_UPGRADE_MODAL, FEATURE.CUSTOM_SCALES);
+        Bus.emit(BUS_EVENT.SHOW_UPGRADE_MODAL, {
+          feature: FEATURE.CUSTOM_SCALES,
+          featureId: 'feat-scales'
+        });
         return;
       }
       closeMyScalesModal();

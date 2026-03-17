@@ -1,12 +1,14 @@
-const { createClient } = require('@supabase/supabase-js');
 require('dotenv').config();
+const { test, expect } = require('@playwright/test');
+const { createClient } = require('@supabase/supabase-js');
+const { waitForPageReady } = require('./page-helper');
 
 const supabaseAdmin = createClient(
   process.env.VITE_SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
-async function createTestUser() {
+async function createTestUser(isAdmin = false) {
   const timestamp = Date.now();
   const random = Math.floor(Math.random() * 10000);
   const email = `test.user.${timestamp}.${random}@example.com`;
@@ -17,7 +19,7 @@ async function createTestUser() {
     password,
     email_confirm: true,
     user_metadata: {
-      is_admin: true
+      is_admin: isAdmin
     }
   });
 
@@ -47,4 +49,28 @@ async function deleteTestUser(userId) {
   }
 }
 
-module.exports = { createTestUser, deleteTestUser, supabaseAdmin };
+async function loginAsTestUser(page, testUser) {
+  // auth-helper.js
+  await waitForPageReady(page);
+
+  // Auth Logic...
+  const authBtnSelector = await page.locator('#authBtn').isVisible() ? '#authBtn' : '#accountBtn';
+  const loginBtn = page.locator(authBtnSelector);
+
+  // If button text implies not logged in, log in
+  const btnText = await loginBtn.innerText();
+  if (btnText.includes('Sign In') || btnText.includes('Register')) {
+    await loginBtn.click();
+    await expect(page.locator('#authModal')).toHaveClass(/open/);
+    await page.fill('#authEmail', testUser.email);
+    await page.fill('#authPass', testUser.password);
+
+    await page.click('#authLogin');
+
+    // Verify login success with longer timeout
+    await expect(page.locator('#authHint')).toContainText('Signed in', { timeout: 15000 });
+    await expect(page.locator('#authModal')).not.toHaveClass(/open/);
+  }
+}
+
+module.exports = { createTestUser, deleteTestUser, loginAsTestUser, supabaseAdmin };

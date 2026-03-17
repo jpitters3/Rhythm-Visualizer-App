@@ -52,7 +52,8 @@ export function setCurrentUser(u) { currentUser = u; }
 export function isAdminUser(user) {
   const email = user?.email?.toLowerCase?.() || "";
   const isMetadataAdmin = user?.user_metadata?.is_admin === true;
-  return ADMIN_EMAILS.has(email) || email.startsWith('test.user.') || isMetadataAdmin;
+  // ONLY use explicit list or metadata
+  return ADMIN_EMAILS.has(email) || isMetadataAdmin;
 }
 
 // Scale State

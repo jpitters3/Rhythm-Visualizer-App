@@ -22,6 +22,73 @@ import { canAccess, FEATURE } from './gated-feature.js';
 // Global references assigned in initControls
 let patternSelect, gridBtn, handBtn, resetBtn, themeBtn, presentBtn, exitPresent, micBtn, saveBtn, renameBtn, deleteBtn, exportBtn, navDashboardBtn, importBtn, loadBtn;
 
+// Custom Confirmation Modal Logic
+let confirmModal, confirmTitle, confirmMessage, confirmOkBtn, confirmCancelBtn, confirmInputWrapper, confirmInput;
+
+/**
+ * Promise-based Custom Modal
+ * mode: 'alert', 'confirm', 'prompt'
+ */
+export function showCustomModal({ title, message, mode = 'confirm', defaultValue = '' }) {
+  return new Promise((resolve) => {
+    if (!confirmModal) {
+      if (mode === 'alert') { alert(message); resolve(true); }
+      else if (mode === 'prompt') { resolve(prompt(message, defaultValue)); }
+      else { resolve(confirm(message)); }
+      return;
+    }
+
+    confirmTitle.textContent = title || (mode === 'prompt' ? 'Input Required' : (mode === 'alert' ? 'Notification' : 'Confirm'));
+    confirmMessage.textContent = message || '';
+    
+    confirmInputWrapper.style.display = (mode === 'prompt') ? 'block' : 'none';
+    confirmCancelBtn.style.display = (mode === 'alert') ? 'none' : 'inline-block';
+    
+    if (mode === 'prompt') {
+      confirmInput.value = defaultValue || '';
+    }
+
+    const onOk = () => {
+      const val = (mode === 'prompt') ? confirmInput.value : true;
+      cleanup();
+      resolve(val);
+    };
+
+    const onCancel = () => {
+      cleanup();
+      resolve(mode === 'prompt' ? null : false);
+    };
+
+    const cleanup = () => {
+      confirmOkBtn.removeEventListener('click', onOk);
+      confirmCancelBtn.removeEventListener('click', onCancel);
+      closeConfirmModal();
+    };
+
+    confirmOkBtn.addEventListener('click', onOk);
+    confirmCancelBtn.addEventListener('click', onCancel);
+
+    confirmModal.classList.add('open');
+    confirmModal.setAttribute('aria-hidden', 'false');
+
+    if (mode === 'prompt') {
+      setTimeout(() => {
+        confirmInput.focus();
+        confirmInput.select();
+      }, 50);
+    } else {
+      confirmOkBtn.focus();
+    }
+  });
+}
+
+function closeConfirmModal() {
+  if (confirmModal) {
+    confirmModal.classList.remove('open');
+    confirmModal.setAttribute('aria-hidden', 'true');
+  }
+}
+
 /**
  * Dropdown toggle helper
  */
@@ -100,7 +167,11 @@ export async function saveCurrentPatternAs(name) {
   try {
     // Check auth
     if (!(await isAuthed())) {
-      alert('Please sign in or create an account to save patterns.');
+      await showCustomModal({
+        title: 'Sign In Required',
+        message: 'Please sign in or create an account to save patterns.',
+        mode: 'alert'
+      });
       openAuthModal();
       return false;
     }
@@ -109,11 +180,11 @@ export async function saveCurrentPatternAs(name) {
     const existingNames = await dbListPatternNames();
     const isNew = !existingNames.includes(trimmed);
 
-    console.log(`[DEBUG] Save attempt: "${trimmed}", isNew: ${isNew}, existing count: ${existingNames.length}`);
-
     if (isNew && !canAccess(FEATURE.UNLIMITED_PATTERNS, { count: existingNames.length })) {
-      console.log('[DEBUG] Access DENIED: triggering upgrade modal.');
-      Bus.emit(BUS_EVENT.SHOW_UPGRADE_MODAL, FEATURE.UNLIMITED_PATTERNS);
+      Bus.emit(BUS_EVENT.SHOW_UPGRADE_MODAL, { 
+        feature: FEATURE.UNLIMITED_PATTERNS, 
+        featureId: 'feat-storage' 
+      });
       return false;
     }
 
@@ -123,7 +194,11 @@ export async function saveCurrentPatternAs(name) {
     return true;
   } catch (err) {
     console.error(err);
-    alert(`Save failed: ${err?.message || err}`);
+    await showCustomModal({
+      title: 'Save Failed',
+      message: err?.message || err,
+      mode: 'alert'
+    });
     return false;
   }
 }
@@ -138,7 +213,11 @@ export async function loadPatternByName(pattern) {
       if (!pattern) return;
       const state = await dbLoadPatternByName(pattern);
       if (!state) {
-        alert('Could not load that pattern.');
+        await showCustomModal({
+          title: 'Load Failed',
+          message: 'Could not load that pattern.',
+          mode: 'alert'
+        });
         return;
       }
       applyPattern(state);
@@ -159,7 +238,11 @@ export async function loadPatternByName(pattern) {
     localStorage.setItem(LAST_USED_KEY, name);
   } catch (err) {
     console.error(err);
-    alert(`Load failed: ${err?.message || err}`);
+    await showCustomModal({
+      title: 'Load Failed',
+      message: err?.message || err,
+      mode: 'alert'
+    });
   }
 }
 
@@ -210,6 +293,19 @@ export function initControls() {
   importBtn = document.getElementById('importBtn');
   loadBtn = document.getElementById('loadBtn');
 
+  // Confirm Modal Elements
+  confirmModal = document.getElementById('confirmModal');
+  confirmTitle = document.getElementById('confirmTitle');
+  confirmMessage = document.getElementById('confirmMessage');
+  confirmOkBtn = document.getElementById('confirmOkBtn');
+  confirmCancelBtn = document.getElementById('confirmCancelBtn');
+  confirmInputWrapper = document.getElementById('confirmInputWrapper');
+  confirmInput = document.getElementById('confirmInput');
+
+  confirmModal?.addEventListener('click', (e) => {
+    if (e.target === confirmModal) closeConfirmModal();
+  });
+
   // 2. Dropdown Setup
   const fileDropdownBtn = document.getElementById('fileDropdownBtn');
   const fileDropdownMenu = document.getElementById('fileDropdownMenu');
@@ -243,14 +339,15 @@ export function initControls() {
     if (!selected) return;
 
     if (hasUnsavedChanges()) {
-      showConfirm(
-        'Unsaved Changes',
-        'You have unsaved changes. Discard them and load the new pattern?',
-        async () => {
-          await loadPatternByName(selected);
-          updatePatternButtons();
-        }
-      );
+      const ok = await showCustomModal({
+        title: 'Unsaved Changes',
+        message: 'You have unsaved changes. Discard them and load the new pattern?',
+        mode: 'confirm'
+      });
+      if (ok) {
+        await loadPatternByName(selected);
+        updatePatternButtons();
+      }
     } else {
       await loadPatternByName(selected);
       updatePatternButtons();
@@ -261,37 +358,59 @@ export function initControls() {
   saveBtn?.addEventListener('click', async (e) => {
     if (e) e.stopPropagation();
     
+    // Close dropdown
+    if (fileDropdownMenu) fileDropdownMenu.classList.remove('show');
+
     // Auth Check BEFORE prompt
     if (!(await isAuthed())) {
-      alert('Please sign in or create an account to save patterns.');
+      await showCustomModal({
+        title: 'Sign In Required',
+        message: 'Please sign in or create an account to save patterns.',
+        mode: 'alert'
+      });
       openAuthModal();
       return;
     }
 
     const defaultName = `Pattern ${new Date().toLocaleString()}`;
-    const name = prompt('Save pattern as:', getSelectedPatternName() || defaultName);
-    if (!name) return;
-
-    await saveCurrentPatternAs(name);
+    const name = await showCustomModal({
+      title: 'Save Pattern',
+      message: 'Enter a name for your pattern:',
+      mode: 'prompt',
+      defaultValue: getSelectedPatternName() || defaultName
+    });
+    
+    if (name) {
+      await saveCurrentPatternAs(name);
+    }
   });
 
   loadBtn?.addEventListener('click', async (e) => {
     if (e) e.stopPropagation();
+
+    // Close dropdown
+    if (fileDropdownMenu) fileDropdownMenu.classList.remove('show');
+
     const selected = getSelectedPatternName();
     if (!selected) {
-      alert('Please select a pattern to load.');
+      await showCustomModal({
+        title: 'Notice',
+        message: 'Please select a pattern to load.',
+        mode: 'alert'
+      });
       return;
     }
 
     if (hasUnsavedChanges()) {
-      showConfirm(
-        'Unsaved Changes',
-        'You have unsaved changes. Discard them and load the new pattern?',
-        async () => {
-          await loadPatternByName(selected);
-          updatePatternButtons();
-        }
-      );
+      const ok = await showCustomModal({
+        title: 'Unsaved Changes',
+        message: 'You have unsaved changes. Discard them and load the new pattern?',
+        mode: 'confirm'
+      });
+      if (ok) {
+        await loadPatternByName(selected);
+        updatePatternButtons();
+      }
     } else {
       await loadPatternByName(selected);
       updatePatternButtons();
@@ -300,10 +419,20 @@ export function initControls() {
 
   renameBtn?.addEventListener('click', async (e) => {
     if (e) e.stopPropagation();
+
+    // Close dropdown
+    if (fileDropdownMenu) fileDropdownMenu.classList.remove('show');
+
     if (!ensureHasSelection()) return;
 
     const oldName = getSelectedPatternName();
-    const nextName = prompt('Rename pattern to:', oldName);
+    const nextName = await showCustomModal({
+      title: 'Rename Pattern',
+      message: `Enter new name for "${oldName}":`,
+      mode: 'prompt',
+      defaultValue: oldName
+    });
+    
     if (!nextName) return;
 
     const trimmed = nextName.trim();
@@ -315,63 +444,160 @@ export function initControls() {
         localStorage.setItem(LAST_USED_KEY, trimmed);
         await refreshPatternSelect(trimmed);
       } else {
-        alert('Please sign in to rename patterns.');
-        openAuthModal();
+        // local
+        const saved = getSavedPatterns();
+        if (!saved[oldName]) return;
+
+        if (saved[trimmed]) {
+          const ok = await showCustomModal({
+            title: 'Overwrite?',
+            message: 'A pattern with that name already exists. Overwrite it?',
+            mode: 'confirm'
+          });
+          if (!ok) return;
+        }
+
+        saved[trimmed] = saved[oldName];
+        delete saved[oldName];
+        localStorage.setItem(LAST_USED_KEY, trimmed);
+        setSavedPatterns(saved);
+        await refreshPatternSelect(trimmed);
       }
     } catch (err) {
       console.error(err);
-      alert(`Rename failed: ${err.message || err}`);
+      await showCustomModal({
+        title: 'Rename Failed',
+        message: err.message || err,
+        mode: 'alert'
+      });
     }
   });
 
   deleteBtn?.addEventListener('click', async (e) => {
     if (e) e.stopPropagation();
+
+    // Close dropdown
+    if (fileDropdownMenu) fileDropdownMenu.classList.remove('show');
+
     if (!ensureHasSelection()) return;
 
     const name = getSelectedPatternName();
-    if (!confirm(`Are you sure you want to delete "${name}"?`)) return;
+    const ok = await showCustomModal({
+      title: 'Delete Pattern',
+      message: `Are you sure you want to delete "${name}"? This cannot be undone.`,
+      mode: 'confirm'
+    });
 
-    try {
-      if (await isAuthed()) {
-        await dbDeletePattern(name);
-        await refreshPatternSelect();
-      } else {
-        const saved = getSavedPatterns();
-        delete saved[name];
-        setSavedPatterns(saved);
-        await refreshPatternSelect();
+    if (ok) {
+      try {
+        if (await isAuthed()) {
+          await dbDeletePattern(name);
+          if (localStorage.getItem(LAST_USED_KEY) === name) localStorage.removeItem(LAST_USED_KEY);
+          await refreshPatternSelect();
+        } else {
+          const saved = getSavedPatterns();
+          if (!saved[name]) return;
+          delete saved[name];
+          setSavedPatterns(saved);
+          if (localStorage.getItem(LAST_USED_KEY) === name) localStorage.removeItem(LAST_USED_KEY);
+          await refreshPatternSelect();
+        }
+      } catch (err) {
+        console.error(err);
+        await showCustomModal({
+          title: 'Delete Failed',
+          message: err.message || err,
+          mode: 'alert'
+        });
       }
-    } catch (err) {
-      console.error(err);
-      alert(`Delete failed: ${err.message || err}`);
+    }
+  });
+
+  exportBtn?.addEventListener('click', async (e) => {
+    if (e) e.stopPropagation();
+
+    // Close dropdown
+    if (fileDropdownMenu) fileDropdownMenu.classList.remove('show');
+
+    const data = JSON.stringify(serializePattern(), null, 2);
+    try {
+      await navigator.clipboard.writeText(data);
+      await showCustomModal({
+        title: 'Exported',
+        message: 'Pattern JSON copied to clipboard.',
+        mode: 'alert'
+      });
+    } catch {
+      await showCustomModal({
+        title: 'Copy JSON',
+        message: 'Manually copy the following text:',
+        mode: 'prompt',
+        defaultValue: data
+      });
     }
   });
 
   importBtn?.addEventListener('click', async (e) => {
     if (e) e.stopPropagation();
-    const raw = prompt('Paste pattern JSON here:');
+
+    // Close dropdown
+    if (fileDropdownMenu) fileDropdownMenu.classList.remove('show');
+
+    if (hasUnsavedChanges()) {
+      const ok = await showCustomModal({
+        title: 'Unsaved Changes',
+        message: 'You have unsaved changes. Discard them and proceed with import?',
+        mode: 'confirm'
+      });
+      if (!ok) return;
+    }
+
+    const raw = await showCustomModal({
+      title: 'Import Pattern',
+      message: 'Paste pattern JSON here:',
+      mode: 'prompt'
+    });
+    
     if (!raw) return;
 
     try {
       const obj = JSON.parse(raw);
       applyPattern(obj);
 
-      const wantSave = confirm('Loaded! Save this pattern to your list?');
+      const wantSave = await showCustomModal({
+        title: 'Import Success',
+        message: 'Loaded! Save this pattern to your cloud list?',
+        mode: 'confirm'
+      });
+      
       if (wantSave) {
         if (!(await isAuthed())) {
-          alert('Please sign in or create an account to save patterns.');
+          await showCustomModal({
+            title: 'Sign In Required',
+            message: 'Please sign in or create an account to save patterns.',
+            mode: 'alert'
+          });
           openAuthModal();
           return;
         }
         const suggested = obj.name || `Imported ${new Date().toLocaleString()}`;
-        const name = prompt('Save imported pattern as:', suggested);
+        const name = await showCustomModal({
+          title: 'Save Imported Pattern',
+          message: 'Enter a name for this pattern:',
+          mode: 'prompt',
+          defaultValue: suggested
+        });
+        
         if (name) {
           // PRO Gating: check count for NEW patterns
           const existingNames = await dbListPatternNames();
           const isNew = !existingNames.includes(name);
 
           if (isNew && !canAccess(FEATURE.UNLIMITED_PATTERNS, { count: existingNames.length })) {
-            Bus.emit(BUS_EVENT.SHOW_UPGRADE_MODAL, FEATURE.UNLIMITED_PATTERNS);
+            Bus.emit(BUS_EVENT.SHOW_UPGRADE_MODAL, { 
+              feature: FEATURE.UNLIMITED_PATTERNS, 
+              featureId: 'feat-storage' 
+            });
             return;
           }
 
@@ -380,7 +606,11 @@ export function initControls() {
         }
       }
     } catch {
-      alert('That did not parse as JSON.');
+      await showCustomModal({
+        title: 'Error',
+        message: 'That did not parse as valid JSON.',
+        mode: 'alert'
+      });
     }
   });
 
@@ -398,13 +628,14 @@ export function initControls() {
     handBtn.textContent = on ? 'Left/Right: On' : 'Left/Right: Off';
   });
 
-  resetBtn?.addEventListener('click', () => {
+  resetBtn?.addEventListener('click', async () => {
     if (hasUnsavedChanges()) {
-      showConfirm(
-        'Unsaved Changes',
-        'Discard changes and reset?',
-        () => resetGridToDefault(activeGrid)
-      );
+      const ok = await showCustomModal({
+        title: 'Unsaved Changes',
+        message: 'Discard changes and reset?',
+        mode: 'confirm'
+      });
+      if (ok) resetGridToDefault(activeGrid);
     } else {
       resetGridToDefault(activeGrid);
     }
@@ -444,11 +675,14 @@ export function initControls() {
     }
   });
 
-  navDashboardBtn?.addEventListener('click', () => {
+  navDashboardBtn?.addEventListener('click', async () => {
     if (hasUnsavedChanges()) {
-      showConfirm('Unsaved Changes', 'Discard changes and return to dashboard?', () => {
-        window.location.hash = '#dashboard';
+      const ok = await showCustomModal({
+        title: 'Unsaved Changes',
+        message: 'Discard changes and return to dashboard?',
+        mode: 'confirm'
       });
+      if (ok) window.location.hash = '#dashboard';
     } else {
       window.location.hash = '#dashboard';
     }
@@ -506,7 +740,10 @@ export function initControls() {
   const exportAudioBtn = document.getElementById('exportAudioBtn');
   exportAudioBtn?.addEventListener('click', async () => {
     if (!canAccess(FEATURE.DOWNLOAD_WAV)) {
-      Bus.emit(BUS_EVENT.SHOW_UPGRADE_MODAL, FEATURE.DOWNLOAD_WAV);
+      Bus.emit(BUS_EVENT.SHOW_UPGRADE_MODAL, { 
+        feature: FEATURE.DOWNLOAD_WAV, 
+        featureId: 'feat-audio' 
+      });
       return;
     }
     const originalHtml = exportAudioBtn.innerHTML;
@@ -527,7 +764,11 @@ export function initControls() {
       }
     } catch (err) {
       console.error(err);
-      alert('Error exporting audio: ' + (err.message || err));
+      await showCustomModal({
+        title: 'Export Error',
+        message: err.message || err,
+        mode: 'alert'
+      });
     } finally {
       exportAudioBtn.disabled = false;
       exportAudioBtn.innerHTML = originalHtml;
@@ -536,13 +777,4 @@ export function initControls() {
 
   updateNotationUI();
   updatePatternButtons();
-}
-
-/**
- * Utility to show custom confirm (placeholder, uses window.confirm for now)
- */
-function showConfirm(title, msg, onOk) {
-  if (confirm(`${title}\n\n${msg}`)) {
-    onOk();
-  }
 }

@@ -29,11 +29,11 @@ export function canAccess(feature, context = {}) {
   if (tier === 'pro') return true;
 
   const accessMap = {
-    [FEATURE.AI_ASSISTANT.slug]: false,
-    [FEATURE.CUSTOM_SCALES.slug]: false,
-    [FEATURE.MIDI_EXPORT.slug]: false,
-    [FEATURE.DOWNLOAD_WAV.slug]: false,
-    [FEATURE.UNLIMITED_PATTERNS.slug]: (context.count || 0) < 5
+    'ai_assistant': false,
+    'custom_scales': false,
+    'midi_export': false,
+    'download_wav': false,
+    'unlimited_patterns': (context.count || 0) < 5
   };
 
   return accessMap[slug] ?? true;
