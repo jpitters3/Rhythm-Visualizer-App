@@ -1,3 +1,4 @@
+import { alert, confirm } from './alert.js';
 import { activeGrid } from './grid-context.js';
 import { renderAllMeasures } from './notegrid.js';
 import { setCaret, setRange, clearRange, getRange } from './range-selection.js';
@@ -55,18 +56,18 @@ export function appendEmptyMeasure(ctx, skipHistory = false) {
 
 // ===== Delete measure =====
 
-export function deleteMeasure(mIndex, ctx) {
+export async function deleteMeasure(mIndex, ctx) {
   const c = ctx || activeGrid;
   const s = c.stepsPerMeasure;
   const totalMeasures = c.measures;
 
 
   if (totalMeasures <= 1) {
-    alert('You must have at least 1 measure.');
+    await alert('You must have at least 1 measure.');
     return;
   }
 
-  const ok = confirm(`Delete measure ${mIndex + 1}?`);
+  const ok = await confirm(`Delete measure ${mIndex + 1}?`);
   if (!ok) return;
 
   if (HistoryManager) HistoryManager.pushState();
@@ -87,11 +88,11 @@ export function deleteMeasure(mIndex, ctx) {
 
 // ===== Duplicate Selection =====
 
-export function duplicateSelection(ctx) {
+export async function duplicateSelection(ctx) {
   const c = ctx || activeGrid;
   const r = getRange(c);
   if (!r) {
-    alert('Please select a range of notes to duplicate.');
+    await alert('Please select a range of notes to duplicate.');
     return;
   }
 
@@ -124,12 +125,12 @@ export function duplicateSelection(ctx) {
 
 // ===== Delete Multi-Measure Range =====
 
-export function deleteMeasuresRange(startM, endM, ctx) {
+export async function deleteMeasuresRange(startM, endM, ctx) {
   const c = ctx || activeGrid;
   const s = c.stepsPerMeasure;
   const countToDelete = (endM - startM + 1);
 
-  if (!confirm(`Delete ${countToDelete} selected measure(s)?`)) return;
+  if (!await confirm(`Delete ${countToDelete} selected measure(s)?`)) return;
 
   if (HistoryManager) HistoryManager.pushState();
 
@@ -166,20 +167,20 @@ export function initMeasureActions() {
     setCaret(start, ctx);
   });
 
-  document.getElementById('delMeasureBtn')?.addEventListener('click', () => {
+  document.getElementById('delMeasureBtn')?.addEventListener('click', async () => {
     const ctx = activeGrid;
     const range = getRange(ctx);
     if (range && range.length > 1) {
       const s = ctx.stepsPerMeasure;
       const startM = Math.floor(range.start / s);
       const endM = Math.floor(range.end / s);
-      deleteMeasuresRange(startM, endM, ctx);
+      await deleteMeasuresRange(startM, endM, ctx);
     } else {
-      deleteMeasure(getActiveMeasureIndex(ctx), ctx);
+      await deleteMeasure(getActiveMeasureIndex(ctx), ctx);
     }
   });
 
-  document.getElementById('selDuplicateBtn')?.addEventListener('click', () => {
-    duplicateSelection(activeGrid);
+  document.getElementById('selDuplicateBtn')?.addEventListener('click', async () => {
+    await duplicateSelection(activeGrid);
   });
 }

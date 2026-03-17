@@ -6,6 +6,7 @@ import { isListening, setIsListening, getScale, getCurrentScaleId, currentUser, 
 import { isCoaching, evaluateDetectedNote, logCoachingEvent, gridLabels } from './coaching-mode.js';
 import { Bus, BUS_EVENT } from './bus.js';
 import { supabase } from './supabase-client.js';
+import { alert, confirm } from './alert.js';
 
 export let micStream = null, audioAnalyser = null;
 let lastActiveElement = null;
@@ -124,7 +125,7 @@ export async function turnOnMic() {
         requestAnimationFrame(transcriptionLoop);
     } catch (err) {
         console.error("Microphone/Audio Error:", err);
-        alert("Microphone access denied or audio device error.\nPlease check your settings.");
+        await alert("Microphone access denied or audio device error.\nPlease check your settings.");
     }
 }
 
@@ -752,26 +753,26 @@ export function hasCalibrationForCurrentScale() {
     return Object.values(currentCalibratedFreqs).some(v => typeof v === 'number');
 }
 
-function finishCalibration() {
+async function finishCalibration() {
     isCalibrating = false;
     micCalOverlay.style.display = 'none';
 
     Bus.emit(BUS_EVENT.CALIBRATION_DONE);
 
-    setTimeout(() => {
+    setTimeout(async () => {
         if (isFullCalWizard) {
             // Confirmation for Phase 2
-            const response = confirm("1. Pitch Calibration Complete!\n\nReady to start Phase 2: Sensitivity Calibration?\n\nThis will load a rhythmic pattern for you to play along with.");
+            const response = await confirm("1. Pitch Calibration Complete!\n\nReady to start Phase 2: Sensitivity Calibration?\n\nThis will load a rhythmic pattern for you to play along with.");
             if (response) {
                 // Trigger Guided (Sensitivity) Calibration
                 guidedCalBtn?.click();
             } else {
                 isFullCalWizard = false;
                 turnOffMic();
-                alert("Full Calibration cancelled.");
+                await alert("Full Calibration cancelled.");
             }
         } else {
-            alert("Pitch Calibration Complete!");
+            await alert("Pitch Calibration Complete!");
             turnOffMic();
         }
     }, 100);
@@ -1075,11 +1076,11 @@ Bus.on(BUS_EVENT.SET_ACCENT_SENSITIVITY, (e) => {
 });
 
 // Listen for Challenge Corrections
-Bus.on(BUS_EVENT.CHALLENGE_CORRECTION, (e) => {
+Bus.on(BUS_EVENT.CHALLENGE_CORRECTION, async (e) => {
     if (e.detail && e.detail.targetNote) {
         const result = applyChallengeCorrection(e.detail.targetNote);
         if (result.success) {
-            alert(`Got it! I've adjusted my hearing for '${e.detail.targetNote}'.\n\nChanges applied:\n- ${result.msg}`);
+            await alert(`Got it! I've adjusted my hearing for '${e.detail.targetNote}'.\n\nChanges applied:\n- ${result.msg}`);
         }
     }
 });
@@ -1216,17 +1217,17 @@ function finishGuidedCalibration() {
     if (activeGrid.playing) stop(activeGrid);
 
     // Short delay to let UI stop visibly before the alert blocks
-    setTimeout(() => {
+    setTimeout(async () => {
         // Show results and check if perfect
         const { isPerfect, summary } = analyzeGuidedResults();
-        alert("Sensitivity Calibration Results:\n\n" + summary);
+        await alert("Sensitivity Calibration Results:\n\n" + summary);
 
         if (!isPerfect) {
             // const printLogs = confirm("Print logs?");
             // if (printLogs) {
             //     logCoachingEvent(summary);
             // }
-            const goAgain = confirm("Automatic adjustments have been applied to improve your calibration.\n\nWould you like to run the test again to verify the fixes?");
+            const goAgain = await confirm("Automatic adjustments have been applied to improve your calibration.\n\nWould you like to run the test again to verify the fixes?");
             if (goAgain) {
                 // Restart guided calibration
                 resetGuideUI();
@@ -1385,7 +1386,7 @@ export function initTranscription() {
             micCalOverlay.style.display = 'block';
             targetNoteDisplay.textContent = calQueue[0];
         } else {
-            alert("Please enable microphone access to calibrate.");
+            await alert("Please enable microphone access to calibrate.");
         }
     });
 
@@ -1577,7 +1578,7 @@ function openAdvancedCalibrationModal() {
     if (menu) menu.classList.remove('show');
 }
 
-function saveAdvancedCalibration() {
+async function saveAdvancedCalibration() {
     const listContainer = document.getElementById('advancedCalList');
     if (!listContainer) return;
 
@@ -1613,11 +1614,11 @@ function saveAdvancedCalibration() {
     localStorage.setItem('gp_clarity_profiles', JSON.stringify(noteClarityAverages));
     localStorage.setItem('gp_blossom_times', JSON.stringify(noteBlossomTimes));
 
-    alert('Advanced Calibration Settings Saved!');
+    await alert('Advanced Calibration Settings Saved!');
     closeAdvancedCalibrationModal();
 }
 
-function resetAdvancedCalibration() {
+async function resetAdvancedCalibration() {
     // Check if they had a perfect calibration
     const perfectCalFlag = localStorage.getItem('gp_perfect_cal');
     const hasPerfect = perfectCalFlag === 'true';
@@ -1627,7 +1628,7 @@ function resetAdvancedCalibration() {
         msg = "You previously achieved a PERFECT auto-calibration score.\n\n[OK] to restore your PERFECT baseline.\n[Cancel] to aggressively wipe to Factory Defaults.";
     }
 
-    if (confirm(msg)) {
+    if (await confirm(msg)) {
         if (hasPerfect) {
             // Restore Perfect
             const perfectMultStr = localStorage.getItem('gp_perfect_cal_mults');
@@ -1635,7 +1636,7 @@ function resetAdvancedCalibration() {
                 noteMultipliers = JSON.parse(perfectMultStr);
                 localStorage.setItem('gp_multipliers', perfectMultStr);
             }
-            alert("Restored to your Perfect Calibration baseline.");
+            await alert("Restored to your Perfect Calibration baseline.");
         } else {
             // Factory Reset everything but Pitch
             noteMultipliers = { ...DEFAULT_MULTIPLIERS };
@@ -1648,13 +1649,13 @@ function resetAdvancedCalibration() {
             localStorage.removeItem('gp_clarity_profiles');
             localStorage.removeItem('gp_blossom_times');
 
-            alert("Factory Defaults Restored.");
+            await alert("Factory Defaults Restored.");
         }
 
         // Re-populate modal to show new values
         openAdvancedCalibrationModal();
     } else {
-        if (hasPerfect && confirm("Force wipe everything to Factory Defaults instead?")) {
+        if (hasPerfect && await confirm("Force wipe everything to Factory Defaults instead?")) {
             noteMultipliers = { ...DEFAULT_MULTIPLIERS };
             noteClarityAverages = {};
             noteSensitivities = {};
@@ -1667,7 +1668,7 @@ function resetAdvancedCalibration() {
             localStorage.removeItem('gp_perfect_cal');
             localStorage.removeItem('gp_perfect_cal_mults');
 
-            alert("Factory Defaults Restored. Perfect calibration flag cleared.");
+            await alert("Factory Defaults Restored. Perfect calibration flag cleared.");
             openAdvancedCalibrationModal();
         }
     }

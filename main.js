@@ -37,6 +37,7 @@ import './css/glossary.css';
 // import './js/constants.js'; // Removed: File does not exist
 
 // Core Logic
+import './js/alert.js';
 import './js/rhythm-core.js';
 import './js/grid-context.js';
 import './js/transport-ui.js';

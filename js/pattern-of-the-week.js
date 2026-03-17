@@ -1,3 +1,4 @@
+import { alert, confirm } from './alert.js';
 import { supabase } from './supabase-client.js';
 import { currentUser } from './state.js';
 
@@ -274,7 +275,7 @@ function editItem(item) {
 }
 
 async function deleteItem(id) {
-  if (!confirm("Are you sure you want to unschedule this pattern?")) return;
+  if (!await confirm("Are you sure you want to unschedule this pattern?")) return;
 
   try {
     const { error } = await supabase
@@ -287,7 +288,7 @@ async function deleteItem(id) {
     fetchFullSchedule(); // Refresh list
 
   } catch (err) {
-    alert("Error deleting: " + err.message);
+    await alert("Error deleting: " + err.message);
   }
 }
 

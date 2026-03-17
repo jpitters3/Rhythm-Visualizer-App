@@ -6,6 +6,7 @@
 import { supabase } from './supabase-client.js';
 import { loadCourseToEdit } from './course-creator.js';
 import { Bus, BUS_EVENT } from './bus.js';
+import { alert } from './alert.js';
 
 // ── State ─────────────────────────────────────────────────────────────────────
 let allAdminCourses = [];   // Full course list (admin sees everything)
@@ -483,9 +484,12 @@ async function saveAll(andClose) {
 }
 
 /** Open existing Course Creator for the course in the given side. */
-function editCourse(side) {
+async function editCourse(side) {
   const courseId = state[side].courseId;
-  if (!courseId) { alert('Please select a course first.'); return; }
+  if (!courseId) {
+    await alert('Please select a course first.');
+    return;
+  }
   const course = allAdminCourses.find(c => c.id === courseId);
   if (!course) return;
   closeCourseCopier();

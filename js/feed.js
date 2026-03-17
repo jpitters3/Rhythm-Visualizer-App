@@ -3,12 +3,13 @@ import { currentUser } from './state.js';
 import { supabase } from './supabase-client.js';
 import { addToPractice } from './practice.js';
 import { applyPattern } from './pattern-crud.js';
+import { alert, confirm } from './alert.js';
 
 // Community Feed Logic
 
-export function loadPatternFromFeed(json, name) {
-  if (confirm(`Load pattern "${name}"? Unsaved changes will be lost.`)) {
-    applyPattern(json);
+export async function loadPatternFromFeed(json, name) {
+  if (await confirm(`Load pattern "${name}"? Unsaved changes will be lost.`)) {
+    await applyPattern(json);
     document.title = `GroovePan — ${name}`;
   }
 }
@@ -217,7 +218,7 @@ function renderPatternsFeed(patterns) {
 
 async function toggleLike(e, patternId, btn) {
   if (!currentUser) {
-    alert('Please sign in to like patterns.');
+    await alert('Please sign in to like patterns.');
     // Open auth modal via the correct button
     const accountBtn = document.getElementById('accountBtn') || document.getElementById('authBtn');
     if (accountBtn) accountBtn.click();
@@ -266,7 +267,7 @@ async function toggleLike(e, patternId, btn) {
   }
 }
 async function deleteSharedPattern(id, cardElement) {
-  if (!confirm('Are you sure you want to unshare this pattern? It will be removed from the community feed.')) return;
+  if (!await confirm('Are you sure you want to unshare this pattern? It will be removed from the community feed.')) return;
 
   const { error } = await supabase
     .from('shared_patterns')
@@ -276,7 +277,7 @@ async function deleteSharedPattern(id, cardElement) {
 
   if (error) {
     console.error('Error deleting pattern:', error);
-    alert('Failed to delete pattern: ' + error.message);
+    await alert('Failed to delete pattern: ' + error.message);
     return;
   }
 

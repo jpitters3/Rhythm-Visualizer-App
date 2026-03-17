@@ -1,3 +1,4 @@
+import { alert, confirm } from './alert.js';
 import { supabase } from './supabase-client.js';
 import { Bus, BUS_EVENT } from './bus.js';
 
@@ -161,11 +162,11 @@ function setupAdminEventListeners() {
   }
 
   if (saveTermBtn) {
-    saveTermBtn.addEventListener('click', saveTerm);
+    saveTermBtn.addEventListener('click', async () => await saveTerm());
   }
 
   if (deleteTermBtn) {
-    deleteTermBtn.addEventListener('click', deleteTerm);
+    deleteTermBtn.addEventListener('click', async () => await deleteTerm());
   }
 
   // Video Upload
@@ -262,7 +263,7 @@ async function saveTerm() {
   const term = termInput.value.trim();
   const definition = defInput.value.trim();
   if (!term || !definition) {
-    alert("Term Name and Definition are required.");
+    await alert("Term Name and Definition are required.");
     return;
   }
 
@@ -310,7 +311,7 @@ async function saveTerm() {
 
   } catch (err) {
     console.error("Save failed:", err);
-    alert("Save failed: " + err.message);
+    await alert("Save failed: " + err.message);
   } finally {
     saveTermBtn.disabled = false;
     saveTermBtn.textContent = 'Save Term';
@@ -319,7 +320,7 @@ async function saveTerm() {
 
 async function deleteTerm() {
   if (!idInput.value) return;
-  if (!confirm("Are you sure you want to delete this term? This cannot be undone.")) return;
+  if (!await confirm("Are you sure you want to delete this term? This cannot be undone.")) return;
 
   try {
     const { error } = await supabase
@@ -332,7 +333,7 @@ async function deleteTerm() {
     await fetchGlossaryTerms();
   } catch (err) {
     console.error("Delete failed:", err);
-    alert("Failed to delete term.");
+    await alert("Failed to delete term.");
   }
 }
 
@@ -344,7 +345,7 @@ async function triggerVideoUpload() {
   fileInput.onchange = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    if (file.size > 50 * 1024 * 1024) return alert("Video file is too large. Max 50MB.");
+    if (file.size > 50 * 1024 * 1024) return await alert("Video file is too large. Max 50MB.");
 
     try {
       videoInput.value = "Uploading...";
@@ -359,7 +360,7 @@ async function triggerVideoUpload() {
     } catch (err) {
       console.error(err);
       videoInput.value = "";
-      alert("Upload failed.");
+      await alert("Upload failed.");
     }
   };
   fileInput.click();

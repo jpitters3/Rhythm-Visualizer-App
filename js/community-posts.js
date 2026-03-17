@@ -3,6 +3,7 @@ import { loadPatternFromFeed } from './feed.js';
 import { currentUser } from './state.js';
 import { supabase } from './supabase-client.js';
 import { serializePattern } from './pattern-crud.js';
+import { alert, confirm, prompt } from './alert.js';
 
 /**
  * Community Posts (Discussion)
@@ -155,8 +156,11 @@ function renderCreatePostArea() {
 let currentDraftAttachment = null; // { type: 'image'|'video'|'audio'|'pattern', data: ... }
 
 // Media Upload Logic
-function triggerMediaUpload(type) {
-  if (!currentUser) return alert('Please sign in.');
+async function triggerMediaUpload(type) {
+  if (!currentUser) {
+    await alert('Please sign in.');
+    return;
+  }
   const fileInput = document.getElementById('mediaInput');
 
   // Set accept types
@@ -185,8 +189,11 @@ function triggerMediaUpload(type) {
   fileInput.click();
 }
 
-function attachCurrentPattern() {
-  if (!currentUser) return alert('Please sign in.');
+async function attachCurrentPattern() {
+  if (!currentUser) {
+    await alert('Please sign in.');
+    return;
+  }
 
   const pattern = serializePattern();
 
@@ -296,7 +303,7 @@ async function submitPost() {
 
         if (error) {
           console.warn('Upload failed (Bucket missing?), ignoring media.', error);
-          alert('Media upload failed. Please contact admin to set up storage buckets.');
+          await alert('Media upload failed. Please contact admin to set up storage buckets.');
           mediaType = null;
         } else {
           const { data: publicData } = supabase.storage.from('post-media').getPublicUrl(fileName);
@@ -322,7 +329,7 @@ async function submitPost() {
 
   } catch (err) {
     console.error(err);
-    alert('Failed to post: ' + err.message);
+    await alert('Failed to post: ' + err.message);
   } finally {
     if (btn) {
       btn.textContent = 'Post';
@@ -440,7 +447,7 @@ function createPostCard(post) {
                 <textarea class="comment-input" placeholder="Write a comment..."></textarea>
                 <div class="comment-actions">
                      <!-- Simplified comment attachments for now? User asked for them too. -->
-                    <button class="c-att-btn" title="Attach" onclick="alert('Comment attachments coming soon!')">📎</button> 
+                    <button class="c-att-btn" title="Attach" data-action="comment-att-stub">📎</button> 
                     <button class="c-send-btn" data-action="submit-comment" data-id="${post.id}">➤</button>
                 </div>
             </div>
@@ -459,7 +466,8 @@ function createPostCard(post) {
 }
 
 async function deletePost(postId, btn) {
-  if (!confirm('Are you sure you want to delete this post?')) return;
+  const ok = await confirm('Are you sure you want to delete this post?');
+  if (!ok) return;
 
   const { error } = await supabase
     .from('community_posts')
@@ -469,7 +477,7 @@ async function deletePost(postId, btn) {
 
   if (error) {
     console.error('Delete error:', error);
-    alert('Failed to delete post: ' + error.message);
+    await alert('Failed to delete post: ' + error.message);
     return;
   }
 
@@ -484,9 +492,12 @@ async function deletePost(postId, btn) {
 }
 
 async function togglePostLike(postId, btn) {
-  if (!currentUser) return alert('Sign in to like');
+  if (!currentUser) {
+    await alert('Sign in to like');
+    return;
+  }
 
-  alert('Like toggled (Mock)');
+  await alert('Like toggled (Mock)');
   // TODO: implement real logic
 }
 
@@ -527,7 +538,10 @@ async function loadComments(postId) {
 }
 
 async function submitComment(postId) {
-  if (!currentUser) return alert("Please sign in.");
+  if (!currentUser) {
+    await alert("Please sign in.");
+    return;
+  }
 
   const sec = document.getElementById(`comments-${postId}`);
   const input = sec.querySelector('.comment-input');

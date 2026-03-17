@@ -1,5 +1,6 @@
 /* Handpan Calibration Logic */
 import { supabase } from './supabase-client.js';
+import { alert } from './alert.js';
 
 const CAL_PITCHES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 
@@ -480,7 +481,7 @@ export function initCalibration() {
     }
   });
 
-  calDoneBtn?.addEventListener('click', () => {
+  calDoneBtn?.addEventListener('click', async () => {
     // Exit calibration
     if (calOverlay) {
       calOverlay.style.display = 'none';
@@ -491,7 +492,7 @@ export function initCalibration() {
       onCalibrationDone(); // Custom exit (e.g. return to My Scales)
     } else {
       // Default: Reload handpans list or select this one
-      alert("Setup Complete! Your custom handpan is ready.");
+      await alert("Setup Complete! Your custom handpan is ready.");
       location.reload();
     }
   });

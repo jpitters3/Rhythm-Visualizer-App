@@ -7,20 +7,20 @@ export const HistoryManager = {
 
   // Initialize (Keyboard Shortcuts)
   init() {
-    window.addEventListener('keydown', (e) => {
+    window.addEventListener('keydown', async (e) => {
       // Cmd+Z or Ctrl+Z
       if ((e.metaKey || e.ctrlKey) && e.key === 'z') {
         e.preventDefault();
         if (e.shiftKey) {
-          this.redo();
+          await this.redo();
         } else {
-          this.undo();
+          await this.undo();
         }
       }
       // Cmd+Y or Ctrl+Y (Common Redo alternative)
       if ((e.metaKey || e.ctrlKey) && e.key === 'y') {
         e.preventDefault();
-        this.redo();
+        await this.redo();
       }
     });
     this.updateUI();
@@ -45,7 +45,7 @@ export const HistoryManager = {
     this.updateUI();
   },
 
-  undo() {
+  async undo() {
     if (this.undoStack.length === 0) return;
 
     // 1. Snapshot CURRENT state to Redo Stack (so we can redo back to it)
@@ -57,13 +57,13 @@ export const HistoryManager = {
 
     // 3. Apply
     if (typeof applyPattern === 'function') {
-      applyPattern(prevState);
+      await applyPattern(prevState);
     }
 
     this.updateUI();
   },
 
-  redo() {
+  async redo() {
     if (this.redoStack.length === 0) return;
 
     // 1. Snapshot CURRENT state to Undo Stack
@@ -75,7 +75,7 @@ export const HistoryManager = {
 
     // 3. Apply
     if (typeof applyPattern === 'function') {
-      applyPattern(nextState);
+      await applyPattern(nextState);
     }
 
     this.updateUI();

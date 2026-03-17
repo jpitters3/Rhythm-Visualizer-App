@@ -1,3 +1,4 @@
+import { alert, confirm, prompt } from './alert.js';
 import { supabase } from './supabase-client.js';
 import { currentUser } from './state.js';
 import { getProfileById } from './profile.js';
@@ -21,19 +22,19 @@ async function copyText(text) {
     await navigator.clipboard.writeText(text);
     return true;
   } catch {
-    prompt('Copy this link:', text);
+    await prompt('Copy this link:', text);
     return false;
   }
 }
 
 async function upsertSharedPattern() {
   if (!currentUser) {
-    alert('Please sign in to share a pattern.');
+    await alert('Please sign in to share a pattern.');
     return null;
   }
 
   const fallback = getSelectedPatternName() || `Shared ${new Date().toLocaleString()}`;
-  const name = prompt('Share pattern name:', fallback);
+  const name = await prompt('Share pattern name:', fallback);
   if (!name) return null;
 
   const row = {
@@ -63,7 +64,7 @@ async function upsertSharedPattern() {
 
   if (error) {
     console.error('Share upsert error:', error);
-    alert(`Share failed: ${error.message}`);
+    await alert(`Share failed: ${error.message}`);
     return null;
   }
 
@@ -80,11 +81,11 @@ shareBtn?.addEventListener('click', async () => {
     await copyText(url);
 
     if (is_public) {
-      alert('Link copied! (This pattern is Public)');
+      await alert('Link copied! (This pattern is Public)');
       return;
     }
 
-    if (confirm('Link copied! Would you also like to publish this pattern to the Community Feed?')) {
+    if (await confirm('Link copied! Would you also like to publish this pattern to the Community Feed?')) {
       const { error } = await supabase
         .from('shared_patterns')
         .update({ is_public: true })
@@ -92,16 +93,16 @@ shareBtn?.addEventListener('click', async () => {
 
       if (error) {
         console.error('Failed to publish', error);
-        alert('Link worked, but failed to publish to community feed.');
+        await alert('Link worked, but failed to publish to community feed.');
       } else {
-        alert('Published to Community Feed!');
+        await alert('Published to Community Feed!');
       }
     } else {
-      alert('Link copied! Pattern is private (only people with the link can see it).');
+      await alert('Link copied! Pattern is private (only people with the link can see it).');
     }
   } catch (e) {
     console.error(e);
-    alert('Share failed (see console).');
+    await alert('Share failed (see console).');
   }
 });
 
@@ -124,15 +125,15 @@ export async function loadSharedFromURL() {
 
   if (error) {
     console.warn('share load error:', error);
-    alert(`Could not load shared pattern: ${error.message}`);
+    await alert(`Could not load shared pattern: ${error.message}`);
     return false;
   }
   if (!data?.pattern_json) {
-    alert('That share link is invalid or no longer public.');
+    await alert('That share link is invalid or no longer public.');
     return false;
   }
 
-  applyPattern(data.pattern_json);
+  await applyPattern(data.pattern_json);
 
   let creatorName = "Unknown";
   if (data.user_id) {
@@ -183,7 +184,7 @@ function updateSharedUI() {
 sharedSaveCopyBtn?.addEventListener('click', async () => {
   const base = sharedMeta?.name || 'Shared Pattern';
   const suggested = `${base} (copy)`;
-  const name = prompt('Save a copy as:', suggested);
+  const name = await prompt('Save a copy as:', suggested);
   if (!name) return;
 
   // We need to await saveCurrentPatternAs if we want to confirm, IF it returns a value.

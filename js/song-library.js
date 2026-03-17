@@ -14,6 +14,7 @@ let librarySongs = [];
 // Import renderAllMeasures dynamically or assume check?
 // Better to import it if it is a module.
 // But this file has no imports at the top. It seems to be treated as a module by the bundler/browser if type="module".
+import { alert, confirm } from './alert.js';
 import { renderAllMeasures, checkCellIsMultiMode } from './notegrid.js';
 import { setTimeSignature } from './noteplayer.js';
 import { getScale } from './state.js';
@@ -184,14 +185,14 @@ function renderLibrary() {
 }
 
 // Internal functions (No longer on window)
-function loadLibrarySong(id) {
+async function loadLibrarySong(id) {
   const song = librarySongs.find(s => s.id === id);
   if (!song) return;
 
   const p = song.pattern_json;
 
   // Load Logic (Similar to loadPattern)
-  if (confirm(`Load "${song.name}"? This will overwrite your current grid.`)) {
+  if (await confirm(`Load "${song.name}"? This will overwrite your current grid.`)) {
     // 1. Set Labels
     if (p.labels) {
       if (activeGrid) activeGrid.innerLabels = p.labels;
@@ -222,7 +223,7 @@ function loadLibrarySong(id) {
 };
 
 async function deleteSong(id) {
-  if (!confirm("Are you sure you want to delete this song?")) return;
+  if (!await confirm("Are you sure you want to delete this song?")) return;
 
   const { error } = await supabase1
     .from('songs')
@@ -230,7 +231,7 @@ async function deleteSong(id) {
     .eq('id', id);
 
   if (error) {
-    alert("Error deleting song: " + error.message);
+    await alert("Error deleting song: " + error.message);
   } else {
     fetchSongs(); // Refresh
   }

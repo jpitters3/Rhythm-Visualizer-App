@@ -6,6 +6,7 @@
 import fixWebmDuration from './fix-webm-duration.js';
 import { getAudioCtx, unlockAudio } from './noteplayer.js';
 import { micStream } from './transcription.js';
+import { alert } from './alert.js';
 
 let rawAudioRecorder = null;
 let rawAudioChunks = [];
@@ -112,7 +113,7 @@ export async function startRawAudioRecording(onStop) {
     return true;
   } catch (err) {
     console.error("Failed to start raw audio recording", err);
-    alert("Microphone access is required to record audio.");
+    await alert("Microphone access is required to record audio.");
     return false;
   }
 }

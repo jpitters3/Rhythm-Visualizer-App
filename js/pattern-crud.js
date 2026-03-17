@@ -1,4 +1,5 @@
 // SAVE / LOAD PATTERNS WITH SUPABASE
+import { alert } from './alert.js';
 import { supabase } from './supabase-client.js';
 import { isAuthed } from './auth.js';
 import { gridA, gridB } from './grid-context.js';
@@ -229,7 +230,7 @@ export function serializePattern(ctx = gridA) {
 export async function applyPattern(state, ctx = gridA) {
   if (!state || !state.mode || !Array.isArray(state.labels)) {
     console.error('Invalid pattern state:', state);
-    alert('That pattern JSON does not look valid.');
+    await alert('That pattern JSON does not look valid.');
     return;
   }
 
@@ -288,7 +289,7 @@ export async function applyPattern(state, ctx = gridA) {
   if (ctx === gridA) {
     if (state.gridB) {
       setDualGrid(true);
-      applyPattern(state.gridB, gridB);
+      await applyPattern(state.gridB, gridB);
     } else {
       // If loading a single-grid pattern, hide grid B
       // But only if we are currently looking at Grid A
@@ -299,10 +300,10 @@ export async function applyPattern(state, ctx = gridA) {
   }
 }
 
-export function ensureHasSelection() {
+export async function ensureHasSelection() {
   const name = getSelectedPatternName();
   if (!name) {
-    alert('Select a saved pattern first.');
+    await alert('Select a saved pattern first.');
     return false;
   }
   return true;

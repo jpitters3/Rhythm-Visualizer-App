@@ -1,6 +1,9 @@
-import { gridA } from './state.js';
+import { gridA } from './grid-context.js';
 import { canAccess, FEATURE } from './gated-feature.js';
 import { Bus, BUS_EVENT } from './bus.js';
+import { supabase } from './supabase-client.js';
+import { SCALES } from './config.js';
+import { renderAllMeasures } from './notegrid.js';
 
 class AiAssistant {
   constructor() {

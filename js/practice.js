@@ -19,7 +19,7 @@ export async function togglePracticeSidebar() {
   } else {
     // Close other sidebars first
     closeSidebar({ reason: 'practice-open', source: 'practice' });
-    
+
     sidebar.classList.add('open');
     sidebar.removeAttribute('aria-hidden');
     fetchPracticeItems();
@@ -44,7 +44,7 @@ export function initPractice() {
   document.getElementById('togglePracticeBtn')?.addEventListener('click', togglePracticeSidebar);
   document.getElementById('closePracticeSidebar')?.addEventListener('click', closePracticeSidebar);
   document.getElementById('refreshPracticeBtn')?.addEventListener('click', fetchPracticeItems);
-  document.getElementById('startPracticeBtn')?.addEventListener('click', startPractice);
+  document.getElementById('startPracticeBtn')?.addEventListener('click', async () => await startPractice());
 
   Bus.on(BUS_EVENT.AUTH_LOGOUT, () => {
     practiceItems = [];
@@ -58,12 +58,12 @@ export function initPractice() {
 initPractice();
 
 
-export function startPractice() {
+export async function startPractice() {
   if (practiceItems.length > 0) {
     const first = practiceItems[0];
-    loadPracticeItem(first.item_type, first.reference_id);
+    await loadPracticeItem(first.item_type, first.reference_id);
   } else {
-    alert("Add items to your practice plan first!");
+    await alert("Add items to your practice plan first!");
   }
 }
 
@@ -119,13 +119,13 @@ function renderPracticeItems() {
 
 // Event Delegation for Practice List
 if (container) {
-  container.addEventListener('click', (e) => {
+  container.addEventListener('click', async (e) => {
     // Handle Item Click (Load)
     const contentDiv = e.target.closest('.practice-item-content');
     if (contentDiv) {
       const type = contentDiv.dataset.type;
       const ref = contentDiv.dataset.ref;
-      loadPracticeItem(type, ref);
+      await loadPracticeItem(type, ref);
       return;
     }
 
@@ -250,12 +250,12 @@ export function isItemInPractice(type, id) {
 }
 
 export async function togglePracticeItem(type, id, title) {
-  if (!currentUser) return alert("Sign in to practice.");
+  if (!currentUser) return await alert("Sign in to practice.");
 
   const existing = practiceItems.find(p => p.reference_id === id && p.item_type === type);
 
   if (existing) {
-    if (confirm(`Remove "${title}" from practice?`)) {
+    if (await confirm(`Remove "${title}" from practice?`)) {
       await removeFromPractice(existing.id);
       return false; // Removed
     }
@@ -281,7 +281,7 @@ export async function addToPractice(type, id, title) {
 }
 
 export async function removeFromPractice(recordId) {
-  if (!confirm("Remove from practice plan?")) return;
+  if (!await confirm("Remove from practice plan?")) return;
 
   const { error } = await supabase.from('practice_items').delete().eq('id', recordId);
   if (!error) {
@@ -300,7 +300,7 @@ async function loadPracticeItem(type, id) {
       .single();
 
     if (data && data.pattern_json) {
-      applyPattern(data.pattern_json);
+      await applyPattern(data.pattern_json);
 
       // Show in player panel
       const titleEl = document.getElementById('activeLessonTitle');
@@ -318,7 +318,7 @@ async function loadPracticeItem(type, id) {
       if (nextBtn) nextBtn.style.display = 'none';
 
     } else {
-      alert("Pattern not found (might have been deleted).");
+      await alert("Pattern not found (might have been deleted).");
     }
   }
 

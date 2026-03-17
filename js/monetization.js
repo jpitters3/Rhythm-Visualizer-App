@@ -26,7 +26,7 @@ export function initMonetization() {
     closeUpgradeBtn?.addEventListener('click', closeUpgradeModal);
     closeCongratsBtn?.addEventListener('click', closeCongratsModal);
     startGroovingBtn?.addEventListener('click', closeCongratsModal);
-    
+
     // Close on backdrop click for both
     window.addEventListener('click', (e) => {
         if (e.target === upgradeModal) closeUpgradeModal();
@@ -41,7 +41,7 @@ export function initMonetization() {
 
 function openUpgradeModal(payload) {
     if (!upgradeModal) return;
-    
+
     // Support both direct feature object or payload { feature, featureId }
     const feature = payload?.feature || payload;
     const featureId = payload?.featureId;
@@ -104,7 +104,7 @@ function checkUpgradeSuccess() {
 
 async function handleUpgradeClick(btn) {
     if (!currentUser) {
-        alert("Please sign in or register to upgrade to Pro.");
+        await alert("Please sign in or register to upgrade to Pro.");
         Bus.emit(BUS_EVENT.OPEN_AUTH_MODAL);
         closeUpgradeModal();
         return;
@@ -133,7 +133,7 @@ async function handleUpgradeClick(btn) {
         }
     } catch (err) {
         console.error("Payment error:", err);
-        alert("Sorry, we couldn't start the checkout process. Please try again later.");
+        await alert("Sorry, we couldn't start the checkout process. Please try again later.");
         if (btn) {
             btn.disabled = false;
             btn.textContent = "Upgrade to Pro";

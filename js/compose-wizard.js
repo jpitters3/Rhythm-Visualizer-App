@@ -9,6 +9,7 @@ import { isListening } from './state.js';
 import { saveAudioClip, getAudioClip, deleteAudioClip, getAllCompositionsLocal, getCompositionLocal, saveCompositionLocal } from './audio-storage.js';
 import { startRawAudioRecording, stopRawAudioRecording } from './audio-recorder.js';
 import { compositionManager } from './composition-manager.js';
+import { alert } from './alert.js';
 
 let wizardState = {
   currentStep: 1,
@@ -453,7 +454,7 @@ async function loadCompositionToWizard(compId) {
 
     // If there's a pattern saved for this step, load it into gridA
     if (comp.steps[targetStep - 1] && comp.steps[targetStep - 1].pattern) {
-      applyPattern(comp.steps[targetStep - 1].pattern, gridA);
+      await applyPattern(comp.steps[targetStep - 1].pattern, gridA);
     }
 
     // Refresh audio previews specifically for this step
@@ -461,7 +462,7 @@ async function loadCompositionToWizard(compId) {
     renderAudioPreview(targetStep);
   } catch (e) {
     console.error("Failed to load composition:", e);
-    alert("Could not load that composition.");
+    await alert("Could not load that composition.");
   }
 }
 

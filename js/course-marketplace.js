@@ -1,3 +1,4 @@
+import { alert, confirm } from './alert.js';
 import { supabase } from './supabase-client.js';
 import { Bus, BUS_EVENT } from './bus.js';
 import { currentUser, isAdminUser } from './state.js';
@@ -160,7 +161,7 @@ export async function togglePublish(courseId, currentStatus) {
   const newStatus = !currentStatus;
   const action = newStatus ? "PUBLISH" : "UNPUBLISH";
 
-  if (!confirm(`ADMIN: Are you sure you want to ${action} this course?`)) return;
+  if (!await confirm(`ADMIN: Are you sure you want to ${action} this course?`)) return;
 
   try {
     const { error: cErr } = await supabase
@@ -182,12 +183,12 @@ export async function togglePublish(courseId, currentStatus) {
     openMarketplace();
   } catch (err) {
     console.error("Publish toggle failed:", err);
-    alert("Failed to update status: " + err.message);
+    await alert("Failed to update status: " + err.message);
   }
 }
 
 export async function deleteCourse(courseId) {
-  if (!confirm("ADMIN: Are you sure you want to delete this course? This action cannot be undone.")) return;
+  if (!await confirm("ADMIN: Are you sure you want to delete this course? This action cannot be undone.")) return;
 
   try {
     const { error } = await supabase
@@ -197,12 +198,12 @@ export async function deleteCourse(courseId) {
 
     if (error) throw error;
 
-    alert("Course deleted successfully.");
+    await alert("Course deleted successfully.");
     openMarketplace();
 
   } catch (err) {
     console.error("Delete failed:", err);
-    alert("Failed to delete course: " + err.message);
+    await alert("Failed to delete course: " + err.message);
   }
 }
 
@@ -219,7 +220,7 @@ export async function archiveCourse(courseId) {
     openMarketplace(); // Refresh to show Activate button
   } catch (err) {
     console.error('Archive failed:', err);
-    alert('Failed to archive course: ' + err.message);
+    await alert('Failed to archive course: ' + err.message);
   }
 }
 
@@ -232,27 +233,27 @@ export async function activateCourse(courseId) {
       .eq('user_id', currentUser.id)
       .eq('course_id', courseId);
     if (error) throw error;
-    alert("Course activated! Let's start learning.");
+    await alert("Course activated! Let's start learning.");
     closeMarketplace();
     await fetchCourses();
     await setActiveCourse(courseId);
     openSidebar();
   } catch (err) {
     console.error('Activate failed:', err);
-    alert('Failed to activate course: ' + err.message);
+    await alert('Failed to activate course: ' + err.message);
   }
 }
 
 export async function unlockCourse(courseId, isPaid) {
   if (!currentUser) {
-    alert("Please sign in to unlock courses.");
+    await alert("Please sign in to unlock courses.");
     // Maybe show auth modal?
     return;
   }
 
   if (isPaid) {
     // Placeholder for Stripe/Payments
-    alert("Payment integration coming soon! (This is a paid course)");
+    await alert("Payment integration coming soon! (This is a paid course)");
     return;
   }
 
@@ -279,7 +280,7 @@ export async function unlockCourse(courseId, isPaid) {
 
   } catch (err) {
     console.error("Unlock failed:", err);
-    alert("Failed to unlock course. Please try again.");
+    await alert("Failed to unlock course. Please try again.");
     if (btn) {
       btn.textContent = "Get Course";
       btn.disabled = false;

@@ -158,12 +158,12 @@ const openProfileBtn = document.getElementById('openProfileBtn');
 const closeProfileBtn = document.getElementById('closeProfileBtn');
 const saveProfileBtn = document.getElementById('saveProfileBtn');
 
-function showError(msg) {
+async function showError(msg) {
   if (profileError) {
     profileError.textContent = msg;
     profileError.style.display = 'flex';
   } else {
-    alert(msg);
+    await alert(msg);
   }
 }
 
@@ -265,7 +265,7 @@ saveProfileBtn?.addEventListener('click', async () => {
   };
   updateProfileUI();
 
-  alert(`Profile updated!`);
+  await alert(`Profile updated!`);
   closeProfileEditor();
 });
 

@@ -1,5 +1,6 @@
 
 import { activeGrid } from './grid-context.js';
+import { alert } from './alert.js';
 
 // HELPER FUNTIONS
 
@@ -342,7 +343,7 @@ grooveModal?.addEventListener('click', (e) => {
   el?.addEventListener('change', updateGrooveHint);
 });
 
-grooveGo?.addEventListener('click', () => {
+grooveGo?.addEventListener('click', async () => {
   const d = parseCount(dingCount);
   const t = parseCount(takCount);
   const s = parseCount(slapCount);
@@ -357,7 +358,7 @@ grooveGo?.addEventListener('click', () => {
     if (D < 1) D = 1; // beat 1 ding
 
     if (D + T + S > 8) {
-      alert('D + T + S cannot exceed 8.');
+      await alert('D + T + S cannot exceed 8.');
       return;
     }
 

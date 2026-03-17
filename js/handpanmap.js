@@ -11,6 +11,7 @@ import { Bus, BUS_EVENT } from './bus.js';
 import { setBeatToGhost, renderAllMeasures } from './notegrid.js';
 import { isAuthed } from './auth.js';
 import { canAccess, FEATURE } from './gated-feature.js';
+import { alert, confirm } from './alert.js';
 
 // DOM Elements (previously globals)
 let handpanImg, scaleSelect, scaleStatus, handpanColorSelect, numberPitchSelect, ghostBtn, lockBtn, composeBtn, handpanSection, handpanOverlay;
@@ -656,11 +657,11 @@ async function swapHandpanOrder(indexA, indexB) {
 }
 
 async function deleteUserHandpan(id) {
-  if (!confirm("Are you sure you want to delete this scale? This cannot be undone.")) return;
+  if (!await confirm("Are you sure you want to delete this scale? This cannot be undone.")) return;
 
   const { error } = await supabase.from('user_handpans').delete().eq('id', id);
   if (error) {
-    alert("Error deleting: " + error.message);
+    await alert("Error deleting: " + error.message);
   } else {
     // Refresh
     await loadAllUserCustomHandpans(); // Reloads cache and selects
@@ -993,16 +994,16 @@ function attachCreationListeners() {
     // If creating new (no ID), need Top Image.
     // If editing (has ID), Top Image is optional (keep existing).
     if (!builder || !scaleName) {
-      alert('Please fill in Builder and Scale Name.');
+      await alert('Please fill in Builder and Scale Name.');
       return;
     }
     if (!editingHandpanId && !topImageFile) {
-      alert('Please select a Top Image for a new handpan.');
+      await alert('Please select a Top Image for a new handpan.');
       return;
     }
 
     if (!currentUser) {
-      alert('You must be signed in.');
+      await alert('You must be signed in.');
       return;
     }
 
@@ -1050,7 +1051,7 @@ function attachCreationListeners() {
 
         if (updateError) throw updateError;
 
-        alert('Handpan updated successfully!');
+        await alert('Handpan updated successfully!');
         // Refresh list
         await loadAllUserCustomHandpans();
 
@@ -1081,7 +1082,7 @@ function attachCreationListeners() {
 
         if (insertError) throw insertError;
 
-        alert('Saved! Entering calibration mode...');
+        await alert('Saved! Entering calibration mode...');
         if (enterCalibrationMode) {
           enterCalibrationMode(insertData);
           // Hide modal completely for calibration
@@ -1093,7 +1094,7 @@ function attachCreationListeners() {
 
     } catch (err) {
       console.error('Error saving handpan:', err);
-      alert('Error: ' + err.message);
+      await alert('Error: ' + err.message);
     } finally {
       saveNewHandpanBtn.textContent = editingHandpanId ? 'Save Changes' : 'Next: Calibrate';
       saveNewHandpanBtn.disabled = false;
@@ -1334,7 +1335,7 @@ export function initHandpanMap() {
 
   calBtn?.addEventListener('click', () => setCalibrating(!calibrating));
 
-  calibrateHandpanBtn?.addEventListener('click', () => {
+  calibrateHandpanBtn?.addEventListener('click', async () => {
     const val = scaleSelect.value;
     if (val.startsWith('custom:')) {
       const id = val.split(':')[1];
@@ -1348,10 +1349,10 @@ export function initHandpanMap() {
           });
         }
       } else {
-        alert('Custom handpan not found in cache.');
+        await alert('Custom handpan not found in cache.');
       }
     } else {
-      alert("You can only calibrate your own custom handpans. Create a custom handpan to customize it.");
+      await alert("You can only calibrate your own custom handpans. Create a custom handpan to customize it.");
     }
   });
 

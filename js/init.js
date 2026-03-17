@@ -8,6 +8,7 @@ import { stop, setMode, initNotePlayer, unlockAudio } from './noteplayer.js';
 import { loadSharedFromURL } from './share-patterns.js';
 import { refreshPatternSelect, serializePattern, updatePatternButtons, snapshotCurrentState } from './pattern-crud.js';
 import { initCourseCreator } from './course-creator.js';
+import { alert } from './alert.js';
 import { initControls, loadPatternByName, syncVirtualHandpanControls } from './controls.js';
 import { updateComposeUI } from './compose-mode.js';
 import { setPresentation, initPresentation } from './presentation-mode.js';
@@ -170,7 +171,7 @@ function runSelfTests() {
   console.assert(cells().length === before, 'Grid rebuilt back');
 }
 
-function showFatalError(err) {
+async function showFatalError(err) {
   // Ensure we stop any running timers if an error happens during startup
   try { if (typeof stop === 'function') stop(); } catch { }
 
@@ -182,7 +183,7 @@ function showFatalError(err) {
 
   if (!modal || !stackPre) {
     // Fallback if DOM not ready or modal deleted
-    alert("App Failed: " + err);
+    await alert("App Failed: " + err);
     return;
   }
 

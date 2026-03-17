@@ -16,77 +16,23 @@ import { exportAudioWav } from './audio-export.js';
 import { editHandsMode, setEditHandsMode, labelNotation, setLabelNotation } from './state.js';
 import { updateUserGridLabelNotation } from './profile.js';
 import { HistoryManager } from './history.js';
-import { Bus, BUS_EVENT } from './bus.js';
 import { canAccess, FEATURE } from './gated-feature.js';
+import { alert, confirm, prompt } from './alert.js';
 
 // Global references assigned in initControls
 let patternSelect, gridBtn, handBtn, resetBtn, themeBtn, presentBtn, exitPresent, micBtn, saveBtn, renameBtn, deleteBtn, exportBtn, navDashboardBtn, importBtn, loadBtn;
 
-// Custom Confirmation Modal Logic
-let confirmModal, confirmTitle, confirmMessage, confirmOkBtn, confirmCancelBtn, confirmInputWrapper, confirmInput;
-
 /**
- * Promise-based Custom Modal
- * mode: 'alert', 'confirm', 'prompt'
+ * @deprecated Use alert, confirm, prompt from ./alert.js instead
  */
-export function showCustomModal({ title, message, mode = 'confirm', defaultValue = '' }) {
-  return new Promise((resolve) => {
-    if (!confirmModal) {
-      if (mode === 'alert') { alert(message); resolve(true); }
-      else if (mode === 'prompt') { resolve(prompt(message, defaultValue)); }
-      else { resolve(confirm(message)); }
-      return;
-    }
-
-    confirmTitle.textContent = title || (mode === 'prompt' ? 'Input Required' : (mode === 'alert' ? 'Notification' : 'Confirm'));
-    confirmMessage.textContent = message || '';
-    
-    confirmInputWrapper.style.display = (mode === 'prompt') ? 'block' : 'none';
-    confirmCancelBtn.style.display = (mode === 'alert') ? 'none' : 'inline-block';
-    
-    if (mode === 'prompt') {
-      confirmInput.value = defaultValue || '';
-    }
-
-    const onOk = () => {
-      const val = (mode === 'prompt') ? confirmInput.value : true;
-      cleanup();
-      resolve(val);
-    };
-
-    const onCancel = () => {
-      cleanup();
-      resolve(mode === 'prompt' ? null : false);
-    };
-
-    const cleanup = () => {
-      confirmOkBtn.removeEventListener('click', onOk);
-      confirmCancelBtn.removeEventListener('click', onCancel);
-      closeConfirmModal();
-    };
-
-    confirmOkBtn.addEventListener('click', onOk);
-    confirmCancelBtn.addEventListener('click', onCancel);
-
-    confirmModal.classList.add('open');
-    confirmModal.setAttribute('aria-hidden', 'false');
-
-    if (mode === 'prompt') {
-      setTimeout(() => {
-        confirmInput.focus();
-        confirmInput.select();
-      }, 50);
-    } else {
-      confirmOkBtn.focus();
-    }
-  });
+export async function showCustomModal({ title, message, mode = 'confirm', defaultValue = '' }) {
+  if (mode === 'alert') return await alert(message, title);
+  if (mode === 'prompt') return await prompt(message, defaultValue, title);
+  return await confirm(message, title);
 }
 
 function closeConfirmModal() {
-  if (confirmModal) {
-    confirmModal.classList.remove('open');
-    confirmModal.setAttribute('aria-hidden', 'true');
-  }
+  // Obsolete but kept for potential legacy references during transition
 }
 
 /**
@@ -220,7 +166,7 @@ export async function loadPatternByName(pattern) {
         });
         return;
       }
-      applyPattern(state);
+      await applyPattern(state);
       localStorage.setItem(LAST_USED_KEY, pattern);
       return;
     }
@@ -234,7 +180,7 @@ export async function loadPatternByName(pattern) {
     if (!name) return;
 
     if (!saved[name]) return;
-    applyPattern(saved[name]);
+    await applyPattern(saved[name]);
     localStorage.setItem(LAST_USED_KEY, name);
   } catch (err) {
     console.error(err);
@@ -293,14 +239,8 @@ export function initControls() {
   importBtn = document.getElementById('importBtn');
   loadBtn = document.getElementById('loadBtn');
 
-  // Confirm Modal Elements
-  confirmModal = document.getElementById('confirmModal');
-  confirmTitle = document.getElementById('confirmTitle');
-  confirmMessage = document.getElementById('confirmMessage');
-  confirmOkBtn = document.getElementById('confirmOkBtn');
-  confirmCancelBtn = document.getElementById('confirmCancelBtn');
-  confirmInputWrapper = document.getElementById('confirmInputWrapper');
-  confirmInput = document.getElementById('confirmInput');
+  setupGridControls(gridA);
+  setupGridControls(gridB);
 
   confirmModal?.addEventListener('click', (e) => {
     if (e.target === confirmModal) closeConfirmModal();
@@ -423,7 +363,7 @@ export function initControls() {
     // Close dropdown
     if (fileDropdownMenu) fileDropdownMenu.classList.remove('show');
 
-    if (!ensureHasSelection()) return;
+    if (!await ensureHasSelection()) return;
 
     const oldName = getSelectedPatternName();
     const nextName = await showCustomModal({
@@ -479,7 +419,7 @@ export function initControls() {
     // Close dropdown
     if (fileDropdownMenu) fileDropdownMenu.classList.remove('show');
 
-    if (!ensureHasSelection()) return;
+    if (!await ensureHasSelection()) return;
 
     const name = getSelectedPatternName();
     const ok = await showCustomModal({
@@ -562,7 +502,7 @@ export function initControls() {
 
     try {
       const obj = JSON.parse(raw);
-      applyPattern(obj);
+      await applyPattern(obj);
 
       const wantSave = await showCustomModal({
         title: 'Import Success',
@@ -646,12 +586,12 @@ export function initControls() {
     localStorage.setItem('theme', document.body.classList.contains('dark') ? 'dark' : 'light');
   });
 
-  presentBtn?.addEventListener('click', () => {
+  presentBtn?.addEventListener('click', async () => {
     const on = !document.body.classList.contains('present');
-    setPresentation(on);
+    await setPresentation(on);
   });
 
-  exitPresent?.addEventListener('click', () => setPresentation(false));
+  exitPresent?.addEventListener('click', async () => await setPresentation(false));
 
   const labelNotationBtn = document.getElementById('labelNotationBtn');
   labelNotationBtn?.addEventListener('click', () => {

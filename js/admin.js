@@ -3,6 +3,7 @@
  * Handles restricted features like Pattern Tagging and Game Config.
  */
 
+import { alert, confirm, prompt } from './alert.js';
 import { currentUser } from './state.js';
 import { ADMIN_EMAILS } from './config.js';
 import { supabase } from './supabase-client.js';
@@ -87,14 +88,14 @@ function setupModals() {
   gameConfigModal = document.getElementById('gameConfigModal');
 }
 
-function openAdminMenu() {
+async function openAdminMenu() {
   // Simple menu to choose tool
-  const choice = prompt("Admin Tools:\n1. Pattern Organization (Tagging)\n2. Game Configuration\n3. Copy Sections Between Courses", "1");
+  const choice = await prompt("Admin Tools:\n1. Pattern Organization (Tagging)\n2. Game Configuration\n3. Copy Sections Between Courses", "1");
 
   if (choice === '1') {
     openPatternOrgModal();
   } else if (choice === '2') {
-    alert("Game Config coming soon!");
+    await alert("Game Config coming soon!");
   } else if (choice === '3') {
     openCourseCopier();
   }
@@ -137,7 +138,7 @@ function setupDelegation() {
   const listContainer = document.getElementById('adminPatternList');
   if (!listContainer) return;
 
-  listContainer.onclick = (e) => {
+  listContainer.onclick = async (e) => {
     const removeBtn = e.target.closest('.remove-tag-btn');
     if (removeBtn) {
       const { pattern, tag } = removeBtn.dataset;
@@ -148,7 +149,7 @@ function setupDelegation() {
     const addBtn = e.target.closest('.add-tag-btn');
     if (addBtn) {
       const { pattern } = addBtn.dataset;
-      promptAddTag(pattern);
+      await promptAddTag(pattern);
       return;
     }
 
@@ -290,13 +291,13 @@ async function removeTag(patternName, tagToRemove) {
     await dbSavePattern(patternName, item.data);
     console.log(`[Admin] Removed tag ${tagToRemove} from ${patternName}`);
   } catch (err) {
-    alert("Failed to save: " + err.message);
+    await alert("Failed to save: " + err.message);
   }
 };
 
 async function promptAddTag(patternName) {
   if (!isAdmin) return;
-  const tag = prompt("Enter tag (e.g. #simon, #easy):");
+  const tag = await prompt("Enter tag (e.g. #simon, #easy):");
   if (!tag) return;
 
   const cleanTag = tag.trim().startsWith('#') ? tag.trim() : '#' + tag.trim();
@@ -317,6 +318,6 @@ async function promptAddTag(patternName) {
     await dbSavePattern(patternName, item.data);
     console.log(`[Admin] Added tag ${cleanTag} to ${patternName}`);
   } catch (err) {
-    alert("Failed to save: " + err.message);
+    await alert("Failed to save: " + err.message);
   }
 };

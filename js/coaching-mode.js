@@ -15,6 +15,7 @@ import { CoachingSession } from './coaching-session.js';
 import { getSelectedPatternName } from './pattern-crud.js';
 import { loadCalibrationProfile, hasCalibrationForCurrentScale, turnOnMic, micStream, turnOffMic } from './transcription.js';
 import { updateBodySidebarClass, closeSidebar } from './courses.js';
+import { alert } from './alert.js';
 
 // Session state
 let coachingSession = null;
@@ -96,7 +97,7 @@ export function resetCalibration() {
  * Enter Coaching Mode (Show HUD, Ready State)
  * @param {Object} ctx - Grid context
  */
-export function enterCoachingMode(ctx = activeGrid) {
+export async function enterCoachingMode(ctx = activeGrid) {
   console.log('Coaching Mode: Entering UI');
 
   // Toggle behavior
@@ -108,7 +109,7 @@ export function enterCoachingMode(ctx = activeGrid) {
   // Validate pattern has notes
   const hasNotes = ctx?.innerLabels?.some(label => label && label.length > 0);
   if (!hasNotes) {
-    alert('Please add some notes to the pattern before starting coaching mode.');
+    await alert('Please add some notes to the pattern before starting coaching mode.');
     return;
   }
 
@@ -140,7 +141,7 @@ Bus.on(BUS_EVENT.SIDEBAR_CLOSE_ALL, (e) => {
   // we exit coaching mode entirely.
   // We WHITELIST 'coaching' (HUD) and 'coaching-results' (Results Sidebar)
   const isCoachingReason = reason === 'coaching' || reason === 'coaching-results';
-  
+
   if (!isCoachingReason && isCoachingUIOpen) {
     console.log(`Coaching Mode: Exiting due to ${reason}`);
     exitCoachingMode();
@@ -1054,7 +1055,7 @@ export async function saveCoachingSession() {
     if (saveBtn) {
       saveBtn.disabled = false;
       saveBtn.textContent = 'Save Session';
-      alert('Failed to save session. Please try again.');
+      await alert('Failed to save session. Please try again.');
     }
   }
 }
@@ -1622,7 +1623,7 @@ export async function copyLogsForStep(targetStep) {
   const windowLogs = sessionLogs.filter(l => l.step >= targetStep - 1 && l.step <= targetStep + 1);
 
   if (windowLogs.length === 0) {
-    alert(`No detailed logs found for Step ${targetStep}.`);
+    await alert(`No detailed logs found for Step ${targetStep}.`);
     return false;
   }
 

@@ -2,6 +2,7 @@
 // js/midi-importer.js
 // Handles reading MIDI files, parsing them, quantizing to grid, and uploading to DB (Admin only)
 
+import { alert, prompt } from './alert.js';
 import { supabase } from './supabase-client.js';
 import { currentUser } from './state.js';
 import { fetchSongs } from './song-library.js';
@@ -31,7 +32,7 @@ function handleMidiFileSelect(e) {
   importMidiBtn.disabled = true;
 
   const reader = new FileReader();
-  reader.onload = function (e) {
+  reader.onload = async function (e) {
     try {
       console.log("FileReader loaded.");
       const dataUrl = e.target.result;
@@ -52,9 +53,9 @@ function handleMidiFileSelect(e) {
       }
 
       processMidiData(obj, file.name)
-        .catch(err => {
+        .catch(async err => {
           console.error(err);
-          alert("Error: " + err.message);
+          await alert("Error: " + err.message);
         })
         .finally(() => {
           if (importMidiBtn.textContent === "Processing...") {
@@ -65,7 +66,7 @@ function handleMidiFileSelect(e) {
         });
 
     } catch (err) {
-      alert("Error parsing MIDI: " + err.message);
+      await alert("Error parsing MIDI: " + err.message);
       console.error(err);
       importMidiBtn.textContent = originalText;
       importMidiBtn.disabled = false;
@@ -91,7 +92,7 @@ async function processMidiData(midi, filename) {
   // 1. Detect Time Division (PPQ) to calculate timing
   const timeDivision = midi.timeDivision;
   if (!timeDivision) {
-    alert("Could not detect MIDI Time Division.");
+    await alert("Could not detect MIDI Time Division.");
     return;
   }
 
@@ -136,7 +137,7 @@ async function processMidiData(midi, filename) {
   });
 
   if (maxStep === 0) {
-    alert("No notes found in MIDI!");
+    await alert("No notes found in MIDI!");
     return;
   }
 
@@ -162,7 +163,7 @@ async function processMidiData(midi, filename) {
   console.log("Processed Pattern:", patternData);
 
   // Confirm Upload
-  const confirmName = prompt("MIDI Processed! Enter a name for this song:", filename.replace('.mid', '').replace('.midi', ''));
+  const confirmName = await prompt("MIDI Processed! Enter a name for this song:", filename.replace('.mid', '').replace('.midi', ''));
   if (!confirmName) {
     importMidiBtn.textContent = "Import MIDI";
     importMidiBtn.disabled = false;
@@ -177,7 +178,7 @@ async function uploadSongToDB(name, patternData) {
   // Use imported currentUser and supabase
 
   if (!currentUser) {
-    alert("You must be logged in to upload songs.");
+    await alert("You must be logged in to upload songs.");
     return;
   }
 
@@ -220,9 +221,9 @@ async function uploadSongToDB(name, patternData) {
 
   if (error) {
     console.error("Upload failed:", error);
-    alert("Upload failed: " + error.message);
+    await alert("Upload failed: " + error.message);
   } else {
-    alert("Song uploaded successfully!");
+    await alert("Song uploaded successfully!");
     // Refresh library if open?
     if (typeof fetchSongs === 'function') fetchSongs();
   }

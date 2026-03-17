@@ -2,6 +2,7 @@ import { currentUser, isAdminUser } from './state.js';
 import { Bus, BUS_EVENT } from './bus.js';
 import { dbListPatternNames, dbLoadPatternByName, getSavedPatterns, serializePattern } from './pattern-crud.js';
 import { supabase } from './supabase-client.js';
+import { alert, confirm, prompt } from './alert.js';
 
 // ===== STATE =====
 let currentCourseData = {
@@ -161,11 +162,11 @@ async function handlePatternSelect(selectEl, sIdx, lIdx) {
       selectEl.style.backgroundColor = '#dff0d8';
       setTimeout(() => selectEl.style.backgroundColor = '', 500);
     } else {
-      alert("Could not load pattern data. It may have been deleted.");
+      await alert("Could not load pattern data. It may have been deleted.");
     }
   } catch (err) {
     console.error("Error loading pattern for lesson:", err);
-    alert("Error loading pattern data.");
+    await alert("Error loading pattern data.");
   }
 }
 
@@ -449,9 +450,9 @@ function renderCourseStructure() {
 }
 
 async function triggerLessonVideoUpload(sIdx, lIdx) {
-  if (!currentUser) return alert("Please sign in to upload videos.");
+  if (!currentUser) return await alert("Please sign in to upload videos.");
   if (typeof isAdminUser === 'function' && !isAdminUser(currentUser)) {
-    return alert("Only admins can upload videos.");
+    return await alert("Only admins can upload videos.");
   }
 
   // Using existing mediaInput if possible, or create a temporary one
@@ -471,7 +472,7 @@ async function triggerLessonVideoUpload(sIdx, lIdx) {
 
     // Size limit check (e.g. 50MB)
     if (file.size > 50 * 1024 * 1024) {
-      alert("Video file is too large. Max 50MB.");
+      await alert("Video file is too large. Max 50MB.");
       return;
     }
 
@@ -509,7 +510,7 @@ async function triggerLessonVideoUpload(sIdx, lIdx) {
 
     } catch (err) {
       console.error("Upload failed:", err);
-      alert("Upload failed: " + err.message);
+      await alert("Upload failed: " + err.message);
       renderCourseStructure(); // Revert
     }
   };
@@ -517,19 +518,19 @@ async function triggerLessonVideoUpload(sIdx, lIdx) {
   fileInput.click();
 }
 
-function removeSection(sIdx) {
-  if (confirm("Delete section and all its lessons?")) {
+async function removeSection(sIdx) {
+  if (await confirm("Delete section and all its lessons?")) {
     currentCourseData.sections.splice(sIdx, 1);
     renderCourseStructure();
   }
 }
 
-function capturePatternForLesson(sIdx, lIdx) {
+async function capturePatternForLesson(sIdx, lIdx) {
   // Manual capture fallback
   currentCourseData.sections[sIdx].lessons[lIdx].pattern_json = serializePattern();
   currentCourseData.sections[sIdx].lessons[lIdx].pattern_name = ""; // Clear name since it's manual
   renderCourseStructure(); // Re-render to show "Capture Current Grid" selected
-  alert("Lesson pattern updated to current grid state!");
+  await alert("Lesson pattern updated to current grid state!");
 }
 
 
@@ -603,7 +604,7 @@ async function handleCourseSave(shouldClose = true) {
 
   if (!currentUser) {
     console.warn("Save aborted: No currentUser");
-    alert("Please sign in to save courses.");
+    await alert("Please sign in to save courses.");
     return;
   }
 
@@ -614,7 +615,7 @@ async function handleCourseSave(shouldClose = true) {
   console.log("Saving Course:", { title, description, currentCourseData });
 
   if (!title) {
-    alert("Please enter a course title.");
+    await alert("Please enter a course title.");
     return;
   }
 
@@ -765,7 +766,7 @@ async function handleCourseSave(shouldClose = true) {
     console.log("Save successful!");
 
     if (shouldClose) {
-      alert("Course saved successfully!");
+      await alert("Course saved successfully!");
       closeCourseCreator();
       // Reset form
       currentCourseData = { title: "", description: "", sections: [] };
@@ -798,7 +799,7 @@ async function handleCourseSave(shouldClose = true) {
 
   } catch (err) {
     console.error("Error saving course (catch block):", err);
-    alert(`Failed to save course: ${err.message}`);
+    await alert(`Failed to save course: ${err.message}`);
   } finally {
     activeBtn.disabled = false;
     if (shouldClose) {

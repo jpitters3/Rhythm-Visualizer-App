@@ -10,6 +10,7 @@ import { TransportRegistry } from './transport-ui.js';
 import { isReviewing, getFeedbackForStep, showFeedbackTooltip, copyLogsForStep, getExpectedNoteForStep } from './coaching-mode.js';
 import { Bus, BUS_EVENT } from './bus.js';
 import { checkExportVisibility } from './controls.js';
+import { confirm } from './alert.js';
 
 export const cells = (ctx) => (ctx || activeGrid).cells;
 export let activeSubIndex = null;
@@ -496,7 +497,7 @@ export function setInnerLabel(i, value, ctx = activeGrid) {
 
 function attachCellListeners(cell, ctx = activeGrid) {
   // Pointer selection
-  cell.addEventListener('click', (ev) => {
+  cell.addEventListener('click', async (ev) => {
     ev.stopPropagation();
 
     // Set activeGrid on click
@@ -524,7 +525,7 @@ function attachCellListeners(cell, ctx = activeGrid) {
               // Challenge Logic
               const expected = getExpectedNoteForStep(gIndex);
               if (expected) {
-                const confirmChallenge = confirm(`I detected a mistake:\n"${feedback}"\n\nDid you play a '${expected}' correctly?\n\nClick OK to train me to hear it better next time.`);
+                const confirmChallenge = await confirm(`I detected a mistake:\n"${feedback}"\n\nDid you play a '${expected}' correctly?\n\nClick OK to train me to hear it better next time.`);
                 if (confirmChallenge) {
                   Bus.emit(BUS_EVENT.CHALLENGE_CORRECTION, { targetNote: expected });
                 }

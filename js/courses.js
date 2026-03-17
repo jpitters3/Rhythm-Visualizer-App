@@ -1,3 +1,4 @@
+import { alert, confirm, prompt } from './alert.js';
 import { Bus, BUS_EVENT } from './bus.js';
 import { currentUser, isAdminUser } from './state.js';
 import { applyPattern, serializePattern, dbSavePattern, refreshPatternSelect, hasUnsavedChanges, snapshotCurrentState } from './pattern-crud.js';
@@ -272,23 +273,22 @@ export async function setActiveCourse(courseId) {
   }
 }
 
-export function loadLesson(lessonId) {
+export async function loadLesson(lessonId) {
   try {
-    // Check unsaved changes
     if (hasUnsavedChanges()) {
-      if (!confirm('You have unsaved changes. Discard them?')) return;
+      if (!await confirm('You have unsaved changes. Discard them?')) return;
     }
 
     const lesson = allLessons.find(l => l.id === lessonId);
     if (!lesson) {
-      alert(`DEBUG ERROR: Lesson not found! ID: ${lessonId}. Total lessons loaded: ${allLessons.length}`);
+      await alert(`DEBUG ERROR: Lesson not found! ID: ${lessonId}. Total lessons loaded: ${allLessons.length}`);
       return;
     }
     currentLesson = lesson;
 
     // 1. Apply the groove to the grid
     if (lesson.pattern_json) {
-      applyPattern(lesson.pattern_json);
+      await applyPattern(lesson.pattern_json);
       // Update last saved state to prevent false dirty check
       snapshotCurrentState();
     }
@@ -519,7 +519,7 @@ export function loadLesson(lessonId) {
 
   } catch (err) {
     console.error("loadLesson Error:", err);
-    alert("Error loading lesson: " + err.message);
+    await alert("Error loading lesson: " + err.message);
   }
 }
 
@@ -605,7 +605,7 @@ function extractYouTubeId(url) {
 
 export async function toggleLessonCompletion(lessonId) {
   if (!currentUser) {
-    alert("Please sign in to track progress.");
+    await alert("Please sign in to track progress.");
     return;
   }
 
@@ -688,19 +688,19 @@ function triggerCourseCompletionCelebration(courseTitle) {
 export async function updateLessonFromGrid(lessonId) {
   const lesson = allLessons.find(l => l.id === lessonId);
   if (!lesson) {
-    alert("Lesson not found.");
+    await alert("Lesson not found.");
     return;
   }
 
-  if (!confirm(`Are you sure you want to update the pattern for "${lesson.title}" with the current grid?`)) {
+  if (!await confirm(`Are you sure you want to update the pattern for "${lesson.title}" with the current grid?`)) {
     return;
   }
 
-  const newName = prompt("Pattern name (saves to library and lesson):", lesson.pattern_name || lesson.title);
+  const newName = await prompt("Pattern name (saves to library and lesson):", lesson.pattern_name || lesson.title);
   if (newName === null) return; // Cancelled
   const trimmedName = newName.trim();
   if (!trimmedName) {
-    alert("Name cannot be empty.");
+    await alert("Name cannot be empty.");
     return;
   }
 
@@ -751,7 +751,7 @@ export async function updateLessonFromGrid(lessonId) {
     console.log(`Lesson ${lessonId} and Pattern "${trimmedName}" updated successfully.`);
   } catch (err) {
     console.error("Failed to update lesson/pattern:", err);
-    alert("Error updating: " + err.message);
+    await alert("Error updating: " + err.message);
   }
 }
 
