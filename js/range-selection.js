@@ -150,9 +150,4 @@ export function updateDragSelectionOver(cellEl, ctx) {
   setRange(c.anchorIndex, idx, c);
 }
 
-// Click outside to clear range
-window.addEventListener('click', (e) => {
-  if (hasRange(activeGrid) && !e.target.closest('.cell') && !e.target.closest('.measure-tools')) {
-    clearRange(activeGrid);
-  }
-});
+

@@ -3,7 +3,7 @@ import { activeGrid, setActiveGrid } from './state.js';
 import { getTimeSignature, calculateSteps } from './rhythm-core.js';
 import { stop, setTimeSignature } from './noteplayer.js';
 import { getScale } from './state.js';
-import { setCaret, setRange, clearRange, getRange, updateDragSelectionOver, startLongPress, cancelLongPress } from './range-selection.js';
+import { setCaret, setRange, clearRange, getRange, updateDragSelectionOver, startLongPress, cancelLongPress, hasRange } from './range-selection.js';
 import { HistoryManager } from './history.js';
 import { editHandsMode, isEditMulti, longPressFired, setLongPressFired, setIsEditMulti, labelNotation } from './state.js';
 import { TransportRegistry } from './transport-ui.js';
@@ -818,3 +818,15 @@ if (typeof window !== 'undefined') {
     }
   });
 }
+
+// Click outside to clear selection (caret and range)
+window.addEventListener('click', (e) => {
+  if (
+    (activeGrid.caretIndex !== null || hasRange(activeGrid)) &&
+    !e.target.closest('.cell') &&
+    !e.target.closest('.measure-tools') &&
+    !e.target.closest('.sel-bar')
+  ) {
+    clearSelection(activeGrid);
+  }
+});
