@@ -277,11 +277,14 @@ body.dark.calibrating .hp-dot.selected {
 
 div.under-handpan {
   position: relative;
-  height: 40px;
+  height: 48px; /* Slightly taller for ghost icon */
   display: flex;
   justify-content: center;
   align-items: center;
   margin-top: 5px;
+  padding-bottom: 10px; /* Space between notes and transport */
+  flex-shrink: 0;
+  z-index: 10;
 }
 
 div.under-handpan.pill-group button {

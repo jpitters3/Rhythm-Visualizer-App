@@ -93,7 +93,8 @@ div.grid-container.top-row {
     height: 44px;
     padding: 0 10px;
     gap: 0;
-    flex-shrink: 0; /* Header should never shrink */
+    flex-shrink: 0;
+    /* Header should never shrink */
   }
 
   .mobile-only {
@@ -147,6 +148,8 @@ div.grid-container.top-row {
   .header-menu-items.open {
     display: flex;
     animation: slideDown 0.2s ease-out;
+    overflow-y: scroll;
+    z-index: 1001;
   }
 
   /* ===== FLATTEN ACCOUNT DROPDOWN ON MOBILE ===== */
@@ -426,7 +429,6 @@ body.dark div.container {
   aside.handpan-panel {
     order: 10;
     flex-shrink: 0;
-    margin-bottom: 5px; /* Small gap above transport */
   }
 }
 
