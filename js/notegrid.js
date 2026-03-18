@@ -825,7 +825,10 @@ window.addEventListener('click', (e) => {
     (activeGrid.caretIndex !== null || hasRange(activeGrid)) &&
     !e.target.closest('.cell') &&
     !e.target.closest('.measure-tools') &&
-    !e.target.closest('.sel-bar')
+    !e.target.closest('.sel-bar') &&
+    !e.target.closest('.hp-dot') &&
+    !e.target.closest('.hp-overlay') &&
+    !e.target.closest('.handpan-tabs')
   ) {
     clearSelection(activeGrid);
   }
