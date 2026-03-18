@@ -23,6 +23,12 @@ export const HistoryManager = {
         await this.redo();
       }
     });
+
+    const undoBtn = document.getElementById('undoBtn');
+    const redoBtn = document.getElementById('redoBtn');
+    if (undoBtn) undoBtn.addEventListener('click', () => this.undo());
+    if (redoBtn) redoBtn.addEventListener('click', () => this.redo());
+
     this.updateUI();
   },
 
