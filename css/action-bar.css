@@ -56,7 +56,7 @@ body.dark .cell.range {
 }
 
 /* Optional: make buttons slightly smaller on mobile */
-@media (max-width: 600px) {
+@media (max-width: 768px) {
   .sel-bar-actions button {
     padding: 8px 12px;
   }

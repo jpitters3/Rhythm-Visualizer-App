@@ -72,7 +72,7 @@
   .desktop-only {
     display: none !important;
   }
-  
+
   .mobile-only {
     display: flex !important;
   }
@@ -81,7 +81,13 @@
     flex-wrap: wrap;
     border-radius: 16px;
     justify-content: center;
+    position: fixed;
+    top: 20vh;
+    margin: 0 auto;
+    z-index: 1000;
   }
+
+
 
   /* Fully hide the container when there is no active selection toolbar to reclaim vertical grid space */
   #measureTools:not(:has(.selection-group.visible)) {
