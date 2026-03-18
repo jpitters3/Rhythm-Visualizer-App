@@ -72,7 +72,7 @@
   }
 
   .handpan-panel {
-    position: static;
+    position: relative; /* Context for absolute drawer */
     width: 100%;
     flex: none;
     max-width: 100%;
@@ -499,10 +499,8 @@ body.dark .icon-btn.active {
 }
 
 .tab-pane {
-  z-index: 1;
-  /* Added for GPU Fix pseudo behind */
+  z-index: 2000; /* Higher z-index for mobile drawer */
   position: relative;
-  /* Added by GPU Fix */
   display: none;
   background: var(--offwhite);
   border: 1px solid var(--offwhite);
@@ -511,6 +509,21 @@ body.dark .icon-btn.active {
 
   animation: fadeIn 0.2s ease;
   overflow: hidden;
+}
+
+@media (max-width: 768px) {
+  .tab-pane {
+    position: absolute;
+    left: 8px;
+    right: 8px;
+    bottom: 100%;
+    margin-bottom: 5px;
+    box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.4);
+    background: rgba(var(--panel-rgb), 0.98);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--panel-border);
+  }
 }
 
 .tab-pane::before {
