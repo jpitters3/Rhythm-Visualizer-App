@@ -16,6 +16,17 @@ export function initGridAutoscroll() {
   if (measuresEl) {
     // Add scroll listener to update fades when the user manually scrolls
     measuresEl.addEventListener('scroll', () => updateScrollFades(measuresEl));
+    
+    // Automatically update scroll fades when the UI changes size or layout
+    const resizeObserver = new ResizeObserver(() => updateScrollFades(measuresEl));
+    resizeObserver.observe(measuresEl);
+
+    // Automatically update scroll fades when measures are added/removed dynamically
+    const mutationObserver = new MutationObserver(() => updateScrollFades(measuresEl));
+    mutationObserver.observe(measuresEl, { childList: true, subtree: true });
+
+    // Fallback initial check once DOM settles 
+    setTimeout(() => updateScrollFades(measuresEl), 200);
   }
 
   addTickObserver((ctx) => {
