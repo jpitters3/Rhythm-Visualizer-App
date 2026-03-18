@@ -279,6 +279,7 @@ div.under-handpan {
   display: flex;
   justify-content: center;
   align-items: center;
+  margin-top: 5px;
 }
 
 div.under-handpan.pill-group button {
@@ -356,8 +357,9 @@ div.lock-btn {
   }
 
   .handpan-wrap {
-    max-width: 380px;
+    max-width: 340px;
     margin: 0 auto;
+    padding: 0 8px;
   }
 
   /* Mobile locking CSS removed - flexbox now handles layout position naturally */
@@ -447,13 +449,19 @@ body.dark .icon-btn.active {
   width: 100%;
   padding: 0 10px;
   gap: 12px;
-  margin-bottom: 12px;
-  margin-top: 10px;
+  margin-bottom: 8px;
+  /* Reduced from 12px */
+  margin-top: 8px;
+  /* Reduced from 10px */
 }
 
 @media (max-width: 768px) {
   .handpan-tabs {
     justify-content: space-between;
+    margin-top: 5px;
+    /* Tighter on mobile */
+    margin-bottom: 5px;
+    /* Tighter on mobile */
   }
 }
 

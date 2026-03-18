@@ -63,7 +63,7 @@ button:disabled {
 }
 
 button#composeBtn {
-  font-size: 30px;
+  font-size: 20px;
 }
 
 button#metronomeBtn svg {
@@ -307,7 +307,8 @@ input[type=range] {
 #labelNotationBtn,
 #clearBtn-A,
 #clearBtn-B,
-#composeBtn {
+#composeBtn,
+#stickingBtn {
   min-width: 70px;
 }
 

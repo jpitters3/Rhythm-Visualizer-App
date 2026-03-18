@@ -59,6 +59,18 @@ body {
   padding-bottom: 88px;
 }
 
+@media (max-width: 768px) {
+  body {
+    padding-bottom: 0;
+    /* No bottom padding needed on mobile with flex layout */
+  }
+
+  .transport-container {
+    padding: 8px 12px;
+    margin-bottom: 20px;
+  }
+}
+
 /* --- Secondary transports: hidden but kept in DOM for functionality --- */
 #lessonTransport,
 #virtualHandpanPlaybackControls {
