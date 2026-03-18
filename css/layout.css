@@ -168,9 +168,9 @@ div.grid-container.top-row {
 }
 
 div.logo img.logo-img {
-  max-height: 240px;
+  max-height: 150px;
   padding-bottom: 20px;
-  max-width: 400px;
+  max-width: 250px;
 }
 
 div.grid-child.pattern-select {
