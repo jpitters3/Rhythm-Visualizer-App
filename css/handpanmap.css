@@ -516,32 +516,68 @@ body.dark .icon-btn.active {
 }
 
 .tab-pane {
-  z-index: 2000;
-  /* Higher z-index for mobile drawer */
-  position: relative;
+  z-index: 3000;
+  /* High priority modal layer */
+  position: fixed;
+  top: 50%;
+  /* top: 120px; */
+  /* Below header */
+  left: auto;
+  right: 50%;
+  transform: translate(50%, -50%);
+  /* right: calc(50vw - 600px + 524px); */
+  /* 400hp + 24gap + 100 user offset */
+  width: 380px;
+  max-width: 90%;
   display: none;
   background: var(--offwhite);
   border: 1px solid var(--offwhite);
   border-radius: 12px;
   padding: 16px;
-
+  box-shadow: 0 15px 50px rgba(0, 0, 0, 0.3);
   animation: fadeIn 0.2s ease;
-  overflow-y: scroll;
+  overflow-y: auto;
+  max-height: 75vh;
+}
+
+@media (max-width: 1200px) {
+  .tab-pane {
+    right: 524px;
+    /* Static offset when container is full width */
+  }
+}
+
+.tab-pane.active {
+  display: block;
 }
 
 @media (max-width: 768px) {
   .tab-pane {
-    position: absolute;
-    left: 8px;
-    right: 8px;
-    bottom: 100%;
-    margin-bottom: 5px;
-    box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.4);
-    background: rgba(var(--panel-rgb), 0.98);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border: 1px solid var(--panel-border);
+    top: 30%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 92%;
+    max-width: 400px;
+    height: auto;
+    max-height: 80vh;
+    margin: 0;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+    z-index: 3000;
   }
+}
+
+.drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(1px);
+  z-index: 2999;
+  display: none;
+  animation: fadeIn 0.2s ease;
+}
+
+.drawer-backdrop.active {
+  display: block;
 }
 
 .tab-pane::before {

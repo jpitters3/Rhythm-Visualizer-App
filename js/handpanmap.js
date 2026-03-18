@@ -1497,14 +1497,26 @@ export function initHandpanMap() {
       const targetPane = document.getElementById(targetId);
       if (!targetPane) return;
       const wasActive = btn.classList.contains('active');
-      tabs.forEach(t => t.classList.remove('active'));
-      panes.forEach(p => p.classList.remove('active'));
+
+      closeAllDrawers();
+
       if (!wasActive) {
         btn.classList.add('active');
         targetPane.classList.add('active');
+        document.getElementById('drawerBackdrop')?.classList.add('active');
       }
     });
   });
+
+  document.getElementById('drawerBackdrop')?.addEventListener('click', () => {
+    closeAllDrawers();
+  });
+
+  function closeAllDrawers() {
+    document.querySelectorAll('.tab-btn').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+    document.getElementById('drawerBackdrop')?.classList.remove('active');
+  }
 
   // Final initial calls
   registerHighlighter(highlightHandpan);

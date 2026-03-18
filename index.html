@@ -403,78 +403,7 @@
             </div>
           </div>
 
-          <!-- TAB PANES -->
-
-          <!-- 1. SETTINGS -->
-          <div id="handpanSettingsDrawer" class="tab-pane">
-            <div class="drawer-content"> <!-- Keep wrapper for padding inheritance -->
-              <div class="setting-row">
-                <label>Scale:</label>
-                <select id="scaleSelect" title="Choose your handpan scale"></select>
-                <span id="scaleStatus" style="display:none; opacity:.7;font-size:13px;"></span>
-              </div>
-
-              <div class="setting-row">
-                <label>Color:</label>
-                <select id="handpanColorSelect" title="Choose your handpan color">
-                  <option value="Bronze">Bronze</option>
-                  <option value="Sketch">Sketch</option>
-                </select>
-              </div>
-
-              <div class="setting-row">
-                <label>Labels:</label>
-                <select id="numberPitchSelect" title="Display numbers or pitches">
-                  <option value="default">-----</option>
-                  <option value="Numbers">Numbers</option>
-                  <option value="Pitches">Pitches</option>
-                </select>
-              </div>
-
-              <div class="setting-row">
-                <label>Hands:</label>
-                <div class="toggle-wrapper" style="display:flex; align-items:center; gap:8px;">
-                  <input type="checkbox" id="vHandsToggle" checked style="width:auto;">
-                  <label for="vHandsToggle" style="font-size:12px; font-weight:400; cursor:pointer; margin:0;">Show
-                    Ghost
-                    Hands</label>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- 2. CHORDS -->
-          <div id="chordDrawer" class="tab-pane">
-            <div id="chordList" class="drawer-content">
-              <!-- Chords injected here -->
-            </div>
-            <div class="drawer-meta" style="text-align:center; font-size:12px; margin-top:8px; opacity:0.7">
-              <span id="chordCount">0</span> chords available
-            </div>
-          </div>
-
-          <!-- 3. CUSTOMIZE -->
-          <div id="customizeDrawer" class="tab-pane">
-            <div id="hpCustomizeControls">
-              <div class="setting-row" style="margin-top: 5px;">
-                <button id="calBtn" class="secondary-btn small-btn" style="width:100%">Adjust Tonefields</button>
-              </div>
-              <div class="setting-row" style="margin-top: 5px;">
-                <button id="calibrateHandpanBtn" class="secondary-btn small-btn" style="width:100%">Calibrate
-                  Handpan</button>
-              </div>
-
-              <div class="setting-row"
-                style="margin-top: 10px; border-top: 1px solid var(--panel-border); padding-top: 10px;">
-                <button id="buildScaleBtn" class="primary-btn small-btn"
-                  style="width:100%; background: linear-gradient(135deg, #6366f1, #8b5cf6); border:none; color:white;">Build
-                  Custom Scale</button>
-              </div>
-            </div>
-
-            <!-- Creation Form Mode (Hidden initially) -->
-
-          </div>
+          <!-- TAB PANES (Moved to bottom of body for stacking context) -->
 
 
           <!-- HANDPAN WRAP -->
@@ -1425,6 +1354,67 @@
 
   <!-- Vite Entry Point -->
   <script type="module" src="/main.js"></script>
+
+  <!-- Mobile Drawer Panes -->
+  <div id="handpanSettingsDrawer" class="tab-pane">
+    <div class="drawer-content">
+      <div class="setting-row">
+        <label>Scale:</label>
+        <select id="scaleSelect" title="Choose your handpan scale"></select>
+        <span id="scaleStatus" style="display:none; opacity:.7;font-size:13px;"></span>
+      </div>
+
+      <div class="setting-row">
+        <label>Color:</label>
+        <select id="handpanColorSelect" title="Choose your handpan color">
+          <option value="Bronze">Bronze</option>
+          <option value="Sketch">Sketch</option>
+        </select>
+      </div>
+
+      <div class="setting-row">
+        <label>Labels:</label>
+        <select id="numberPitchSelect" title="Display numbers or pitches">
+          <option value="default">-----</option>
+          <option value="Numbers">Numbers</option>
+          <option value="Pitches">Pitches</option>
+        </select>
+      </div>
+
+      <div class="setting-row">
+        <label>Hands:</label>
+        <div class="toggle-wrapper" style="display:flex; align-items:center; gap:8px;">
+          <input type="checkbox" id="vHandsToggle" checked style="width:auto;">
+          <label for="vHandsToggle" style="font-size:12px; font-weight:400; cursor:pointer; margin:0;">Show Ghost Hands</label>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="chordDrawer" class="tab-pane">
+    <div id="chordList" class="drawer-content">
+      <!-- Chords injected here -->
+    </div>
+    <div class="drawer-meta" style="text-align:center; font-size:12px; margin-top:8px; opacity:0.7">
+      <span id="chordCount">0</span> chords available
+    </div>
+  </div>
+
+  <div id="customizeDrawer" class="tab-pane">
+    <div id="hpCustomizeControls">
+      <div class="setting-row" style="margin-top: 5px;">
+        <button id="calBtn" class="secondary-btn small-btn" style="width:100%">Adjust Tonefields</button>
+      </div>
+      <div class="setting-row" style="margin-top: 5px;">
+        <button id="calibrateHandpanBtn" class="secondary-btn small-btn" style="width:100%">Calibrate Handpan</button>
+      </div>
+      <div class="setting-row" style="margin-top: 10px; border-top: 1px solid var(--panel-border); padding-top: 10px;">
+        <button id="buildScaleBtn" class="primary-btn small-btn" style="width:100%; background: linear-gradient(135deg, #6366f1, #8b5cf6); border:none; color:white;">Build Custom Scale</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="drawerBackdrop" class="drawer-backdrop"></div>
 
   <!-- POTW MODAL -->
   <div id="potwModal" class="modal-overlay" aria-hidden="true" style="display: none;">
