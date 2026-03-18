@@ -79,8 +79,8 @@ class AiAssistant {
 
   addSuggestions() {
     const suggestions = [
-      "Add a happy chord progression with chords on the '1' beat only, and no melody",
-      "Add a sad melody that repeats every 16 beats",
+      "Add a happy progression with chords on the '1' beat",
+      "Add a sad melody",
       "Add an upbeat section"
     ];
 

@@ -455,16 +455,6 @@ body.dark .icon-btn.active {
   /* Reduced from 10px */
 }
 
-@media (max-width: 768px) {
-  .handpan-tabs {
-    justify-content: space-between;
-    margin-top: 5px;
-    /* Tighter on mobile */
-    margin-bottom: 5px;
-    /* Tighter on mobile */
-  }
-}
-
 .tab-btn {
   background: var(--panel);
   border: 1px solid var(--panel-border);
@@ -478,6 +468,22 @@ body.dark .icon-btn.active {
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+@media (max-width: 768px) {
+  .handpan-tabs {
+    justify-content: space-between;
+    margin-top: 5px;
+    /* Tighter on mobile */
+    margin-bottom: 5px;
+    /* Tighter on mobile */
+  }
+
+  .tab-btn {
+    font-size: 16px;
+    width: 30px;
+    height: 30px;
+  }
 }
 
 .tab-btn:hover {
