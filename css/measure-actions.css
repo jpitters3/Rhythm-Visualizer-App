@@ -82,9 +82,9 @@
     border-radius: 16px;
     justify-content: center;
     position: fixed;
-    top: 20vh;
+    top: 38vh;
     margin: 0 auto;
-    z-index: 1000;
+    z-index: 2000;
   }
 
 
