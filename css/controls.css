@@ -83,7 +83,7 @@ select {
   color: var(--text);
 }
 
-input[type=range] {
+.bpm-control input[type=range] {
   width: 140px;
 }
 
@@ -315,5 +315,9 @@ input[type=range] {
 @media (max-width: 768px) {
   .scroll-indicator {
     display: flex;
+  }
+
+  .bpm-control input[type=range] {
+    width: 100px;
   }
 }
