@@ -49,11 +49,6 @@ body.has-selection .controls-transport {
   /* Move up when selection tools expand */
 }
 
-.controls-transport .transport-container {
-  pointer-events: all;
-  /* max-width: 600px; */
-}
-
 /* Give the page content room so the bottom measure isn't hidden */
 body {
   padding-bottom: 88px;
@@ -69,6 +64,16 @@ body {
     padding: 8px 12px;
     margin-bottom: 20px;
     max-width: 95vw;
+  }
+
+  .controls-transport {
+    order: 11;
+    flex-shrink: 0;
+    /* Remove fixed positioning so it doesn't float over the handpan, 
+       and doesn't jump when the visual viewport changes */
+    position: relative !important;
+    bottom: auto !important;
+    margin-bottom: 0 !important;
   }
 }
 

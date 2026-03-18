@@ -62,7 +62,7 @@
         <option value="Click">Click</option>
         <option value="Shaker">Shaker</option>
       </select>
-      <button class="t-mute-btn" title="Toggle Mute">🔊</button>
+      <button class="t-mute-btn" style="display:none;" title="Toggle Mute">🔊</button>
     </div>
   </template>
 
@@ -72,7 +72,7 @@
         <img class="logo-img" src="./assets/images/logo.png" />
       </div>
 
-      <div style="display: flex; gap: 8px; justify-content: right; width: 100%">
+      <div id="mobileControlsWrapper">
         <button id="mobileControlsBtn" class="hamburger-btn mobile-only" title="Toggle Controls">
           <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none">
             <circle cx="12" cy="12" r="3"></circle>
