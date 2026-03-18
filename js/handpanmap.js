@@ -921,53 +921,48 @@ function updateLabelStyles() {
 }
 
 function removeNoteLabels() {
+  // Only remove them if we really need a clean slate (e.g. scale change)
   document.querySelectorAll('.hp-label').forEach(el => el.remove());
 }
 
 function overlayNumberPitchNotes() {
-  removeNoteLabels();
-
   const isCustom = scaleSelect.value.startsWith('custom:');
 
   for (const [note, el] of handpanDots.entries()) {
     const p = HANDPAN_MAP[note];
     if (!p) continue;
 
-    const label = document.createElement('div');
-    label.className = 'hp-label';
-    let text = '';
+    // Check if label already exists
+    let label = el.querySelector('.hp-label');
+    if (!label) {
+      label = document.createElement('div');
+      label.className = 'hp-label';
+      el.appendChild(label);
+    }
 
+    let text = '';
     if (overlayNumbers) {
-      // Unified Logic
-      text = note; // Default to key (e.g. "1", "2" or "A3")
+      text = note;
     } else if (overlayPitches) {
-      // Unified: Look up pitch for the label
       if (typeof noteForLabel === 'function') {
         const pitch = noteForLabel(note);
-        // Clean up pitch string? e.g. "Cs4" -> "C#4"?
-        // Also handle if pitch is file path? (Unified map stores "A3", "C#4")
         text = pitch ? pitch.replace('s', '#') : '';
-
         if (note === 'T' || note === 'S') text = note;
       } else {
         text = note;
       }
     }
 
-    // Never show label for Ding
-    // Check key ('D'), full label ('Ding'), or if it matches current scale ding pitch
     const scale = typeof getScale === 'function' ? getScale() : null;
-    const dingPitch = scale ? scale.ding : 'D3'; // Default to D3
-
-    // Check note key (e.g. 'D') or resolved pitch text (e.g. 'D3_ding')
-    // noteForLabel('D') returns 'D3_ding' usually.
+    const dingPitch = scale ? scale.ding : 'D3';
     if (note === 'D' || note === 'Ding' || text.includes('_ding') || text === dingPitch) {
       text = '';
     }
 
-    label.textContent = text;
-
-    el.appendChild(label);
+    // Only update if text actually changed to avoid unnecessary churn
+    if (label.textContent !== text) {
+      label.textContent = text;
+    }
   }
 }
 
@@ -1565,13 +1560,16 @@ export function initHandpanMap() {
     for (const entry of entries) {
       const { width, height } = entry.contentRect;
       
-      // Only rebuild if the dimensions have actually changed significantly (> 1px)
-      // This prevents minor layout shifts or animations from triggering a full DOM clear/rebuild.
-      if (Math.abs(width - lastWidth) > 1 || Math.abs(height - lastHeight) > 1) {
+      // On mobile, minor layout shifts (address bar, scrolling) can cause sub-pixel or tiny shifts.
+      // We use a 2px threshold to avoid flickering during animations or minor scrolling.
+      const threshold = 2; 
+
+      if (Math.abs(width - lastWidth) > threshold || Math.abs(height - lastHeight) > threshold) {
         lastWidth = width;
         lastHeight = height;
         
         if (handpanImg && handpanImg.complete && handpanImg.naturalHeight !== 0 && !handpanLoadingOverlay?.classList.contains('active')) {
+          console.log('[Handpan] Stabilized Rebuild Triggered');
           buildHandpanOverlay();
         }
       }
