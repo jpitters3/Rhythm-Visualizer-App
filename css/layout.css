@@ -327,10 +327,10 @@ body.dark div.container {
   div.container {
     margin: 0 auto;
     width: 100%;
-    height: 100vh;
+    height: 100svh;
     height: 100lvh;
     /* prevents shifting when mobile browser bars appear */
-    min-height: 100vh;
+    min-height: 100svh;
     padding: 10px 5px 0 5px;
     /* Minimal top/side padding, no bottom padding */
     border-radius: 0;
