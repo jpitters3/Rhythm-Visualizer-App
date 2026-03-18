@@ -168,9 +168,9 @@ div.grid-container.top-row {
 }
 
 div.logo img.logo-img {
-  max-height: 120px;
+  max-height: 240px;
   padding-bottom: 20px;
-  max-width: 200px;
+  max-width: 400px;
 }
 
 div.grid-child.pattern-select {
@@ -215,7 +215,8 @@ div.container {
   height: 98vh;
   min-height: 600px;
   overflow-y: hidden;
-  padding: 40px 50px 0 50px; /* Reduced bottom padding to align with grid */
+  padding: 40px 50px 0 50px;
+  /* Reduced bottom padding to align with grid */
   max-width: 1200px;
   /* Glassmorphism Update */
   background: rgba(var(--panel-rgb), 0.7);
@@ -232,7 +233,8 @@ div.container {
 }
 
 .route-view {
-  display: none; /* Hidden by default */
+  display: none;
+  /* Hidden by default */
   flex-direction: column;
   flex: 1;
   min-height: 0;
