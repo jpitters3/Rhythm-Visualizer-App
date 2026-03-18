@@ -66,10 +66,26 @@ div.grid-container.top-row {
 
   /* Adjust Logo */
   div.logo img.logo-img {
-    height: 100px;
-    /* Smaller Logo */
-    padding-bottom: 0;
-    max-height: none;
+    height: 80px;
+    position: absolute;
+    top: -10px;
+    margin-bottom: 60px;
+  }
+
+  #mobileControlsBtn {
+    justify-content: center;
+    align-items: center;
+  }
+
+  /* Compact Top Row */
+  div.grid-container.top-row {
+    height: 44px;
+    padding: 0 10px;
+    gap: 0;
+  }
+
+  .mobile-only {
+    display: block !important;
   }
 
   /* Hide Menu Items by default */
@@ -304,7 +320,8 @@ body.dark div.container {
     /* Minimal top/side padding, no bottom padding */
     border-radius: 0;
     border: none;
-    gap: 8px; /* Reduced gap between header and main content */
+    gap: 8px;
+    /* Reduced gap between header and main content */
   }
 
   /* Force vertical layout for mobile */
@@ -322,7 +339,8 @@ body.dark div.container {
     flex-direction: column !important;
     flex: 1 1 0 !important;
     min-height: 0 !important;
-    gap: 0 !important; /* Remove gap between grid and handpan panel */
+    gap: 0 !important;
+    /* Remove gap between grid and handpan panel */
   }
 
   .left {
@@ -337,6 +355,7 @@ body.dark div.container {
     min-height: 0 !important;
     /* Critical */
     overflow-y: auto;
+    margin-top: 10px
   }
 
   #measureTools {
@@ -360,6 +379,35 @@ body.dark div.container {
   .controls-primary::-webkit-scrollbar,
   .grid-child.pattern-select::-webkit-scrollbar {
     display: none;
+  }
+
+  /* Expanded Floating Controls Drawer */
+  #primaryControlsWrapper {
+    display: none;
+    position: absolute;
+    top: 5px;
+    /* Position at the top of the content area, just below the header */
+    left: 8px;
+    right: 8px;
+    background: rgba(var(--panel-rgb), 0.95);
+    /* More opaque on mobile for readability */
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--panel-border);
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+    padding: 12px;
+    z-index: 2000;
+  }
+
+  #primaryControlsWrapper.open {
+    display: block;
+    animation: slideDown 0.2s ease-out;
+  }
+
+  /* Reset some inner paddings for the floating menu */
+  #primaryControlsWrapper .scrollable-controls-wrapper {
+    padding: 0;
   }
 
   /* Push handpan above transport controls at bottom */

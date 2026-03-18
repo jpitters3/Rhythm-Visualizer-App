@@ -1,28 +1,51 @@
 
-// Mobile Hamburger Menu Logic
+// Mobile UI Logic (Hamburger and Controls)
 export function initMobileMenu() {
   const mobileMenuBtn = document.getElementById('mobileMenuBtn');
   const headerMenu = document.getElementById('headerMenu');
+  const mobileControlsBtn = document.getElementById('mobileControlsBtn');
+  const primaryControlsWrapper = document.getElementById('primaryControlsWrapper');
 
   if (!mobileMenuBtn || !headerMenu) return;
 
-  // Toggle menu
+  // Toggle Main Menu
   mobileMenuBtn.addEventListener('click', (e) => {
     e.stopPropagation();
+    // Close controls if open
+    if (primaryControlsWrapper) primaryControlsWrapper.classList.remove('open');
+    
     headerMenu.classList.toggle('open');
-    // Toggle aria-expanded for accessibility
     const isOpen = headerMenu.classList.contains('open');
     mobileMenuBtn.setAttribute('aria-expanded', isOpen);
   });
 
-  // CLICK OUTSIDE to close
-  document.addEventListener('click', (e) => {
-    if (!headerMenu.classList.contains('open')) return;
-
-    // If click is NOT inside the menu AND NOT on the button, close it
-    if (!headerMenu.contains(e.target) && !mobileMenuBtn.contains(e.target)) {
+  // Toggle Primary Controls Drawer
+  if (mobileControlsBtn && primaryControlsWrapper) {
+    mobileControlsBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      // Close main menu if open
       headerMenu.classList.remove('open');
       mobileMenuBtn.setAttribute('aria-expanded', 'false');
+
+      primaryControlsWrapper.classList.toggle('open');
+    });
+  }
+
+  // CLICK OUTSIDE to close both
+  document.addEventListener('click', (e) => {
+    // Handle Main Menu
+    if (headerMenu.classList.contains('open')) {
+      if (!headerMenu.contains(e.target) && !mobileMenuBtn.contains(e.target)) {
+        headerMenu.classList.remove('open');
+        mobileMenuBtn.setAttribute('aria-expanded', 'false');
+      }
+    }
+
+    // Handle Controls Drawer
+    if (primaryControlsWrapper && primaryControlsWrapper.classList.contains('open')) {
+      if (!primaryControlsWrapper.contains(e.target) && !mobileControlsBtn.contains(e.target)) {
+        primaryControlsWrapper.classList.remove('open');
+      }
     }
   });
 }
