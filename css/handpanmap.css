@@ -31,6 +31,7 @@
   align-self: flex-start;
   display: flex;
   flex-direction: column;
+  z-index: 1001;
 }
 
 .handpan-wrap {
@@ -72,11 +73,13 @@
   }
 
   .handpan-panel {
-    position: relative; /* Context for absolute drawer */
+    position: relative;
+    /* Context for absolute drawer */
     width: 100%;
     flex: none;
     max-width: 100%;
-    transform: translateZ(0); /* GPU stability */
+    transform: translateZ(0);
+    /* GPU stability */
     backface-visibility: hidden;
   }
 }
@@ -281,12 +284,14 @@ body.dark.calibrating .hp-dot.selected {
 
 div.under-handpan {
   position: relative;
-  height: 48px; /* Slightly taller for ghost icon */
+  height: 48px;
+  /* Slightly taller for ghost icon */
   display: flex;
   justify-content: center;
   align-items: center;
   margin-top: 5px;
-  padding-bottom: 10px; /* Space between notes and transport */
+  padding-bottom: 10px;
+  /* Space between notes and transport */
   flex-shrink: 0;
   z-index: 10;
 }
@@ -369,7 +374,8 @@ div.lock-btn {
     max-width: 260px;
     margin: 0 auto;
     padding: 0 8px;
-    transform: translateZ(0); /* GPU stability */
+    transform: translateZ(0);
+    /* GPU stability */
     backface-visibility: hidden;
   }
 
@@ -510,7 +516,8 @@ body.dark .icon-btn.active {
 }
 
 .tab-pane {
-  z-index: 2000; /* Higher z-index for mobile drawer */
+  z-index: 2000;
+  /* Higher z-index for mobile drawer */
   position: relative;
   display: none;
   background: var(--offwhite);
@@ -520,7 +527,6 @@ body.dark .icon-btn.active {
 
   animation: fadeIn 0.2s ease;
   overflow-y: scroll;
-  z-index: 1000
 }
 
 @media (max-width: 768px) {
