@@ -512,7 +512,8 @@ body.dark .icon-btn.active {
   padding: 16px;
 
   animation: fadeIn 0.2s ease;
-  overflow: hidden;
+  overflow-y: scroll;
+  z-index: 1000
 }
 
 @media (max-width: 768px) {
