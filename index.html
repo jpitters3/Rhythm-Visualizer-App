@@ -174,107 +174,113 @@
 
       <!-- Control buttons -->
       <div class="controls pattern-row">
-        <div class="controls-primary">
-          <button id="resetBtn" title="Reset">🔄</button>
+        <div class="scrollable-controls-wrapper">
+          <div class="scroll-indicator left">◂</div>
+          <div class="controls-primary scrollable-controls-content" id="primaryControlsRow">
+            <button id="resetBtn" title="Reset">🔄</button>
             <button id="themeBtn" title="Toggle light / dark mode">☀︎ / ☾</button>
             <button id="grooveBtn" title="Generate a random groove" style="display: none;">Give me a groove!</button>
             <button id="labelNotationBtn" title="Toggle label notation (Musical vs Numeric)">1 2 3</button>
             <button id="composeBtn"
               title="Compose mode: writing advances to the next beat (Alt = write without advance)">🎼</button>
-          <button id="gridBtn" style="display:none;" title="Toggle between 8th and 16th grid">8ths</button>
-          <button id="handBtn" style="display: none;" class="active" title="Toggle left/right hand coloring">Left/Right:
-            Off</button>
-          <button id="stickingBtn" title="Edit Sticking Mode: Click cells to toggle Hand (R/L)">🤚</button>
-          <button id="flipHandsBtn" style="display:none;"
-            title="Flip Remaining: Inverts hands from current selection onwards">🔁</button>
-          <button id="dualModeBtn" title="Toggle Dual Grid Mode">👥</button>
-          <div class="control-group">
-            <!-- Time Signature -->
-            <div class="ts-wrapper">
-              <select id="tsNum" class="ts-select">
-                <option value="1">1</option>
-                <option value="2">2</option>
-                <option value="3">3</option>
-                <option value="4" selected>4</option>
-                <option value="5">5</option>
-                <option value="6">6</option>
-                <option value="7">7</option>
-                <option value="8">8</option>
-                <option value="9">9</option>
-                <option value="10">10</option>
-                <option value="11">11</option>
-                <option value="12">12</option>
-                <option value="13">13</option>
-                <option value="14">14</option>
-                <option value="15">15</option>
-                <option value="16">16</option>
-                <option value="17">17</option>
-                <option value="18">18</option>
-                <option value="19">19</option>
-              </select>
-              <span class="ts-sep">/</span>
-              <select id="tsDen" class="ts-select">
-                <option value="2">2</option>
-                <option value="4" selected>4</option>
-                <option value="8">8</option>
-              </select>
+            <button id="gridBtn" style="display:none;" title="Toggle between 8th and 16th grid">8ths</button>
+            <button id="handBtn" style="display: none;" class="active"
+              title="Toggle left/right hand coloring">Left/Right:
+              Off</button>
+            <button id="stickingBtn" title="Edit Sticking Mode: Click cells to toggle Hand (R/L)">🤚</button>
+            <button id="flipHandsBtn" style="display:none;"
+              title="Flip Remaining: Inverts hands from current selection onwards">🔁</button>
+            <button id="dualModeBtn" title="Toggle Dual Grid Mode">👥</button>
+            <div class="control-group">
+              <!-- Time Signature -->
+              <div class="ts-wrapper">
+                <select id="tsNum" class="ts-select">
+                  <option value="1">1</option>
+                  <option value="2">2</option>
+                  <option value="3">3</option>
+                  <option value="4" selected>4</option>
+                  <option value="5">5</option>
+                  <option value="6">6</option>
+                  <option value="7">7</option>
+                  <option value="8">8</option>
+                  <option value="9">9</option>
+                  <option value="10">10</option>
+                  <option value="11">11</option>
+                  <option value="12">12</option>
+                  <option value="13">13</option>
+                  <option value="14">14</option>
+                  <option value="15">15</option>
+                  <option value="16">16</option>
+                  <option value="17">17</option>
+                  <option value="18">18</option>
+                  <option value="19">19</option>
+                </select>
+                <span class="ts-sep">/</span>
+                <select id="tsDen" class="ts-select">
+                  <option value="2">2</option>
+                  <option value="4" selected>4</option>
+                  <option value="8">8</option>
+                </select>
+              </div>
             </div>
-          </div>
 
-          <button id="undoBtn" title="Undo (Cmd+Z)" disabled>↩️</button>
-          <button id="redoBtn" title="Redo (Cmd+Shift+Z)" style="display:none;" disabled>↪️</button>
-          <!-- Microphone -->
-          <div class="dropdown mic-dropdown">
-            <button id="micBtn" class="secondary-btn" title="Toggle mic (Click) / Settings (Auto-open)">🎤</button>
-            <div id="micDropdownMenu" class="dropdown-content">
-              <div style="padding: 8px 12px;">
-                <div class="setting-group" style="margin-bottom: 12px;">
-                  <label
-                    style="font-size: 13px; font-weight: 500; display:block; margin-bottom:4px;">Sensitivity</label>
-                  <div style="display:flex; align-items:center; gap:8px;">
-                    <input type="range" id="micSensInput" min="0.01" max="0.3" step="0.01" value="0.05"
-                      style="width:100px;">
-                    <span id="sensVal" style="font-size:12px; font-family:monospace;">0.05</span>
+            <button id="undoBtn" title="Undo (Cmd+Z)" disabled>↩️</button>
+            <button id="redoBtn" title="Redo (Cmd+Shift+Z)" style="display:none;" disabled>↪️</button>
+            <!-- Microphone -->
+            <div class="dropdown mic-dropdown">
+              <button id="micBtn" class="secondary-btn" title="Toggle mic (Click) / Settings (Auto-open)">🎤</button>
+              <div id="micDropdownMenu" class="dropdown-content">
+                <div style="padding: 8px 12px;">
+                  <div class="setting-group" style="margin-bottom: 12px;">
+                    <label
+                      style="font-size: 13px; font-weight: 500; display:block; margin-bottom:4px;">Sensitivity</label>
+                    <div style="display:flex; align-items:center; gap:8px;">
+                      <input type="range" id="micSensInput" min="0.01" max="0.3" step="0.01" value="0.05"
+                        style="width:100px;">
+                      <span id="sensVal" style="font-size:12px; font-family:monospace;">0.05</span>
+                    </div>
                   </div>
-                </div>
 
-                <div class="setting-group" style="margin-bottom:12px;">
-                  <label style="font-size: 13px; font-weight: 500; display:block; margin-bottom:4px;">Latency
-                    Comp</label>
-                  <div style="display:flex; align-items:center; gap:8px;">
-                    <input type="range" id="micDelayInput" min="-100" max="100" step="1" value="0" style="width:100px;">
-                    <span id="delayVal" style="font-size:12px; font-family:monospace;">0ms</span>
+                  <div class="setting-group" style="margin-bottom:12px;">
+                    <label style="font-size: 13px; font-weight: 500; display:block; margin-bottom:4px;">Latency
+                      Comp</label>
+                    <div style="display:flex; align-items:center; gap:8px;">
+                      <input type="range" id="micDelayInput" min="-100" max="100" step="1" value="0"
+                        style="width:100px;">
+                      <span id="delayVal" style="font-size:12px; font-family:monospace;">0ms</span>
+                    </div>
                   </div>
-                </div>
 
-                <button id="fullCalBtn" class="primary-btn" style="margin-bottom:8px; width: 100%;">Full Calibration
-                  (Recommended)</button>
-                <button id="micCalBtn">1. Pitch Calibration</button>
-                <button id="guidedCalBtn" style="margin-top:8px;">2. Sensitivity Calibration</button>
-                <button id="advancedCalBtn" style="margin-top:8px;" title="Manually adjust note thresholds">3. Advanced
-                  Calibration</button>
+                  <button id="fullCalBtn" class="primary-btn" style="margin-bottom:8px; width: 100%;">Full Calibration
+                    (Recommended)</button>
+                  <button id="micCalBtn">1. Pitch Calibration</button>
+                  <button id="guidedCalBtn" style="margin-top:8px;">2. Sensitivity Calibration</button>
+                  <button id="advancedCalBtn" style="margin-top:8px;" title="Manually adjust note thresholds">3.
+                    Advanced
+                    Calibration</button>
+                </div>
+              </div>
+            </div>
+            <button id="clearBtn-A">Clear</button>
+            <button id="zoomOutBtn" title="Zoom Out" style="display:none;">🔎 −</button>
+            <button id="zoomInBtn" title="Zoom In" style="display:none;">🔎 ＋</button>
+            <button id="presentBtn" title="Toggle presentation mode (Esc exits)">⛶</button>
+
+            <div id="calibrationStatus" class="calibration-overlay" style="display:none;">
+              <div class="cal-progress-wrapper">
+                <svg class="cal-progress-svg" viewBox="0 0 36 36">
+                  <circle class="cal-circle-bg" cx="18" cy="18" r="16"></circle>
+                  <circle id="calProgressCircle" class="cal-circle-progress" cx="18" cy="18" r="16"></circle>
+                </svg>
+                <div class="cal-info">
+                  <span class="cal-label">Tap Note</span>
+                  <span id="targetNoteName" class="cal-note">Ding</span>
+                </div>
               </div>
             </div>
           </div>
-          <button id="clearBtn-A">Clear</button>
-          <button id="zoomOutBtn" title="Zoom Out" style="display:none;">🔎 −</button>
-          <button id="zoomInBtn" title="Zoom In" style="display:none;">🔎 ＋</button>
-          <button id="presentBtn" title="Toggle presentation mode (Esc exits)">⛶</button>
-
-          <div id="calibrationStatus" class="calibration-overlay" style="display:none;">
-            <div class="cal-progress-wrapper">
-              <svg class="cal-progress-svg" viewBox="0 0 36 36">
-                <circle class="cal-circle-bg" cx="18" cy="18" r="16"></circle>
-                <circle id="calProgressCircle" class="cal-circle-progress" cx="18" cy="18" r="16"></circle>
-              </svg>
-              <div class="cal-info">
-                <span class="cal-label">Tap Note</span>
-                <span id="targetNoteName" class="cal-note">Ding</span>
-              </div>
-            </div>
-          </div>
+          <div class="scroll-indicator right">▸</div>
         </div>
-
       </div>
       <div class="controls-transport">
         <div id="mainTransport-A" class="transport-container" data-grid="A">
@@ -336,7 +342,8 @@
 
           <!-- Measure Actions -->
           <div class="measure-tools" id="measureTools">
-            <div class="measure-group desktop-only" style="display: flex; flex-direction: column; align-items: flex-start; gap: 2px;">
+            <div class="measure-group desktop-only"
+              style="display: flex; flex-direction: column; align-items: flex-start; gap: 2px;">
               <span class="measure-tools-label" style="font-size: 10px; opacity: 0.7;">Measures</span>
               <div style="display: flex; gap: 4px;">
                 <button class="addMeasureBtn" title="Add a new measure">＋</button>
@@ -360,7 +367,8 @@
         <aside class="handpan-panel" aria-label="Handpan map">
           <!-- TABS -->
           <div class="handpan-tabs">
-            <div class="measure-group mobile-only" style="display: flex; flex-direction: column; align-items: center; gap: 2px;">
+            <div class="measure-group mobile-only"
+              style="display: flex; flex-direction: column; align-items: center; gap: 2px;">
               <span style="font-size: 10px; opacity: 0.7;">Measures</span>
               <div style="display: flex; gap: 8px;">
                 <button title="Add a new measure" class="addMeasureBtn tab-btn"
@@ -456,9 +464,7 @@
               <div class="hp-loader"></div>
               <span>Loading Scale...</span>
             </div>
-            <div id="lockBtn" class="lock-btn" style="display:none;">
-              <img id="lockBtnImg" src="./assets/images/lock.png" alt="Lock handpan" />
-            </div>
+
             <div id="handpanFlipBtnContainer" style="position:absolute; width:100%;">
               <button id="flipSideBtn" class="flip-btn" style="display:none;" title="Flip to Bottom">🔄</button>
             </div>

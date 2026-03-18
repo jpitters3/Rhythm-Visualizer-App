@@ -355,14 +355,6 @@ div.lock-btn {
     z-index: 100;
   }
 
-  div.lock-btn img {
-    width: 100%;
-  }
-
-  .locked {
-    background: var(--bg);
-  }
-
   .handpan-wrap {
     max-width: 380px;
     margin: 0 auto;

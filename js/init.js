@@ -39,6 +39,7 @@ import { initGlossary } from './glossary.js';
 import { initGridAutoscroll } from './grid-autoscroll.js';
 import { initGridZoom } from './grid-zoom.js';
 import { initMonetization } from './monetization.js';
+import { initScrollIndicators } from './scroll-indicators.js';
 
 /**
  * Main application initializer
@@ -57,6 +58,7 @@ async function init() {
     initPresentation();
     initGridAutoscroll();
     initGridZoom();
+    initScrollIndicators();
     initPOTW();
     HistoryManager.init();
     ChordUI.init();

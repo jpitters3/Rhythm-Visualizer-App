@@ -261,3 +261,58 @@ input[type=range] {
   text-align: center;
   font-weight: 700;
 }
+
+/* ===== Scollable Controls Wrapper ===== */
+.scrollable-controls-wrapper {
+  position: relative;
+  width: 100%;
+  display: flex;
+  align-items: center;
+}
+
+.scroll-indicator {
+  display: none;
+  /* Hidden on desktop */
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 20;
+  width: 32px;
+  height: 100%;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  /* Clicks pass through */
+  color: var(--text);
+  font-size: 20px;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.scroll-indicator.active {
+  opacity: 1;
+}
+
+.scroll-indicator.left {
+  left: 0;
+  background: linear-gradient(to right, var(--bg) 80%, transparent);
+}
+
+.scroll-indicator.right {
+  right: 0;
+  background: linear-gradient(to left, var(--bg) 80%, transparent);
+}
+
+#themeBtn,
+#labelNotationBtn,
+#clearBtn-A,
+#clearBtn-B,
+#composeBtn {
+  min-width: 70px;
+}
+
+@media (max-width: 768px) {
+  .scroll-indicator {
+    display: flex;
+  }
+}

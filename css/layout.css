@@ -66,7 +66,7 @@ div.grid-container.top-row {
 
   /* Adjust Logo */
   div.logo img.logo-img {
-    height: 60px;
+    height: 100px;
     /* Smaller Logo */
     padding-bottom: 0;
     max-height: none;
@@ -297,9 +297,11 @@ body.dark div.container {
     margin: 0 auto;
     width: 100%;
     height: 100vh;
-    height: 100lvh; /* prevents shifting when mobile browser bars appear */
+    height: 100lvh;
+    /* prevents shifting when mobile browser bars appear */
     min-height: 100vh;
-    padding: 10px 5px 0 5px; /* Minimal top/side padding, no bottom padding */
+    padding: 10px 5px 0 5px;
+    /* Minimal top/side padding, no bottom padding */
     border-radius: 0;
     border: none;
   }
@@ -310,7 +312,7 @@ body.dark div.container {
     flex-direction: column !important;
     overflow: hidden;
     height: 100% !important;
-    min-height: 0 !important; 
+    min-height: 0 !important;
     flex: 1 1 0 !important;
   }
 
@@ -327,10 +329,11 @@ body.dark div.container {
     flex: 1 1 0 !important;
     min-height: 0 !important;
   }
-  
+
   #measures {
     flex: 1 1 0 !important;
-    min-height: 0 !important; /* Critical */
+    min-height: 0 !important;
+    /* Critical */
     overflow-y: auto;
   }
 
@@ -343,11 +346,15 @@ body.dark div.container {
   .grid-child.pattern-select {
     flex-wrap: nowrap !important;
     overflow-x: auto !important;
+    justify-content: flex-start !important;
+    /* Fixes left-side clipping when overflowing */
+    scroll-behavior: smooth;
     /* Hide scrollbar for clean UI but keep it scrollable */
-    scrollbar-width: none; 
+    scrollbar-width: none;
     -ms-overflow-style: none;
     padding-bottom: 5px;
   }
+
   .controls-primary::-webkit-scrollbar,
   .grid-child.pattern-select::-webkit-scrollbar {
     display: none;
@@ -368,18 +375,6 @@ body.dark div.container {
     bottom: auto !important;
     margin-bottom: 0 !important;
   }
-}
-
-/* Background overlay logic moved from inline */
-div.container::after {
-  /* content: "";  <-- This was in inline, but "background-color: aliceblue; opacity: 0.5;" implies it might be an overlay? 
-     But ::after needs content. 
-     If it was just background-color, maybe it was a mistake? 
-     I'll preserve it but add content: "" if missing in original to avoid it being broken. 
-     Actually, looking at original: div.container::after { background-color: aliceblue; opacity: 0.5; } 
-     It had no content property, so it probably did NOTHING. 
-     I will comment it out as "broken/unused". */
-  /* content: ""; background-color: aliceblue; opacity: 0.5; position: absolute; inset: 0; pointer-events: none; */
 }
 
 select#patternSelect {
