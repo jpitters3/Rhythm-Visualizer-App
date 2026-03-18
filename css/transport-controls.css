@@ -32,6 +32,7 @@
 
 /* --- Main transport: pinned to bottom of viewport --- */
 .controls-transport {
+  pointer-events: all;
   position: fixed;
   bottom: 0;
   left: 0;
@@ -67,6 +68,7 @@ body {
   }
 
   .controls-transport {
+    pointer-events: all;
     order: 11;
     flex-shrink: 0;
     /* Remove fixed positioning so it doesn't float over the handpan, 

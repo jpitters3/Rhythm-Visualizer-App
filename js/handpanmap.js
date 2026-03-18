@@ -1559,10 +1559,22 @@ export function initHandpanMap() {
   window.dispatchEvent(new Event('handpan-loaded'));
 
   // ResizeObserver for automatic realignment
-  const resizeObserver = new ResizeObserver(() => {
-    // Only rebuild if image is actually loaded/visible
-    if (handpanImg && handpanImg.complete && handpanImg.naturalHeight !== 0 && !handpanLoadingOverlay?.classList.contains('active')) {
-      buildHandpanOverlay();
+  let lastWidth = 0;
+  let lastHeight = 0;
+  const resizeObserver = new ResizeObserver((entries) => {
+    for (const entry of entries) {
+      const { width, height } = entry.contentRect;
+      
+      // Only rebuild if the dimensions have actually changed significantly (> 1px)
+      // This prevents minor layout shifts or animations from triggering a full DOM clear/rebuild.
+      if (Math.abs(width - lastWidth) > 1 || Math.abs(height - lastHeight) > 1) {
+        lastWidth = width;
+        lastHeight = height;
+        
+        if (handpanImg && handpanImg.complete && handpanImg.naturalHeight !== 0 && !handpanLoadingOverlay?.classList.contains('active')) {
+          buildHandpanOverlay();
+        }
+      }
     }
   });
   if (handpanSection) resizeObserver.observe(handpanSection);

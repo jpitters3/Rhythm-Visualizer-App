@@ -76,6 +76,8 @@
     width: 100%;
     flex: none;
     max-width: 100%;
+    transform: translateZ(0); /* GPU stability */
+    backface-visibility: hidden;
   }
 }
 
@@ -360,6 +362,8 @@ div.lock-btn {
     max-width: 260px;
     margin: 0 auto;
     padding: 0 8px;
+    transform: translateZ(0); /* GPU stability */
+    backface-visibility: hidden;
   }
 
   /* Mobile locking CSS removed - flexbox now handles layout position naturally */
