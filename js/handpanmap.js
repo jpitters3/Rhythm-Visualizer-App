@@ -14,7 +14,7 @@ import { canAccess, FEATURE } from './gated-feature.js';
 import { alert, confirm } from './alert.js';
 
 // DOM Elements (previously globals)
-let handpanImg, scaleSelect, scaleStatus, handpanColorSelect, numberPitchSelect, ghostBtn, lockBtn, composeBtn, handpanSection, handpanOverlay;
+let handpanImg, scaleSelect, scaleStatus, handpanColorSelect, numberPitchSelect, ghostBtn, ghostBackBtn, ghostFwdBtn, lockBtn, composeBtn, handpanSection, handpanOverlay;
 let handpanWrapBottom, handpanImgBottom, handpanOverlayBottom;
 
 /* Mapped to nine-note-handpan-numbered.png */
@@ -1111,6 +1111,8 @@ export function initHandpanMap() {
   handpanColorSelect = document.getElementById('handpanColorSelect');
   numberPitchSelect = document.getElementById('numberPitchSelect');
   ghostBtn = document.getElementById('ghostBtn');
+  ghostBackBtn = document.getElementById('ghostBackBtn');
+  ghostFwdBtn = document.getElementById('ghostFwdBtn');
   lockBtn = document.getElementById('lockBtn');
   composeBtn = document.getElementById('composeBtn');
   handpanSection = document.getElementById('handpanSection');
@@ -1449,6 +1451,25 @@ export function initHandpanMap() {
     if (getComposeOn && getComposeOn()) {
       setCaret(clampIndex(idx + 1));
     }
+  });
+
+  ghostBackBtn?.addEventListener('click', () => {
+    const idx = activeGrid.caretIndex;
+    if (idx === null) return;
+    setCaret(clampIndex(idx - 1));
+  });
+
+  ghostFwdBtn?.addEventListener('click', () => {
+    const idx = activeGrid.caretIndex;
+    if (idx === null) return;
+    setCaret(clampIndex(idx + 1));
+  });
+
+  Bus.on(BUS_EVENT.CARET_CHANGED, () => {
+    const hasCaret = activeGrid && activeGrid.caretIndex !== null;
+    if (ghostBtn) ghostBtn.disabled = !hasCaret;
+    if (ghostBackBtn) ghostBackBtn.disabled = !hasCaret;
+    if (ghostFwdBtn) ghostFwdBtn.disabled = !hasCaret;
   });
 
   lockBtn?.addEventListener('click', () => composeBtn?.click());

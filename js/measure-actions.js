@@ -158,26 +158,29 @@ export async function deleteMeasuresRange(startM, endM, ctx) {
 // ===== UI EVENT LISTENERS ===== //
 
 export function initMeasureActions() {
-  document.getElementById('addMeasureBtn')?.addEventListener('click', () => {
-    const ctx = activeGrid;
-    appendEmptyMeasure(ctx);
-    // append is end?
-    const m = ctx.measures - 1;
-    const { start } = measureRange(m, ctx);
-    setCaret(start, ctx);
+  document.querySelectorAll('.addMeasureBtn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const ctx = activeGrid;
+      appendEmptyMeasure(ctx);
+      const m = ctx.measures - 1;
+      const { start } = measureRange(m, ctx);
+      setCaret(start, ctx);
+    });
   });
 
-  document.getElementById('delMeasureBtn')?.addEventListener('click', async () => {
-    const ctx = activeGrid;
-    const range = getRange(ctx);
-    if (range && range.length > 1) {
-      const s = ctx.stepsPerMeasure;
-      const startM = Math.floor(range.start / s);
-      const endM = Math.floor(range.end / s);
-      await deleteMeasuresRange(startM, endM, ctx);
-    } else {
-      await deleteMeasure(getActiveMeasureIndex(ctx), ctx);
-    }
+  document.querySelectorAll('.delMeasureBtn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const ctx = activeGrid;
+      const range = getRange(ctx);
+      if (range && range.length > 1) {
+        const s = ctx.stepsPerMeasure;
+        const startM = Math.floor(range.start / s);
+        const endM = Math.floor(range.end / s);
+        await deleteMeasuresRange(startM, endM, ctx);
+      } else {
+        await deleteMeasure(getActiveMeasureIndex(ctx), ctx);
+      }
+    });
   });
 
   document.getElementById('selDuplicateBtn')?.addEventListener('click', async () => {

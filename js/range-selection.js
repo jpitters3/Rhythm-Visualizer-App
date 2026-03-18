@@ -1,6 +1,7 @@
 import { activeGrid, gridA, gridB } from './grid-context.js';
 import { setLongPressFired } from './state.js';
 import { isReviewing } from './coaching-mode.js';
+import { Bus, BUS_EVENT } from './bus.js';
 
 function allCells(ctx) {
   return Array.from((ctx || activeGrid).cells);
@@ -39,7 +40,17 @@ function applySelectionLocal(i, ctx) {
   const c = ctx || activeGrid;
   c.caretIndex = i;
   const cellList = c.cells;
-  cellList.forEach((cell, idx) => cell.classList.toggle('selected', idx === i));
+  let targetCell = null;
+  cellList.forEach((cell, idx) => {
+    const isSelected = (idx === i);
+    cell.classList.toggle('selected', isSelected);
+    if (isSelected) targetCell = cell;
+  });
+  Bus.emit(BUS_EVENT.CARET_CHANGED);
+  
+  if (targetCell && typeof targetCell.scrollIntoView === 'function') {
+    targetCell.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
 }
 
 export function applySelection(i, ctx) {

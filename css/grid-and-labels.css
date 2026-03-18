@@ -159,27 +159,27 @@
   font-size: 14px;
 }
 
-/* Define the mobile-only layout (Max 4 beats per row) */
+/* Define the mobile-only layout to maximize density */
 @media (max-width: 768px) {
 
-  /* Force 4-column grid for consistent alignment */
+  /* Allow the full 8 column grid on mobile to shrink cells */
   .grid,
   .labels {
-    grid-template-columns: repeat(4, 1fr) !important;
-    gap: 6px;
+    grid-template-columns: repeat(var(--cols, 8), 1fr) !important;
+    gap: 4px;
   }
 
   /* Ensure the measure container also respects this, keeping the `+` button in check */
   .measure {
-    /* Columns 1-4 for beats, Col 5 for the + button (which spans rows) */
-    grid-template-columns: repeat(4, 1fr) auto !important;
-    gap: 6px;
+    grid-template-columns: repeat(var(--cols, 8), 1fr) auto !important;
+    gap: 4px;
+    margin-bottom: 8px; /* tighter rows */
   }
 
   .quad-container {
     opacity: 0;
     /* Hidden by default, like desktop */
-    width: 40px;
+    width: auto;
     justify-self: center;
     align-items: center;
     padding: 0;
@@ -193,11 +193,11 @@
     pointer-events: auto;
   }
 
-  /* Increase sub-dot size on mobile for better touch targets */
+  /* Scale down sub-dots to fit the 8-column layout */
   .sub-dot {
-    width: 38px;
-    height: 38px;
-    font-size: 18px;
+    width: 20px;
+    height: 20px;
+    font-size: 10px;
   }
 }
 
@@ -400,13 +400,13 @@
 
 @media (max-width: 600px) {
   .labelCell {
-    font-size: 18px;
+    font-size: 14px; /* shrink labels to fit » 8 cols */
   }
 
   .add-measure {
-    width: 40px;
-    height: 40px;
-    font-size: 24px;
+    width: 32px;
+    height: 32px;
+    font-size: 20px;
   }
 }
 

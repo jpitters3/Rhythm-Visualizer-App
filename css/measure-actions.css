@@ -64,11 +64,29 @@
   margin: 0 0 8px 2px;
 }
 
-@media (max-width: 600px) {
+.mobile-only {
+  display: none !important;
+}
+
+@media (max-width: 768px) {
+  .desktop-only {
+    display: none !important;
+  }
+  
+  .mobile-only {
+    display: flex !important;
+  }
+
   .measure-tools {
     flex-wrap: wrap;
     border-radius: 16px;
-    /* Less pill-shaped if wrapped */
     justify-content: center;
+  }
+
+  /* Fully hide the container when there is no active selection toolbar to reclaim vertical grid space */
+  #measureTools:not(:has(.selection-group.visible)) {
+    display: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
   }
 }

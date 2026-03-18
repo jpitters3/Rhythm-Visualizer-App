@@ -132,6 +132,7 @@ export function clearSelection(ctx = activeGrid) {
     });
   });
   setIsEditMulti(false);
+  Bus.emit(BUS_EVENT.CARET_CHANGED);
 }
 
 export function applySelection(i, ctx = activeGrid) {

@@ -19,7 +19,8 @@ export const BUS_EVENT = {
   CHALLENGE_CORRECTION: 'transcription:challenge-correction',
   SHOW_UPGRADE_MODAL: 'monetization:show-upgrade-modal',
   SHOW_CONGRATS_MODAL: 'monetization:show-congrats-modal',
-  OPEN_AUTH_MODAL: 'auth:open-modal'
+  OPEN_AUTH_MODAL: 'auth:open-modal',
+  CARET_CHANGED: 'caret-changed'
 };
 
 /**

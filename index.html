@@ -176,11 +176,11 @@
       <div class="controls pattern-row">
         <div class="controls-primary">
           <button id="resetBtn" title="Reset">🔄</button>
-          <button id="themeBtn" title="Toggle light / dark mode">☀︎ / ☾</button>
-          <button id="grooveBtn" title="Generate a random groove" style="display: none;">Give me a groove!</button>
-          <button id="labelNotationBtn" title="Toggle label notation (Musical vs Numeric)">1 2 3</button>
-          <button id="composeBtn"
-            title="Compose mode: writing advances to the next beat (Alt = write without advance)">🎼</button>
+            <button id="themeBtn" title="Toggle light / dark mode">☀︎ / ☾</button>
+            <button id="grooveBtn" title="Generate a random groove" style="display: none;">Give me a groove!</button>
+            <button id="labelNotationBtn" title="Toggle label notation (Musical vs Numeric)">1 2 3</button>
+            <button id="composeBtn"
+              title="Compose mode: writing advances to the next beat (Alt = write without advance)">🎼</button>
           <button id="gridBtn" style="display:none;" title="Toggle between 8th and 16th grid">8ths</button>
           <button id="handBtn" style="display: none;" class="active" title="Toggle left/right hand coloring">Left/Right:
             Off</button>
@@ -336,10 +336,12 @@
 
           <!-- Measure Actions -->
           <div class="measure-tools" id="measureTools">
-            <div class="measure-group">
-              <span class="measure-tools-label"></span>
-              <button id="addMeasureBtn" title="Add a new measure">＋</button>
-              <button id="delMeasureBtn" title="Delete active measure">−</button>
+            <div class="measure-group desktop-only" style="display: flex; flex-direction: column; align-items: flex-start; gap: 2px;">
+              <span class="measure-tools-label" style="font-size: 10px; opacity: 0.7;">Measures</span>
+              <div style="display: flex; gap: 4px;">
+                <button class="addMeasureBtn" title="Add a new measure">＋</button>
+                <button class="delMeasureBtn" title="Delete active measure">−</button>
+              </div>
             </div>
 
             <div id="selectionTools" class="selection-group">
@@ -358,9 +360,20 @@
         <aside class="handpan-panel" aria-label="Handpan map">
           <!-- TABS -->
           <div class="handpan-tabs">
-            <button class="tab-btn" data-tab="handpanSettingsDrawer" title="Settings">🛸</button>
-            <button class="tab-btn" data-tab="chordDrawer" title="Chords">🎶</button>
-            <button class="tab-btn" data-tab="customizeDrawer" title="Customize">⚙️</button>
+            <div class="measure-group mobile-only" style="display: flex; flex-direction: column; align-items: center; gap: 2px;">
+              <span style="font-size: 10px; opacity: 0.7;">Measures</span>
+              <div style="display: flex; gap: 8px;">
+                <button title="Add a new measure" class="addMeasureBtn tab-btn"
+                  style="font-size: 16px; padding: 6px 12px;">＋</button>
+                <button title="Delete active measure" class="delMeasureBtn tab-btn"
+                  style="font-size: 16px; padding: 6px 12px;">−</button>
+              </div>
+            </div>
+            <div style="display: flex; gap: 12px;">
+              <button class="tab-btn" data-tab="handpanSettingsDrawer" title="Settings">🛸</button>
+              <button class="tab-btn" data-tab="chordDrawer" title="Chords">🎶</button>
+              <button class="tab-btn" data-tab="customizeDrawer" title="Customize">⚙️</button>
+            </div>
           </div>
 
           <!-- TAB PANES -->
@@ -459,8 +472,10 @@
             <img id="handpanImgBottom" class="handpan-img" src="" alt="Handpan Bottom" />
             <div class="handpan-overlay" id="handpanOverlayBottom"></div>
           </div>
-          <div id="ghostNoteSection" class="under-handpan">
-            <button id="ghostBtn"><img src="./assets/images/ghost.png" /></button>
+          <div id="ghostNoteSection" class="under-handpan pill-group">
+            <button id="ghostBackBtn" title="Move caret left" disabled>◂</button>
+            <button id="ghostBtn" title="Place ghost note" disabled><img src="./assets/images/ghost.png" /></button>
+            <button id="ghostFwdBtn" title="Move caret right" disabled>▸</button>
           </div><br />
 
 
