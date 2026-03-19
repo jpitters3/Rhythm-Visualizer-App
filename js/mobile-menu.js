@@ -19,6 +19,15 @@ export function initMobileMenu() {
     mobileMenuBtn.setAttribute('aria-expanded', isOpen);
   });
 
+  // Close Main Menu when a button inside it is clicked (mobile)
+  headerMenu.addEventListener('click', (e) => {
+    if (e.target.tagName === 'BUTTON' || e.target.closest('button')) {
+      headerMenu.classList.remove('open');
+      mobileMenuBtn.setAttribute('aria-expanded', 'false');
+    }
+  });
+
+
   // Toggle Primary Controls Drawer
   if (mobileControlsBtn && primaryControlsWrapper) {
     mobileControlsBtn.addEventListener('click', (e) => {

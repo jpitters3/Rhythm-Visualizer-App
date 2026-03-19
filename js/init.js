@@ -71,6 +71,8 @@ async function init() {
     initGames();
     initCourseMarketplace();
     initCourseCreator();
+    initCourses();
+
 
     // Admin Tools (Async check inside)
     initAdmin();

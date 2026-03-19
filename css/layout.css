@@ -28,6 +28,8 @@ div.grid-container.top-row {
   padding: 8px;
   color: var(--text);
   border-radius: 8px;
+  align-items: center;
+  justify-content: center;
 }
 
 .hamburger-btn:hover {

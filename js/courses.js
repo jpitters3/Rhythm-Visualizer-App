@@ -19,6 +19,7 @@ export let allSections = [];
 export let allLessons = [];
 export let currentLesson = null;
 export let completedLessonIds = new Set();
+let lastSidebarType = 'course'; // 'course' or 'lesson'
 
 export async function fetchCourses() {
   if (!currentUser) return;
@@ -321,7 +322,7 @@ export async function loadLesson(lessonId) {
     const courseId = section ? section.courseId : null;
 
     if (secTitleEl) {
-      secTitleEl.innerHTML = `<span class="clickable-nav-title" data-action="open-sidebar-course" data-course-id="${courseId}" title="Open course sidebar">${courseTitle} • ${sectionTitle}</span>`;
+      secTitleEl.innerHTML = `<span class="clickable-nav-title" data-action="open-sidebar-course" data-course-id="${courseId}" title="Open course sidebar">← ${courseTitle} • ${sectionTitle}</span>`;
     }
 
     const titleEl = document.getElementById('activeLessonTitle');
@@ -514,9 +515,6 @@ export async function loadLesson(lessonId) {
       }
     }
 
-    // On Mobile, maybe close sidebar? On desktop, keep open?
-    if (window.innerWidth < 768) closeSidebar();
-
   } catch (err) {
     console.error("loadLesson Error:", err);
     await alert("Error loading lesson: " + err.message);
@@ -550,6 +548,7 @@ export function closeSidebar(options = {}) {
 }
 
 export function openLessonSidebar() {
+  lastSidebarType = 'lesson';
   closeSidebar({ reason: 'lesson-player', source: 'courses' }); // mutually exclusive
   const panel = document.getElementById('lessonPlayer');
   if (panel) {
@@ -569,6 +568,7 @@ export function closeLessonSidebar() {
 }
 
 export function openSidebar() {
+  lastSidebarType = 'course';
   closeSidebar({ reason: 'course-list', source: 'courses' }); // mutually exclusive
   const sb = document.getElementById('courseSidebar');
   if (sb && !sb.classList.contains('open')) {
@@ -588,6 +588,23 @@ export function toggleSidebar() {
   } else {
     // Note: openSidebar already calls closeSidebar
     openSidebar();
+  }
+}
+
+export function toggleLastSidebar() {
+  const courseSb = document.getElementById('courseSidebar');
+  const lessonSb = document.getElementById('lessonPlayer');
+
+  const isAnyOpen = (courseSb && courseSb.classList.contains('open')) || (lessonSb && lessonSb.classList.contains('open'));
+
+  if (isAnyOpen) {
+    closeSidebar();
+  } else {
+    if (lastSidebarType === 'lesson' && currentLesson) {
+      openLessonSidebar();
+    } else {
+      openSidebar();
+    }
   }
 }
 
@@ -813,14 +830,6 @@ document.body.addEventListener('click', async (e) => {
       if (pLid) {
         e.stopPropagation();
         await togglePracticeItem('lesson', pLid, pTitle);
-        // Refresh state is tricky without re-rendering or accessing local variable function
-        // We can just rely on the button click handler updating itself if we kept the `onclick` but we removed it.
-        // Wait. loadLesson created the button with specific logic.
-        // The button in `loadLesson` is dynamic.
-        // Let's re-run the check logic or just update that button directly here?
-        // Simplest is to re-call `loadLesson` or extract the `updateBtnState` logic.
-        // Actually, the button in `loadLesson` is re-created on load.
-        // If we want it to update visually:
         const pBtn = document.getElementById('addPracticeBtn');
         if (pBtn) {
           const isAdded = isItemInPractice('lesson', pLid);
@@ -835,6 +844,16 @@ document.body.addEventListener('click', async (e) => {
         }
       }
       break;
+    case 'toggle-sidebar':
+      e.stopPropagation();
+      closePracticeSidebar();
+      toggleSidebar();
+      break;
+    case 'toggle-last-sidebar':
+      e.stopPropagation();
+      closePracticeSidebar();
+      toggleLastSidebar();
+      break;
     case 'dismiss-celebration':
       const overlay = document.getElementById('celebrationOverlay');
       if (overlay) {
@@ -846,14 +865,7 @@ document.body.addEventListener('click', async (e) => {
 });
 
 // Sidebar Toggles (Existing ID-based, can stay or move to delegation)
-const navbarToggle = document.getElementById('toggleSidebarBtn');
-if (navbarToggle) {
-  navbarToggle.addEventListener('click', () => {
-    // Close Practice Sidebar if open
-    closePracticeSidebar();
-    toggleSidebar();
-  });
-}
+
 
 const sidebarCloseBtn = document.getElementById('closeSidebar');
 if (sidebarCloseBtn) sidebarCloseBtn.addEventListener('click', closeSidebar);
@@ -880,13 +892,13 @@ if (closeLessonBtn) {
   closeLessonBtn.addEventListener('click', closeLessonSidebar);
 }
 
-const lessonCoursesBtn = document.getElementById('lessonCoursesBtn');
-if (lessonCoursesBtn) {
-  lessonCoursesBtn.addEventListener('click', () => {
-    closeLessonSidebar();
-    openSidebar();
-  });
-}
+// const lessonCoursesBtn = document.getElementById('lessonCoursesBtn');
+// if (lessonCoursesBtn) {
+//   lessonCoursesBtn.addEventListener('click', () => {
+//     closeLessonSidebar();
+//     openSidebar();
+//   });
+// }
 
 // Cross-module Events
 Bus.on(BUS_EVENT.COURSE_DATA_CHANGED, () => {
@@ -906,9 +918,6 @@ Bus.on(BUS_EVENT.REQUEST_LOAD_LESSON, (e) => {
 });
 
 export function initCourses() {
-  const toggleBtn = document.getElementById('toggleSidebarBtn');
-  toggleBtn?.addEventListener('click', toggleSidebar);
-
   const closeBtn = document.getElementById('closeSidebarBtn');
   closeBtn?.addEventListener('click', closeSidebar);
 
