@@ -43,6 +43,7 @@ div.grid-container.top-row {
   justify-content: space-between;
   /* Spread Pattern vs Account */
   gap: 20px;
+  z-index: 3000;
 }
 
 #mobileControlsWrapper {
@@ -114,7 +115,7 @@ div.grid-container.top-row {
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
     border-radius: 12px;
     padding: 20px;
-    z-index: 1000;
+    z-index: 3000;
     flex-direction: column;
     align-items: stretch;
     /* Full width items */
@@ -149,7 +150,6 @@ div.grid-container.top-row {
     display: flex;
     animation: slideDown 0.2s ease-out;
     overflow-y: scroll;
-    z-index: 1001;
   }
 
   /* ===== FLATTEN ACCOUNT DROPDOWN ON MOBILE ===== */

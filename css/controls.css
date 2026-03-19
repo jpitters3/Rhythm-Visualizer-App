@@ -320,4 +320,8 @@ select {
   .bpm-control input[type=range] {
     width: 100px;
   }
+
+  .dropdown-content {
+    z-index: 3000;
+  }
 }
