@@ -9,6 +9,7 @@ import { isItemInPractice, togglePracticeItem, closePracticeSidebar } from './pr
 import { loadCourseToEdit } from './course-creator.js';
 import { openMarketplace } from './course-marketplace.js';
 import { autoLinkText } from './glossary.js';
+import { openAuthModal } from './auth.js';
 
 // ===== SIDEBAR LOGIC (OWNED COURSES) =====
 
@@ -22,7 +23,7 @@ export let completedLessonIds = new Set();
 let lastSidebarType = 'course'; // 'course' or 'lesson'
 
 export async function fetchCourses() {
-  if (!currentUser) return;
+  if (!currentUser) renderCourseSidebar(null);
 
   try {
     // 1. Fetch User Profile for Active Course ID
@@ -93,9 +94,26 @@ export async function fetchCourses() {
 }
 
 export function renderCourseSidebar(courses) {
+
   const list = document.getElementById('courseList');
   const header = document.querySelector('#courseSidebar .sidebar-header');
   if (!list || !header) return;
+
+  if (!currentUser) {
+    list.innerHTML = `
+      <div class="empty-courses">
+        <!-- <h4>Not signed in.</h4> -->
+        <h4>Please sign in to access courses.</h4>
+        <button class="primary-btn" data-action="sign-in">Sign In</button>
+      </div>
+    `;
+
+    // Clean header action
+    if (header.querySelector('.browse-icon-btn')) {
+      header.querySelector('.browse-icon-btn').remove();
+    }
+    return;
+  }
 
   // 1. Setup Header Button
   // If no courses, show Empty State
@@ -782,6 +800,9 @@ document.body.addEventListener('click', async (e) => {
   const id = target.dataset.id; // generic ID
 
   switch (action) {
+    case 'sign-in':
+      openAuthModal();
+      break;
     case 'open-marketplace':
       openMarketplace();
       break;
