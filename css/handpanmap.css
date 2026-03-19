@@ -534,11 +534,12 @@ body.dark .icon-btn.active {
   border: 1px solid var(--offwhite);
   border-radius: 12px;
   padding: 16px;
-  box-shadow: 0 15px 50px rgba(0, 0, 0, 0.3);
-  animation: fadeIn 0.2s ease;
+  box-shadow: 0 25px 80px rgba(0, 0, 0, 0.5);
+  animation: pureFadeIn 0.2s ease;
   overflow-y: auto;
   max-height: 75vh;
 }
+
 
 @media (max-width: 1200px) {
   .tab-pane {
@@ -561,24 +562,25 @@ body.dark .icon-btn.active {
     height: auto;
     max-height: 80vh;
     margin: 0;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 15px 50px rgba(0, 0, 0, 0.6);
     z-index: 3000;
   }
 }
+
 
 .drawer-backdrop {
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.1);
-  backdrop-filter: blur(1px);
   z-index: 2999;
   display: none;
-  animation: fadeIn 0.2s ease;
+  animation: pureFadeIn 0.2s ease;
 }
 
 .drawer-backdrop.active {
   display: block;
 }
+
 
 .tab-pane::before {
   content: "";
@@ -607,17 +609,16 @@ body.dark .icon-btn.active {
   display: block;
 }
 
-@keyframes fadeIn {
+@keyframes pureFadeIn {
   from {
     opacity: 0;
-    transform: translateY(5px);
   }
 
   to {
     opacity: 1;
-    transform: translateY(0);
   }
 }
+
 
 .tab-pane .drawer-content {
   padding: 0;

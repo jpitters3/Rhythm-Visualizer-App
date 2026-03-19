@@ -1474,6 +1474,7 @@ export function initHandpanMap() {
   });
 
   buildScaleBtn?.addEventListener('click', () => {
+    closeAllDrawers();
     openMyScalesModal('list');
   });
 
