@@ -187,3 +187,17 @@
   opacity: 0.6;
   cursor: not-allowed;
 }
+
+@media (max-width: 768px) {
+  .market-card {
+    width: 60vw;
+  }
+
+  .card-thumb {
+    height: 100px;
+  }
+
+  .card-content {
+    height: 200px;
+  }
+}
