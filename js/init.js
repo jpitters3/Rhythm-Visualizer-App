@@ -1,23 +1,21 @@
 // ===== INIT =====
 import { gridA } from './grid-context.js';
-import { activeGrid, setActiveGrid } from './state.js';
-import { activeSubIndex, cells, renderAllMeasures, initNoteGrid } from './notegrid.js';
-import { ADMIN_EMAILS } from './config.js';
+import { currentUser, activeGrid } from './state.js';
+import { cells, renderAllMeasures, initNoteGrid } from './notegrid.js';
+import { ADMIN_EMAILS, COMPOSE_KEY } from './config.js';
 import { TransportRegistry } from './transport-ui.js';
 import { stop, setMode, initNotePlayer, unlockAudio } from './noteplayer.js';
 import { loadSharedFromURL } from './share-patterns.js';
-import { refreshPatternSelect, serializePattern, updatePatternButtons, snapshotCurrentState } from './pattern-crud.js';
+import { refreshPatternSelect, updatePatternButtons, snapshotCurrentState } from './pattern-crud.js';
 import { initCourseCreator } from './course-creator.js';
 import { alert } from './alert.js';
 import { initControls, loadPatternByName, syncVirtualHandpanControls } from './controls.js';
 import { updateComposeUI } from './compose-mode.js';
 import { setPresentation, initPresentation } from './presentation-mode.js';
-import { currentUser } from './state.js';
 import { initAuth } from './auth.js';
 import { STEPS } from './rhythm-core.js';
 import { supabase } from './supabase-client.js';
 import { initCourses } from './courses.js';
-import { initPractice } from './practice.js';
 import { initMobileMenu } from './mobile-menu.js';
 import { initShortcuts } from './keyboard-shortcuts.js';
 import { initMeasureActions } from './measure-actions.js';

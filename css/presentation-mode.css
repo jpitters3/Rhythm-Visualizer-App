@@ -445,10 +445,6 @@ body.present div.present-controls {
     position: fixed;
     bottom: 5vh;
   }
-
-  body.present #lockBtn {
-    display: none;
-  }
 }
 
 /* ===== STREAM VIEW (Highway) ===== */

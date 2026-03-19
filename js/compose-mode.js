@@ -1,32 +1,29 @@
 import { activeGrid } from './grid-context.js';
 import { setCaret, clearRange } from './range-selection.js';
-import { cells, setInnerLabel, renderAllMeasures } from './notegrid.js';
+import { setInnerLabel, renderAllMeasures } from './notegrid.js';
 import { HistoryManager } from './history.js';
 import { isReviewing } from './coaching-mode.js';
+import { COMPOSE_KEY } from './config.js';
 
-export const COMPOSE_KEY = 'groovepan_compose_mode';
 let composeOn = (localStorage.getItem(COMPOSE_KEY) === 'on');
 
-const composeBtn = document.getElementById('composeBtn');
-const handpanSection = document.getElementById('handpanSection');
-const ghostNoteSection = document.getElementById('ghostNoteSection');
-
+const composeBtns = document.querySelectorAll('.compose-btn');
 
 export function updateComposeUI() {
-  if (!composeBtn) return;
-  composeBtn.classList.toggle('active', composeOn);
+  if (!composeBtns) return;
+  composeBtns.forEach(btn => {
+    btn.classList.toggle('active', composeOn);
+  });
   document.body.classList.toggle('composeOn', composeOn);
-
-  // Lock the handpan section on mobile
-  if (handpanSection) handpanSection.classList.toggle('locked', composeOn);
-  if (ghostNoteSection) ghostNoteSection.classList.toggle('locked', composeOn);
 }
 
-if (composeBtn) {
-  composeBtn.addEventListener('click', () => {
-    composeOn = !composeOn;
-    localStorage.setItem(COMPOSE_KEY, composeOn ? 'on' : 'off');
-    updateComposeUI();
+if (composeBtns) {
+  composeBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      composeOn = !composeOn;
+      localStorage.setItem(COMPOSE_KEY, composeOn ? 'on' : 'off');
+      updateComposeUI();
+    });
   });
 }
 

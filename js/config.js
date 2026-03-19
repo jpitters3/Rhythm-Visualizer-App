@@ -33,3 +33,4 @@ export const SCALE_KEY_REMOTE = 'handpan_scale';
 export const AUDIO_DELAY = 0.1; // 100ms scheduling buffer for snappiness
 export const VISUAL_HEADSTART = 0.0; // 0ms visual lead-time to compensate for display lag
 export const ACCENT_RMS_MULTIPLIER = 2.0; // Accents must be 2x louder than base sensitivity
+export const COMPOSE_KEY = 'groovepan_compose_mode';

@@ -211,7 +211,7 @@
             <button id="themeBtn" title="Toggle light / dark mode">☀︎ / ☾</button>
             <button id="grooveBtn" title="Generate a random groove" style="display: none;">Give me a groove!</button>
             <button id="labelNotationBtn" title="Toggle label notation (Musical vs Numeric)">1 2 3</button>
-            <button id="composeBtn"
+            <button id="composeBtn" class="compose-btn"
               title="Compose mode: writing advances to the next beat (Alt = write without advance)">➔</button>
             <button id="gridBtn" style="display:none;" title="Toggle between 8th and 16th grid">8ths</button>
             <button id="handBtn" style="display: none;" class="active"
@@ -391,6 +391,7 @@
                 <button id="selPasteBtn" disabled>Paste</button>
                 <button id="selDeleteBtn">Delete</button>
                 <button id="selCancelBtn">Cancel</button>
+                <button class="compose-btn" title="Compose mode: writing advances to the next beat">➔</button>
               </div>
               <div class="scroll-indicator right">▸</div>
             </div>
@@ -1336,7 +1337,6 @@
     const numberPitchSelect = document.getElementById('numberPitchSelect');
     const handpanSection = document.getElementById('handpanWrap');
     const ghostNoteSection = document.getElementById('ghostNoteSection');
-    const lockBtn = document.getElementById('lockBtn');
 
     // ===== RANGE SELECTION STATE =====
     let anchorIndex = null;     // anchor for shift-click / long-press selection

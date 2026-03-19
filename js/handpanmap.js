@@ -14,7 +14,7 @@ import { canAccess, FEATURE } from './gated-feature.js';
 import { alert, confirm } from './alert.js';
 
 // DOM Elements (previously globals)
-let handpanImg, scaleSelect, scaleStatus, handpanColorSelect, numberPitchSelect, ghostBtn, ghostBackBtn, ghostFwdBtn, lockBtn, composeBtn, handpanSection, handpanOverlay;
+let handpanImg, scaleSelect, scaleStatus, handpanColorSelect, numberPitchSelect, ghostBtn, ghostBackBtn, ghostFwdBtn, composeBtn, handpanSection, handpanOverlay;
 let handpanWrapBottom, handpanImgBottom, handpanOverlayBottom;
 
 /* Mapped to nine-note-handpan-numbered.png */
@@ -1108,7 +1108,6 @@ export function initHandpanMap() {
   ghostBtn = document.getElementById('ghostBtn');
   ghostBackBtn = document.getElementById('ghostBackBtn');
   ghostFwdBtn = document.getElementById('ghostFwdBtn');
-  lockBtn = document.getElementById('lockBtn');
   composeBtn = document.getElementById('composeBtn');
   handpanSection = document.getElementById('handpanSection');
   handpanOverlay = document.getElementById('handpanOverlay');
@@ -1467,8 +1466,6 @@ export function initHandpanMap() {
     if (ghostFwdBtn) ghostFwdBtn.disabled = !hasCaret;
   });
 
-  lockBtn?.addEventListener('click', () => composeBtn?.click());
-
   hpSettingsToggle?.addEventListener('click', (e) => {
     e.stopPropagation();
     const isHidden = hpSettingsPanel.style.display === 'none';
@@ -1571,15 +1568,15 @@ export function initHandpanMap() {
   const resizeObserver = new ResizeObserver((entries) => {
     for (const entry of entries) {
       const { width, height } = entry.contentRect;
-      
+
       // On mobile, minor layout shifts (address bar, scrolling) can cause sub-pixel or tiny shifts.
       // We use a 2px threshold to avoid flickering during animations or minor scrolling.
-      const threshold = 2; 
+      const threshold = 2;
 
       if (Math.abs(width - lastWidth) > threshold || Math.abs(height - lastHeight) > threshold) {
         lastWidth = width;
         lastHeight = height;
-        
+
         if (handpanImg && handpanImg.complete && handpanImg.naturalHeight !== 0 && !handpanLoadingOverlay?.classList.contains('active')) {
           console.log('[Handpan] Stabilized Rebuild Triggered');
           buildHandpanOverlay();

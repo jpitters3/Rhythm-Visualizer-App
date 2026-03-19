@@ -62,7 +62,7 @@ button:disabled {
   cursor: not-allowed;
 }
 
-button#composeBtn {
+button.compose-btn {
   font-size: 20px;
 }
 
@@ -307,7 +307,7 @@ select {
 #labelNotationBtn,
 #clearBtn-A,
 #clearBtn-B,
-#composeBtn,
+.compose-btn,
 #stickingBtn {
   min-width: 70px;
 }
