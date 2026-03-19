@@ -1,8 +1,10 @@
-export function initScrollIndicators() {
-  const container = document.getElementById('primaryControlsRow');
-  const leftIndicator = document.querySelector('.scroll-indicator.left');
-  const rightIndicator = document.querySelector('.scroll-indicator.right');
-  
+/**
+ * Sets up scroll indicators for a specific container and its indicators.
+ * @param {HTMLElement} container - The scrollable element.
+ * @param {HTMLElement} leftIndicator - The left arrow element.
+ * @param {HTMLElement} rightIndicator - The right arrow element.
+ */
+export function setupScrollIndicators(container, leftIndicator, rightIndicator) {
   if (!container || !leftIndicator || !rightIndicator) return;
 
   function updateIndicators() {
@@ -40,4 +42,27 @@ export function initScrollIndicators() {
 
   // initial check
   setTimeout(updateIndicators, 100);
+  
+  return updateIndicators; // Return for manual triggering if needed
 }
+
+export function initScrollIndicators() {
+  // 1. Primary Controls
+  const primaryRow = document.getElementById('primaryControlsRow');
+  const primaryWrapper = primaryRow?.closest('.scrollable-controls-wrapper');
+  if (primaryRow && primaryWrapper) {
+    const left = primaryWrapper.querySelector('.scroll-indicator.left');
+    const right = primaryWrapper.querySelector('.scroll-indicator.right');
+    setupScrollIndicators(primaryRow, left, right);
+  }
+
+  // 2. Selection Tools
+  const selectionRow = document.getElementById('selectionTools');
+  const selectionWrapper = document.getElementById('selectionToolsWrapper');
+  if (selectionRow && selectionWrapper) {
+    const left = selectionWrapper.querySelector('.scroll-indicator.left');
+    const right = selectionWrapper.querySelector('.scroll-indicator.right');
+    setupScrollIndicators(selectionRow, left, right);
+  }
+}
+

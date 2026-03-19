@@ -399,8 +399,10 @@ body.dark div.container {
   }
 
   /* Expanded Floating Controls Drawer */
-  #primaryControlsWrapper {
+  #primaryControlsWrapper,
+  .measure-tools {
     display: none;
+    width: 93vw;
     position: absolute;
     top: 5px;
     /* Position at the top of the content area, just below the header */
@@ -415,6 +417,13 @@ body.dark div.container {
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
     padding: 12px;
     z-index: 2000;
+    overflow: hidden; /* Contain scrolling content */
+  }
+
+  /* Reset some inner paddings for the floating menu */
+  #primaryControlsWrapper .scrollable-controls-wrapper,
+  .measure-tools .selection-group {
+    padding: 0;
   }
 
   #primaryControlsWrapper.open {
@@ -422,10 +431,7 @@ body.dark div.container {
     animation: slideDown 0.2s ease-out;
   }
 
-  /* Reset some inner paddings for the floating menu */
-  #primaryControlsWrapper .scrollable-controls-wrapper {
-    padding: 0;
-  }
+
 
   /* Push handpan above transport controls at bottom */
   aside.handpan-panel {

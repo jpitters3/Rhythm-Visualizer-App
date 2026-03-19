@@ -2,7 +2,6 @@
   align-self: flex-start;
   display: inline-flex;
   align-items: center;
-  /* gap: 10px; */
   padding: 6px;
   margin-bottom: 15px;
   margin-left: 10px;
@@ -12,7 +11,7 @@
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
-.measure-group {
+*/ .measure-group {
   display: flex;
   align-items: center;
   /* gap: 10px; */
@@ -31,6 +30,16 @@
   transition: max-width 0.45s cubic-bezier(0.4, 0, 0.2, 1),
     opacity 0.3s ease;
 }
+
+.selection-group button {
+  width: auto !important;
+  min-width: fit-content;
+  flex-shrink: 0;
+  height: 40px;
+  /* Slightly more compact for selection tools */
+  padding: 0 16px;
+}
+
 
 .selection-group.visible {
   max-width: 800px;
@@ -78,12 +87,7 @@
   }
 
   .measure-tools {
-    flex-wrap: wrap;
-    border-radius: 16px;
-    justify-content: center;
-    position: fixed;
-    top: 38vh;
-    margin: 0 auto;
+    width: 85vw;
     z-index: 2000;
   }
 
@@ -94,5 +98,39 @@
     display: none !important;
     padding: 0 !important;
     margin: 0 !important;
+  }
+
+  #measureTools:has(.selection-group.visible) {
+    display: block !important;
+  }
+
+  #selectionToolsWrapper {
+    width: 100%;
+    margin: 0;
+    padding: 0;
+  }
+
+  /* Sync selection row padding with primary row */
+  .selection-group {
+    padding: 0 4px !important;
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    justify-content: flex-start !important;
+    padding-bottom: 4px;
+    /* Space for scroll-indicator if needed */
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    width: 100%;
+  }
+
+  .selection-group::-webkit-scrollbar {
+    display: none;
+  }
+
+  .selection-group .sel-bar-text {
+    flex-shrink: 0;
+    margin-right: 8px;
+    font-size: 13px;
+    font-weight: 700;
   }
 }
