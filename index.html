@@ -1588,45 +1588,65 @@
 
         <!-- Note Props -->
         <div id="calNoteProps" style="display:none;">
-          <div class="prop-row">
-            <label>Pitch</label>
-            <div style="display:flex; gap:5px;">
-              <select id="calPitchSelect" style="flex:1"></select>
-              <select id="calOctaveSelect" style="width:60px;">
-                <option value="2">2</option>
-                <option value="3">3</option>
-                <option value="4">4</option>
-                <option value="5">5</option>
-              </select>
+          <!-- Step 1: Pitch & Octave -->
+          <div class="wizard-step active" data-step="1">
+            <div class="prop-row">
+              <label>Pitch & Octave</label>
+              <div style="display:flex; gap:5px;">
+                <select id="calPitchSelect" style="flex:1"></select>
+                <select id="calOctaveSelect" style="width:60px;">
+                  <option value="2">2</option>
+                  <option value="3">3</option>
+                  <option value="4">4</option>
+                  <option value="5">5</option>
+                </select>
+              </div>
             </div>
           </div>
 
-          <div class="prop-row">
-            <label>Number (Optional)</label>
-            <select id="calNumberSelect"></select>
+          <!-- Step 2: Number -->
+          <div class="wizard-step" data-step="2">
+            <div class="prop-row">
+              <label>Number (Optional)</label>
+              <select id="calNumberSelect"></select>
+            </div>
           </div>
 
-          <div class="prop-row">
-            <label>Size</label>
-            <input type="range" id="calSizeInput" min="5" max="40" value="12">
-            <span id="valSize" style="font-size:11px; float:right;">12%</span>
+          <!-- Step 3: Size -->
+          <div class="wizard-step" data-step="3">
+            <div class="prop-row">
+              <label>Size</label>
+              <input type="range" id="calSizeInput" min="5" max="40" value="12">
+              <span id="valSize" style="font-size:11px; float:right;">12%</span>
+            </div>
           </div>
 
-          <div class="prop-row">
-            <label>Shape (H/W Ratio)</label>
-            <input type="range" id="calShapeInput" min="0.5" max="1.5" step="0.05" value="1">
-            <span id="valShape" style="font-size:11px; float:right;">1.00</span>
+          <!-- Step 4: Shape -->
+          <div class="wizard-step" data-step="4">
+            <div class="prop-row">
+              <label>Shape (H/W Ratio)</label>
+              <input type="range" id="calShapeInput" min="0.5" max="1.5" step="0.05" value="1">
+              <span id="valShape" style="font-size:11px; float:right;">1.00</span>
+            </div>
           </div>
 
-          <div class="prop-row">
-            <label>Rotation</label>
-            <input type="range" id="calRotInput" min="0" max="360" value="0">
-            <span id="valRot" style="font-size:11px; float:right;">0°</span>
+          <!-- Step 5: Rotation -->
+          <div class="wizard-step" data-step="5">
+            <div class="prop-row">
+              <label>Rotation</label>
+              <input type="range" id="calRotInput" min="0" max="360" value="0">
+              <span id="valRot" style="font-size:11px; float:right;">0°</span>
+            </div>
           </div>
 
+          <!-- Navigation -->
+          <div class="wizard-nav">
+            <button id="wizardBack" class="wizard-btn" disabled>Back</button>
+            <span id="wizardStepInfo">Step 1/5</span>
+            <button id="wizardNext" class="wizard-btn">Next</button>
+          </div>
 
-
-          <div class="prop-row">
+          <div class="prop-row" style="margin-top:20px;">
             <button id="deleteTonefieldBtn" class="danger-btn">Delete Note</button>
           </div>
         </div>
