@@ -40,7 +40,6 @@
   z-index: 500;
   display: flex;
   justify-content: center;
-  pointer-events: none;
   transition: bottom 0.3s ease;
   /* Smooth move up */
 }
