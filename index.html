@@ -29,6 +29,8 @@
   <link rel="stylesheet" href="./css/ai-assistant.css">
   <link rel="stylesheet" href="css/profile.css">
   <link rel="stylesheet" href="css/feed.css">
+  <link rel="stylesheet" href="css/sidebar.css">
+  <link rel="stylesheet" href="css/camera-crop.css">
   <link rel="stylesheet" href="css/course-marketplace.css">
   <link rel="stylesheet" href="./css/calibration.css">
   <link rel="stylesheet" href="./css/coaching-mode.css">
@@ -1180,12 +1182,18 @@
             <label style="display:block; font-size:12px; color:var(--text-secondary); margin-bottom:4px;">Top Image
               (Required)</label>
             <div style="display:flex; align-items:center; gap:10px;">
-              <button type="button" class="secondary-btn small-btn"
-                onclick="document.getElementById('hpTopImage').click()">Choose File</button>
+              <div class="camera-btn-wrapper">
+                <button type="button" class="secondary-btn small-btn"
+                  onclick="document.getElementById('hpTopImage').click()">Choose File</button>
+                <button type="button" class="primary-btn small-btn" data-action="take-photo" data-type="top">Take
+                  Photo</button>
+              </div>
               <span id="hpTopFileName" style="font-size:12px; color:var(--text); opacity:0.8;">No file chosen</span>
+              <div id="hpTopCameraIndicator" class="camera-indicator">Camera Capture</div>
               <input type="file" id="hpTopImage" accept="image/*" style="display:none"
-                onchange="document.getElementById('hpTopFileName').textContent = this.files[0]?.name || 'No file chosen'">
+                onchange="document.getElementById('hpTopFileName').textContent = this.files[0]?.name || 'No file chosen'; document.getElementById('hpTopCameraIndicator').classList.remove('active')">
             </div>
+
             <div id="hpTopCurrent"
               style="display:none; font-size:11px; color:#2ecc71; margin-top:5px; font-style:italic;"></div>
           </div>
@@ -1194,13 +1202,19 @@
             <label style="display:block; font-size:12px; color:var(--text-secondary); margin-bottom:4px;">Bottom Image
               (Optional)</label>
             <div style="display:flex; align-items:center; gap:10px;">
-              <button type="button" class="secondary-btn small-btn"
-                onclick="document.getElementById('hpBottomImage').click()">Choose File</button>
+              <div class="camera-btn-wrapper">
+                <button type="button" class="secondary-btn small-btn"
+                  onclick="document.getElementById('hpBottomImage').click()">Choose File</button>
+                <button type="button" class="primary-btn small-btn" data-action="take-photo" data-type="bottom">Take
+                  Photo</button>
+              </div>
               <span id="hpBottomFileName" style="font-size:12px; color:var(--text); opacity:0.8;">No file
                 chosen</span>
+              <div id="hpBottomCameraIndicator" class="camera-indicator">Camera Capture</div>
               <input type="file" id="hpBottomImage" accept="image/*" style="display:none"
-                onchange="document.getElementById('hpBottomFileName').textContent = this.files[0]?.name || 'No file chosen'">
+                onchange="document.getElementById('hpBottomFileName').textContent = this.files[0]?.name || 'No file chosen'; document.getElementById('hpBottomCameraIndicator').classList.remove('active')">
             </div>
+
             <div id="hpBottomCurrent"
               style="display:none; font-size:11px; color:#2ecc71; margin-top:5px; font-style:italic;"></div>
           </div>
@@ -1374,8 +1388,35 @@
   <!-- Vite Entry Point -->
   <script type="module" src="/main.js"></script>
 
-  <!-- Mobile Drawer Panes -->
+  <!-- Camera Modal -->
+  <div id="cameraModal" class="camera-overlay" aria-hidden="true">
+    <div class="camera-viewfinder">
+      <video id="cameraVideo" autoplay playsinline></video>
+      <div class="camera-guide"></div>
+    </div>
+    <div class="camera-controls">
+      <button class="camera-action-btn" id="closeCameraBtn">Cancel</button>
+      <button class="shutter-btn" id="shutterBtn" title="Take photo"></button>
+      <button class="camera-action-btn" id="flipCameraBtn">Flip</button>
+    </div>
+  </div>
+
+  <!-- AI Processing Overlay -->
+  <div id="processingOverlay" class="processing-overlay" aria-hidden="true">
+    <div class="loader-container">
+      <div class="ai-loader"></div>
+      <div class="processing-text">AI Removing Background...</div>
+      <div id="aiStatus" style="font-size:14px; color:#6366f1; font-weight:600; margin-top:5px;">Initializing...</div>
+      <div style="width:200px; height:6px; background:rgba(255,255,255,0.1); border-radius:3px; margin-top:10px; overflow:hidden;">
+        <div id="aiProgressBar" style="width:0%; height:100%; background:#6366f1; transition:width 0.3s ease;"></div>
+      </div>
+      <div style="font-size:11px; opacity:0.6; margin-top:15px;">Model download (first time only)</div>
+    </div>
+  </div>
+
+
   <div id="handpanSettingsDrawer" class="tab-pane">
+
     <div class="drawer-content">
       <div class="setting-row">
         <label>Scale:</label>
