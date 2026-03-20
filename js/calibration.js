@@ -97,6 +97,7 @@ function toggleCalibrationSide() {
 
 function loadCalibrationImage(src) {
   if (calHandpanImage) {
+    calHandpanImage.crossOrigin = 'anonymous';
     calHandpanImage.onload = function () {
       if (!this.naturalWidth || !this.naturalHeight) return;
 
@@ -496,6 +497,110 @@ export function initCalibration() {
       location.reload();
     }
   });
+
+  // Magic Auto-Detect
+  document.getElementById('autoDetectBtn')?.addEventListener('click', () => autoDetectTonefields());
+}
+
+/**
+ * The "Magic" Algorithm: 
+ * Uses Computer Vision (CCL) to find note blobs in the image.
+ */
+async function autoDetectTonefields() {
+  if (!calHandpanImage || !calHandpanImage.src) return;
+  
+  const statusEl = document.getElementById('calSaveStatus');
+  if (statusEl) {
+    statusEl.textContent = "AI Detecting...";
+    statusEl.classList.remove('error');
+    statusEl.style.opacity = '1';
+  }
+
+  try {
+    // 1. Get Image Blob from Canvas
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = calHandpanImage.naturalWidth;
+    canvas.height = calHandpanImage.naturalHeight;
+    ctx.drawImage(calHandpanImage, 0, 0);
+    
+    const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+    
+    // 2. Invoke Backend AI Detect Function
+    const { data, error: fnError } = await supabase.functions.invoke('detect-tonefields', {
+      body: blob,
+    });
+
+    if (fnError) {
+      if (fnError.message?.includes('GOOGLE_AI_API_KEY')) {
+        throw new Error("AI Setup Required: Please set your GOOGLE_AI_API_KEY in Supabase secrets.");
+      }
+      throw new Error(fnError.message || 'Server AI failed');
+    }
+
+    if (!data || !data.tonefields || data.tonefields.length === 0) {
+      throw new Error("AI could not identify any tonefields in this image.");
+    }
+
+    const tfs = data.tonefields;
+
+    // 3. Convert to internal format and sort
+    const newNoteMap = [];
+    
+    // Separate Ding
+    const ding = tfs.find(t => t.note?.toLowerCase() === 'ding') || tfs[0];
+    const others = tfs.filter(t => t !== ding);
+
+    // Add Ding
+    const dId = Date.now();
+    newNoteMap.push({
+      id: dId,
+      x: ding.x,
+      y: ding.y,
+      width: ding.r * 2 || 12,
+      height: ding.r * 2 || 12,
+      rotation: 0,
+      note: 'D',
+      octave: 3,
+      assignedNumber: 'Ding',
+      side: currentCalibrationSide
+    });
+
+    // Add Others
+    others.forEach((n, i) => {
+      newNoteMap.push({
+        id: Date.now() + i + 1,
+        x: n.x,
+        y: n.y,
+        width: n.r * 2 || 10,
+        height: n.r * 2 || 10,
+        rotation: 0,
+        note: n.note !== 'Ding' ? n.note : 'C', // Ensure it's a pitch
+        octave: n.octave || (lastAssignedOctave + Math.floor((lastAssignedPitchIndex + (i+1)*2) / CAL_PITCHES.length)),
+        assignedNumber: String(i + 1),
+        side: currentCalibrationSide
+      });
+    });
+
+    // 4. Update UI
+    currentNoteMap = newNoteMap;
+    renderTonefields();
+    selectTonefield(null);
+    triggerAutoSave();
+    
+    if (statusEl) {
+      statusEl.textContent = `AI Detected ${newNoteMap.length} points!`;
+      setTimeout(() => statusEl.style.opacity = '0', 2000);
+    }
+
+  } catch (err) {
+    console.error("AI Detection error:", err);
+    if (statusEl) {
+      statusEl.textContent = "AI Failed";
+      statusEl.classList.add('error');
+    }
+    alert(err.message);
+  }
 }
 
 
