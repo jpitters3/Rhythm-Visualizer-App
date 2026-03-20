@@ -64,14 +64,12 @@ serve(async (req) => {
     // Convert image to base64 for Gemini
     const base64Image = encode(imageData);
 
-    const prompt = `Act as a handpan expert. In the provided image of a handpan (which has its background removed), identify the coordinates of all tonefields (notes). 
+    const prompt = `Act as a handpan expert. In the provided image of a handpan (background removed), identify the coordinates of all tonefields (notes). 
     - The Ding is the central note. 
     - Identify other notes in the harmonic circle.
-    - Provide the coordinates as percentages (0-100).
-    - Provide 'width' and 'height' as percentages of image width (to support elliptical shapes).
-    - Provide 'rotation' in degrees (0-360).
-    - Output your findings ONLY as a raw JSON array: [{"note": "Ding", "x": 50.4, "y": 48.2, "width": 12.5, "height": 11.2, "rotation": 15}, ...]. 
-    - No other text.`;
+    - Provide the coordinates (x, y) and radius (r) as percentages (0-100) of the image dimensions.
+    - Output your findings ONLY as a JSON array: [{"note": "Ding", "x": 50.4, "y": 48.2, "r": 6.5}, {"note": "1", "x": 60.1, "y": 30.5, "r": 4.5}, ...]. 
+    - No other text. Accuracy is critical.`;
 
     // Candidate models as requested by user
     const candidates = [

@@ -183,71 +183,104 @@ function updateTonefieldVisuals(el, tf) {
   el.style.left = `${tf.x}%`;
   el.style.top = `${tf.y}%`;
 
-  // Logic: 'r' was radius in percent. 
-  // New logic: Use width/height/rotation if available, else fallback to 'r'
   let w = tf.width || (tf.r * 2) || 12;
   let h = tf.height || (tf.r * 2) || 12;
   let rot = tf.rotation || 0;
 
   el.style.width = `${w}%`;
-  el.style.height = `${h}%`;
+  el.style.height = 'auto'; // Let aspect-ratio handle height
+  el.style.aspectRatio = `${w} / ${h}`;
   el.style.transform = `translate(-50%, -50%) rotate(${rot}deg)`;
 }
 
 // === INTERACTION ===
 
+let activePointers = new Map();
+let initialPinchDist = 0;
+let initialPinchAngle = 0;
+let initialTfState = null;
+
 function onTonefieldPointerDown(e, id) {
   e.stopPropagation();
   e.preventDefault();
+  
+  const el = e.currentTarget;
+  el.setPointerCapture(e.pointerId);
+  
   selectTonefield(id);
+  activePointers.set(e.pointerId, e);
 
-  const el = document.getElementById(`tf-${id}`);
+  const tf = currentNoteMap.find(t => t.id === id);
+  if (!tf) return;
+
   const container = document.getElementById('calCanvasContainer');
-  if (!el || !container) return;
-
   const rect = container.getBoundingClientRect();
 
+  // Initial State for Dragging
   const startX = e.clientX;
   const startY = e.clientY;
-  const startLeft = parseFloat(el.style.left);
-  const startTop = parseFloat(el.style.top);
+  const startLeft = tf.x;
+  const startTop = tf.y;
+
+  if (activePointers.size === 2) {
+    const pts = Array.from(activePointers.values());
+    initialPinchDist = Math.hypot(pts[1].clientX - pts[0].clientX, pts[1].clientY - pts[0].clientY);
+    initialPinchAngle = Math.atan2(pts[1].clientY - pts[0].clientY, pts[1].clientX - pts[0].clientX);
+    initialTfState = { width: tf.width, height: tf.height, rotation: tf.rotation };
+  }
 
   el.classList.add('dragging');
 
-  // Define handlers
   function onMove(ev) {
-    const dx = ev.clientX - startX;
-    const dy = ev.clientY - startY;
+    if (!activePointers.has(ev.pointerId)) return;
+    activePointers.set(ev.pointerId, ev);
 
-    const w = rect.width > 0 ? rect.width : 1;
-    const h = rect.height > 0 ? rect.height : 1;
+    if (activePointers.size === 1) {
+      // DRAG LOGIC
+      const dx = ev.clientX - startX;
+      const dy = ev.clientY - startY;
+      const w = rect.width || 1;
+      const h = rect.height || 1;
 
-    const dxPct = (dx / w) * 100;
-    const dyPct = (dy / h) * 100;
+      tf.x = Math.max(0, Math.min(100, startLeft + (dx / w) * 100));
+      tf.y = Math.max(0, Math.min(100, startTop + (dy / h) * 100));
+      
+      updateTonefieldVisuals(el, tf);
+    } 
+    else if (activePointers.size === 2 && initialTfState) {
+      // PINCH & ROTATE LOGIC
+      const pts = Array.from(activePointers.values());
+      const currentDist = Math.hypot(pts[1].clientX - pts[0].clientX, pts[1].clientY - pts[0].clientY);
+      const currentAngle = Math.atan2(pts[1].clientY - pts[0].clientY, pts[1].clientX - pts[0].clientX);
 
-    const newX = Math.max(0, Math.min(100, startLeft + dxPct));
-    const newY = Math.max(0, Math.min(100, startTop + dyPct));
+      const distRatio = currentDist / (initialPinchDist || 1);
+      const angleDiff = (currentAngle - initialPinchAngle) * (180 / Math.PI);
 
-    el.style.left = `${newX}%`;
-    el.style.top = `${newY}%`;
+      tf.width = Math.max(5, Math.min(50, initialTfState.width * distRatio));
+      tf.height = Math.max(5, Math.min(50, initialTfState.height * distRatio));
+      tf.rotation = (initialTfState.rotation + angleDiff) % 360;
 
-    const tf = currentNoteMap.find(t => t.id === id);
-    if (tf) {
-      tf.x = newX;
-      tf.y = newY;
+      updateTonefieldVisuals(el, tf);
     }
   }
 
-  function onUp() {
-    document.removeEventListener('pointermove', onMove);
-    document.removeEventListener('pointerup', onUp);
-    el.classList.remove('dragging');
-    triggerAutoSave();
+  function onUp(ev) {
+    activePointers.delete(ev.pointerId);
+    if (activePointers.size < 2) {
+      initialTfState = null;
+    }
+    if (activePointers.size === 0) {
+      el.releasePointerCapture(ev.pointerId);
+      el.removeEventListener('pointermove', onMove);
+      el.removeEventListener('pointerup', onUp);
+      el.classList.remove('dragging');
+      triggerAutoSave();
+    }
   }
 
-  // Attach to DOCUMENT to catch everything
-  document.addEventListener('pointermove', onMove);
-  document.addEventListener('pointerup', onUp);
+  el.addEventListener('pointermove', onMove);
+  el.addEventListener('pointerup', onUp);
+  el.addEventListener('pointercancel', onUp);
 }
 
 function selectTonefield(id) {
@@ -559,9 +592,9 @@ async function autoDetectTonefields() {
       id: dId,
       x: ding.x,
       y: ding.y,
-      width: ding.width || 12,
-      height: ding.height || 12,
-      rotation: ding.rotation || 0,
+      width: (ding.r * 2) || 12,
+      height: (ding.r * 2) || 12,
+      rotation: 0,
       note: 'D',
       octave: 3,
       assignedNumber: 'Ding',
@@ -574,10 +607,10 @@ async function autoDetectTonefields() {
         id: Date.now() + i + 1,
         x: n.x,
         y: n.y,
-        width: n.width || 10,
-        height: n.height || 10,
-        rotation: n.rotation || 0,
-        note: n.note !== 'Ding' ? n.note : 'C', // Ensure it's a pitch
+        width: (n.r * 2) || 10,
+        height: (n.r * 2) || 10,
+        rotation: 0,
+        note: n.note !== 'Ding' ? n.note : 'C',
         octave: n.octave || (lastAssignedOctave + Math.floor((lastAssignedPitchIndex + (i+1)*2) / CAL_PITCHES.length)),
         assignedNumber: String(i + 1),
         side: currentCalibrationSide
