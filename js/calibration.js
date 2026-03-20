@@ -427,6 +427,16 @@ export function initCalibration() {
     if (currentWizardStep < 5) {
       currentWizardStep++;
       updateWizardUI();
+    } else {
+      // Finish clicked
+      selectTonefield(null);
+    }
+  });
+
+  // Click away to deselect
+  calCanvasContainer?.addEventListener('click', (e) => {
+    if (!e.target.closest('.tonefield')) {
+      selectTonefield(null);
     }
   });
 
