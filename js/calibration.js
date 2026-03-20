@@ -36,6 +36,7 @@ let valShape = null;
 let calRotInput = null;
 let valRot = null;
 let addTonefieldBtn = null;
+let autoDetectBtn = null;
 let deleteTonefieldBtn = null;
 let calDoneBtn = null;
 
@@ -360,6 +361,7 @@ export function initCalibration() {
   calRotInput = document.getElementById('calRotInput');
   valRot = document.getElementById('valRot');
   addTonefieldBtn = document.getElementById('headerAddTonefieldBtn');
+  autoDetectBtn = document.getElementById('autoDetectBtn');
   deleteTonefieldBtn = document.getElementById('deleteTonefieldBtn');
   calDoneBtn = document.getElementById('calDoneBtn');
 
@@ -557,9 +559,9 @@ async function autoDetectTonefields() {
       id: dId,
       x: ding.x,
       y: ding.y,
-      width: ding.r * 2 || 12,
-      height: ding.r * 2 || 12,
-      rotation: 0,
+      width: ding.width || 12,
+      height: ding.height || 12,
+      rotation: ding.rotation || 0,
       note: 'D',
       octave: 3,
       assignedNumber: 'Ding',
@@ -572,9 +574,9 @@ async function autoDetectTonefields() {
         id: Date.now() + i + 1,
         x: n.x,
         y: n.y,
-        width: n.r * 2 || 10,
-        height: n.r * 2 || 10,
-        rotation: 0,
+        width: n.width || 10,
+        height: n.height || 10,
+        rotation: n.rotation || 0,
         note: n.note !== 'Ding' ? n.note : 'C', // Ensure it's a pitch
         octave: n.octave || (lastAssignedOctave + Math.floor((lastAssignedPitchIndex + (i+1)*2) / CAL_PITCHES.length)),
         assignedNumber: String(i + 1),

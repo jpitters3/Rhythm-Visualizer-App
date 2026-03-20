@@ -68,8 +68,9 @@ serve(async (req) => {
     - The Ding is the central note. 
     - Identify other notes in the harmonic circle.
     - Provide the coordinates as percentages (0-100).
-    - Estimate the radius (r) of each tonefield.
-    - Output your findings ONLY as a raw JSON array: [{"note": "Ding", "x": 50.4, "y": 48.2, "r": 12}, ...]. 
+    - Provide 'width' and 'height' as percentages of image width (to support elliptical shapes).
+    - Provide 'rotation' in degrees (0-360).
+    - Output your findings ONLY as a raw JSON array: [{"note": "Ding", "x": 50.4, "y": 48.2, "width": 12.5, "height": 11.2, "rotation": 15}, ...]. 
     - No other text.`;
 
     // Candidate models as requested by user
