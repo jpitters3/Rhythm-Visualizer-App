@@ -173,7 +173,8 @@
   .measure {
     grid-template-columns: repeat(var(--cols, 8), 1fr) auto !important;
     gap: 4px;
-    margin-bottom: 8px; /* tighter rows */
+    margin-bottom: 8px;
+    /* tighter rows */
   }
 
   .quad-container {
@@ -309,8 +310,6 @@
   min-height: 0;
   padding: 0 15px;
   overflow-y: auto;
-  position: relative;
-  z-index: 10;
 
   /* Base setup for smooth transitions */
   scroll-behavior: smooth;
@@ -331,7 +330,8 @@ body.dark .measures {
 /* Custom Scrollbar Styles */
 .measures::-webkit-scrollbar {
   width: 6px;
-  display: block; /* Ensure it's not hidden */
+  display: block;
+  /* Ensure it's not hidden */
 }
 
 .measures::-webkit-scrollbar-track {
@@ -342,7 +342,8 @@ body.dark .measures {
   background-color: var(--sb-thumb-color);
   border-radius: 20px;
   /* Animating scrollbar color is the only way to "fade" native scrollbars in Webkit */
-  border: 1px solid transparent; /* padding effect */
+  border: 1px solid transparent;
+  /* padding effect */
   background-clip: padding-box;
   transition: background-color 0.5s ease;
 }
@@ -411,7 +412,8 @@ body.dark .measures {
 
 @media (max-width: 600px) {
   .labelCell {
-    font-size: 14px; /* shrink labels to fit » 8 cols */
+    font-size: 14px;
+    /* shrink labels to fit » 8 cols */
   }
 
   .add-measure {
