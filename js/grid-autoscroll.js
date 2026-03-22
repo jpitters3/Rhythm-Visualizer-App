@@ -16,27 +16,23 @@ export function initGridAutoscroll() {
   if (measuresEl) {
     // Add scroll listener to update fades when the user manually scrolls
     // Throttled with rAF to avoid layout thrashing
-    let scrollTicking = false;
+    // Auto-hide scrollbar logic
+    let scrollbarTimeout;
+    const showScrollbar = () => {
+      measuresEl.classList.add('scrollbar-visible');
+      clearTimeout(scrollbarTimeout);
+      scrollbarTimeout = setTimeout(() => {
+        measuresEl.classList.remove('scrollbar-visible');
+      }, 5000);
+    };
+
     measuresEl.addEventListener('scroll', () => {
-      if (!scrollTicking) {
-        window.requestAnimationFrame(() => {
-          updateScrollFades(measuresEl);
-          scrollTicking = false;
-        });
-        scrollTicking = true;
-      }
+      showScrollbar(); // Show on manual scroll
     });
+
+    // We also need to show it on auto-scroll hits
+    // We'll wrap the scrollTo in a common function if possible, or just call showScrollbar()
     
-    // Automatically update scroll fades when the UI changes size or layout
-    const resizeObserver = new ResizeObserver(() => updateScrollFades(measuresEl));
-    resizeObserver.observe(measuresEl);
-
-    // Automatically update scroll fades when measures are added/removed dynamically
-    const mutationObserver = new MutationObserver(() => updateScrollFades(measuresEl));
-    mutationObserver.observe(measuresEl, { childList: true, subtree: true });
-
-    // Fallback initial check once DOM settles 
-    setTimeout(() => updateScrollFades(measuresEl), 200);
   }
 
   addTickObserver((ctx) => {
@@ -81,7 +77,10 @@ export function initGridAutoscroll() {
 
     if (currentStep > lastActiveIndex && lastActiveIndex >= 0) {
       if (lastScrolledMeasure !== -2) { // Use -2 as a special state for "scrolled mid-measure"
-        measuresEl.scrollTo({ top: 0, behavior: 'instant' });
+        // Instant Jump to Top
+        measuresEl.style.scrollBehavior = 'auto';
+        measuresEl.scrollTop = 0;
+        measuresEl.style.scrollBehavior = ''; // Reset to CSS default (smooth)
         lastScrolledMeasure = -2;
       }
       return;
@@ -89,7 +88,9 @@ export function initGridAutoscroll() {
 
     // 2. Standard Loop-Back detection
     if (currentMeasureIndex === 0 && lastScrolledMeasure > 0) {
-      measuresEl.scrollTo({ top: 0, behavior: 'instant' });
+      measuresEl.style.scrollBehavior = 'auto';
+      measuresEl.scrollTop = 0;
+      measuresEl.style.scrollBehavior = '';
       lastScrolledMeasure = 0;
       return;
     }
@@ -121,7 +122,12 @@ export function initGridAutoscroll() {
       if (targetRow) {
         const targetScroll = targetRow.offsetTop;
         if (measuresEl.scrollTop !== targetScroll) {
-          measuresEl.scrollTo({ top: targetScroll, behavior: 'smooth' });
+          // Trigger scrollbar visibility
+          measuresEl.classList.add('scrollbar-visible');
+          // Reset timer logic from above is handled by the 'scroll' event listener
+          
+          // Use CSS scroll-behavior: smooth for better hardware acceleration
+          measuresEl.scrollTop = targetScroll;
         }
       }
     }
@@ -130,38 +136,14 @@ export function initGridAutoscroll() {
   });
 }
 
-/** 
- * Updates masks to show 'misty' fade at top/bottom if content overflows
- */
-function updateScrollFades(el) {
-  if (!el) return;
-
-  const scrollTop = el.scrollTop;
-  const scrollHeight = el.scrollHeight;
-  const clientHeight = el.clientHeight;
-
-  // Threshold of 10px to avoid flickering on tiny scrolls
-  const hasTop = scrollTop > 10;
-  const hasBottom = (scrollHeight - scrollTop - clientHeight) > 10;
-
-  el.classList.remove('fade-top', 'fade-bottom', 'fade-both');
-
-  if (hasTop && hasBottom) {
-    el.classList.add('fade-both');
-  } else if (hasTop) {
-    el.classList.add('fade-top');
-  } else if (hasBottom) {
-    el.classList.add('fade-bottom');
-  }
-}
-
 /** Reset internal state (e.g. when a new pattern is loaded) */
 export function resetGridAutoscroll() {
   lastScrolledMeasure = -1;
   fixedSlotTop = -1;
   const measuresEl = document.getElementById('measures');
   if (measuresEl) {
-    measuresEl.scrollTo({ top: 0 });
-    updateScrollFades(measuresEl);
+    measuresEl.style.scrollBehavior = 'auto';
+    measuresEl.scrollTop = 0;
+    measuresEl.style.scrollBehavior = '';
   }
 }

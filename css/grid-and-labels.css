@@ -312,36 +312,43 @@
   position: relative;
   z-index: 10;
 
-  /* Hide scrollbar for Chrome, Safari and Opera */
-  -ms-overflow-style: none;
-  /* IE and Edge */
-  scrollbar-width: none;
-  /* Firefox */
+  /* Base setup for smooth transitions */
+  scroll-behavior: smooth;
 
-  /* Base mask setup for smooth transitions */
-  mask-repeat: no-repeat;
-  -webkit-mask-repeat: no-repeat;
-  transition: mask-image 0.3s ease, -webkit-mask-image 0.3s ease;
+  /* Custom subtle scrollbar variables */
+  --sb-thumb-opacity: 0;
+  --sb-thumb-color: rgba(128, 128, 128, 0.4);
 }
 
-.measures.fade-bottom {
-  -webkit-mask-image: linear-gradient(to bottom, black 85%, transparent 100%);
-  mask-image: linear-gradient(to bottom, black 85%, transparent 100%);
+body.dark .measures {
+  --sb-thumb-color: rgba(255, 255, 255, 0.25);
 }
 
-.measures.fade-top {
-  -webkit-mask-image: linear-gradient(to top, black 85%, transparent 100%);
-  mask-image: linear-gradient(to top, black 85%, transparent 100%);
+.measures.scrollbar-visible {
+  --sb-thumb-opacity: 1;
 }
 
-.measures.fade-both {
-  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 15%, black 85%, transparent 100%);
-  mask-image: linear-gradient(to bottom, transparent 0%, black 15%, black 85%, transparent 100%);
-}
-
+/* Custom Scrollbar Styles */
 .measures::-webkit-scrollbar {
-  display: none;
-  /* Chrome, Safari and Opera */
+  width: 6px;
+  display: block; /* Ensure it's not hidden */
+}
+
+.measures::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.measures::-webkit-scrollbar-thumb {
+  background-color: var(--sb-thumb-color);
+  border-radius: 20px;
+  /* Animating scrollbar color is the only way to "fade" native scrollbars in Webkit */
+  border: 1px solid transparent; /* padding effect */
+  background-clip: padding-box;
+  transition: background-color 0.5s ease;
+}
+
+.measures:not(.scrollbar-visible)::-webkit-scrollbar-thumb {
+  background-color: transparent;
 }
 
 .measures-scroller {
@@ -359,6 +366,10 @@
   gap: 12px;
   margin-bottom: 16px;
   align-items: center;
+
+  /* Rendering Optimization */
+  content-visibility: auto;
+  contain-intrinsic-size: 1px 200px;
 }
 
 /* We’ll render label cells + grid cells directly inside the measure grid */

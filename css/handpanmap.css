@@ -131,6 +131,7 @@
   pointer-events: auto;
   cursor: pointer;
   font-size: 24px;
+  will-change: transform, opacity;
 }
 
 /* The visual representation */
@@ -149,6 +150,7 @@
     box-shadow 0.8s cubic-bezier(0.22, 1, 0.36, 1),
     background-color 120ms ease,
     border-color 120ms ease;
+  will-change: transform, opacity;
 }
 
 .hp-dot.active .hp-visual {

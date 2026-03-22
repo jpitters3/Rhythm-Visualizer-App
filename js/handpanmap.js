@@ -750,7 +750,7 @@ export function highlightHandpan(note, stepIndex, forceHand = null, latency = 0)
 
   // Use WAAPI for a buttery smooth, compositor-driven animation.
   // This eliminates the non-performant `offsetWidth` reflow hack.
-  const duration = Math.max(500, (intervalMs() * 4) * 0.8);
+  const duration = Math.max(200, (intervalMs() * 4) * 0.8);
   const shadowColor = down ? 'var(--down-fill)' : 'var(--up-fill)';
 
   const visual = el.querySelector('.hp-visual');
