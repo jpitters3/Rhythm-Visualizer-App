@@ -118,7 +118,6 @@
 #discussionView {
   overflow-y: scroll;
   min-height: 0;
-  overscroll-behavior: contain;
 }
 
 .delete-pattern-btn {
@@ -208,7 +207,6 @@
   flex: 1;
   overflow-y: scroll;
   min-height: 0;
-  overscroll-behavior: contain;
   padding: 20px;
   display: flex;
   flex-direction: column;
@@ -372,6 +370,88 @@
   opacity: 0.6;
 }
 
+/* --- Mobile Responsiveness --- */
+@media screen and (max-width: 768px) {
+  .feed-modal {
+    width: 95%;
+    height: 90vh;
+  }
+
+  .feed-main-header {
+    padding: 12px 16px;
+    gap: 8px;
+  }
+
+  .feed-nav-group {
+    gap: 4px;
+    padding: 3px;
+  }
+
+  .feed-main-tab {
+    padding: 8px 12px;
+    font-size: 14px;
+  }
+
+  .close-btn {
+    flex-shrink: 0;
+    margin-left: 4px;
+  }
+
+  .feed-filters {
+    padding: 8px 16px;
+    gap: 8px;
+    overflow-x: auto;
+    justify-content: flex-start;
+  }
+
+  .feed-filter-tab {
+    padding: 6px 10px;
+    font-size: 13px;
+    white-space: nowrap;
+  }
+}
+
+/* --- Mobile Responsiveness --- */
+@media screen and (max-width: 768px) {
+  .feed-modal {
+    width: 95%;
+    height: 90vh;
+  }
+
+  .feed-main-header {
+    padding: 12px 16px;
+    gap: 8px;
+  }
+
+  .feed-nav-group {
+    gap: 4px;
+    padding: 3px;
+  }
+
+  .feed-main-tab {
+    padding: 8px 12px;
+    font-size: 14px;
+  }
+
+  .close-btn {
+    flex-shrink: 0;
+    margin-left: 4px;
+  }
+
+  .feed-filters {
+    padding: 8px 16px;
+    gap: 8px;
+    overflow-x: auto;
+    justify-content: flex-start;
+  }
+
+  .feed-filter-tab {
+    padding: 6px 10px;
+    font-size: 13px;
+    white-space: nowrap;
+  }
+}
+
 .post-body {
   font-size: 0.95rem;
   line-height: 1.5;
@@ -514,8 +594,6 @@
   background: rgba(0, 0, 0, 0.05);
   opacity: 1;
 }
-
-.comment-btn {}
 
 /* Specific styling if needed */
 
