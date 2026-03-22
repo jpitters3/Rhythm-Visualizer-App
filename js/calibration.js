@@ -14,6 +14,8 @@ let lastAssignedOctave = 3;     // Default starting at 3
 let saveTimeout = null;
 let onCalibrationDone = null; // Callback for when "Done" is clicked
 
+let currentWizardStep = 1;
+
 // DOM Elements
 let calOverlay = null;
 let calHandpanName = null;
@@ -36,6 +38,7 @@ let valShape = null;
 let calRotInput = null;
 let valRot = null;
 let addTonefieldBtn = null;
+let autoDetectBtn = null;
 let deleteTonefieldBtn = null;
 let calDoneBtn = null;
 
@@ -97,31 +100,15 @@ function toggleCalibrationSide() {
 
 function loadCalibrationImage(src) {
   if (calHandpanImage) {
+    calHandpanImage.crossOrigin = 'anonymous';
     calHandpanImage.onload = function () {
       if (!this.naturalWidth || !this.naturalHeight) return;
 
-      const ratio = this.naturalHeight / this.naturalWidth;
       const container = document.getElementById('calCanvasContainer');
       if (!container) return;
 
-      // Max dimension 800px
-      let w = 800;
-      let h = 800;
-
-      if (ratio > 1) {
-        // Portrait: Constrain Height
-        h = 800;
-        w = 800 / ratio;
-      } else {
-        // Landscape: Constrain Width
-        w = 800;
-        h = 800 * ratio;
-      }
-
-      if (!isFinite(w) || !isFinite(h)) return;
-
-      container.style.width = `${w}px`;
-      container.style.height = `${h}px`;
+      // Sync container aspect ratio to image
+      container.style.aspectRatio = `${this.naturalWidth} / ${this.naturalHeight}`;
     };
 
     calHandpanImage.src = src;
@@ -181,71 +168,104 @@ function updateTonefieldVisuals(el, tf) {
   el.style.left = `${tf.x}%`;
   el.style.top = `${tf.y}%`;
 
-  // Logic: 'r' was radius in percent. 
-  // New logic: Use width/height/rotation if available, else fallback to 'r'
   let w = tf.width || (tf.r * 2) || 12;
   let h = tf.height || (tf.r * 2) || 12;
   let rot = tf.rotation || 0;
 
   el.style.width = `${w}%`;
-  el.style.height = `${h}%`;
+  el.style.height = 'auto'; // Let aspect-ratio handle height
+  el.style.aspectRatio = `${w} / ${h}`;
   el.style.transform = `translate(-50%, -50%) rotate(${rot}deg)`;
 }
 
 // === INTERACTION ===
 
+let activePointers = new Map();
+let initialPinchDist = 0;
+let initialPinchAngle = 0;
+let initialTfState = null;
+
 function onTonefieldPointerDown(e, id) {
   e.stopPropagation();
   e.preventDefault();
+
+  const el = e.currentTarget;
+  el.setPointerCapture(e.pointerId);
+
   selectTonefield(id);
+  activePointers.set(e.pointerId, e);
 
-  const el = document.getElementById(`tf-${id}`);
+  const tf = currentNoteMap.find(t => t.id === id);
+  if (!tf) return;
+
   const container = document.getElementById('calCanvasContainer');
-  if (!el || !container) return;
-
   const rect = container.getBoundingClientRect();
 
+  // Initial State for Dragging
   const startX = e.clientX;
   const startY = e.clientY;
-  const startLeft = parseFloat(el.style.left);
-  const startTop = parseFloat(el.style.top);
+  const startLeft = tf.x;
+  const startTop = tf.y;
+
+  if (activePointers.size === 2) {
+    const pts = Array.from(activePointers.values());
+    initialPinchDist = Math.hypot(pts[1].clientX - pts[0].clientX, pts[1].clientY - pts[0].clientY);
+    initialPinchAngle = Math.atan2(pts[1].clientY - pts[0].clientY, pts[1].clientX - pts[0].clientX);
+    initialTfState = { width: tf.width, height: tf.height, rotation: tf.rotation };
+  }
 
   el.classList.add('dragging');
 
-  // Define handlers
   function onMove(ev) {
-    const dx = ev.clientX - startX;
-    const dy = ev.clientY - startY;
+    if (!activePointers.has(ev.pointerId)) return;
+    activePointers.set(ev.pointerId, ev);
 
-    const w = rect.width > 0 ? rect.width : 1;
-    const h = rect.height > 0 ? rect.height : 1;
+    if (activePointers.size === 1) {
+      // DRAG LOGIC
+      const dx = ev.clientX - startX;
+      const dy = ev.clientY - startY;
+      const w = rect.width || 1;
+      const h = rect.height || 1;
 
-    const dxPct = (dx / w) * 100;
-    const dyPct = (dy / h) * 100;
+      tf.x = Math.max(0, Math.min(100, startLeft + (dx / w) * 100));
+      tf.y = Math.max(0, Math.min(100, startTop + (dy / h) * 100));
 
-    const newX = Math.max(0, Math.min(100, startLeft + dxPct));
-    const newY = Math.max(0, Math.min(100, startTop + dyPct));
+      updateTonefieldVisuals(el, tf);
+    }
+    else if (activePointers.size === 2 && initialTfState) {
+      // PINCH & ROTATE LOGIC
+      const pts = Array.from(activePointers.values());
+      const currentDist = Math.hypot(pts[1].clientX - pts[0].clientX, pts[1].clientY - pts[0].clientY);
+      const currentAngle = Math.atan2(pts[1].clientY - pts[0].clientY, pts[1].clientX - pts[0].clientX);
 
-    el.style.left = `${newX}%`;
-    el.style.top = `${newY}%`;
+      const distRatio = currentDist / (initialPinchDist || 1);
+      const angleDiff = (currentAngle - initialPinchAngle) * (180 / Math.PI);
 
-    const tf = currentNoteMap.find(t => t.id === id);
-    if (tf) {
-      tf.x = newX;
-      tf.y = newY;
+      tf.width = Math.max(5, Math.min(50, initialTfState.width * distRatio));
+      tf.height = Math.max(5, Math.min(50, initialTfState.height * distRatio));
+      tf.rotation = (initialTfState.rotation + angleDiff) % 360;
+
+      updateTonefieldVisuals(el, tf);
     }
   }
 
-  function onUp() {
-    document.removeEventListener('pointermove', onMove);
-    document.removeEventListener('pointerup', onUp);
-    el.classList.remove('dragging');
-    triggerAutoSave();
+  function onUp(ev) {
+    activePointers.delete(ev.pointerId);
+    if (activePointers.size < 2) {
+      initialTfState = null;
+    }
+    if (activePointers.size === 0) {
+      el.releasePointerCapture(ev.pointerId);
+      el.removeEventListener('pointermove', onMove);
+      el.removeEventListener('pointerup', onUp);
+      el.classList.remove('dragging');
+      triggerAutoSave();
+    }
   }
 
-  // Attach to DOCUMENT to catch everything
-  document.addEventListener('pointermove', onMove);
-  document.addEventListener('pointerup', onUp);
+  el.addEventListener('pointermove', onMove);
+  el.addEventListener('pointerup', onUp);
+  el.addEventListener('pointercancel', onUp);
 }
 
 function selectTonefield(id) {
@@ -262,6 +282,10 @@ function selectTonefield(id) {
     if (calPropTitle) calPropTitle.textContent = "Note Settings";
     if (calNoteProps) calNoteProps.style.display = 'block';
     if (calGlobalProps) calGlobalProps.style.display = 'none';
+
+    // Reset Wizard to Step 1
+    currentWizardStep = 1;
+    updateWizardUI();
 
     const el = document.getElementById(`tf-${id}`);
     if (el) el.classList.add('selected');
@@ -302,6 +326,31 @@ function selectTonefield(id) {
     const imgRot = currentHandpanData?.image_rotation || 0;
     if (calImgRotInput) calImgRotInput.value = imgRot;
     if (valImgRot) valImgRot.textContent = imgRot + '°';
+  }
+}
+
+function updateWizardUI() {
+  const steps = document.querySelectorAll('.wizard-step');
+  steps.forEach(s => {
+    const stepNum = parseInt(s.getAttribute('data-step'));
+    s.classList.toggle('active', stepNum === currentWizardStep);
+  });
+
+  const info = document.getElementById('wizardStepInfo');
+  if (info) info.textContent = `Step ${currentWizardStep}/5`;
+
+  const backBtn = document.getElementById('wizardBack');
+  const nextBtn = document.getElementById('wizardNext');
+
+  if (backBtn) backBtn.disabled = (currentWizardStep === 1);
+  if (nextBtn) {
+    if (currentWizardStep === 5) {
+      nextBtn.textContent = 'Finish';
+      nextBtn.style.background = 'rgba(0, 200, 83, 0.4)';
+    } else {
+      nextBtn.textContent = 'Next';
+      nextBtn.style.background = '';
+    }
   }
 }
 
@@ -359,8 +408,37 @@ export function initCalibration() {
   calRotInput = document.getElementById('calRotInput');
   valRot = document.getElementById('valRot');
   addTonefieldBtn = document.getElementById('headerAddTonefieldBtn');
+  autoDetectBtn = document.getElementById('autoDetectBtn');
   deleteTonefieldBtn = document.getElementById('deleteTonefieldBtn');
   calDoneBtn = document.getElementById('calDoneBtn');
+
+  // Wizard Nav
+  const wizardBack = document.getElementById('wizardBack');
+  const wizardNext = document.getElementById('wizardNext');
+
+  wizardBack?.addEventListener('click', () => {
+    if (currentWizardStep > 1) {
+      currentWizardStep--;
+      updateWizardUI();
+    }
+  });
+
+  wizardNext?.addEventListener('click', () => {
+    if (currentWizardStep < 5) {
+      currentWizardStep++;
+      updateWizardUI();
+    } else {
+      // Finish clicked
+      selectTonefield(null);
+    }
+  });
+
+  // Click away to deselect
+  calCanvasContainer?.addEventListener('click', (e) => {
+    if (!e.target.closest('.tonefield')) {
+      selectTonefield(null);
+    }
+  });
 
   addTonefieldBtn?.addEventListener('click', () => {
     // Smart Logic: Increment Semitone
@@ -496,6 +574,110 @@ export function initCalibration() {
       location.reload();
     }
   });
+
+  // Magic Auto-Detect
+  document.getElementById('autoDetectBtn')?.addEventListener('click', () => autoDetectTonefields());
+}
+
+/**
+ * The "Magic" Algorithm: 
+ * Uses Computer Vision (CCL) to find note blobs in the image.
+ */
+async function autoDetectTonefields() {
+  if (!calHandpanImage || !calHandpanImage.src) return;
+
+  const statusEl = document.getElementById('calSaveStatus');
+  if (statusEl) {
+    statusEl.textContent = "AI Detecting...";
+    statusEl.classList.remove('error');
+    statusEl.style.opacity = '1';
+  }
+
+  try {
+    // 1. Get Image Blob from Canvas
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = calHandpanImage.naturalWidth;
+    canvas.height = calHandpanImage.naturalHeight;
+    ctx.drawImage(calHandpanImage, 0, 0);
+
+    const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+
+    // 2. Invoke Backend AI Detect Function
+    const { data, error: fnError } = await supabase.functions.invoke('detect-tonefields', {
+      body: blob,
+    });
+
+    if (fnError) {
+      if (fnError.message?.includes('GOOGLE_AI_API_KEY')) {
+        throw new Error("AI Setup Required: Please set your GOOGLE_AI_API_KEY in Supabase secrets.");
+      }
+      throw new Error(fnError.message || 'Server AI failed');
+    }
+
+    if (!data || !data.tonefields || data.tonefields.length === 0) {
+      throw new Error("AI could not identify any tonefields in this image.");
+    }
+
+    const tfs = data.tonefields;
+
+    // 3. Convert to internal format and sort
+    const newNoteMap = [];
+
+    // Separate Ding
+    const ding = tfs.find(t => t.note?.toLowerCase() === 'ding') || tfs[0];
+    const others = tfs.filter(t => t !== ding);
+
+    // Add Ding
+    const dId = Date.now();
+    newNoteMap.push({
+      id: dId,
+      x: ding.x,
+      y: ding.y,
+      width: (ding.r * 2) || 12,
+      height: (ding.r * 2) || 12,
+      rotation: 0,
+      note: 'D',
+      octave: 3,
+      assignedNumber: 'Ding',
+      side: currentCalibrationSide
+    });
+
+    // Add Others
+    others.forEach((n, i) => {
+      newNoteMap.push({
+        id: Date.now() + i + 1,
+        x: n.x,
+        y: n.y,
+        width: (n.r * 2) || 10,
+        height: (n.r * 2) || 10,
+        rotation: 0,
+        note: n.note !== 'Ding' ? n.note : 'C',
+        octave: n.octave || (lastAssignedOctave + Math.floor((lastAssignedPitchIndex + (i + 1) * 2) / CAL_PITCHES.length)),
+        assignedNumber: String(i + 1),
+        side: currentCalibrationSide
+      });
+    });
+
+    // 4. Update UI
+    currentNoteMap = newNoteMap;
+    renderTonefields();
+    selectTonefield(null);
+    triggerAutoSave();
+
+    if (statusEl) {
+      statusEl.textContent = `AI Detected ${newNoteMap.length} points!`;
+      setTimeout(() => statusEl.style.opacity = '0', 2000);
+    }
+
+  } catch (err) {
+    console.error("AI Detection error:", err);
+    if (statusEl) {
+      statusEl.textContent = "AI Failed";
+      statusEl.classList.add('error');
+    }
+    alert(err.message);
+  }
 }
 
 

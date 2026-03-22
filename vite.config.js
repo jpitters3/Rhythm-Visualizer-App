@@ -1,11 +1,16 @@
 import { defineConfig } from 'vite';
+import basicSsl from '@vitejs/plugin-basic-ssl';
 import fs from 'fs';
 
 export default defineConfig({
-  plugins: [],
+  plugins: [
+    basicSsl()
+  ],
   base: '/',
   server: {
     port: 3000,
+    host: true,
+    https: true,
     open: false,
     host: true, // Expose to local network
     https: {
@@ -14,7 +19,6 @@ export default defineConfig({
     }, // Required for camera on mobile
   },
   build: {
-
     outDir: 'dist',
     assetsDir: 'assets',
     sourcemap: false,

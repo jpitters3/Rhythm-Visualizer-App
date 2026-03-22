@@ -29,6 +29,8 @@
   <link rel="stylesheet" href="./css/ai-assistant.css">
   <link rel="stylesheet" href="css/profile.css">
   <link rel="stylesheet" href="css/feed.css">
+  <link rel="stylesheet" href="css/sidebar.css">
+  <link rel="stylesheet" href="css/camera-crop.css">
   <link rel="stylesheet" href="css/course-marketplace.css">
   <link rel="stylesheet" href="./css/calibration.css">
   <link rel="stylesheet" href="./css/coaching-mode.css">
@@ -1180,12 +1182,18 @@
             <label style="display:block; font-size:12px; color:var(--text-secondary); margin-bottom:4px;">Top Image
               (Required)</label>
             <div style="display:flex; align-items:center; gap:10px;">
-              <button type="button" class="secondary-btn small-btn"
-                onclick="document.getElementById('hpTopImage').click()">Choose File</button>
+              <div class="camera-btn-wrapper">
+                <button type="button" class="secondary-btn small-btn"
+                  onclick="document.getElementById('hpTopImage').click()">Choose File</button>
+                <button type="button" class="primary-btn small-btn" data-action="take-photo" data-type="top">Take
+                  Photo</button>
+              </div>
               <span id="hpTopFileName" style="font-size:12px; color:var(--text); opacity:0.8;">No file chosen</span>
+              <div id="hpTopCameraIndicator" class="camera-indicator">Camera Capture</div>
               <input type="file" id="hpTopImage" accept="image/*" style="display:none"
-                onchange="document.getElementById('hpTopFileName').textContent = this.files[0]?.name || 'No file chosen'">
+                onchange="document.getElementById('hpTopFileName').textContent = this.files[0]?.name || 'No file chosen'; document.getElementById('hpTopCameraIndicator').classList.remove('active')">
             </div>
+
             <div id="hpTopCurrent"
               style="display:none; font-size:11px; color:#2ecc71; margin-top:5px; font-style:italic;"></div>
           </div>
@@ -1194,13 +1202,19 @@
             <label style="display:block; font-size:12px; color:var(--text-secondary); margin-bottom:4px;">Bottom Image
               (Optional)</label>
             <div style="display:flex; align-items:center; gap:10px;">
-              <button type="button" class="secondary-btn small-btn"
-                onclick="document.getElementById('hpBottomImage').click()">Choose File</button>
+              <div class="camera-btn-wrapper">
+                <button type="button" class="secondary-btn small-btn"
+                  onclick="document.getElementById('hpBottomImage').click()">Choose File</button>
+                <button type="button" class="primary-btn small-btn" data-action="take-photo" data-type="bottom">Take
+                  Photo</button>
+              </div>
               <span id="hpBottomFileName" style="font-size:12px; color:var(--text); opacity:0.8;">No file
                 chosen</span>
+              <div id="hpBottomCameraIndicator" class="camera-indicator">Camera Capture</div>
               <input type="file" id="hpBottomImage" accept="image/*" style="display:none"
-                onchange="document.getElementById('hpBottomFileName').textContent = this.files[0]?.name || 'No file chosen'">
+                onchange="document.getElementById('hpBottomFileName').textContent = this.files[0]?.name || 'No file chosen'; document.getElementById('hpBottomCameraIndicator').classList.remove('active')">
             </div>
+
             <div id="hpBottomCurrent"
               style="display:none; font-size:11px; color:#2ecc71; margin-top:5px; font-style:italic;"></div>
           </div>
@@ -1374,8 +1388,36 @@
   <!-- Vite Entry Point -->
   <script type="module" src="/main.js"></script>
 
-  <!-- Mobile Drawer Panes -->
+  <!-- Camera Modal -->
+  <div id="cameraModal" class="camera-overlay" aria-hidden="true">
+    <div class="camera-viewfinder">
+      <video id="cameraVideo" autoplay playsinline></video>
+      <div class="camera-guide"></div>
+    </div>
+    <div class="camera-controls">
+      <button class="camera-action-btn" id="closeCameraBtn">Cancel</button>
+      <button class="shutter-btn" id="shutterBtn" title="Take photo"></button>
+      <button class="camera-action-btn" id="flipCameraBtn">Flip</button>
+    </div>
+  </div>
+
+  <!-- AI Processing Overlay -->
+  <div id="processingOverlay" class="processing-overlay" aria-hidden="true">
+    <div class="loader-container">
+      <div class="ai-loader"></div>
+      <div class="processing-text">AI Removing Background...</div>
+      <div id="aiStatus" style="font-size:14px; color:#6366f1; font-weight:600; margin-top:5px;">Initializing...</div>
+      <div
+        style="width:200px; height:6px; background:rgba(255,255,255,0.1); border-radius:3px; margin-top:10px; overflow:hidden;">
+        <div id="aiProgressBar" style="width:0%; height:100%; background:#6366f1; transition:width 0.3s ease;"></div>
+      </div>
+      <div style="font-size:11px; opacity:0.6; margin-top:15px;">Model download (first time only)</div>
+    </div>
+  </div>
+
+
   <div id="handpanSettingsDrawer" class="tab-pane">
+
     <div class="drawer-content">
       <div class="setting-row">
         <label>Scale:</label>
@@ -1519,6 +1561,9 @@
       <div id="calSaveStatus">Saved</div>
 
       <div class="cal-actions">
+        <button id="autoDetectBtn" class="cal-btn cal-btn-primary"
+          style="display:none; margin-right:8px; background: linear-gradient(135deg, #6366f1, #8b5cf6); border: none;">✨
+          Auto-Detect</button>
         <button id="calFlipBtn" class="cal-btn cal-btn-secondary" style="display:none;">Flip View</button>
         <button id="headerAddTonefieldBtn" class="cal-btn cal-btn-primary" style="margin-right:8px;">＋ Add
           Tonefield</button>
@@ -1542,56 +1587,71 @@
 
         <!-- Global Props -->
         <div id="calGlobalProps">
-          <div class="prop-row">
-            <label>Image Rotation</label>
-            <input type="range" id="calImgRotInput" min="0" max="360" value="0">
-            <span id="valImgRot" style="font-size:11px; float:right;">0°</span>
-          </div>
-
-
+          <p style="font-size: 11px; opacity: 0.7; margin-top: 10px; text-align: center;">Click "Auto-Detect" to map
+            notes automatically, or "Add" to do it manually.</p>
         </div>
 
         <!-- Note Props -->
         <div id="calNoteProps" style="display:none;">
-          <div class="prop-row">
-            <label>Pitch</label>
-            <div style="display:flex; gap:5px;">
-              <select id="calPitchSelect" style="flex:1"></select>
-              <select id="calOctaveSelect" style="width:60px;">
-                <option value="2">2</option>
-                <option value="3">3</option>
-                <option value="4">4</option>
-                <option value="5">5</option>
-              </select>
+          <!-- Step 1: Pitch & Octave -->
+          <div class="wizard-step active" data-step="1">
+            <div class="prop-row">
+              <label>Pitch & Octave</label>
+              <div style="display:flex; gap:5px;">
+                <select id="calPitchSelect" style="flex:1"></select>
+                <select id="calOctaveSelect" style="width:60px;">
+                  <option value="2">2</option>
+                  <option value="3">3</option>
+                  <option value="4">4</option>
+                  <option value="5">5</option>
+                </select>
+              </div>
             </div>
           </div>
 
-          <div class="prop-row">
-            <label>Number (Optional)</label>
-            <select id="calNumberSelect"></select>
+          <!-- Step 2: Number -->
+          <div class="wizard-step" data-step="2">
+            <div class="prop-row">
+              <label>Number (Optional)</label>
+              <select id="calNumberSelect"></select>
+            </div>
           </div>
 
-          <div class="prop-row">
-            <label>Size</label>
-            <input type="range" id="calSizeInput" min="5" max="40" value="12">
-            <span id="valSize" style="font-size:11px; float:right;">12%</span>
+          <!-- Step 3: Size -->
+          <div class="wizard-step" data-step="3">
+            <div class="prop-row">
+              <label>Size</label>
+              <input type="range" id="calSizeInput" min="5" max="40" value="12">
+              <span id="valSize" style="font-size:11px; float:right;">12%</span>
+            </div>
           </div>
 
-          <div class="prop-row">
-            <label>Shape (H/W Ratio)</label>
-            <input type="range" id="calShapeInput" min="0.5" max="1.5" step="0.05" value="1">
-            <span id="valShape" style="font-size:11px; float:right;">1.00</span>
+          <!-- Step 4: Shape -->
+          <div class="wizard-step" data-step="4">
+            <div class="prop-row">
+              <label>Shape (H/W Ratio)</label>
+              <input type="range" id="calShapeInput" min="0.5" max="1.5" step="0.05" value="1">
+              <span id="valShape" style="font-size:11px; float:right;">1.00</span>
+            </div>
           </div>
 
-          <div class="prop-row">
-            <label>Rotation</label>
-            <input type="range" id="calRotInput" min="0" max="360" value="0">
-            <span id="valRot" style="font-size:11px; float:right;">0°</span>
+          <!-- Step 5: Rotation -->
+          <div class="wizard-step" data-step="5">
+            <div class="prop-row">
+              <label>Rotation</label>
+              <input type="range" id="calRotInput" min="0" max="360" value="0">
+              <span id="valRot" style="font-size:11px; float:right;">0°</span>
+            </div>
           </div>
 
+          <!-- Navigation -->
+          <div class="wizard-nav">
+            <button id="wizardBack" class="wizard-btn" disabled>Back</button>
+            <span id="wizardStepInfo">Step 1/5</span>
+            <button id="wizardNext" class="wizard-btn">Next</button>
+          </div>
 
-
-          <div class="prop-row">
+          <div class="prop-row" style="margin-top:20px;">
             <button id="deleteTonefieldBtn" class="danger-btn">Delete Note</button>
           </div>
         </div>

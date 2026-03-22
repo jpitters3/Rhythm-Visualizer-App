@@ -975,7 +975,12 @@ const originalBuild = buildHandpanOverlay;
 // Settings Toggle
 let hpSettingsToggle, hpSettingsPanel, hpSettingsInitial, hpCreationForm, buildScaleBtn, cancelBuildBtn, saveNewHandpanBtn;
 
-// Settings Toggle
+// Camera & AI State
+let cameraStream = null;
+let currentCaptureType = null; // 'top' or 'bottom'
+let capturedTopBlob = null;
+let capturedBottomBlob = null;
+let isFrontCamera = false;
 
 
 function attachCreationListeners() {
@@ -992,10 +997,11 @@ function attachCreationListeners() {
       await alert('Please fill in Builder and Scale Name.');
       return;
     }
-    if (!editingHandpanId && !topImageFile) {
+    if (!editingHandpanId && !topImageFile && !capturedTopBlob) {
       await alert('Please select a Top Image for a new handpan.');
       return;
     }
+
 
     if (!currentUser) {
       await alert('You must be signed in.');
@@ -1009,25 +1015,32 @@ function attachCreationListeners() {
       let topUrl = null;
       let bottomUrl = null;
 
-      // 1. Upload Top Image (if provided)
-      if (topImageFile) {
-        const fileExt = topImageFile.name.split('.').pop();
+      // 1. Upload Top Image (prioritize camera capture)
+      if (capturedTopBlob || topImageFile) {
+        const fileToUpload = capturedTopBlob || topImageFile;
+        const isCamera = !!capturedTopBlob;
+        const fileExt = isCamera ? 'png' : fileToUpload.name.split('.').pop();
         const fileName = `${currentUser.id}_${Date.now()}_top.${fileExt}`;
-        const { data: uploadData, error: uploadError } = await supabase.storage.from('handpan-images').upload(fileName, topImageFile);
+        
+        const { data: uploadData, error: uploadError } = await supabase.storage.from('handpan-images').upload(fileName, fileToUpload);
         if (uploadError) throw uploadError;
         const { data: { publicUrl } } = supabase.storage.from('handpan-images').getPublicUrl(fileName);
         topUrl = publicUrl;
       }
 
-      // 2. Upload Bottom Image (if provided)
-      if (bottomImageFile) {
-        const bExt = bottomImageFile.name.split('.').pop();
+      // 2. Upload Bottom Image (prioritize camera capture)
+      if (capturedBottomBlob || bottomImageFile) {
+        const fileToUpload = capturedBottomBlob || bottomImageFile;
+        const isCamera = !!capturedBottomBlob;
+        const bExt = isCamera ? 'png' : fileToUpload.name.split('.').pop();
         const bName = `${currentUser.id}_${Date.now()}_bottom.${bExt}`;
-        const { data: bData, error: bError } = await supabase.storage.from('handpan-images').upload(bName, bottomImageFile);
+
+        const { data: bData, error: bError } = await supabase.storage.from('handpan-images').upload(bName, fileToUpload);
         if (bError) throw bError;
         const { data: { publicUrl: bPubUrl } } = supabase.storage.from('handpan-images').getPublicUrl(bName);
         bottomUrl = bPubUrl;
       }
+
 
       if (editingHandpanId) {
         // --- UPDATE ---
@@ -1484,6 +1497,29 @@ export function initHandpanMap() {
   });
 
   attachCreationListeners();
+  initCameraUI();
+
+  let hasPreloadedAI = false;
+  async function preloadAI() {
+    if (hasPreloadedAI) return;
+    hasPreloadedAI = true;
+    console.log('Pre-loading AI models in background...');
+    try {
+      const { removeBackground } = await import('@imgly/background-removal');
+      // Run once with a tiny image to trigger the model fetch and initialization
+      const canvas = document.createElement('canvas');
+      canvas.width = 1;
+      canvas.height = 1;
+      const blob = await new Promise(r => canvas.toBlob(r));
+      await removeBackground(blob);
+      console.log('AI models cached and ready.');
+    } catch (err) {
+      console.warn('AI pre-load failed (will retry on shutter):', err);
+      hasPreloadedAI = false;
+    }
+  }
+
+
 
   // Tab Manager logic
   const tabs = document.querySelectorAll('.tab-btn');
@@ -1502,7 +1538,14 @@ export function initHandpanMap() {
         btn.classList.add('active');
         targetPane.classList.add('active');
         document.getElementById('drawerBackdrop')?.classList.add('active');
+
+        // Pre-load AI when "My Handpans" (Settings) tab is opened
+        if (targetId === 'handpanSettingsDrawer') {
+          preloadAI();
+        }
       }
+
+
     });
   });
 
@@ -1599,6 +1642,186 @@ function buildScaleSelect() {
     scaleSelect.appendChild(opt);
   }
 }
+
+function initCameraUI() {
+  const cameraModal = document.getElementById('cameraModal');
+  const video = document.getElementById('cameraVideo');
+  const shutterBtn = document.getElementById('shutterBtn');
+  const closeCameraBtn = document.getElementById('closeCameraBtn');
+  const flipCameraBtn = document.getElementById('flipCameraBtn');
+  const processingOverlay = document.getElementById('processingOverlay');
+
+  // Find all "Take Photo" buttons
+
+
+  document.querySelectorAll('[data-action="take-photo"]').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      currentCaptureType = btn.dataset.type;
+      openCamera();
+    });
+  });
+
+  // Clear camera captured blobs if user manually selects a file
+  document.getElementById('hpTopImage')?.addEventListener('change', () => {
+    capturedTopBlob = null;
+  });
+  document.getElementById('hpBottomImage')?.addEventListener('change', () => {
+    capturedBottomBlob = null;
+  });
+
+  async function openCamera() {
+    try {
+      const constraints = {
+        video: {
+          facingMode: isFrontCamera ? 'user' : 'environment',
+          width: { ideal: 1920 },
+          height: { ideal: 1920 }
+        }
+      };
+      cameraStream = await navigator.mediaDevices.getUserMedia(constraints);
+      video.srcObject = cameraStream;
+      cameraModal.classList.add('active');
+    } catch (err) {
+      console.error('Camera error:', err);
+      alert('Could not access camera: ' + err.message);
+    }
+  }
+
+  function stopCamera() {
+    if (cameraStream) {
+      cameraStream.getTracks().forEach(track => track.stop());
+      cameraStream = null;
+    }
+    cameraModal.classList.remove('active');
+  }
+
+  closeCameraBtn?.addEventListener('click', stopCamera);
+
+  flipCameraBtn?.addEventListener('click', () => {
+    isFrontCamera = !isFrontCamera;
+    stopCamera();
+    openCamera();
+  });
+
+  shutterBtn?.addEventListener('click', async () => {
+    // 1. Capture and Crop to the UI Guide (280px)
+    const canvas = document.createElement('canvas');
+    
+    // Calculate crop matching the 280px guide
+    const videoWidth = video.videoWidth;
+    const videoHeight = video.videoHeight;
+    const viewWidth = video.clientWidth;
+    const viewHeight = video.clientHeight;
+    
+    const guideSizeUI = 280; 
+    const ratio = videoWidth / viewWidth; 
+    const cropSize = guideSizeUI * ratio;
+    
+    // Center of the video
+    const sourceX = (videoWidth - cropSize) / 2;
+    const sourceY = (videoHeight - cropSize) / 2;
+    
+    canvas.width = 1024;
+    canvas.height = 1024;
+    const ctx = canvas.getContext('2d');
+    
+    // Draw the square crop from the center
+    ctx.drawImage(video, sourceX, sourceY, cropSize, cropSize, 0, 0, 1024, 1024);
+
+    stopCamera();
+    
+    // Reset Progress UI
+    const statusEl = document.getElementById('aiStatus');
+    const progressEl = document.getElementById('aiProgressBar');
+    if (statusEl) statusEl.textContent = 'Initializing AI...';
+    if (progressEl) progressEl.style.width = '0%';
+    
+    processingOverlay.classList.add('active');
+
+    try {
+      // 2. Call Server-Side AI (Supabase Edge Function)
+      if (statusEl) statusEl.textContent = 'Uploading to AI Server...';
+      if (progressEl) progressEl.style.width = '30%';
+
+      const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.85));
+      
+      const { data: resultBlob, error: fnError } = await supabase.functions.invoke('remove-background', {
+        body: blob,
+      });
+
+      if (fnError) throw new Error(fnError.message || 'Server AI failed');
+      
+      // Handle both Blob, ArrayBuffer, and Base64 (JSON) responses
+      let blobToUse = resultBlob;
+      let dataUrlToUse = null;
+
+      if (blobToUse && typeof blobToUse === 'object' && blobToUse.image) {
+        // It's a base64 data URL from our new Edge Function logic
+        dataUrlToUse = blobToUse.image;
+      } else if (blobToUse instanceof ArrayBuffer) {
+        blobToUse = new Blob([blobToUse], { type: 'image/png' });
+      } else if (!(blobToUse instanceof Blob)) {
+        if (blobToUse && typeof blobToUse === 'object' && blobToUse.error) {
+          throw new Error(blobToUse.error);
+        }
+        console.error('Unexpected response format:', blobToUse);
+        throw new Error('Server returned invalid data format. Please check Cloudinary logs.');
+      }
+
+      if (statusEl) statusEl.textContent = 'Finishing...';
+      if (progressEl) progressEl.style.width = '90%';
+
+      // 3. Final Polish: Force a circular clip to remove any remaining artifacts
+      const finalCanvas = document.createElement('canvas');
+      finalCanvas.width = 1024;
+      finalCanvas.height = 1024;
+      const fCtx = finalCanvas.getContext('2d');
+      
+      const resultImg = new Image();
+      resultImg.src = dataUrlToUse || URL.createObjectURL(blobToUse);
+      await new Promise(r => resultImg.onload = r);
+
+
+      
+      fCtx.beginPath();
+      fCtx.arc(512, 512, 510, 0, Math.PI * 2); 
+      fCtx.clip();
+      fCtx.drawImage(resultImg, 0, 0, 1024, 1024);
+      
+      const finalBlob = await new Promise(resolve => finalCanvas.toBlob(resolve, 'image/png'));
+
+      // 4. Store result
+      if (currentCaptureType === 'top') {
+        capturedTopBlob = finalBlob;
+        document.getElementById('hpTopCameraIndicator').classList.add('active');
+        document.getElementById('hpTopFileName').textContent = 'Camera Capture (Server-Cleaned)';
+      } else {
+        capturedBottomBlob = finalBlob;
+        document.getElementById('hpBottomCameraIndicator').classList.add('active');
+        document.getElementById('hpBottomFileName').textContent = 'Camera Capture (Server-Cleaned)';
+      }
+
+    } catch (err) {
+      console.error('AI Processing error:', err);
+      alert('Background removal failed: ' + err.message + '\n\nMake sure your Edge Function is deployed and CLOUDINARY secrets are set!');
+
+      
+      const rawBlob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+      if (currentCaptureType === 'top') {
+        capturedTopBlob = rawBlob;
+        document.getElementById('hpTopCameraIndicator').classList.add('active');
+      } else {
+        capturedBottomBlob = rawBlob;
+        document.getElementById('hpBottomCameraIndicator').classList.add('active');
+      }
+    } finally {
+      processingOverlay.classList.remove('active');
+    }
+  });
+}
+
+
 
 export async function initScale() {
   let name = null;
