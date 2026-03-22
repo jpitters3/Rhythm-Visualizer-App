@@ -256,9 +256,15 @@ function showCountdown(num) {
   if (overlay && text) {
     overlay.style.display = 'flex';
     text.textContent = num;
-    text.style.animation = 'none';
-    void text.offsetWidth;
-    text.style.animation = null;
+
+    // Use WAAPI to pulse the number without forcing a reflow
+    text.animate([
+      { transform: 'scale(1.5)', opacity: 0 },
+      { transform: 'scale(1)', opacity: 1 }
+    ], {
+      duration: 300,
+      easing: 'ease-out'
+    });
   }
 }
 
@@ -682,7 +688,7 @@ export function playNoteSample(n, delay = 0) {
   // Apply instrument volume
   const targetVol = Math.max(0.0001, volInstrument || 1.0);
   const startTime = audioCtx.currentTime + (isFinite(delay) ? delay : 0);
-  
+
   if (!isFinite(targetVol) || !isFinite(startTime)) {
     console.error('[Audio] Non-finite value in playNoteSample:', { targetVol, startTime, delay });
     return;

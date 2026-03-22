@@ -715,6 +715,12 @@ export function buildHandpanOverlay() {
     }
 
     targetOverlay.appendChild(dot);
+    
+    // Create visual child to isolate pulse from label
+    const visual = document.createElement('div');
+    visual.className = 'hp-visual';
+    dot.appendChild(visual);
+
     handpanDots.set(note, dot);
   }
   if (overlayPitches || overlayNumbers)
@@ -726,8 +732,8 @@ let hpPulseTimers = new Map();
 export function highlightHandpan(note, stepIndex, forceHand = null, latency = 0) {
   let key = String(note || '').toUpperCase();
   let el = handpanDots.get(key);
-  if (!el) el = handpanDots.get(note); // Fallback to raw note
-  if (!el && key === 'DING') el = handpanDots.get('D'); // Aliasing for Ding
+  if (!el) el = handpanDots.get(note);
+  if (!el && key === 'DING') el = handpanDots.get('D');
   if (!el) return;
 
   // Sticking Override
@@ -742,46 +748,35 @@ export function highlightHandpan(note, stepIndex, forceHand = null, latency = 0)
     down = isDownbeatStep(stepIndex);
   }
 
-  el.classList.remove('hp-down', 'hp-up', 'active');
-  // Clear any existing animation delay before restarting
-  el.style.animationDelay = '';
-  el.style.transitionDelay = '';
+  // Use WAAPI for a buttery smooth, compositor-driven animation.
+  // This eliminates the non-performant `offsetWidth` reflow hack.
+  const duration = Math.max(500, (intervalMs() * 4) * 0.8);
+  const shadowColor = down ? 'var(--down-fill)' : 'var(--up-fill)';
 
-  el.classList.add(down ? 'hp-down' : 'hp-up');
+  const visual = el.querySelector('.hp-visual');
+  if (!visual) return;
 
-  // restart animation
-  void el.offsetWidth;
-
-  if (latency > 0) {
-    const offset = `-${latency.toFixed(3)}s`;
-    // Apply negative delay to both the element (for transitions) and its ::after pseudo-element (for animations)
-    // CSS inline styles directly on the element won't target ::after, so we use a CSS variable
-    el.style.setProperty('--hp-pulse-delay', offset);
-    el.style.transitionDelay = offset;
-  } else {
-    el.style.removeProperty('--hp-pulse-delay');
-  }
-
-  el.classList.add('active');
-
-  // per-note timer so multiple notes in a row don't fight
-  clearTimeout(hpPulseTimers.get(key));
-
-  // Base duration is min of 500ms or 90% of the interval
-  let timeoutDuration = Math.min(200, intervalMs() * 0.9);
-
-  // If the visual fired late, the CSS animation has already lost that time.
-  // E.g. 500ms animation, 200ms late = 300ms remaining.
-  // We subtract the latency so Javascript removes the class exactly when the CSS animation finishes.
-  // But for Playwright testing, if latency is super high (e.g., initial load spike),
-  // we don't want the visual to flash for 0ms, so we ensure a minimum of 350ms so Playwright can catch it.
-  timeoutDuration = Math.max(100, timeoutDuration - (latency * 1000));
-
-  hpPulseTimers.set(key, setTimeout(() => {
-    el.classList.remove('active', 'hp-down', 'hp-up');
-    el.style.removeProperty('--hp-pulse-delay');
-    el.style.transitionDelay = '';
-  }, timeoutDuration));
+  // Pulse animation using Web Animations API (WAAPI)
+  // This eliminates the non-performant `offsetWidth` reflow hack.
+  // We animate the 'visual' child to avoid moving the label/number.
+  visual.animate([
+    { 
+      transform: 'scale(1)', 
+      backgroundColor: 'rgba(255, 255, 255, 0.4)',
+      boxShadow: `0 0 20px 10px ${shadowColor}`,
+      opacity: 1 
+    },
+    { 
+      transform: 'scale(1.4)', 
+      backgroundColor: 'transparent',
+      boxShadow: '0 0 0 0 transparent',
+      opacity: 0 
+    }
+  ], {
+    duration: duration,
+    easing: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+    delay: -latency * 1000 // compensate for startup/audio latency
+  });
 }
 
 /* Calibration */

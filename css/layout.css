@@ -296,8 +296,7 @@ div.container {
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  background: rgba(var(--panel-rgb), 0.95);
   z-index: -1;
   transform: translateZ(0);
   will-change: transform;
@@ -309,8 +308,7 @@ div.container {
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  background: rgba(var(--panel-rgb), 0.9);
   z-index: -1;
   transform: translateZ(0);
   /* Force GPU Layer */
@@ -408,10 +406,8 @@ body.dark div.container {
     /* Position at the top of the content area, just below the header */
     left: 8px;
     right: 8px;
-    background: rgba(var(--panel-rgb), 0.95);
-    /* More opaque on mobile for readability */
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
+    background: rgba(var(--panel-rgb), 0.98);
+    /* More opaque on mobile for readability and performance */
     border: 1px solid var(--panel-border);
     border-radius: 12px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);

@@ -206,9 +206,14 @@ class VirtualHands {
   }
 
   triggerStrike(el) {
-    requestAnimationFrame(() => {
-      el.classList.add('striking');
-      setTimeout(() => el.classList.remove('striking'), 150);
+    // Pulse animation for the hand strike using WAAPI
+    el.animate([
+      { transform: 'scale(1)', opacity: 1 },
+      { transform: 'scale(1.3)', opacity: 0.8 },
+      { transform: 'scale(1)', opacity: 1 }
+    ], {
+      duration: 150,
+      easing: 'ease-out'
     });
   }
 

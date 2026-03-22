@@ -1199,10 +1199,16 @@ function updateGuidedUI(currentIndex) {
 
         // Visual strike feedback
         if (isStrikeStep) {
-            guideNoteBox.classList.remove('pulse');
             guideNoteBox.classList.add('strike'); // Green background from CSS
-            void guideNoteBox.offsetWidth; // Trigger reflow
-            guideNoteBox.classList.add('pulse');
+
+            guideNoteBox.animate([
+                { transform: 'scale(1)', background: 'hsl(120, 70%, 50%)' },
+                { transform: 'scale(1.2)', background: 'hsl(120, 70%, 70%)' },
+                { transform: 'scale(1)', background: 'transparent' }
+            ], {
+                duration: 300,
+                easing: 'ease-out'
+            });
 
             // Revert green after pulse
             setTimeout(() => {
@@ -1309,10 +1315,14 @@ function startCountdown(callback) {
         if (count > 0) {
             number.textContent = count;
 
-            // Trigger animation restrike
-            number.style.animation = 'none';
-            void number.offsetWidth; // Force reflow
-            number.style.animation = null;
+            // Trigger animation restrike with WAAPI
+            number.animate([
+                { transform: 'scale(1.5)', opacity: 0 },
+                { transform: 'scale(1)', opacity: 1 }
+            ], {
+                duration: 300,
+                easing: 'ease-out'
+            });
 
             playTick();
             count--;
