@@ -132,6 +132,9 @@
   cursor: pointer;
   font-size: 24px;
   will-change: transform, opacity;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 /* The visual representation */

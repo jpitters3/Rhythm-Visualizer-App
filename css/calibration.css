@@ -210,6 +210,7 @@
   will-change: transform, left, top;
   -webkit-backface-visibility: hidden;
   backface-visibility: hidden;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .tonefield:hover {
