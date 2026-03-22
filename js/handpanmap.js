@@ -8,7 +8,7 @@ import { supabase } from './supabase-client.js';
 import { enterCalibrationMode } from './calibration.js';
 import { activeGrid } from './grid-context.js';
 import { Bus, BUS_EVENT } from './bus.js';
-import { setBeatToGhost, renderAllMeasures } from './notegrid.js';
+import { setBeatToGhost, renderAllMeasures, updateGridLabels } from './notegrid.js';
 import { isAuthed } from './auth.js';
 import { canAccess, FEATURE } from './gated-feature.js';
 import { alert, confirm } from './alert.js';
@@ -1021,7 +1021,7 @@ function attachCreationListeners() {
         const isCamera = !!capturedTopBlob;
         const fileExt = isCamera ? 'png' : fileToUpload.name.split('.').pop();
         const fileName = `${currentUser.id}_${Date.now()}_top.${fileExt}`;
-        
+
         const { data: uploadData, error: uploadError } = await supabase.storage.from('handpan-images').upload(fileName, fileToUpload);
         if (uploadError) throw uploadError;
         const { data: { publicUrl } } = supabase.storage.from('handpan-images').getPublicUrl(fileName);
@@ -1442,13 +1442,19 @@ export function initHandpanMap() {
     updateLabelStyles();
   });
 
+  let numberPitchTimer = null;
   numberPitchSelect?.addEventListener('change', async () => {
     const val = numberPitchSelect.value;
     localStorage.setItem('handpanLabelPref', val);
     updateUserLabelPreference(val);
     syncStateFromStorage();
     buildHandpanOverlay();
-    renderAllMeasures();
+
+    // Debounce grid update as it's the heaviest operation
+    clearTimeout(numberPitchTimer);
+    numberPitchTimer = setTimeout(() => {
+      updateGridLabels();
+    }, 50);
   });
 
   ghostBtn?.addEventListener('click', () => {
@@ -1499,25 +1505,7 @@ export function initHandpanMap() {
   attachCreationListeners();
   initCameraUI();
 
-  let hasPreloadedAI = false;
-  async function preloadAI() {
-    if (hasPreloadedAI) return;
-    hasPreloadedAI = true;
-    console.log('Pre-loading AI models in background...');
-    try {
-      const { removeBackground } = await import('@imgly/background-removal');
-      // Run once with a tiny image to trigger the model fetch and initialization
-      const canvas = document.createElement('canvas');
-      canvas.width = 1;
-      canvas.height = 1;
-      const blob = await new Promise(r => canvas.toBlob(r));
-      await removeBackground(blob);
-      console.log('AI models cached and ready.');
-    } catch (err) {
-      console.warn('AI pre-load failed (will retry on shutter):', err);
-      hasPreloadedAI = false;
-    }
-  }
+
 
 
 
@@ -1539,12 +1527,8 @@ export function initHandpanMap() {
         targetPane.classList.add('active');
         document.getElementById('drawerBackdrop')?.classList.add('active');
 
-        // Pre-load AI when "My Handpans" (Settings) tab is opened
-        if (targetId === 'handpanSettingsDrawer') {
-          preloadAI();
-        }
-      }
 
+      }
 
     });
   });
@@ -1707,36 +1691,36 @@ function initCameraUI() {
   shutterBtn?.addEventListener('click', async () => {
     // 1. Capture and Crop to the UI Guide (280px)
     const canvas = document.createElement('canvas');
-    
+
     // Calculate crop matching the 280px guide
     const videoWidth = video.videoWidth;
     const videoHeight = video.videoHeight;
     const viewWidth = video.clientWidth;
     const viewHeight = video.clientHeight;
-    
-    const guideSizeUI = 280; 
-    const ratio = videoWidth / viewWidth; 
+
+    const guideSizeUI = 280;
+    const ratio = videoWidth / viewWidth;
     const cropSize = guideSizeUI * ratio;
-    
+
     // Center of the video
     const sourceX = (videoWidth - cropSize) / 2;
     const sourceY = (videoHeight - cropSize) / 2;
-    
+
     canvas.width = 1024;
     canvas.height = 1024;
     const ctx = canvas.getContext('2d');
-    
+
     // Draw the square crop from the center
     ctx.drawImage(video, sourceX, sourceY, cropSize, cropSize, 0, 0, 1024, 1024);
 
     stopCamera();
-    
+
     // Reset Progress UI
     const statusEl = document.getElementById('aiStatus');
     const progressEl = document.getElementById('aiProgressBar');
     if (statusEl) statusEl.textContent = 'Initializing AI...';
     if (progressEl) progressEl.style.width = '0%';
-    
+
     processingOverlay.classList.add('active');
 
     try {
@@ -1745,13 +1729,13 @@ function initCameraUI() {
       if (progressEl) progressEl.style.width = '30%';
 
       const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.85));
-      
+
       const { data: resultBlob, error: fnError } = await supabase.functions.invoke('remove-background', {
         body: blob,
       });
 
       if (fnError) throw new Error(fnError.message || 'Server AI failed');
-      
+
       // Handle both Blob, ArrayBuffer, and Base64 (JSON) responses
       let blobToUse = resultBlob;
       let dataUrlToUse = null;
@@ -1777,18 +1761,18 @@ function initCameraUI() {
       finalCanvas.width = 1024;
       finalCanvas.height = 1024;
       const fCtx = finalCanvas.getContext('2d');
-      
+
       const resultImg = new Image();
       resultImg.src = dataUrlToUse || URL.createObjectURL(blobToUse);
       await new Promise(r => resultImg.onload = r);
 
 
-      
+
       fCtx.beginPath();
-      fCtx.arc(512, 512, 510, 0, Math.PI * 2); 
+      fCtx.arc(512, 512, 510, 0, Math.PI * 2);
       fCtx.clip();
       fCtx.drawImage(resultImg, 0, 0, 1024, 1024);
-      
+
       const finalBlob = await new Promise(resolve => finalCanvas.toBlob(resolve, 'image/png'));
 
       // 4. Store result
@@ -1806,7 +1790,7 @@ function initCameraUI() {
       console.error('AI Processing error:', err);
       alert('Background removal failed: ' + err.message + '\n\nMake sure your Edge Function is deployed and CLOUDINARY secrets are set!');
 
-      
+
       const rawBlob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
       if (currentCaptureType === 'top') {
         capturedTopBlob = rawBlob;

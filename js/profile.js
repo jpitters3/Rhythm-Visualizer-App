@@ -41,9 +41,6 @@ export async function loadCurrentProfile() {
           // Trigger update logic - Assumption: This function triggers internal update
           const event = new Event('change');
           sel.dispatchEvent(event);
-
-          buildHandpanOverlay();
-          renderAllMeasures();
         }
       }
 

@@ -149,6 +149,66 @@ export function resetGridToDefault(ctx = activeGrid) {
   renderAllMeasures(ctx);
 }
 
+function resolveLabelText(lbl, pref, isMulti = false, subIdx = null) {
+  if (isMulti) {
+    let subText = lbl[subIdx] || '';
+    if (subText === '0' || subText === 'Ding') {
+      subText = (pref === 'Numbers') ? 'D' : '';
+    }
+    return subText;
+  }
+
+  const isDing = (lbl === '0' || lbl === 'Ding');
+  if (isDing) {
+    return (pref === 'Pitches') ? '' : 'D';
+  }
+
+  if (pref === 'Pitches' && lbl !== '' && getScale) {
+    const scale = getScale();
+    if (scale && scale.map) {
+      let pitch = scale.map[lbl];
+      if (!pitch && isDing) pitch = scale.ding;
+      if (pitch) {
+        return pitch.replace('s', '#').replace(/[0-9]/g, '');
+      }
+    }
+  }
+  return lbl;
+}
+
+export function updateGridLabels(ctx = activeGrid) {
+  if (!ctx || !ctx.container) return;
+  const pref = localStorage.getItem('handpanLabelPref') || 'Numbers';
+  const allCells = ctx.container.querySelectorAll('.cell');
+
+  allCells.forEach(cell => {
+    const g = parseInt(cell.dataset.index);
+    if (isNaN(g)) return;
+    const lbl = ctx.innerLabels[g] || '';
+    const isMultiCell = checkCellIsMultiMode(lbl);
+
+    if (!isMultiCell) {
+      const inner = cell.querySelector('.inner');
+      if (inner) {
+        const displayText = resolveLabelText(lbl, pref, false);
+        inner.textContent = displayText;
+
+        // Ding Egg handles
+        if (lbl === '0' || lbl === 'Ding') {
+          cell.classList.toggle('visual-ding', pref === 'Pitches');
+        } else {
+          cell.classList.remove('visual-ding');
+        }
+      }
+    } else {
+      const allSubs = cell.querySelectorAll('.sub-dot');
+      allSubs.forEach((sub, sIdx) => {
+        sub.textContent = resolveLabelText(lbl, pref, true, sIdx);
+      });
+    }
+  });
+}
+
 export function renderAllMeasures(ctx = activeGrid) {
   const measuresEl = ctx.container;
   if (!measuresEl) return;
@@ -159,6 +219,8 @@ export function renderAllMeasures(ctx = activeGrid) {
 
   measuresEl.innerHTML = '<div class="measures-scroller"></div>';
   const scroller = measuresEl.firstChild;
+
+  const pref = localStorage.getItem('handpanLabelPref') || 'Numbers';
 
   for (let m = 0; m < measureCount; m++) {
     const row = document.createElement('div');
@@ -238,49 +300,15 @@ export function renderAllMeasures(ctx = activeGrid) {
       const isMultiCell = checkCellIsMultiMode(lbl);
 
       if (!isMultiCell) {
-        // Set single-note cell labels
-        // Resolve Display Text (Number vs Pitch)
-        let displayText = lbl;
-        const isDing = (lbl === '0' || lbl === 'Ding');
-
-        const pref = localStorage.getItem('handpanLabelPref') || 'Numbers';
-
-        if (isDing) {
-          if (pref === 'Pitches') {
-            cell.classList.add('visual-ding');
-            displayText = ''; // Use egg, hide text
-          } else {
-            cell.classList.remove('visual-ding');
-            displayText = 'D'; // Numbers mode: show 'D'
-          }
-        } else {
-          cell.classList.remove('visual-ding');
-          if (pref === 'Pitches' && lbl !== '' && getScale) {
-            const scale = getScale();
-            if (scale && scale.map) {
-              // Find pitch for this label
-              let pitch = scale.map[lbl];
-
-              // Special handling for Ding if mapped differently
-              if (!pitch && isDing) pitch = scale.ding;
-              if (pitch) {
-                // Format: "C#4" -> "C#" (cleaner for grid)
-                displayText = pitch.replace('s', '#').replace(/[0-9]/g, '');
-              }
-            }
-          }
+        inner.textContent = resolveLabelText(lbl, pref, false);
+        if (lbl === '0' || lbl === 'Ding') {
+          cell.classList.toggle('visual-ding', pref === 'Pitches');
         }
-        inner.textContent = displayText;
       } else {
         cell.classList.add('multi-mode');
-        const pref = localStorage.getItem('handpanLabelPref') || 'Numbers';
         const allSubs = cell.querySelectorAll('.sub-dot');
         for (let idx = 0; idx < allSubs.length; idx++) {
-          let subText = lbl[idx] || '';
-          if (subText === '0' || subText === 'Ding') {
-            subText = (pref === 'Numbers') ? 'D' : ''; // Or 'D' depending on preference
-          }
-          allSubs[idx].textContent = subText;
+          allSubs[idx].textContent = resolveLabelText(lbl, pref, true, idx);
         };
       }
 
