@@ -308,14 +308,14 @@ div.container {
   content: "";
   position: absolute;
   /* Expand slightly to ensure blur covers edges without artifacts */
-  inset: -40px;
+  /* inset: -40px;
   background-image: url('../public/assets/images/backgrounds/river_wallpaper.jpg');
   background-attachment: fixed;
   background-size: cover;
-  background-position: center top;
+  background-position: center top; */
   /* filter: blur(10px); */
   /* Balanced opacity to blend with the panel color */
-  opacity: 0.15;
+  opacity: 0;
   z-index: -1;
   pointer-events: none;
   /* Performance optimization */
