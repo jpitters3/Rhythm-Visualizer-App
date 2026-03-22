@@ -3,20 +3,16 @@ import basicSsl from '@vitejs/plugin-basic-ssl';
 import fs from 'fs';
 
 export default defineConfig({
-  plugins: [
-    basicSsl()
-  ],
+  plugins: [],
   base: '/',
   server: {
     port: 3000,
-    host: true,
-    https: true,
-    open: false,
     host: true, // Expose to local network
     https: {
       key: fs.readFileSync('.certs/localhost-key.pem'),
       cert: fs.readFileSync('.certs/localhost.pem'),
     }, // Required for camera on mobile
+    open: false,
   },
   build: {
     outDir: 'dist',
