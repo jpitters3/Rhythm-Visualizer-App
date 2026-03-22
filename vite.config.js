@@ -1,5 +1,4 @@
 import { defineConfig } from 'vite';
-import basicSsl from '@vitejs/plugin-basic-ssl';
 import fs from 'fs';
 
 export default defineConfig({
@@ -8,10 +7,12 @@ export default defineConfig({
   server: {
     port: 3000,
     host: true, // Expose to local network
-    https: {
-      key: fs.readFileSync('.certs/localhost-key.pem'),
-      cert: fs.readFileSync('.certs/localhost.pem'),
-    }, // Required for camera on mobile
+    https: fs.existsSync('.certs/localhost-key.pem') && fs.existsSync('.certs/localhost.pem') 
+      ? {
+          key: fs.readFileSync('.certs/localhost-key.pem'),
+          cert: fs.readFileSync('.certs/localhost.pem'),
+        } 
+      : false, // Required for camera on mobile, but optional for CI build
     open: false,
   },
   build: {
