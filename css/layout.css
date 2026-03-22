@@ -251,10 +251,11 @@ div.container {
   padding: 40px 50px 0 50px;
   /* Reduced bottom padding to align with grid */
   max-width: 1200px;
-  /* Glassmorphism Update */
+  /* Glassmorphism Illusion: Remove expensive real-time filter */
   background: rgba(var(--panel-rgb), 0.7);
   border: 1px solid rgba(255, 255, 255, 0.4);
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(255, 255, 255, 0.2) inset;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25),
+    0 0 0 1px rgba(255, 255, 255, 0.2) inset;
   z-index: 1000;
   display: flex;
   flex-direction: column;
@@ -306,21 +307,33 @@ div.container {
 .container::before {
   content: "";
   position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background: rgba(var(--panel-rgb), 0.9);
+  /* Expand slightly to ensure blur covers edges without artifacts */
+  inset: -40px;
+  background-image: url('../public/assets/images/backgrounds/river_wallpaper.jpg');
+  background-attachment: fixed;
+  background-size: cover;
+  background-position: center top;
+  /* filter: blur(10px); */
+  /* Balanced opacity to blend with the panel color */
+  opacity: 0.15;
   z-index: -1;
-  transform: translateZ(0);
-  /* Force GPU Layer */
-  will-change: transform;
-  /* Prevent compositor thrashing */
   pointer-events: none;
+  /* Performance optimization */
+  will-change: transform;
+  transform: translateZ(0);
+  border: 1px solid white;
+}
+
+body.dark .container::before {
+  background-image: url('../public/assets/images/backgrounds/starry-sky.jpg');
+  opacity: 0.35;
 }
 
 body.dark div.container {
-  background: rgba(22, 22, 31, 0.75);
-  border-color: rgba(255, 255, 255, 0.08);
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  background: rgba(22, 22, 31, 0.7);
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5),
+    0 0 0 1px rgba(255, 255, 255, 0.05) inset;
 }
 
 @media (max-width: 768px) {
@@ -413,7 +426,8 @@ body.dark div.container {
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
     padding: 12px;
     z-index: 2000;
-    overflow: hidden; /* Contain scrolling content */
+    overflow: hidden;
+    /* Contain scrolling content */
   }
 
   /* Reset some inner paddings for the floating menu */
