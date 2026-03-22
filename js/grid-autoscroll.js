@@ -15,7 +15,17 @@ export function initGridAutoscroll() {
   const measuresEl = document.getElementById('measures');
   if (measuresEl) {
     // Add scroll listener to update fades when the user manually scrolls
-    measuresEl.addEventListener('scroll', () => updateScrollFades(measuresEl));
+    // Throttled with rAF to avoid layout thrashing
+    let scrollTicking = false;
+    measuresEl.addEventListener('scroll', () => {
+      if (!scrollTicking) {
+        window.requestAnimationFrame(() => {
+          updateScrollFades(measuresEl);
+          scrollTicking = false;
+        });
+        scrollTicking = true;
+      }
+    });
     
     // Automatically update scroll fades when the UI changes size or layout
     const resizeObserver = new ResizeObserver(() => updateScrollFades(measuresEl));
@@ -71,7 +81,7 @@ export function initGridAutoscroll() {
 
     if (currentStep > lastActiveIndex && lastActiveIndex >= 0) {
       if (lastScrolledMeasure !== -2) { // Use -2 as a special state for "scrolled mid-measure"
-        measuresEl.scrollTo({ top: 0, behavior: 'smooth' });
+        measuresEl.scrollTo({ top: 0, behavior: 'instant' });
         lastScrolledMeasure = -2;
       }
       return;
