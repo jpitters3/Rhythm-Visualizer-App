@@ -5,56 +5,117 @@ export function initMobileMenu() {
   const headerMenu = document.getElementById('headerMenu');
   const mobileControlsBtn = document.getElementById('mobileControlsBtn');
   const primaryControlsWrapper = document.getElementById('primaryControlsWrapper');
+  const mobileFileOptionsBtn = document.getElementById('mobileFileOptionsBtn');
+  const mobileFileOptionsDrawer = document.getElementById('mobileFileOptionsDrawer');
 
   if (!mobileMenuBtn || !headerMenu) return;
+
+  // Move File Options to drawer on Mobile
+  function moveFileOptionsForMobile() {
+    if (window.innerWidth <= 768 && mobileFileOptionsDrawer) {
+      const patternSelect = document.querySelector('.grid-child.pattern-select');
+      const shareBtn = document.getElementById('shareBtn');
+      if (patternSelect) mobileFileOptionsDrawer.appendChild(patternSelect);
+      if (shareBtn) mobileFileOptionsDrawer.appendChild(shareBtn);
+    }
+  }
+  moveFileOptionsForMobile();
 
   // Toggle Main Menu
   mobileMenuBtn.addEventListener('click', (e) => {
     e.stopPropagation();
-    // Close controls if open
+    // Close other drawers if open
     if (primaryControlsWrapper) primaryControlsWrapper.classList.remove('open');
+    if (mobileFileOptionsDrawer) mobileFileOptionsDrawer.classList.remove('open');
     
     headerMenu.classList.toggle('open');
     const isOpen = headerMenu.classList.contains('open');
     mobileMenuBtn.setAttribute('aria-expanded', isOpen);
   });
 
-  // Close Main Menu when a button inside it is clicked (mobile)
-  headerMenu.addEventListener('click', (e) => {
-    if (e.target.tagName === 'BUTTON' || e.target.closest('button')) {
-      headerMenu.classList.remove('open');
-      mobileMenuBtn.setAttribute('aria-expanded', 'false');
-    }
-  });
-
-
   // Toggle Primary Controls Drawer
   if (mobileControlsBtn && primaryControlsWrapper) {
     mobileControlsBtn.addEventListener('click', (e) => {
       e.stopPropagation();
-      // Close main menu if open
       headerMenu.classList.remove('open');
+      if (mobileFileOptionsDrawer) mobileFileOptionsDrawer.classList.remove('open');
       mobileMenuBtn.setAttribute('aria-expanded', 'false');
 
       primaryControlsWrapper.classList.toggle('open');
     });
   }
 
-  // CLICK OUTSIDE to close both
-  document.addEventListener('click', (e) => {
-    // Handle Main Menu
-    if (headerMenu.classList.contains('open')) {
-      if (!headerMenu.contains(e.target) && !mobileMenuBtn.contains(e.target)) {
-        headerMenu.classList.remove('open');
-        mobileMenuBtn.setAttribute('aria-expanded', 'false');
-      }
-    }
+  // Toggle File Options Drawer
+  if (mobileFileOptionsBtn && mobileFileOptionsDrawer) {
+    mobileFileOptionsBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      headerMenu.classList.remove('open');
+      if (primaryControlsWrapper) primaryControlsWrapper.classList.remove('open');
+      mobileMenuBtn.setAttribute('aria-expanded', 'false');
 
-    // Handle Controls Drawer
-    if (primaryControlsWrapper && primaryControlsWrapper.classList.contains('open')) {
-      if (!primaryControlsWrapper.contains(e.target) && !mobileControlsBtn.contains(e.target)) {
-        primaryControlsWrapper.classList.remove('open');
+      mobileFileOptionsDrawer.classList.toggle('open');
+    });
+  }
+
+  // Close drawers when a button inside them is clicked
+  [headerMenu, primaryControlsWrapper, mobileFileOptionsDrawer].forEach(panel => {
+    if (!panel) return;
+    panel.addEventListener('click', (e) => {
+      if (e.target.tagName === 'BUTTON' || e.target.closest('button')) {
+        // Special case: don't close if it's a dropdown toggle that just opened something
+        if (e.target.classList.contains('dropdown-toggle')) return;
+        
+        panel.classList.remove('open');
+        if (panel === headerMenu) mobileMenuBtn.setAttribute('aria-expanded', 'false');
       }
-    }
+    });
   });
+
+  // CLICK OUTSIDE to close all
+  document.addEventListener('click', (e) => {
+    const panels = [
+      { el: headerMenu, btn: mobileMenuBtn },
+      { el: primaryControlsWrapper, btn: mobileControlsBtn },
+      { el: mobileFileOptionsDrawer, btn: mobileFileOptionsBtn }
+    ];
+
+    panels.forEach(({ el, btn }) => {
+      if (el && el.classList.contains('open')) {
+        if (!el.contains(e.target) && !btn.contains(e.target)) {
+          el.classList.remove('open');
+          if (btn === mobileMenuBtn) btn.setAttribute('aria-expanded', 'false');
+        }
+      }
+    });
+  });
+
+  // Handle Native Mobile File Select
+  const mobileFileSelect = document.getElementById('mobileFileSelect');
+  if (mobileFileSelect) {
+    mobileFileSelect.addEventListener('change', (e) => {
+      const val = e.target.value;
+      if (!val) return;
+
+      const btnMap = {
+        'save': 'saveBtn',
+        'load': 'loadBtn',
+        'rename': 'renameBtn',
+        'delete': 'deleteBtn',
+        'export': 'exportBtn',
+        'import': 'importBtn',
+        'midi': 'importMidiBtn'
+      };
+
+      const targetBtnId = btnMap[val];
+      if (targetBtnId) {
+        const btn = document.getElementById(targetBtnId);
+        if (btn) {
+          btn.click();
+        }
+      }
+
+      // Reset selection for next use
+      mobileFileSelect.value = "";
+    });
+  }
 }

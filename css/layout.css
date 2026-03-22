@@ -411,6 +411,7 @@ body.dark div.container {
 
   /* Expanded Floating Controls Drawer */
   #primaryControlsWrapper,
+  #mobileFileOptionsDrawer,
   .measure-tools {
     display: none;
     width: 93vw;
@@ -432,16 +433,60 @@ body.dark div.container {
 
   /* Reset some inner paddings for the floating menu */
   #primaryControlsWrapper .scrollable-controls-wrapper,
+  #mobileFileOptionsDrawer .grid-child.pattern-select,
   .measure-tools .selection-group {
     padding: 0;
   }
 
-  #primaryControlsWrapper.open {
+  #primaryControlsWrapper.open,
+  #mobileFileOptionsDrawer.open {
+    display: block;
+  }
+
+  /* High-Level Toggle for mobile file layout */
+  #mobileFileOptionsDrawer .grid-child.pattern-select {
+    display: flex !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: visible !important;
+  }
+
+  #mobileFileOptionsDrawer .grid-child.pattern-select h3 {
+    display: none;
+    /* Already obvious */
+  }
+
+  #mobileFileOptionsDrawer #shareBtn {
+    margin-top: 10px;
+    width: 100%;
+    min-height: 44px;
+    background: var(--primary);
+    color: black;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+  }
+
+  #mobileFileOptionsDrawer.open {
     display: block;
     animation: slideDown 0.2s ease-out;
   }
 
 
+
+  /* Hide desktop dropdown on mobile, show native select */
+  #desktopFileDropdown {
+    display: none !important;
+  }
+
+  #mobileFileSelect {
+    display: block !important;
+    flex: 1;
+    min-width: 100px;
+  }
 
   /* Push handpan above transport controls at bottom */
   aside.handpan-panel {
@@ -450,8 +495,13 @@ body.dark div.container {
   }
 }
 
-select#patternSelect {
+select#patternSelect,
+select#mobileFileSelect {
   max-width: 160px;
+}
+
+#mobileFileSelect {
+  display: none;
 }
 
 /* ===== ROUTE-SPECIFIC GLOBAL STYLING ===== */

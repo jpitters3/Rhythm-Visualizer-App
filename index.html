@@ -89,6 +89,12 @@
             <line x1="9" y1="3" x2="9" y2="21"></line>
           </svg>
         </button>
+        <button id="mobileFileOptionsBtn" class="hamburger-btn mobile-only" title="File Options">
+          <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none">
+            <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path>
+            <polyline points="13 2 13 9 20 9"></polyline>
+          </svg>
+        </button>
         <button id="mobileControlsBtn" class="hamburger-btn mobile-only" title="Toggle Controls">
           <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none">
             <circle cx="12" cy="12" r="3"></circle>
@@ -144,7 +150,7 @@
             <option value="">(no saved patterns)</option>
           </select>
           <!-- File Dropdown -->
-          <div class="dropdown">
+          <div class="dropdown" id="desktopFileDropdown">
             <button id="fileDropdownBtn" class="dropdown-toggle">File ▾</button>
             <div id="fileDropdownMenu" class="dropdown-content">
               <button id="saveBtn" title="Save current pattern">Save</button>
@@ -176,11 +182,32 @@
             </div>
           </div>
 
+          <!-- Native Mobile File Dropdown -->
+          <select id="mobileFileSelect" class="mobile-only-select">
+            <option value="" disabled selected>File...</option>
+            <option value="save">Save</option>
+            <option value="load">Load</option>
+            <option value="rename">Rename</option>
+            <option value="delete">Delete</option>
+            <optgroup label="Advanced">
+              <option value="export">Export</option>
+              <option value="import">Import</option>
+              <!-- <option value="midi">Import MIDI</option> -->
+            </optgroup>
+          </select>
+
           <button id="shareBtn" title="Create a share link (public)">Share</button>
           <button id="communityBtn" class="primary-btn" title="Browse Community Rhythms">Community</button>
         </div>
       </div> <!-- End Wrapper -->
     </div> <!-- End top-row -->
+
+    <!-- Mobile File Options Drawer (Hidden by default) -->
+    <div id="mobileFileOptionsDrawer" class="mobile-drawer">
+      <div id="fileOptionsMobilePlaceholder"></div>
+      <!-- These elements will be moved here on mobile via JS if needed, 
+           or we can just place mobile-specific copies here. -->
+    </div>
 
     <!-- FREE PLAY VIEW -->
     <div id="view-freeplay" class="route-view active">
