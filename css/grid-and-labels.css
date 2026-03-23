@@ -301,6 +301,13 @@
   .cell .inner {
     font-size: 25px
   }
+
+  .measures {
+    /* box-shadow: 0 18px 18px 0px rgba(101, 101, 101, 0.35); */
+    /* grey fade ☝🏽 */
+    box-shadow: 0 18px 18px 0px rgba(255, 255, 255, 0.45);
+    /* white fade ☝🏽 */
+  }
 }
 
 /* ===== MULTI-MEASURE WRAP ===== */
