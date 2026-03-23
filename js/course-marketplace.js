@@ -244,7 +244,7 @@ export async function activateCourse(courseId) {
   }
 }
 
-export async function unlockCourse(courseId, isPaid) {
+export async function unlockCourse(courseId, isPaid, btn) {
   if (!currentUser) {
     await alert("Please sign in to unlock courses.");
     // show auth modal
@@ -257,7 +257,6 @@ export async function unlockCourse(courseId, isPaid) {
     return;
   }
 
-  const btn = document.activeElement;
   if (btn) {
     btn.textContent = "Unlocking...";
     btn.disabled = true;
@@ -310,7 +309,7 @@ export function initCourseMarketplace() {
     } else if (action === 'delete-course') {
       deleteCourse(id);
     } else if (action === 'unlock-course') {
-      unlockCourse(id, isPaid);
+      unlockCourse(id, isPaid, target);
     } else if (action === 'archive-course') {
       archiveCourse(id);
     } else if (action === 'activate-course') {
