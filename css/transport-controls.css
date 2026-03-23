@@ -56,13 +56,13 @@ body {
 
 @media (max-width: 768px) {
   body {
-    padding-bottom: 0;
+    padding-bottom: 0 !important;
     /* No bottom padding needed on mobile with flex layout */
   }
 
   .transport-container {
     padding: 8px 12px;
-    margin-bottom: 20px;
+    margin-bottom: 0;
     max-width: 95vw;
   }
 
@@ -70,10 +70,10 @@ body {
     pointer-events: all;
     order: 11;
     flex-shrink: 0;
-    /* Use sticky to ensure it stays pinned to the bottom of the visible area
-       if the flex container overflows for any reason */
-    position: sticky !important;
+    position: fixed !important;
     bottom: 0 !important;
+    left: 0;
+    right: 0;
     margin-bottom: 0 !important;
     background: var(--body-bg);
     padding-bottom: env(safe-area-inset-bottom, 10px);
