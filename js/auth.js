@@ -47,6 +47,9 @@ let accountDropdownMenu = null;
 let authLogoutDropdown = null;
 let authVerifyOtp = null;
 
+// Stores the email confirmed at step 1 — not re-read from the DOM to prevent autofill corruption
+let confirmedEmail = '';
+
 // Auth modal
 export function openAuthModal() {
   if (!authModal) return;
@@ -56,17 +59,16 @@ export function openAuthModal() {
   if (currentUser) {
     // PRE-FILL if signed in
     if (authEmail) authEmail.value = currentUser.email;
+    if (authEmail) authEmail.readOnly = false;
     if (authPass) {
       authPass.value = '';
       authPass.placeholder = 'New Password';
     }
   } else {
-    // Clear if signed out
-    if (authEmail) authEmail.value = '';
-    if (authPass) {
-      authPass.value = '';
-      authPass.placeholder = '••••••••';
-    }
+    // Reset to email-first step
+    if (authEmail) { authEmail.value = ''; authEmail.readOnly = false; }
+    if (authPass) { authPass.value = ''; authPass.placeholder = '••••••••'; }
+    resetToEmailStep();
     setTimeout(() => authEmail?.focus(), 0);
   }
 
@@ -108,6 +110,10 @@ export function updateAccountUI() {
     // Auth Modal buttons
     if (authLogin) authLogin.style.display = 'none';
     if (authRegister) authRegister.style.display = 'none';
+
+    // Hide ToS checkbox when logged in
+    const tosRow = document.getElementById('authTosRow');
+    if (tosRow) tosRow.style.display = 'none';
 
     // Dropdown Links
     const profileBtn = document.getElementById('openProfileBtn');
@@ -189,24 +195,14 @@ export function updateAccountUI() {
     }
 
     if (authLogout) authLogout.style.display = 'none';
-    if (authLogin) authLogin.style.display = '';
-    if (authRegister) authRegister.style.display = '';
+    // Reset auth modal to email step — the step helpers control form rows
+    if (authLogin) authLogin.style.display = 'none';
+    if (authRegister) authRegister.style.display = 'none';
 
     const upPass = document.getElementById('authUpdatePassword');
     if (upPass) upPass.style.display = 'none';
     const upEmail = document.getElementById('authUpdateEmail');
     if (upEmail) upEmail.style.display = 'none';
-    const forgot = document.getElementById('authForgotPassword');
-    if (forgot) forgot.style.display = '';
-
-    const pr = document.getElementById('authPasswordRow');
-    if (pr) pr.style.display = '';
-    const cpr = document.getElementById('authCurrentPassRow');
-    if (cpr) cpr.style.display = 'none';
-    const pcr = document.getElementById('authPasswordConfirmRow');
-    if (pcr) pcr.style.display = 'none';
-    const tpb = document.getElementById('authTogglePasswordBtn');
-    if (tpb) tpb.style.display = 'none';
 
     if (authOtpRow) authOtpRow.style.display = 'none';
     if (authVerifyOtp) authVerifyOtp.style.display = 'none';
@@ -299,10 +295,12 @@ export async function initAuth() {
   const authCurrentPass = document.getElementById('authCurrentPass');
   authOtpRow = document.getElementById('authOtpRow');
   authVerifyOtp = document.getElementById('authVerifyOtp');
+  const authContinueBtn = document.getElementById('authContinueBtn');
+  const authBackBtn = document.getElementById('authBackBtn');
 
   Bus.on(BUS_EVENT.OPEN_AUTH_MODAL, openAuthModal);
 
-  // New Logic: Click Account -> If Signed In (Toggle Dropdown) ELSE (Open Modal)
+  // Account button behaviour
   accountBtn?.addEventListener('click', (e) => {
     e.stopPropagation();
     if (currentUser) {
@@ -312,7 +310,6 @@ export async function initAuth() {
     }
   });
 
-  // Auto-close Account Dropdown on Item Click
   document.getElementById('authBtn')?.addEventListener('click', () => {
     accountDropdownMenu?.classList.remove('show');
     openAuthModal();
@@ -339,60 +336,62 @@ export async function initAuth() {
   });
 
   authModal?.addEventListener('click', (e) => {
-    if (e.target === authModal) {
-      closeAuthModal();
-    }
+    if (e.target === authModal) closeAuthModal();
   });
 
-  authLogoutDropdown?.addEventListener('click', async () => {
-    logout();
-  });
+  authLogoutDropdown?.addEventListener('click', async () => { logout(); });
 
-  authUpdatePasswordBtn?.addEventListener('click', async () => {
-    const newPassword = authPass.value;
-    const confirm = authPassConfirm.value;
-
-    if (!newPassword) {
-      authHint.textContent = 'Please enter a new password.';
-      authPass.focus();
-      return;
-    }
-
-    if (newPassword !== confirm) {
-      authHint.textContent = 'Passwords do not match.';
-      authPassConfirm.focus();
-      return;
-    }
-
-    authHint.textContent = 'Updating password...';
-    const { error } = await supabase.auth.updateUser({ password: newPassword });
-
-    if (error) {
-      authHint.textContent = `Error: ${error.message} `;
-    } else {
-      authHint.textContent = 'Password updated successfully!';
-      authPass.value = '';
-      authPassConfirm.value = '';
-      setTimeout(() => closeAuthModal(), 1500);
-    }
-  });
-
-  authRegister?.addEventListener('click', async () => {
+  // ── STEP 1: Continue (email check) ──────────────────────────────────────
+  authContinueBtn?.addEventListener('click', async () => {
     const email = authEmail.value.trim();
-    const password = authPass.value;
-    authHint.textContent = 'Registering...';
-    const { data, error } = await supabase.auth.signUp({ email, password });
-    if (error) { authHint.textContent = error.message; return; }
-    authHint.textContent = 'Registered! Please check your email for confirmation, then sign in.';
-    authEmail.value = '';
-    authPass.value = '';
-    if (authPassConfirm) authPassConfirm.value = '';
+    if (!email || !email.includes('@')) {
+      authHint.textContent = 'Please enter a valid email address.';
+      authEmail.focus();
+      return;
+    }
+
+    authHint.textContent = 'Checking…';
+    authContinueBtn.disabled = true;
+
+    try {
+      const { data, error } = await supabase.functions.invoke('check-email-exists', {
+        body: { email }
+      });
+
+      if (error) throw error;
+
+      if (data?.exists) {
+        confirmedEmail = email;
+        showLoginStep(email);
+      } else {
+        confirmedEmail = email;
+        showSignupStep(email);
+      }
+    } catch (err) {
+      console.warn('Email check failed:', err);
+      authHint.textContent = 'Unable to verify email. Please try again or check your connection.';
+      authHint.style.color = 'var(--error, #ff4444)';
+    } finally {
+      authContinueBtn.disabled = false;
+      authContinueBtn.textContent = 'Continue';
+    }
   });
 
+  // Allow pressing Enter on email to continue
+  authEmail?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !currentUser) authContinueBtn?.click();
+  });
+
+  // ── Back button ──────────────────────────────────────────────────────────
+  authBackBtn?.addEventListener('click', () => {
+    resetToEmailStep();
+  });
+
+  // ── STEP 2a: Login ───────────────────────────────────────────────────────
   authLogin?.addEventListener('click', async () => {
-    const email = authEmail.value.trim();
+    const email = confirmedEmail || authEmail.value.trim();
     const password = authPass.value;
-    authHint.textContent = 'Signing in...';
+    authHint.textContent = 'Signing in…';
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) { authHint.textContent = error.message; return; }
     setCurrentUser(data.user);
@@ -400,66 +399,80 @@ export async function initAuth() {
     updateAccountUI();
     updateAdminUI();
     closeAuthModal();
-
     Bus.emit(BUS_EVENT.AUTH_LOGIN, { user: currentUser });
     Bus.emit(BUS_EVENT.PATTERN_REFRESH_NEEDED);
   });
 
+  // Allow Enter on password to log in
+  authPass?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') authLogin?.click();
+  });
+
+  // ── STEP 2b: Register ────────────────────────────────────────────────────
+  authRegister?.addEventListener('click', async () => {
+    const tosCheckbox = document.getElementById('authTosCheckbox');
+    if (!tosCheckbox?.checked) {
+      authHint.textContent = 'Please agree to the Terms of Service and Privacy Policy to create an account.';
+      tosCheckbox?.focus();
+      return;
+    }
+    const email = confirmedEmail || authEmail.value.trim();
+    const password = authPass.value;
+    const confirm = authPassConfirm?.value;
+    if (password !== confirm) {
+      authHint.textContent = 'Passwords do not match.';
+      authPassConfirm?.focus();
+      return;
+    }
+    authHint.textContent = 'Creating account…';
+    const { data, error } = await supabase.auth.signUp({ email, password });
+    if (error) { authHint.textContent = error.message; return; }
+    authHint.textContent = 'Account created! Please check your email to confirm, then log in.';
+    authPass.value = '';
+    if (authPassConfirm) authPassConfirm.value = '';
+  });
+
+  // ── Forgot password ──────────────────────────────────────────────────────
   authForgotPassword?.addEventListener('click', async () => {
-    const email = authEmail.value.trim();
+    const email = confirmedEmail || authEmail.value.trim();
     if (!email) {
       authHint.textContent = 'Please enter your email above first.';
       authEmail.focus();
       return;
     }
-
-    authHint.textContent = 'Sending reset code...';
-    // By omitting redirectTo, Supabase should send a 6-digit OTP instead (if configured inside their email template)
+    authHint.textContent = 'Sending reset code…';
     const { error } = await supabase.auth.resetPasswordForEmail(email);
-
     if (error) {
-      authHint.textContent = `Error: ${error.message} `;
+      authHint.textContent = `Error: ${error.message}`;
     } else {
       authHint.textContent = 'Reset code sent! Check your email and enter it below.';
-
-      // Update UI to OTP mode
       authForgotPassword.style.display = 'none';
       authLogin.style.display = 'none';
       authRegister.style.display = 'none';
       document.getElementById('authPasswordRow').style.display = 'none';
-
       authOtpRow.style.display = '';
       authVerifyOtp.style.display = '';
       authOtp.focus();
     }
   });
 
+  // ── Verify OTP ───────────────────────────────────────────────────────────
   authVerifyOtp?.addEventListener('click', async () => {
-    const email = authEmail.value.trim();
+    const email = confirmedEmail || authEmail.value.trim();
     const token = authOtp.value.trim();
-
     if (!token || token.length < 6 || token.length > 8) {
       authHint.textContent = 'Please enter the verification code correctly.';
       authOtp.focus();
       return;
     }
-
-    authHint.textContent = 'Verifying code...';
-    const { error } = await supabase.auth.verifyOtp({
-      email,
-      token,
-      type: 'recovery'
-    });
-
+    authHint.textContent = 'Verifying code…';
+    const { error } = await supabase.auth.verifyOtp({ email, token, type: 'recovery' });
     if (error) {
       authHint.textContent = `Error: ${error.message}`;
     } else {
       authHint.textContent = 'Code verified! Please enter your new password.';
-
-      // Switch UI to password update mode
       authOtpRow.style.display = 'none';
       authVerifyOtp.style.display = 'none';
-
       document.getElementById('authPasswordRow').style.display = '';
       document.getElementById('authPasswordConfirmRow').style.display = '';
       document.getElementById('authUpdatePassword').style.display = '';
@@ -469,90 +482,164 @@ export async function initAuth() {
     }
   });
 
+  // ── Change password (logged-in) ──────────────────────────────────────────
   authTogglePasswordBtn?.addEventListener('click', () => {
-    const upPass = document.getElementById('authUpdatePassword');
-    if (upPass) upPass.style.display = '';
-    const pcr = document.getElementById('authPasswordConfirmRow');
-    if (pcr) pcr.style.display = '';
-    const pr = document.getElementById('authPasswordRow');
-    if (pr) pr.style.display = '';
-
+    document.getElementById('authUpdatePassword').style.display = '';
+    document.getElementById('authPasswordConfirmRow').style.display = '';
+    document.getElementById('authPasswordRow').style.display = '';
     authTogglePasswordBtn.style.display = 'none';
-    const cpr = document.getElementById('authCurrentPassRow');
-    if (cpr) cpr.style.display = 'none';
-    const upEmail = document.getElementById('authUpdateEmail');
-    if (upEmail) upEmail.style.display = 'none';
+    document.getElementById('authCurrentPassRow').style.display = 'none';
+    document.getElementById('authUpdateEmail').style.display = 'none';
     authPass.focus();
   });
 
+  authUpdatePasswordBtn?.addEventListener('click', async () => {
+    const newPassword = authPass.value;
+    const confirm = authPassConfirm.value;
+    if (!newPassword) { authHint.textContent = 'Please enter a new password.'; authPass.focus(); return; }
+    if (newPassword !== confirm) { authHint.textContent = 'Passwords do not match.'; authPassConfirm.focus(); return; }
+    authHint.textContent = 'Updating password…';
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    if (error) {
+      authHint.textContent = `Error: ${error.message}`;
+    } else {
+      authHint.textContent = 'Password updated successfully!';
+      authPass.value = '';
+      authPassConfirm.value = '';
+      setTimeout(() => closeAuthModal(), 1500);
+    }
+  });
+
+  // ── Email change (logged-in) ─────────────────────────────────────────────
   authEmail?.addEventListener('input', () => {
     if (!currentUser) return;
-    const current = currentUser.email;
     const val = authEmail.value.trim();
-
-    if (val !== current) {
-      const cpr = document.getElementById('authCurrentPassRow');
-      if (cpr) cpr.style.display = '';
-      const upEmail = document.getElementById('authUpdateEmail');
-      if (upEmail) upEmail.style.display = '';
-      const pr = document.getElementById('authPasswordRow');
-      if (pr) pr.style.display = 'none';
-      const pcr = document.getElementById('authPasswordConfirmRow');
-      if (pcr) pcr.style.display = 'none';
-      const upPass = document.getElementById('authUpdatePassword');
-      if (upPass) upPass.style.display = 'none';
-      const tpb = document.getElementById('authTogglePasswordBtn');
-      if (tpb) tpb.style.display = 'none';
+    if (val !== currentUser.email) {
+      document.getElementById('authCurrentPassRow').style.display = '';
+      document.getElementById('authUpdateEmail').style.display = '';
+      document.getElementById('authPasswordRow').style.display = 'none';
+      document.getElementById('authPasswordConfirmRow').style.display = 'none';
+      document.getElementById('authUpdatePassword').style.display = 'none';
+      document.getElementById('authTogglePasswordBtn').style.display = 'none';
     } else {
-      const cpr = document.getElementById('authCurrentPassRow');
-      if (cpr) cpr.style.display = 'none';
-      const upEmail = document.getElementById('authUpdateEmail');
-      if (upEmail) upEmail.style.display = 'none';
-      const tpb = document.getElementById('authTogglePasswordBtn');
-      if (tpb) tpb.style.display = '';
+      document.getElementById('authCurrentPassRow').style.display = 'none';
+      document.getElementById('authUpdateEmail').style.display = 'none';
+      document.getElementById('authTogglePasswordBtn').style.display = '';
     }
   });
 
   authUpdateEmailBtn?.addEventListener('click', async () => {
     const newEmail = authEmail.value.trim();
     const password = authCurrentPass.value;
-
-    if (!password) {
-      authHint.textContent = 'Please enter your current password.';
-      authCurrentPass.focus();
-      return;
-    }
-
-    authHint.textContent = 'Verifying...';
-    const { error: loginErr } = await supabase.auth.signInWithPassword({
-      email: currentUser.email,
-      password: password
-    });
-
-    if (loginErr) {
-      authHint.textContent = 'Incorrect password.';
-      return;
-    }
-
-    authHint.textContent = 'Updating email...';
-    const { error } = await supabase.auth.updateUser(
-      { email: newEmail },
-      { emailRedirectTo: window.location.href }
-    );
-
+    if (!password) { authHint.textContent = 'Please enter your current password.'; authCurrentPass.focus(); return; }
+    authHint.textContent = 'Verifying…';
+    const { error: loginErr } = await supabase.auth.signInWithPassword({ email: currentUser.email, password });
+    if (loginErr) { authHint.textContent = 'Incorrect password.'; return; }
+    authHint.textContent = 'Updating email…';
+    const { error } = await supabase.auth.updateUser({ email: newEmail }, { emailRedirectTo: window.location.href });
     if (error) {
-      authHint.textContent = `Error: ${error.message} `;
+      authHint.textContent = `Error: ${error.message}`;
     } else {
-      authHint.textContent = 'Please check BOTH your old and new email inboxes. You must click both verification links to complete the change.';
+      authHint.textContent = 'Please check BOTH your old and new email inboxes to complete the change.';
       authCurrentPass.value = '';
     }
   });
 
-  authLogout?.addEventListener('click', async () => {
-    logout();
-  });
+  authLogout?.addEventListener('click', async () => { logout(); });
 
-  // Initialization calls
   await initAuthSession();
-
 }
+
+// ── Email-first step helpers ─────────────────────────────────────────────────
+
+function resetToEmailStep() {
+  confirmedEmail = '';
+  const authContinueBtn = document.getElementById('authContinueBtn');
+  const authBackBtn = document.getElementById('authBackBtn');
+  const authForgotPassword = document.getElementById('authForgotPassword');
+  const authModalTitle = document.getElementById('authModalTitle');
+  const authModalSubtitle = document.getElementById('authModalSubtitle');
+
+  authModalTitle && (authModalTitle.textContent = 'Log in or sign up');
+  authModalSubtitle && (authModalSubtitle.textContent = 'Save your grooves to the cloud.');
+  authHint.textContent = '';
+
+  // Show email row, hide rest
+  const emailEl = document.getElementById('authEmail');
+  if (emailEl) { emailEl.readOnly = false; emailEl.style.opacity = ''; }
+  document.getElementById('authEmailRow').style.display = '';
+  document.getElementById('authPasswordRow').style.display = 'none';
+  document.getElementById('authPasswordConfirmRow').style.display = 'none';
+  document.getElementById('authTosRow').style.display = 'none';
+  if (authForgotPassword) authForgotPassword.style.display = 'none';
+  if (authBackBtn) authBackBtn.style.display = 'none';
+
+  // Buttons
+  if (authContinueBtn) { authContinueBtn.style.display = ''; authContinueBtn.classList.add('active'); }
+  if (authLogin) authLogin.style.display = 'none';
+  if (authRegister) authRegister.style.display = 'none';
+
+  authEmail?.focus();
+}
+
+function showLoginStep(email) {
+  const authContinueBtn = document.getElementById('authContinueBtn');
+  const authBackBtn = document.getElementById('authBackBtn');
+  const authForgotPassword = document.getElementById('authForgotPassword');
+  const authModalTitle = document.getElementById('authModalTitle');
+  const authModalSubtitle = document.getElementById('authModalSubtitle');
+
+  authModalTitle && (authModalTitle.textContent = 'Welcome back!');
+  authModalSubtitle && (authModalSubtitle.textContent = email);
+  authHint.textContent = '';
+
+  // Lock email field
+  if (authEmail) authEmail.readOnly = true;
+
+  document.getElementById('authEmailRow').style.display = 'none';
+  document.getElementById('authPasswordRow').style.display = '';
+  document.getElementById('authPasswordConfirmRow').style.display = 'none';
+  document.getElementById('authTosRow').style.display = 'none';
+  if (authForgotPassword) authForgotPassword.style.display = '';
+  if (authBackBtn) authBackBtn.style.display = '';
+
+  // Buttons
+  if (authContinueBtn) authContinueBtn.style.display = 'none';
+  if (authLogin) { authLogin.style.display = ''; authLogin.classList.add('active'); }
+  if (authRegister) authRegister.style.display = 'none';
+
+  authPass?.focus();
+}
+
+function showSignupStep(email) {
+  const authContinueBtn = document.getElementById('authContinueBtn');
+  const authBackBtn = document.getElementById('authBackBtn');
+  const authForgotPassword = document.getElementById('authForgotPassword');
+  const authModalTitle = document.getElementById('authModalTitle');
+  const authModalSubtitle = document.getElementById('authModalSubtitle');
+  const tosRow = document.getElementById('authTosRow');
+  const tosCheckbox = document.getElementById('authTosCheckbox');
+
+  authModalTitle && (authModalTitle.textContent = 'Create an account');
+  authModalSubtitle && (authModalSubtitle.textContent = email);
+  authHint.textContent = '';
+
+  // Lock email field
+  if (authEmail) authEmail.readOnly = true;
+
+  document.getElementById('authEmailRow').style.display = 'none';
+  document.getElementById('authPasswordRow').style.display = '';
+  document.getElementById('authPasswordConfirmRow').style.display = '';
+  if (tosRow) { tosRow.style.display = 'flex'; }
+  if (tosCheckbox) tosCheckbox.checked = false;
+  if (authForgotPassword) authForgotPassword.style.display = 'none';
+  if (authBackBtn) authBackBtn.style.display = '';
+
+  // Buttons
+  if (authContinueBtn) authContinueBtn.style.display = 'none';
+  if (authLogin) authLogin.style.display = 'none';
+  if (authRegister) { authRegister.style.display = ''; authRegister.classList.add('active'); }
+
+  authPass?.focus();
+}
+
