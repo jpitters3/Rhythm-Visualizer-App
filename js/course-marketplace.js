@@ -247,7 +247,7 @@ export async function activateCourse(courseId) {
 export async function unlockCourse(courseId, isPaid) {
   if (!currentUser) {
     await alert("Please sign in to unlock courses.");
-    // Maybe show auth modal?
+    // show auth modal
     return;
   }
 
@@ -267,16 +267,12 @@ export async function unlockCourse(courseId, isPaid) {
     const { error } = await supabase
       .from('user_courses')
       .insert([{ user_id: currentUser.id, course_id: courseId }]);
-
     if (error) throw error;
-
-    // Success! COURSE_UNLOCKED event will refresh the sidebar and select the new course.
-    // Success — directly refresh sidebar and select the course.
+    await alert("Course activated! Let's start learning.");
     closeMarketplace();
     await fetchCourses();
     await setActiveCourse(courseId);
     openSidebar();
-    Bus.emit(BUS_EVENT.COURSE_DATA_CHANGED); // notify any other listeners (e.g. glossary)
 
   } catch (err) {
     console.error("Unlock failed:", err);
