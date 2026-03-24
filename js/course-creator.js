@@ -25,10 +25,33 @@ export function initCourseCreator() {
     // Centralized Event Delegation
     list.addEventListener('click', handleCourseCreatorClick);
     list.addEventListener('change', handleCourseCreatorChange);
-    // Drag events need careful handling, might keep direct listeners in render or delegate
-    // Delegation for drag is tricky due to dragstart needing the element.
-    // We can attach drag listeners in render or use delegation if we are careful.
-    // Keeping render-attached drag listeners is fine for now as they are specific.
+
+    // Drag delegation — read indices from data attributes at event time
+    list.addEventListener('dragstart', (e) => {
+      const lessonEl = e.target.closest('.lesson-builder');
+      const sectionEl = e.target.closest('.section-builder');
+      if (lessonEl) {
+        e.stopPropagation();
+        courseDragStart(e, 'lesson', parseInt(lessonEl.dataset.sidx), parseInt(lessonEl.dataset.lidx));
+      } else if (sectionEl) {
+        courseDragStart(e, 'section', parseInt(sectionEl.dataset.sidx));
+      }
+    });
+    list.addEventListener('dragover', courseDragOver);
+    list.addEventListener('dragenter', courseDragEnter);
+    list.addEventListener('dragleave', courseDragLeave);
+    list.addEventListener('dragend', courseDragEnd);
+    list.addEventListener('drop', (e) => {
+      if (!dragSrcData) return;
+      const lessonEl = e.target.closest('.lesson-builder');
+      const sectionEl = e.target.closest('.section-builder');
+      if (dragSrcData.type === 'lesson' && lessonEl) {
+        e.stopPropagation();
+        courseDrop(e, 'lesson', parseInt(lessonEl.dataset.sidx), parseInt(lessonEl.dataset.lidx));
+      } else if (dragSrcData.type === 'section' && sectionEl) {
+        courseDrop(e, 'section', parseInt(sectionEl.dataset.sidx));
+      }
+    });
   }
 
   // Bind main buttons
@@ -70,11 +93,87 @@ function addLessonToSection(sectionIndex) {
   };
   currentCourseData.sections[sectionIndex].lessons.push(lesson);
 
-  // Auto-expand section and new lesson
+  const lIdx = currentCourseData.sections[sectionIndex].lessons.length - 1;
   expandedSections.add(sectionIndex);
-  expandedLessons.add(`${sectionIndex}-${currentCourseData.sections[sectionIndex].lessons.length - 1}`);
+  expandedLessons.add(`${sectionIndex}-${lIdx}`);
 
-  renderCourseStructure();
+  // If section is already in DOM, append the new lesson directly
+  const sectionEl = document.querySelector(`.section-builder[data-sidx="${sectionIndex}"]`);
+  if (sectionEl) {
+    const lessonsContainer = sectionEl.querySelector('.lessons-container');
+    // Make sure section is expanded
+    if (!lessonsContainer.classList.contains('active')) {
+      lessonsContainer.classList.add('active');
+      sectionEl.querySelector('[data-action="toggleSection"]').textContent = '▼';
+    }
+    // Re-index existing lessons (their lidx data attributes stay valid since we're appending)
+    lessonsContainer.appendChild(renderLessonEl(sectionIndex, lIdx));
+    // Ensure Add Lesson button exists
+    if (!sectionEl.querySelector('.add-lesson-btn')) {
+      const btn = document.createElement('button');
+      btn.className = 'add-lesson-btn';
+      btn.dataset.action = 'addLesson';
+      btn.dataset.sidx = sectionIndex;
+      btn.textContent = '+ Add Lesson';
+      sectionEl.appendChild(btn);
+    }
+  } else {
+    renderCourseStructure();
+  }
+}
+
+// Build a single lesson DOM element
+function renderLessonEl(sIdx, lIdx) {
+  const lesson = currentCourseData.sections[sIdx].lessons[lIdx];
+  const isLessonExpanded = expandedLessons.has(`${sIdx}-${lIdx}`);
+
+  const patternOptions = availablePatterns.map(name =>
+    `<option value="${name}" ${lesson.pattern_name === name ? 'selected' : ''}>${name}</option>`
+  ).join('');
+
+  const lessonEl = document.createElement('div');
+  lessonEl.className = 'lesson-builder';
+  lessonEl.setAttribute('draggable', 'true');
+  lessonEl.dataset.sidx = sIdx;
+  lessonEl.dataset.lidx = lIdx;
+
+  lessonEl.innerHTML = `
+    <div class="lesson-header-bar" data-action="toggleLessonHeader" data-sidx="${sIdx}" data-lidx="${lIdx}">
+      <div class="lesson-drag-handle" title="Drag to reorder lesson">::</div>
+      <button class="toggle-btn lesson-toggle-btn" data-action="toggleLesson" data-sidx="${sIdx}" data-lidx="${lIdx}">
+        ${isLessonExpanded ? '▼' : '▶'}
+      </button>
+      <input type="text" class="lesson-title-input" value="${lesson.title}" placeholder="Lesson Title" data-field="lesson-title" data-sidx="${sIdx}" data-lidx="${lIdx}">
+      <button class="icon-btn remove-btn-small" data-action="removeLesson" data-sidx="${sIdx}" data-lidx="${lIdx}" title="Remove Lesson">&times;</button>
+    </div>
+    <div class="lesson-content ${isLessonExpanded ? 'active' : ''}">
+      <textarea placeholder="Description" data-field="lesson-desc" data-sidx="${sIdx}" data-lidx="${lIdx}">${lesson.description}</textarea>
+      <div class="input-with-icon">
+        <span>📺</span>
+        <input type="text" value="${lesson.video_url}" placeholder="YouTube URL or Uploaded Video" data-field="lesson-video" data-sidx="${sIdx}" data-lidx="${lIdx}">
+        <button class="small-upload-btn" data-action="uploadVideo" data-sidx="${sIdx}" data-lidx="${lIdx}" title="Upload Video File">📤</button>
+      </div>
+      <div class="lesson-meta-box">
+        <div class="meta-label">ASSOCIATED PATTERN</div>
+        <div class="pattern-control-row">
+          <select class="pattern-select" data-field="lesson-pattern" data-sidx="${sIdx}" data-lidx="${lIdx}">
+            <option value="">-- Capture Current Grid --</option>
+            ${patternOptions}
+          </select>
+          <button class="small-capture-btn" data-action="capturePattern" data-sidx="${sIdx}" data-lidx="${lIdx}" title="Save current grid as pattern">📸</button>
+        </div>
+      </div>
+    </div>
+  `;
+  return lessonEl;
+}
+
+// Fill a lessons container for a given section
+function renderLessonsForSection(sIdx, container) {
+  container.innerHTML = '';
+  currentCourseData.sections[sIdx].lessons.forEach((_, lIdx) => {
+    container.appendChild(renderLessonEl(sIdx, lIdx));
+  });
 }
 
 // --- Event Delegation Handlers ---
@@ -122,8 +221,15 @@ function handleCourseCreatorChange(e) {
   if (field === 'section-title') {
     currentCourseData.sections[sIdx].title = target.value;
   } else if (field === 'section-published') {
-    currentCourseData.sections[sIdx].is_published = target.checked;
-    renderCourseStructure();
+    const isPublished = target.checked;
+    currentCourseData.sections[sIdx].is_published = isPublished;
+    const sectionEl = document.querySelector(`.section-builder[data-sidx="${sIdx}"]`);
+    if (sectionEl) {
+      sectionEl.querySelector(`label[for="sec-pub-${sIdx}"]`).textContent = isPublished ? 'Published' : 'Draft';
+      sectionEl.querySelector(`label[for="sec-pub-${sIdx}"]`).style.color = isPublished ? '#2ecc71' : '#f39c12';
+      sectionEl.querySelector('.section-header-bar').style.borderBottom = isPublished ? '' : '2px dashed #f39c12';
+      sectionEl.querySelector('.lessons-container').style.opacity = isPublished ? '' : '0.8';
+    }
   } else if (field === 'lesson-title') {
     currentCourseData.sections[sIdx].lessons[lIdx].title = target.value;
   } else if (field === 'lesson-desc') {
@@ -210,19 +316,50 @@ function addSection() {
 }
 
 function toggleSection(sIdx) {
+  const sectionEl = document.querySelector(`.section-builder[data-sidx="${sIdx}"]`);
+  if (!sectionEl) return;
+
+  const lessonsContainer = sectionEl.querySelector('.lessons-container');
+  const toggleBtn = sectionEl.querySelector('[data-action="toggleSection"]');
+
   if (expandedSections.has(sIdx)) {
     expandedSections.delete(sIdx);
+    lessonsContainer.classList.remove('active');
+    toggleBtn.textContent = '▶';
+    sectionEl.querySelector('.add-lesson-btn')?.remove();
   } else {
     expandedSections.add(sIdx);
+    renderLessonsForSection(sIdx, lessonsContainer);
+    lessonsContainer.classList.add('active');
+    toggleBtn.textContent = '▼';
+    if (!sectionEl.querySelector('.add-lesson-btn')) {
+      const btn = document.createElement('button');
+      btn.className = 'add-lesson-btn';
+      btn.dataset.action = 'addLesson';
+      btn.dataset.sidx = sIdx;
+      btn.textContent = '+ Add Lesson';
+      sectionEl.appendChild(btn);
+    }
   }
-  renderCourseStructure();
 }
 
 function toggleLesson(sIdx, lIdx) {
   const key = `${sIdx}-${lIdx}`;
-  if (expandedLessons.has(key)) expandedLessons.delete(key);
-  else expandedLessons.add(key);
-  renderCourseStructure();
+  const lessonEl = document.querySelector(`.lesson-builder[data-sidx="${sIdx}"][data-lidx="${lIdx}"]`);
+  if (!lessonEl) return;
+
+  const content = lessonEl.querySelector('.lesson-content');
+  const toggleBtn = lessonEl.querySelector('.lesson-toggle-btn');
+
+  if (expandedLessons.has(key)) {
+    expandedLessons.delete(key);
+    content.classList.remove('active');
+    toggleBtn.textContent = '▶';
+  } else {
+    expandedLessons.add(key);
+    content.classList.add('active');
+    toggleBtn.textContent = '▼';
+  }
 }
 
 // --- DRAG AND DROP HANDLERS ---
@@ -330,7 +467,7 @@ function courseDrop(e, type, targetSIdx, targetLIdx = null) {
 }
 
 
-// Function to render the UI for the course builder
+// Function to render the UI for the course builder (structural render only)
 function renderCourseStructure() {
   const container = document.getElementById('courseStructure');
   if (!container) return;
@@ -344,105 +481,31 @@ function renderCourseStructure() {
     sectionEl.setAttribute('draggable', 'true');
     sectionEl.dataset.sidx = sIdx;
 
-    // Drag Events (Keep specific handlers for now to ensure correct data transfer)
-    sectionEl.addEventListener('dragstart', (e) => courseDragStart(e, 'section', sIdx));
-    sectionEl.addEventListener('dragover', courseDragOver);
-    sectionEl.addEventListener('dragenter', courseDragEnter);
-    sectionEl.addEventListener('dragleave', courseDragLeave);
-    sectionEl.addEventListener('drop', (e) => courseDrop(e, 'section', sIdx));
-    sectionEl.addEventListener('dragend', courseDragEnd);
-
-
     sectionEl.innerHTML = `
       <div class="section-header-bar" style="${!section.is_published ? 'border-bottom: 2px dashed #f39c12;' : ''}">
-          <div class="drag-handle" title="Drag to reorder section">☰</div>
-          <button class="toggle-btn" data-action="toggleSection" data-sidx="${sIdx}">
-             ${isExpanded ? '▼' : '▶'}
-          </button>
-          <div class="section-title-input">
-             <input type="text" value="${section.title}" data-field="section-title" data-sidx="${sIdx}" placeholder="Section Title">
-          </div>
-          
-          <div class="section-publish-toggle" style="margin-right: 10px; display: flex; align-items: center; gap: 5px;">
-             <input type="checkbox" id="sec-pub-${sIdx}" 
-                ${section.is_published ? 'checked' : ''} 
-                data-field="section-published" data-sidx="${sIdx}">
-             <label for="sec-pub-${sIdx}" style="font-size: 0.8rem; cursor: pointer; color: ${section.is_published ? '#2ecc71' : '#f39c12'};">
-                ${section.is_published ? 'Published' : 'Draft'}
-             </label>
-          </div>
-
-          <button class="icon-btn remove-section-btn" data-action="removeSection" data-sidx="${sIdx}" title="Remove Section">&times;</button>
+        <div class="drag-handle" title="Drag to reorder section">☰</div>
+        <button class="toggle-btn" data-action="toggleSection" data-sidx="${sIdx}">
+          ${isExpanded ? '▼' : '▶'}
+        </button>
+        <div class="section-title-input">
+          <input type="text" value="${section.title}" data-field="section-title" data-sidx="${sIdx}" placeholder="Section Title">
+        </div>
+        <div class="section-publish-toggle" style="margin-right: 10px; display: flex; align-items: center; gap: 5px;">
+          <input type="checkbox" id="sec-pub-${sIdx}"
+            ${section.is_published ? 'checked' : ''}
+            data-field="section-published" data-sidx="${sIdx}">
+          <label for="sec-pub-${sIdx}" style="font-size: 0.8rem; cursor: pointer; color: ${section.is_published ? '#2ecc71' : '#f39c12'};">
+            ${section.is_published ? 'Published' : 'Draft'}
+          </label>
+        </div>
+        <button class="icon-btn remove-section-btn" data-action="removeSection" data-sidx="${sIdx}" title="Remove Section">&times;</button>
       </div>
-      
       <div class="lessons-container ${isExpanded ? 'active' : ''}" id="section-${sIdx}-lessons" style="${!section.is_published ? 'opacity: 0.8;' : ''}"></div>
-      
       ${isExpanded ? `<button class="add-lesson-btn" data-action="addLesson" data-sidx="${sIdx}">+ Add Lesson</button>` : ''}
     `;
 
-    const lessonsContainer = sectionEl.querySelector('.lessons-container');
-
     if (isExpanded) {
-      section.lessons.forEach((lesson, lIdx) => {
-        const isLessonExpanded = expandedLessons.has(`${sIdx}-${lIdx}`);
-
-        // Generate Pattern Options
-        const patternOptions = availablePatterns.map(name =>
-          `<option value="${name}" ${lesson.pattern_name === name ? 'selected' : ''}>${name}</option>`
-        ).join('');
-
-        const lessonEl = document.createElement('div');
-        lessonEl.className = 'lesson-builder';
-        lessonEl.setAttribute('draggable', 'true');
-        lessonEl.dataset.sidx = sIdx;
-        lessonEl.dataset.lidx = lIdx;
-
-        // Drag Events (Lesson)
-        lessonEl.addEventListener('dragstart', (e) => {
-          e.stopPropagation(); // Don't drag section!
-          courseDragStart(e, 'lesson', sIdx, lIdx);
-        });
-        lessonEl.addEventListener('dragover', courseDragOver);
-        lessonEl.addEventListener('dragenter', courseDragEnter);
-        lessonEl.addEventListener('dragleave', courseDragLeave);
-        lessonEl.addEventListener('drop', (e) => {
-          e.stopPropagation();
-          courseDrop(e, 'lesson', sIdx, lIdx);
-        });
-        lessonEl.addEventListener('dragend', courseDragEnd);
-
-        lessonEl.innerHTML = `
-            <div class="lesson-header-bar" data-action="toggleLessonHeader" data-sidx="${sIdx}" data-lidx="${lIdx}">
-                <div class="lesson-drag-handle" title="Drag to reorder lesson">::</div>
-                <button class="toggle-btn lesson-toggle-btn" data-action="toggleLesson" data-sidx="${sIdx}" data-lidx="${lIdx}">
-                     ${isLessonExpanded ? '▼' : '▶'}
-                </button>
-                <input type="text" class="lesson-title-input" value="${lesson.title}" placeholder="Lesson Title" data-field="lesson-title" data-sidx="${sIdx}" data-lidx="${lIdx}">
-                <button class="icon-btn remove-btn-small" data-action="removeLesson" data-sidx="${sIdx}" data-lidx="${lIdx}" title="Remove Lesson">&times;</button>
-            </div>
-
-            <div class="lesson-content ${isLessonExpanded ? 'active' : ''}">
-                <textarea placeholder="Description" data-field="lesson-desc" data-sidx="${sIdx}" data-lidx="${lIdx}">${lesson.description}</textarea>
-                <div class="input-with-icon">
-                    <span>📺</span>
-                    <input type="text" value="${lesson.video_url}" placeholder="YouTube URL or Uploaded Video" data-field="lesson-video" data-sidx="${sIdx}" data-lidx="${lIdx}">
-                    <button class="small-upload-btn" data-action="uploadVideo" data-sidx="${sIdx}" data-lidx="${lIdx}" title="Upload Video File">📤</button>
-                </div>
-                
-                <div class="lesson-meta-box">
-                  <div class="meta-label">ASSOCIATED PATTERN</div>
-                  <div class="pattern-control-row">
-                    <select class="pattern-select" data-field="lesson-pattern" data-sidx="${sIdx}" data-lidx="${lIdx}">
-                      <option value="">-- Capture Current Grid --</option>
-                      ${patternOptions}
-                    </select>
-                    <button class="small-capture-btn" data-action="capturePattern" data-sidx="${sIdx}" data-lidx="${lIdx}" title="Save current grid as pattern">📸</button>
-                  </div>
-                </div>
-            </div>
-          `;
-        lessonsContainer.appendChild(lessonEl);
-      });
+      renderLessonsForSection(sIdx, sectionEl.querySelector('.lessons-container'));
     }
 
     container.appendChild(sectionEl);
@@ -500,18 +563,23 @@ async function triggerLessonVideoUpload(sIdx, lIdx) {
       const { data: publicData } = supabase.storage.from('lesson-videos').getPublicUrl(fileName); // Updated
       const publicUrl = publicData.publicUrl;
 
-      // Update state
       currentCourseData.sections[sIdx].lessons[lIdx].video_url = publicUrl;
 
-      // Update UI
-      renderCourseStructure(); // Safest to just re-render
+      const videoInput = document.querySelector(
+        `.lesson-builder[data-sidx="${sIdx}"][data-lidx="${lIdx}"] [data-field="lesson-video"]`
+      );
+      if (videoInput) videoInput.value = publicUrl;
 
       console.log("Upload successful:", publicUrl);
 
     } catch (err) {
       console.error("Upload failed:", err);
       await alert("Upload failed: " + err.message);
-      renderCourseStructure(); // Revert
+      // Clear "Uploading..." text from input
+      const videoInput = document.querySelector(
+        `.lesson-builder[data-sidx="${sIdx}"][data-lidx="${lIdx}"] [data-field="lesson-video"]`
+      );
+      if (videoInput) videoInput.value = currentCourseData.sections[sIdx].lessons[lIdx].video_url || "";
     }
   };
 
@@ -526,10 +594,10 @@ async function removeSection(sIdx) {
 }
 
 async function capturePatternForLesson(sIdx, lIdx) {
-  // Manual capture fallback
   currentCourseData.sections[sIdx].lessons[lIdx].pattern_json = serializePattern();
-  currentCourseData.sections[sIdx].lessons[lIdx].pattern_name = ""; // Clear name since it's manual
-  renderCourseStructure(); // Re-render to show "Capture Current Grid" selected
+  currentCourseData.sections[sIdx].lessons[lIdx].pattern_name = "";
+  const sel = document.querySelector(`.lesson-builder[data-sidx="${sIdx}"][data-lidx="${lIdx}"] .pattern-select`);
+  if (sel) sel.value = "";
   await alert("Lesson pattern updated to current grid state!");
 }
 
