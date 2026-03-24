@@ -314,7 +314,7 @@
 .measures {
   max-width: 900px;
   flex: 1;
-  min-height: 0;
+  min-height: 120px;
   padding: 0 15px;
   overflow-y: auto;
 

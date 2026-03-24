@@ -47,6 +47,12 @@
 </head>
 
 <body id="body">
+  <script>
+    (function () {
+      if (localStorage.getItem('theme') === 'dark') document.body.classList.add('dark');
+      if (localStorage.getItem('handSplit') === 'on') document.body.classList.add('handSplit');
+    })();
+  </script>
   <template id="transport-template">
     <div class="transport-group">
       <button class="t-play-btn" title="Play/Stop">►</button>
@@ -77,7 +83,7 @@
   <div id="gridContainer" class="container">
     <div class="grid-container top-row">
       <div class="grid-child logo">
-        <a href="."><img class="logo-img" src="./assets/images/logo.png" /></a>
+        <a href="."><img class="logo-img" src="./assets/images/logo.png" width="122" height="130" /></a>
       </div>
 
       <div id="mobileControlsWrapper">
