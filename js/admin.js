@@ -84,7 +84,7 @@ function setupModals() {
   if (patternOrgModal) {
     patternOrgModal.querySelector('.close-modal-btn').onclick = () => {
       stopPatternPreview(); // Stop playback when closing modal
-      patternOrgModal.style.display = 'none';
+      patternOrgModal.classList.remove('open');
     }
   }
 
@@ -116,7 +116,7 @@ async function openAdminMenu() {
 async function openPatternOrgModal() {
   if (!patternOrgModal) return;
 
-  patternOrgModal.style.display = 'flex';
+  patternOrgModal.classList.add('open');
   const listContainer = document.getElementById('adminPatternList');
   listContainer.innerHTML = '<div style="padding:20px; text-align:center;">Loading patterns...</div>';
 

@@ -89,7 +89,6 @@ function switchTab(tabId) {
 // --- ACTIONS ---
 async function openPotwModal() {
   if (!modal) return;
-  modal.style.display = 'flex';
   modal.classList.add('open');
   modal.setAttribute('aria-hidden', 'false');
 
@@ -108,7 +107,6 @@ async function openPotwModal() {
 
 function closePotwModal() {
   if (!modal) return;
-  modal.style.display = 'none';
   modal.classList.remove('open');
   modal.setAttribute('aria-hidden', 'true');
   resetForm();

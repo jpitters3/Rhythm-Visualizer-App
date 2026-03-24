@@ -100,7 +100,6 @@ export function initGames() {
 
 function openGameSelection() {
   if (gameSelectionModal) {
-    gameSelectionModal.style.display = 'flex';
     gameSelectionModal.classList.add('open');
   }
 }
@@ -108,7 +107,6 @@ function openGameSelection() {
 function closeGameSelection() {
   if (gameSelectionModal) {
     gameSelectionModal.classList.remove('open');
-    gameSelectionModal.style.display = 'none';
   }
 }
 /**

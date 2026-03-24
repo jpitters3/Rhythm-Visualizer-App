@@ -2,16 +2,36 @@
 .modal-overlay {
   position: fixed;
   inset: 0;
-  display: none;
+  display: flex;
   align-items: center;
   justify-content: center;
   padding: 18px;
   background: rgba(0, 0, 0, 0.45);
   z-index: 10000;
+
+  /* GPU-composited fade — no layout reflow on open/close */
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.18s ease, visibility 0.18s ease;
 }
 
 .modal-overlay.open {
-  display: flex;
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+/* Subtle scale-in on inner modal cards */
+.modal-overlay .modal,
+.modal-overlay .course-modal {
+  transform: scale(0.97) translateY(6px);
+  transition: transform 0.18s ease;
+}
+
+.modal-overlay.open .modal,
+.modal-overlay.open .course-modal {
+  transform: scale(1) translateY(0);
 }
 
 .modal {

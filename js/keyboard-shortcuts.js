@@ -28,7 +28,7 @@ export function initShortcuts() {
 
       // Guided Calibration
       const guided = document.getElementById('guidedCalModal');
-      if (guided && guided.style.display !== 'none') {
+      if (guided && guided.classList.contains('open')) {
         document.getElementById('closeGuidedBtn')?.click();
         return;
       }

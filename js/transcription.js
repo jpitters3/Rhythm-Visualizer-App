@@ -1246,7 +1246,7 @@ function finishGuidedCalibration() {
         // If perfect or user declines restart, enable review mode
         const modal = document.getElementById('guidedCalModal');
         if (modal) {
-            modal.style.display = 'none';
+            modal.classList.remove('open');
             modal.setAttribute('aria-hidden', true);
         }
 
@@ -1415,7 +1415,7 @@ export function initTranscription() {
         lastActiveElement = document.activeElement;
 
         const modal = document.getElementById('guidedCalModal');
-        modal.style.display = 'flex';
+        modal.classList.add('open');
         modal.setAttribute('aria-hidden', false);
 
         const menu = document.getElementById('micDropdownMenu');
@@ -1439,7 +1439,7 @@ export function initTranscription() {
     const closeGuidedBtnLocal = document.getElementById('closeGuidedBtn');
     closeGuidedBtnLocal?.addEventListener('click', () => {
         const modal = document.getElementById('guidedCalModal');
-        modal.style.display = 'none';
+        modal.classList.remove('open');
         isGuidedCalibrating = false;
         modal.setAttribute('aria-hidden', true);
 
@@ -1580,7 +1580,7 @@ function openAdvancedCalibrationModal() {
         });
     });
 
-    modal.style.display = 'flex';
+    modal.classList.add('open');
     modal.setAttribute('aria-hidden', 'false');
 
     // Close Mic dropdown
@@ -1687,7 +1687,7 @@ async function resetAdvancedCalibration() {
 function closeAdvancedCalibrationModal() {
     const modal = document.getElementById('advancedCalModal');
     if (modal) {
-        modal.style.display = 'none';
+        modal.classList.remove('open');
         modal.setAttribute('aria-hidden', 'true');
     }
 }
