@@ -326,7 +326,7 @@
   /* Removed transition to prevent lag on strike */
 }
 
-.modal-actions {
+#guidedCalModal .modal-actions {
   margin-top: 30px;
   display: flex;
   justify-content: center;

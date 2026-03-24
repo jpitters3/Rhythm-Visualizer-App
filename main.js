@@ -6,7 +6,7 @@ import './css/grid-and-labels.css';
 import './css/hand-icons.css';
 import './css/legend.css';
 import './css/dual-grid.css';
-import './css/groove-modal.css';
+import './css/modal.css';
 import './css/song-library.css';
 import './css/transport-controls.css';
 import './css/presentation-mode.css';

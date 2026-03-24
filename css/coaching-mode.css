@@ -23,11 +23,6 @@
   pointer-events: none;
 }
 
-#calOptimizationModal .modal-title {
-  font-size: 24px;
-  font-weight: 800;
-  letter-spacing: -0.5px;
-}
 
 #calOptimizationModal .primary-btn.active {
   background: linear-gradient(135deg, var(--accent-glow), #4f46e5);
