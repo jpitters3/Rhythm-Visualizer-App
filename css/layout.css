@@ -90,6 +90,7 @@ div.grid-container.top-row {
   /* Adjust Logo */
   div.logo img.logo-img {
     height: 80px;
+    width: auto;
     position: absolute;
     top: -10px;
     margin-bottom: 60px;

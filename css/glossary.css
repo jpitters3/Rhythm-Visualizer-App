@@ -9,12 +9,13 @@
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  /* backdrop-filter removed: full-viewport blur on every open frame kills performance on complex pages -> macOS CPU Fix */
   z-index: 10000;
   justify-content: center;
   align-items: center;
-  transition: all 0.3s ease;
+  /* Use specific properties instead of 'all' — avoids tracking every animatable property */
+  transition: opacity 0.25s ease, visibility 0.25s ease;
+  will-change: opacity;
 }
 
 .modal-overlay.open {

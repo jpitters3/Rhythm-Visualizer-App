@@ -11,6 +11,7 @@ import { dbListPatternNames, dbLoadPatternByName, dbSavePattern, applyPattern } 
 import { start, stop } from './noteplayer.js';
 import { GridContext } from './grid-context.js';
 import { initCourseCopier, openCourseCopier } from './course-copier.js';
+import { initAssignments, openAssignments } from './assignments.js';
 
 let isAdmin = false;
 let patternOrgModal = null;
@@ -38,6 +39,7 @@ export async function initAdmin() {
     injectAdminButton();
     setupModals();
     initCourseCopier();
+    initAssignments();
   }
 }
 
@@ -60,6 +62,16 @@ function injectAdminButton() {
 
   // Insert after Account Settings
   dropdown.insertBefore(btn, accountSettingsBtn.nextSibling);
+
+  // Assignments button
+  if (!document.getElementById('assignmentsBtn')) {
+    const assignBtn = document.createElement('button');
+    assignBtn.id = 'assignmentsBtn';
+    assignBtn.innerHTML = '📋 Assignments';
+    assignBtn.style.marginTop = '4px';
+    assignBtn.onclick = openAssignments;
+    dropdown.insertBefore(assignBtn, btn.nextSibling);
+  }
 
   // Also enable other admin-only buttons in the dropdown if they exist
   const adminElements = document.querySelectorAll('.admin-only');

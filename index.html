@@ -37,6 +37,7 @@
   <link rel="stylesheet" href="./css/pattern-of-the-week.css">
   <link rel="stylesheet" href="./css/glossary.css">
   <link rel="stylesheet" href="./css/monetization.css">
+  <link rel="stylesheet" href="./css/assignments.css">
 
   <!-- PWA & Mobile Optimization -->
   <link rel="manifest" href="./manifest.json">
@@ -2046,6 +2047,115 @@
         <button id="confirmCancelBtn" class="secondary-btn">Cancel</button>
         <button id="confirmOkBtn" class="primary-btn active">OK</button>
       </div>
+    </div>
+  </div>
+
+  <!-- Assignments Manager Modal -->
+  <div id="assignmentsModal" class="modal-overlay" aria-hidden="true">
+    <div class="modal assignments-modal">
+
+      <div class="modal-header">
+        <h2 class="modal-title">Assignments</h2>
+        <button id="closeAssignmentsModal" class="close-btn" aria-label="Close">&times;</button>
+      </div>
+
+      <div class="asgn-tab-bar">
+        <button class="asgn-tab-btn active" data-tab="assignments">Assignments</button>
+        <button class="asgn-tab-btn" data-tab="submissions">Submissions</button>
+      </div>
+
+      <!-- Tab 1: Assignments -->
+      <div id="asgnTab-assignments" class="asgn-tab-panel">
+        <div class="asgn-panel-toolbar">
+          <button id="asgnNewBtn" class="primary-btn">+ New Assignment</button>
+        </div>
+        <div id="asgnList" class="asgn-list"></div>
+
+        <!-- Inline editor -->
+        <div id="asgnEditor" class="asgn-editor" style="display:none;">
+          <div class="asgn-editor-header">
+            <h3 id="asgnEditorTitle">New Assignment</h3>
+            <button id="asgnEditorCloseBtn" class="close-btn" aria-label="Close editor">&times;</button>
+          </div>
+
+          <div class="asgn-field-group">
+            <label class="asgn-label" for="asgnTitle">Title</label>
+            <input type="text" id="asgnTitle" placeholder="e.g., Week 3 Practice" />
+          </div>
+          <div class="asgn-field-group">
+            <label class="asgn-label" for="asgnDesc">Description</label>
+            <textarea id="asgnDesc" rows="3" placeholder="Instructions for the student…"></textarea>
+          </div>
+          <div class="asgn-field-row">
+            <div class="asgn-field-group">
+              <label class="asgn-label" for="asgnCourseSelect">Link to Course (optional)</label>
+              <select id="asgnCourseSelect" class="asgn-select">
+                <option value="">— None —</option>
+              </select>
+            </div>
+            <div class="asgn-field-group">
+              <label class="asgn-label" for="asgnDueDate">Default Due Date (optional)</label>
+              <input type="date" id="asgnDueDate" class="asgn-date-input" />
+            </div>
+          </div>
+          <div class="asgn-field-group asgn-toggle-row">
+            <input type="checkbox" id="asgnPublished" class="asgn-toggle" />
+            <label class="asgn-label" for="asgnPublished" style="margin:0;">Published</label>
+            <span class="asgn-toggle-hint">Students can only see published assignments.</span>
+          </div>
+
+          <div class="asgn-section-heading">Submission Items</div>
+          <div id="asgnItemsList" class="asgn-items-list"></div>
+          <div class="asgn-add-item-row">
+            <select id="asgnAddItemType" class="asgn-select asgn-add-type-select">
+              <option value="">— Add item type —</option>
+              <option value="mark_complete">✅ Mark Complete</option>
+              <option value="quiz">📝 Quiz</option>
+              <option value="audio">🎙️ Audio Recording</option>
+              <option value="video">🎥 Video Upload</option>
+              <option value="link">🔗 URL / Link</option>
+            </select>
+            <button id="asgnAddItemBtn" class="secondary-btn">+ Add Item</button>
+          </div>
+
+          <div class="asgn-editor-footer">
+            <button id="asgnDeleteBtn" class="asgn-danger-btn" style="display:none;">Delete Assignment</button>
+            <span id="asgnSaveStatus" class="asgn-save-status">Saved!</span>
+            <button id="asgnSaveBtn" class="primary-btn">Save Assignment</button>
+          </div>
+
+          <!-- Assign to Students (shown after save) -->
+          <div id="asgnStudentSection" class="asgn-student-section" style="display:none;">
+            <div class="asgn-section-heading">Assign to Students</div>
+            <div id="asgnStudentList" class="asgn-student-list"></div>
+            <div class="asgn-student-footer">
+              <button id="asgnAssignBtn" class="primary-btn">Assign Selected</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab 2: Submissions -->
+      <div id="asgnTab-submissions" class="asgn-tab-panel" style="display:none;">
+        <div id="asgnSubmissionList" class="asgn-submission-list"></div>
+
+        <!-- Review panel -->
+        <div id="asgnReviewPanel" class="asgn-review-panel" style="display:none;">
+          <div class="asgn-editor-header">
+            <h3 id="asgnReviewTitle">Review Submission</h3>
+            <button id="asgnReviewCloseBtn" class="close-btn" aria-label="Close review">&times;</button>
+          </div>
+          <div id="asgnReviewBody" class="asgn-review-body"></div>
+          <div class="asgn-field-group">
+            <label class="asgn-label" for="asgnFeedback">Feedback for student (optional)</label>
+            <textarea id="asgnFeedback" rows="3" placeholder="Leave a note for the student…"></textarea>
+          </div>
+          <div class="asgn-editor-footer">
+            <button id="asgnMarkReviewedBtn" class="primary-btn">Mark Reviewed</button>
+          </div>
+        </div>
+      </div>
+
     </div>
   </div>
 

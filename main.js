@@ -30,6 +30,7 @@ import './css/games.css';
 import './css/calibration.css';
 import './css/compose-wizard.css';
 import './css/glossary.css';
+import './css/assignments.css';
 
 // Import JS (Ordered Dependencies)
 // Using raw imports for side-effect scripts that populate 'window'
@@ -84,3 +85,4 @@ import './js/song-library.js';
 import './js/games.js';
 import './css/admin.css'; // Admin Styles
 import './js/admin.js';   // Admin Logic
+import './js/assignments.js';
