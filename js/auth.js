@@ -2,6 +2,7 @@ import { supabase } from './supabase-client.js';
 import { Bus, BUS_EVENT } from './bus.js';
 import { currentUser, setCurrentUser, isAdminUser } from './state.js';
 import { loadCurrentProfile } from './profile.js';
+import { Modal } from './modal.js';
 
 export async function isAuthed() {
   if (typeof supabase === 'undefined' || !supabase.auth) return false;
@@ -32,6 +33,7 @@ export function updateAdminUI() {
 // Elements (Globals previously, now local resolution if possible, or assume global ID access)
 // Elements (Globals previously, now local resolution if possible, or assume global ID access)
 let authModal = null;
+let authPanel = null;
 let authEmail = null;
 let authPass = null;
 let authHint = null;
@@ -52,9 +54,8 @@ let confirmedEmail = '';
 
 // Auth modal
 export function openAuthModal() {
-  if (!authModal) return;
-  authModal.classList.add('open');
-  authModal.setAttribute('aria-hidden', 'false');
+  if (!authPanel) return;
+  authPanel.open();
 
   if (currentUser) {
     // PRE-FILL if signed in
@@ -89,9 +90,7 @@ export function openAuthModal() {
 }
 
 export function closeAuthModal() {
-  if (!authModal) return;
-  authModal.classList.remove('open');
-  authModal.setAttribute('aria-hidden', 'true');
+  authPanel?.close();
 }
 
 // Dropdown
@@ -271,6 +270,7 @@ export async function initAuthSession() {
 export async function initAuth() {
   // Elements
   authModal = document.getElementById('authModal');
+  authPanel = new Modal(authModal);
   authEmail = document.getElementById('authEmail');
   authPass = document.getElementById('authPass');
   authHint = document.getElementById('authHint');
@@ -333,10 +333,6 @@ export async function initAuth() {
     if (accountBtn && accountDropdownMenu && !accountBtn.contains(e.target) && !accountDropdownMenu.contains(e.target)) {
       accountDropdownMenu.classList.remove('show');
     }
-  });
-
-  authModal?.addEventListener('click', (e) => {
-    if (e.target === authModal) closeAuthModal();
   });
 
   authLogoutDropdown?.addEventListener('click', async () => { logout(); });

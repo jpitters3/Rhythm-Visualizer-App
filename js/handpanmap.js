@@ -1,4 +1,5 @@
 import { setCaret } from './range-selection.js';
+import { Modal } from './modal.js';
 import { updateUserLabelPreference } from './profile.js';
 import { writeToSelected, clampIndex, getComposeOn } from './compose-mode.js';
 import { preloadScaleSamples, noteForLabel, isDownbeatStep, registerHighlighter, playNoteByLabel, intervalMs } from './noteplayer.js';
@@ -430,19 +431,15 @@ export function toggleHandpanSide() {
 }
 
 // === MY SCALES MANAGEMENT ===
-let myScalesBtn, myScalesModal, closeMyScalesBtn, myScalesList;
+let myScalesBtn, myScalesModal, myScalesPanel, closeMyScalesBtn, myScalesList;
 
 function closeMyScalesModal() {
-  myScalesModal.classList.remove('open');
-  setTimeout(() => myScalesModal.style.display = 'none', 300); // Wait for transition
-  myScalesModal.setAttribute('aria-hidden', 'true');
+  myScalesPanel.close();
 }
 
 
 async function openMyScalesModal(view = 'list') {
-  myScalesModal.style.display = 'flex';
-  setTimeout(() => myScalesModal.classList.add('open'), 10);
-  myScalesModal.setAttribute('aria-hidden', 'false');
+  myScalesPanel.open();
 
   // View Switching
   if (view === 'form') {
@@ -1121,6 +1118,7 @@ export function initHandpanMap() {
   handpanOverlay = document.getElementById('handpanOverlay');
   myScalesBtn = document.getElementById('myScalesBtn');
   myScalesModal = document.getElementById('myScalesModal');
+  myScalesPanel = new Modal(myScalesModal);
   closeMyScalesBtn = document.getElementById('closeMyScalesBtn');
   myScalesList = document.getElementById('myScalesList');
   calBtn = document.getElementById('calBtn');

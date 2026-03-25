@@ -4,11 +4,13 @@ import { Bus, BUS_EVENT } from './bus.js';
 import { supabase } from './supabase-client.js';
 import { SCALES } from './config.js';
 import { renderAllMeasures } from './notegrid.js';
+import { Sidepanel } from './sidepanel.js';
 
 class AiAssistant {
   constructor() {
     this.isOpen = false;
     this.chatContainer = document.getElementById('aiChatContainer');
+    this.sidePanel = new Sidepanel(this.chatContainer);
     this.cursor = document.getElementById('aiFab');
     this.input = document.getElementById('aiInput');
     this.messagesArea = document.querySelector('.ai-messages');
@@ -56,15 +58,15 @@ class AiAssistant {
       return;
     }
 
-    const nextState = (typeof forceState === 'boolean') ? forceState : !this.chatContainer.classList.contains('open');
+    const nextState = (typeof forceState === 'boolean') ? forceState : !this.sidePanel.isOpen;
 
     if (nextState) {
-      this.chatContainer.classList.add('open');
+      this.sidePanel.open();
       this.input.focus();
       // Refresh suggestions (remove old, add new to trigger animation)
       this.refreshSuggestions();
     } else {
-      this.chatContainer.classList.remove('open');
+      this.sidePanel.close();
     }
   }
 

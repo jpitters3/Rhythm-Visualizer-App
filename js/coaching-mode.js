@@ -16,6 +16,7 @@ import { getSelectedPatternName } from './pattern-crud.js';
 import { loadCalibrationProfile, hasCalibrationForCurrentScale, turnOnMic, micStream, turnOffMic } from './transcription.js';
 import { updateBodySidebarClass, closeSidebar } from './courses.js';
 import { alert } from './alert.js';
+import { Sidepanel } from './sidepanel.js';
 
 // Session state
 let coachingSession = null;
@@ -34,6 +35,7 @@ let skipCalibrationCheck = {}; // scaleId -> true
 
 // UI elements
 let coachingSidebar = null;
+const coachingSidePanel = new Sidepanel(document.getElementById('coachingSidebar'), { onClose: updateBodySidebarClass });
 let hudAccuracy = null;
 let hudCorrect = null;
 let hudTotal = null;
@@ -43,6 +45,7 @@ let resultsModal = null;
 
 // Results Sidebar elements
 let coachResultsSidebar = null;
+const coachResultsSidePanel = new Sidepanel(document.getElementById('coachResultsSidebar'), { onClose: updateBodySidebarClass });
 let sidebarOverallScore = null;
 let sidebarNoteAccuracy = null;
 let sidebarTimingAccuracy = null;
@@ -127,10 +130,7 @@ export function openCoachingSidebar() {
     if (closeBtn) closeBtn.onclick = exitCoachingMode;
   }
 
-  if (coachingSidebar) {
-    coachingSidebar.classList.add('open');
-    coachingSidebar.setAttribute('aria-hidden', 'false');
-  }
+  coachingSidePanel.open();
   updateBodySidebarClass();
 }
 
@@ -152,11 +152,7 @@ Bus.on(BUS_EVENT.SIDEBAR_CLOSE_ALL, (e) => {
  * Close Coaching Sidebar specifically
  */
 export function closeCoachingSidebar() {
-  if (coachingSidebar) {
-    coachingSidebar.classList.remove('open');
-    coachingSidebar.setAttribute('aria-hidden', 'true');
-  }
-  updateBodySidebarClass();
+  coachingSidePanel.close();
 }
 
 /**
@@ -821,10 +817,9 @@ export function openCoachResultsSidebar() {
 
   if (coachResultsSidebar) {
     populateResultsSidebar();
-    coachResultsSidebar.classList.add('open');
-    coachResultsSidebar.setAttribute('aria-hidden', 'false');
   }
 
+  coachResultsSidePanel.open();
   updateBodySidebarClass();
 }
 
@@ -832,11 +827,7 @@ export function openCoachResultsSidebar() {
  * Close Coach Results Sidebar
  */
 export function closeCoachResultsSidebar() {
-  if (coachResultsSidebar) {
-    coachResultsSidebar.classList.remove('open');
-    coachResultsSidebar.setAttribute('aria-hidden', 'true');
-  }
-  updateBodySidebarClass();
+  coachResultsSidePanel.close();
 }
 
 /**

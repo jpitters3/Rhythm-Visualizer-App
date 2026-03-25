@@ -1,4 +1,5 @@
 import { escapeHtml } from './utils.js';
+import { Modal } from './modal.js';
 import { currentUser } from './state.js';
 import { supabase } from './supabase-client.js';
 import { addToPractice } from './practice.js';
@@ -14,7 +15,7 @@ export async function loadPatternFromFeed(json, name) {
   }
 }
 
-let feedModal;
+let feedModal, feedPanel;
 let closeFeedBtn;
 let feedGrid;
 let feedFilterTabs;
@@ -26,6 +27,7 @@ let discussionView;
 
 export function initFeed() {
   feedModal = document.getElementById('feedModal');
+  feedPanel = new Modal(feedModal, { onClose: () => { document.body.style.overflow = ''; } });
   closeFeedBtn = document.getElementById('closeFeedBtn');
   feedGrid = document.getElementById('feedGrid');
   feedFilterTabs = document.querySelectorAll('.feed-filter-tab');
@@ -43,11 +45,7 @@ export function initFeed() {
     commBtn.dataset.listenerAttached = 'true';
   }
 
-  closeFeedBtn?.addEventListener('click', () => {
-    document.body.style.overflow = '';
-    feedModal.classList.remove('open');
-    feedModal.setAttribute('aria-hidden', 'true');
-  });
+  closeFeedBtn?.addEventListener('click', () => feedPanel.close());
 
   navCompositionsBtn?.addEventListener('click', () => switchMainTab('compositions'));
   navDiscussionBtn?.addEventListener('click', () => switchMainTab('discussion'));
@@ -93,8 +91,7 @@ function switchMainTab(tabName) {
 
 function openFeedModal() {
   document.body.style.overflow = 'hidden';
-  feedModal.classList.add('open');
-  feedModal.setAttribute('aria-hidden', 'false');
+  feedPanel.open();
   // Default to Discussion
   switchMainTab('discussion');
 }
@@ -192,8 +189,7 @@ function renderPatternsFeed(patterns) {
     const playBtn = card.querySelector('.play-pattern-btn');
     playBtn.addEventListener('click', () => {
       loadPatternFromFeed(p.pattern_json, p.name);
-      document.body.style.overflow = '';
-      feedModal.classList.remove('open');
+      feedPanel.close();
     });
 
     const pracBtn = card.querySelector('.add-practice-btn');

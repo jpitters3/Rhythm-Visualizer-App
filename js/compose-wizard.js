@@ -1,4 +1,5 @@
 import { dbListPatternsWithData, getSavedPatterns, applyPattern, serializePattern } from './pattern-crud.js';
+import { Modal } from './modal.js';
 import { supabase } from './supabase-client.js';
 import { gridA, gridB } from './grid-context.js';
 import { setDualGrid, clearGrid, renderAllMeasures } from './notegrid.js';
@@ -380,6 +381,8 @@ function updateNextButton() {
   }
 }
 
+let cwLoadPanel = null;
+
 async function showLoadCompositionModal() {
   const comps = await getAllCompositionsLocal();
 
@@ -389,7 +392,9 @@ async function showLoadCompositionModal() {
     modalOverlay.id = 'cw-load-modal';
     modalOverlay.className = 'modal-overlay';
     document.body.appendChild(modalOverlay);
+    cwLoadPanel = new Modal(modalOverlay);
   }
+  if (!cwLoadPanel) cwLoadPanel = new Modal(modalOverlay);
 
   let contentHtml = `
     <div class="modal">
@@ -422,16 +427,16 @@ async function showLoadCompositionModal() {
   `;
 
   modalOverlay.innerHTML = contentHtml;
-  modalOverlay.classList.add('open');
+  cwLoadPanel.open();
 
-  document.getElementById('cw-load-cancel').onclick = () => modalOverlay.classList.remove('open');
+  document.getElementById('cw-load-cancel').onclick = () => cwLoadPanel.close();
 
   const items = modalOverlay.querySelectorAll('.cw-load-item');
   items.forEach(item => {
     item.onmouseenter = () => item.style.background = 'rgba(255,255,255,0.05)';
     item.onmouseleave = () => item.style.background = 'transparent';
     item.onclick = async () => {
-      modalOverlay.classList.remove('open');
+      cwLoadPanel.close();
       await loadCompositionToWizard(item.dataset.id);
     };
   });

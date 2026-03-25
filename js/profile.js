@@ -1,4 +1,5 @@
 import { currentUser, isAdminUser, } from './state.js';
+import { Modal } from './modal.js';
 import { supabase } from './supabase-client.js';
 import { buildHandpanOverlay } from './handpanmap.js';
 import { renderAllMeasures } from './notegrid.js';
@@ -146,6 +147,7 @@ export async function getProfileById(userId) {
 // UI HANDLERS
 
 const profileModal = document.getElementById('profileModal');
+const profilePanel = new Modal(profileModal);
 const profileUsernameInput = document.getElementById('profileUsername');
 const profileFirstNameInput = document.getElementById('profileFirstName');
 const profileLastNameInput = document.getElementById('profileLastName');
@@ -181,14 +183,12 @@ export function openProfileEditor() {
   if (profileLastNameInput) profileLastNameInput.value = currentProfile.last_name || '';
   profileBioInput.value = currentProfile.bio || '';
 
-  profileModal.classList.add('open');
-  profileModal.setAttribute('aria-hidden', 'false');
+  profilePanel.open();
   document.getElementById('accountDropdownMenu')?.classList.remove('show');
 }
 
 export function closeProfileEditor() {
-  profileModal.classList.remove('open');
-  profileModal.setAttribute('aria-hidden', 'true');
+  profilePanel.close();
 }
 
 function updateProfileUI() {

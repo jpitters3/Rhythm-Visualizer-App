@@ -4,6 +4,7 @@
  */
 
 import { alert, confirm, prompt } from './alert.js';
+import { Modal } from './modal.js';
 import { currentUser } from './state.js';
 import { ADMIN_EMAILS } from './config.js';
 import { supabase } from './supabase-client.js';
@@ -82,10 +83,9 @@ function setupModals() {
   // Pattern Org Modal
   patternOrgModal = document.getElementById('patternOrgModal');
   if (patternOrgModal) {
-    patternOrgModal.querySelector('.close-modal-btn').onclick = () => {
-      stopPatternPreview(); // Stop playback when closing modal
-      patternOrgModal.classList.remove('open');
-    }
+    const patternOrgPanel = new Modal(patternOrgModal, { onClose: stopPatternPreview });
+    patternOrgModal.querySelector('.close-modal-btn').onclick = () => patternOrgPanel.close();
+    patternOrgModal._panel = patternOrgPanel;
   }
 
   // Search input listener
@@ -116,7 +116,7 @@ async function openAdminMenu() {
 async function openPatternOrgModal() {
   if (!patternOrgModal) return;
 
-  patternOrgModal.classList.add('open');
+  patternOrgModal._panel.open();
   const listContainer = document.getElementById('adminPatternList');
   listContainer.innerHTML = '<div style="padding:20px; text-align:center;">Loading patterns...</div>';
 

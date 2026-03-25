@@ -1,9 +1,10 @@
 /* Monetization & Stripe Logic */
 import { currentUser } from './state.js';
+import { Modal } from './modal.js';
 import { supabase } from './supabase-client.js';
 import { Bus, BUS_EVENT } from './bus.js';
 
-let upgradeModal, congratsModal;
+let upgradeModal, congratsModal, upgradePanel, congratsPanel;
 
 export function initMonetization() {
     // Late-bound DOM references
@@ -13,6 +14,12 @@ export function initMonetization() {
     congratsModal = document.getElementById('congratsModal');
     const closeCongratsBtn = document.getElementById('closeCongratsBtn');
     const startGroovingBtn = document.getElementById('startGroovingBtn');
+    upgradePanel = new Modal(upgradeModal);
+    congratsPanel = new Modal(congratsModal, { onClose: () => {
+      const url = new URL(window.location);
+      url.searchParams.delete('upgrade');
+      window.history.replaceState({}, '', url);
+    }});
 
     // Listen for Gating Events via Bus
     Bus.on(BUS_EVENT.SHOW_UPGRADE_MODAL, (e) => {
@@ -27,11 +34,6 @@ export function initMonetization() {
     closeCongratsBtn?.addEventListener('click', closeCongratsModal);
     startGroovingBtn?.addEventListener('click', closeCongratsModal);
 
-    // Close on backdrop click for both
-    window.addEventListener('click', (e) => {
-        if (e.target === upgradeModal) closeUpgradeModal();
-        if (e.target === congratsModal) closeCongratsModal();
-    });
 
     checkoutBtn?.addEventListener('click', () => handleUpgradeClick(checkoutBtn));
 
@@ -67,31 +69,19 @@ function openUpgradeModal(payload) {
         intro.innerHTML = `Get instant access to <strong>${featureName}</strong>, and everything else in the <strong>Pro Bundle</strong>, by upgrading today!`;
     }
 
-    upgradeModal.classList.add('open');
-    upgradeModal.setAttribute('aria-hidden', 'false');
+    upgradePanel.open();
 }
 
 function closeUpgradeModal() {
-    if (!upgradeModal) return;
-    upgradeModal.classList.remove('open');
-    upgradeModal.setAttribute('aria-hidden', 'true');
+    upgradePanel?.close();
 }
 
 function openCongratsModal() {
-    if (!congratsModal) return;
-    congratsModal.classList.add('open');
-    congratsModal.setAttribute('aria-hidden', 'false');
+    congratsPanel?.open();
 }
 
 function closeCongratsModal() {
-    if (!congratsModal) return;
-    congratsModal.classList.remove('open');
-    congratsModal.setAttribute('aria-hidden', 'true');
-    
-    // Clean up URL to remove ?upgrade=success
-    const url = new URL(window.location);
-    url.searchParams.delete('upgrade');
-    window.history.replaceState({}, '', url);
+    congratsPanel?.close();
 }
 
 function checkUpgradeSuccess() {

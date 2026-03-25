@@ -1,4 +1,5 @@
 import { alert, confirm } from './alert.js';
+import { Modal } from './modal.js';
 import { supabase } from './supabase-client.js';
 import { Bus, BUS_EVENT } from './bus.js';
 
@@ -6,13 +7,13 @@ let glossaryTerms = [];
 let availableCourses = [];
 
 // DOM Elements - Admin
-let adminModal, openAdminBtn, closeAdminBtn, newTermBtn, saveTermBtn, deleteTermBtn, termListEl, searchInput, saveStatus;
+let adminModal, adminPanel, openAdminBtn, closeAdminBtn, newTermBtn, saveTermBtn, deleteTermBtn, termListEl, searchInput, saveStatus;
 
 // Form Inputs
 let idInput, termInput, defInput, videoInput, courseSelector;
 
 // DOM Elements - Viewer
-let viewerModal, closeViewerBtn, gvTitle, gvDefinition, gvVideoContainer, gvVideoFrame, gvVideoPlayer, gvRelatedCoursesSection, gvRelatedCoursesList;
+let viewerModal, viewerPanel, closeViewerBtn, gvTitle, gvDefinition, gvVideoContainer, gvVideoFrame, gvVideoPlayer, gvRelatedCoursesSection, gvRelatedCoursesList;
 
 export async function initGlossary() {
   // Global event delegation for glossary links
@@ -30,10 +31,8 @@ export async function initGlossary() {
 
     // 2. Check Admin Open Button
     if (e.target.id === 'openGlossaryModalBtn' || e.target.closest('#openGlossaryModalBtn')) {
-      const modal = document.getElementById('glossaryAdminModal');
-      if (modal) {
-        modal.classList.add('open');
-        modal.setAttribute('aria-hidden', 'false');
+      if (adminPanel) {
+        adminPanel.open();
         loadCoursesForSelector().then(() => {
           clearForm();
           renderTermList();
@@ -45,6 +44,7 @@ export async function initGlossary() {
 
   // Grab standard DOM elements
   adminModal = document.getElementById('glossaryAdminModal');
+  adminPanel = new Modal(adminModal);
   openAdminBtn = document.getElementById('openGlossaryModalBtn');
   closeAdminBtn = document.getElementById('closeGlossaryAdminBtn');
   newTermBtn = document.getElementById('newGlossaryTermBtn');
@@ -61,6 +61,11 @@ export async function initGlossary() {
   courseSelector = document.getElementById('glossaryCourseSelector');
 
   viewerModal = document.getElementById('glossaryViewerModal');
+  viewerPanel = new Modal(viewerModal, { onClose: () => {
+    history.pushState('', document.title, window.location.pathname + window.location.search);
+    gvVideoFrame.src = '';
+    gvVideoPlayer.pause();
+  }});
   closeViewerBtn = document.getElementById('closeGlossaryViewerBtn');
   gvTitle = document.getElementById('gvTitle');
   gvDefinition = document.getElementById('gvDefinition');
@@ -147,10 +152,7 @@ export function autoLinkText(text) {
 
 function setupAdminEventListeners() {
   if (closeAdminBtn) {
-    closeAdminBtn.addEventListener('click', () => {
-      adminModal.classList.remove('open');
-      adminModal.setAttribute('aria-hidden', 'true');
-    });
+    closeAdminBtn.addEventListener('click', () => adminPanel.close());
   }
 
   if (newTermBtn) {
@@ -371,15 +373,7 @@ async function triggerVideoUpload() {
 
 function setupViewerEventListeners() {
   if (closeViewerBtn) {
-    closeViewerBtn.addEventListener('click', () => {
-      viewerModal.classList.remove('open');
-      viewerModal.setAttribute('aria-hidden', 'true');
-      // Clean up hash
-      history.pushState('', document.title, window.location.pathname + window.location.search);
-      // Stop video
-      gvVideoFrame.src = "";
-      gvVideoPlayer.pause();
-    });
+    closeViewerBtn.addEventListener('click', () => viewerPanel.close());
   }
 
   // Listen for hash changes
@@ -491,8 +485,7 @@ export async function openGlossaryTerm(slug) {
   }
 
   // Open Modal
-  viewerModal.classList.add('open');
-  viewerModal.setAttribute('aria-hidden', 'false');
+  viewerPanel.open();
 
   // Ensure URL matches
   if (window.location.hash !== `#glossary-${slug}`) {

@@ -4,6 +4,7 @@
  */
 
 import { activeGrid } from './state.js';
+import { Modal } from './modal.js';
 import { start, stop, addTickObserver, removeTickObserver } from './noteplayer.js';
 import { Bus, BUS_EVENT } from './bus.js';
 import { renderAllMeasures } from './notegrid.js';
@@ -32,6 +33,7 @@ let gameHUD = null;
 let gameLevelEl = null;
 let gameStreakEl = null;
 let gameSelectionModal = null;
+let gameSelectionPanel = null;
 
 // Pattern cache for Simon game
 let simonPatterns = [];
@@ -55,6 +57,7 @@ export function initGames() {
   gameLevelEl = document.getElementById('gameLevel');
   gameStreakEl = document.getElementById('gameStreak');
   gameSelectionModal = document.getElementById('gameSelectionModal');
+  gameSelectionPanel = new Modal(gameSelectionModal);
   turnIndicator = document.getElementById('simonTurnIndicator');
 
   // Button Listeners
@@ -99,15 +102,11 @@ export function initGames() {
 }
 
 function openGameSelection() {
-  if (gameSelectionModal) {
-    gameSelectionModal.classList.add('open');
-  }
+  gameSelectionPanel?.open();
 }
 
 function closeGameSelection() {
-  if (gameSelectionModal) {
-    gameSelectionModal.classList.remove('open');
-  }
+  gameSelectionPanel?.close();
 }
 /**
  * Show turn indicator with message

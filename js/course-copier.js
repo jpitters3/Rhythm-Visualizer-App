@@ -4,6 +4,7 @@
  */
 
 import { supabase } from './supabase-client.js';
+import { Modal } from './modal.js';
 import { loadCourseToEdit } from './course-creator.js';
 import { Bus, BUS_EVENT } from './bus.js';
 import { alert } from './alert.js';
@@ -19,16 +20,14 @@ const state = {
 
 // Drag state
 let dragSrc = null; // { side:'left'|'right', sIdx:Number }
+let copierPanel = null;
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 export async function initCourseCopier() {
   // Modal open/close
+  copierPanel = new Modal(document.getElementById('courseCopierModal'));
   document.getElementById('closeCourseCopierModal')
     ?.addEventListener('click', closeCourseCopier);
-  document.getElementById('courseCopierModal')
-    ?.addEventListener('click', (e) => {
-      if (e.target.id === 'courseCopierModal') closeCourseCopier();
-    });
 
   // Search bar — renders rich results panel
   document.getElementById('copierSearch')
@@ -57,11 +56,8 @@ export async function initCourseCopier() {
 }
 
 export async function openCourseCopier() {
-  const modal = document.getElementById('courseCopierModal');
-  if (!modal) return;
-
-  modal.classList.add('open');
-  modal.setAttribute('aria-hidden', 'false');
+  if (!copierPanel) return;
+  copierPanel.open();
 
   allAdminCourses = await fetchAllCourses();
   populateDropdowns(allAdminCourses);
@@ -77,10 +73,7 @@ export async function openCourseCopier() {
 }
 
 function closeCourseCopier() {
-  const modal = document.getElementById('courseCopierModal');
-  if (!modal) return;
-  modal.classList.remove('open');
-  modal.setAttribute('aria-hidden', 'true');
+  copierPanel?.close();
 }
 
 // ── Data ──────────────────────────────────────────────────────────────────────

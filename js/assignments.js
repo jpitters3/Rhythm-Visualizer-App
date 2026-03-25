@@ -5,12 +5,14 @@
  */
 
 import { currentUser } from './state.js';
+import { Modal } from './modal.js';
 import { supabase } from './supabase-client.js';
 import { alert, confirm } from './alert.js';
 import { escapeHtml } from './utils.js';
 
 // ===== DOM REFS =====
 let modal = null;
+let asgnPanel = null;
 
 // ===== MODULE STATE =====
 let activeTab = 'assignments';
@@ -49,6 +51,7 @@ const ITEM_TYPE_LABELS = {
 
 export function initAssignments() {
   modal = document.getElementById('assignmentsModal');
+  asgnPanel = new Modal(modal, { onClose: () => { resetEditor(); submissionsLoaded = false; } });
   if (!modal) return;
 
   // Close
@@ -108,19 +111,14 @@ export function initAssignments() {
 }
 
 export function openAssignments() {
-  if (!modal) return;
-  modal.classList.add('open');
-  modal.setAttribute('aria-hidden', 'false');
+  if (!asgnPanel) return;
+  asgnPanel.open();
   switchTab('assignments');
   loadInitialData();
 }
 
 function closeAssignments() {
-  if (!modal) return;
-  modal.classList.remove('open');
-  modal.setAttribute('aria-hidden', 'true');
-  resetEditor();
-  submissionsLoaded = false;
+  asgnPanel?.close();
 }
 
 function switchTab(tabName) {

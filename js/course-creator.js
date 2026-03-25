@@ -1,4 +1,5 @@
 import { currentUser, isAdminUser } from './state.js';
+import { Modal } from './modal.js';
 import { Bus, BUS_EVENT } from './bus.js';
 import { dbListPatternNames, dbLoadPatternByName, getSavedPatterns, serializePattern } from './pattern-crud.js';
 import { supabase } from './supabase-client.js';
@@ -57,9 +58,6 @@ export function initCourseCreator() {
   // Bind main buttons
   document.getElementById('openCourseModalBtn')?.addEventListener('click', openCourseCreator);
   document.getElementById('closeCourseModal')?.addEventListener('click', closeCourseCreator);
-  document.getElementById('courseModal')?.addEventListener('click', (e) => {
-    if (e.target.id === 'courseModal') closeCourseCreator();
-  });
   document.getElementById('addSectionBtn')?.addEventListener('click', addSection);
 
   document.getElementById('saveCourseBtn')?.addEventListener('click', () => handleCourseSave(true));
@@ -605,14 +603,14 @@ async function capturePatternForLesson(sIdx, lIdx) {
 // ===== Event listeners ===== //
 
 const courseModal = document.getElementById('courseModal');
+const courseModalPanel = new Modal(courseModal);
 const openCourseBtn = document.getElementById('openCourseModalBtn');
 const closeCourseBtn = document.getElementById('closeCourseModal');
 
 async function openCourseCreator() {
   await loadPatternOptions(); // Fetch patterns before opening
 
-  courseModal.classList.add('open');
-  courseModal.setAttribute('aria-hidden', 'false');
+  courseModalPanel.open();
   // Initialize with one empty section if new
   if (currentCourseData.sections.length === 0 && !currentCourseData.id) {
     currentCourseData.sections.push({ title: "Section 1", lessons: [] });
@@ -640,20 +638,13 @@ export async function loadCourseToEdit(course) {
 }
 
 export function closeCourseCreator() {
-  courseModal.classList.remove('open');
-  courseModal.setAttribute('aria-hidden', 'true');
+  courseModalPanel.close();
 }
 
 // Listeners
 openCourseBtn?.addEventListener('click', openCourseCreator);
 closeCourseBtn?.addEventListener('click', closeCourseCreator);
 
-// Close on clicking the dark overlay
-courseModal?.addEventListener('click', (e) => {
-  if (e.target === courseModal) {
-    closeCourseCreator();
-  }
-});
 
 
 const addSectionBtn = document.getElementById('addSectionBtn');

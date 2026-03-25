@@ -1,4 +1,5 @@
 import { unlockAudio, getAudioCtx, addTickObserver, stop, start } from './noteplayer.js';
+import { Modal } from './modal.js';
 import { activeGrid } from './grid-context.js';
 import { cells, setInnerLabel, renderAllMeasures } from './notegrid.js';
 import { loadPatternByName } from './controls.js';
@@ -1134,6 +1135,9 @@ function autoCorrelate(buffer, sampleRate) {
 
 // Guided Calibration Modal
 const guidedCalModal = document.getElementById('guidedCalModal');
+const guidedCalPanel = new Modal(guidedCalModal);
+const advancedCalModal = document.getElementById('advancedCalModal');
+const advancedCalPanel = new Modal(advancedCalModal);
 const startGuidedBtn = document.getElementById('startGuidedBtn');
 const closeGuidedBtn = document.getElementById('closeGuidedBtn');
 const guideNoteBox = document.getElementById('guideNoteBox');
@@ -1244,11 +1248,7 @@ function finishGuidedCalibration() {
         }
 
         // If perfect or user declines restart, enable review mode
-        const modal = document.getElementById('guidedCalModal');
-        if (modal) {
-            modal.classList.remove('open');
-            modal.setAttribute('aria-hidden', true);
-        }
+        guidedCalPanel.close();
 
         isFullCalWizard = false;
         resetGuideUI();
@@ -1414,9 +1414,7 @@ export function initTranscription() {
 
         lastActiveElement = document.activeElement;
 
-        const modal = document.getElementById('guidedCalModal');
-        modal.classList.add('open');
-        modal.setAttribute('aria-hidden', false);
+        guidedCalPanel.open();
 
         const menu = document.getElementById('micDropdownMenu');
         if (menu) menu.classList.remove('show');
@@ -1438,10 +1436,8 @@ export function initTranscription() {
 
     const closeGuidedBtnLocal = document.getElementById('closeGuidedBtn');
     closeGuidedBtnLocal?.addEventListener('click', () => {
-        const modal = document.getElementById('guidedCalModal');
-        modal.classList.remove('open');
+        guidedCalPanel.close();
         isGuidedCalibrating = false;
-        modal.setAttribute('aria-hidden', true);
 
         if (activeGrid.playing) stop(activeGrid);
         if (lastActiveElement) lastActiveElement.focus();
@@ -1580,8 +1576,7 @@ function openAdvancedCalibrationModal() {
         });
     });
 
-    modal.classList.add('open');
-    modal.setAttribute('aria-hidden', 'false');
+    advancedCalPanel.open();
 
     // Close Mic dropdown
     const menu = document.getElementById('micDropdownMenu');
@@ -1685,11 +1680,7 @@ async function resetAdvancedCalibration() {
 }
 
 function closeAdvancedCalibrationModal() {
-    const modal = document.getElementById('advancedCalModal');
-    if (modal) {
-        modal.classList.remove('open');
-        modal.setAttribute('aria-hidden', 'true');
-    }
+    advancedCalPanel.close();
 }
 
 // Attach listeners inside initialization

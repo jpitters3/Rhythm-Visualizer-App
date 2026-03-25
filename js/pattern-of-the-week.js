@@ -1,11 +1,12 @@
 import { alert, confirm } from './alert.js';
 import { supabase } from './supabase-client.js';
 import { currentUser } from './state.js';
+import { Modal } from './modal.js';
 
 /* POTW Dashboard Logic */
 // State
 let patternsCache = [];
-let modal, statusMsg, patternSelect, dateInput, diffInput, descInput, scheduleBtn;
+let modal, potwPanel, statusMsg, patternSelect, dateInput, diffInput, descInput, scheduleBtn;
 let tabs, tabContents;
 
 let editingId = null; // ID of the weekly_pattern being edited
@@ -14,6 +15,7 @@ let editingId = null; // ID of the weekly_pattern being edited
 export function initPOTW() {
   const potwBtn = document.getElementById('openPotwModalBtn');
   modal = document.getElementById('potwModal');
+  potwPanel = new Modal(modal, { onClose: resetForm });
   const closeBtn = document.getElementById('closePotwBtn');
   scheduleBtn = document.getElementById('potwScheduleBtn');
 
@@ -88,9 +90,8 @@ function switchTab(tabId) {
 
 // --- ACTIONS ---
 async function openPotwModal() {
-  if (!modal) return;
-  modal.classList.add('open');
-  modal.setAttribute('aria-hidden', 'false');
+  if (!potwPanel) return;
+  potwPanel.open();
 
   // Reset
   if (statusMsg) statusMsg.textContent = '';
@@ -106,10 +107,7 @@ async function openPotwModal() {
 }
 
 function closePotwModal() {
-  if (!modal) return;
-  modal.classList.remove('open');
-  modal.setAttribute('aria-hidden', 'true');
-  resetForm();
+  potwPanel?.close();
 }
 
 function resetForm() {

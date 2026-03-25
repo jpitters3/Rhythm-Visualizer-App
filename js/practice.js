@@ -3,36 +3,31 @@ import { currentUser } from './state.js';
 import { supabase } from './supabase-client.js';
 import { applyPattern } from './pattern-crud.js';
 import { openLessonSidebar, updateBodySidebarClass, closeSidebar } from './courses.js';
+import { Sidepanel } from './sidepanel.js';
 
 // State
 let practiceItems = [];
 
 // DOM Elements
 const sidebar = document.getElementById('practiceSidebar');
+const practiceSidePanel = new Sidepanel(sidebar, { onClose: updateBodySidebarClass });
 const container = document.getElementById('practiceList');
 
 export async function togglePracticeSidebar() {
-  const isOpen = sidebar.classList.contains('open');
-
-  if (isOpen) {
+  if (practiceSidePanel.isOpen) {
     closeSidebar({ reason: 'practice-close', source: 'practice' });
   } else {
     // Close other sidebars first
     closeSidebar({ reason: 'practice-open', source: 'practice' });
 
-    sidebar.classList.add('open');
-    sidebar.removeAttribute('aria-hidden');
+    practiceSidePanel.open();
     fetchPracticeItems();
     updateBodySidebarClass();
   }
 }
 
 export function closePracticeSidebar() {
-  if (sidebar) {
-    sidebar.classList.remove('open');
-    sidebar.setAttribute('aria-hidden', 'true');
-  }
-  updateBodySidebarClass();
+  practiceSidePanel.close();
 }
 
 // Bindings
@@ -269,7 +264,7 @@ export async function togglePracticeItem(type, id, title) {
 
     if (!error) {
       await fetchPracticeItems();
-      if (!sidebar.classList.contains('open')) togglePracticeSidebar();
+      if (!practiceSidePanel.isOpen) togglePracticeSidebar();
       return true; // Added
     }
   }

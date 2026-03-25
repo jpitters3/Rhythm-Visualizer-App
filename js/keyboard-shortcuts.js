@@ -7,7 +7,8 @@ import { getRange, clearRange } from './range-selection.js';
 import { setPresentation } from './presentation-mode.js';
 import { TransportRegistry } from './transport-ui.js';
 import { writeToSelected, getComposeOn } from './compose-mode.js';
-import { handleEscKey } from './windowControls.js';
+import { Modal } from './modal.js';
+import { Sidepanel } from './sidepanel.js';
 
 export function initShortcuts() {
   document.addEventListener('keydown', (e) => {
@@ -16,7 +17,7 @@ export function initShortcuts() {
 
     // Esc
     if (e.key === 'Escape') {
-      if (handleEscKey()) return;
+      if (Modal.closeTopmost() || Sidepanel.closeTopmost()) return;
 
       // Presentation Mode
       if (document.body.classList.contains('present')) {

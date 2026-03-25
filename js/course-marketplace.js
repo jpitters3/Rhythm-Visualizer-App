@@ -1,4 +1,5 @@
 import { alert, confirm } from './alert.js';
+import { Modal } from './modal.js';
 import { supabase } from './supabase-client.js';
 import { Bus, BUS_EVENT } from './bus.js';
 import { currentUser, isAdminUser } from './state.js';
@@ -7,12 +8,12 @@ import { fetchCourses, setActiveCourse, openSidebar } from './courses.js';
 let marketplaceModal = null;
 let closeMarketBtn = null;
 let marketGrid = null;
+let marketPanel = null;
 
 export async function openMarketplace() {
   if (!marketplaceModal) return;
 
-  marketplaceModal.classList.add('open');
-  marketplaceModal.setAttribute('aria-hidden', 'false');
+  marketPanel.open();
 
   marketGrid.innerHTML = '<div class="loading-spinner">Loading courses...</div>';
 
@@ -284,13 +285,12 @@ export async function unlockCourse(courseId, isPaid, btn) {
 }
 
 export function closeMarketplace() {
-  if (!marketplaceModal) return;
-  marketplaceModal.classList.remove('open');
-  marketplaceModal.setAttribute('aria-hidden', 'true');
+  marketPanel?.close();
 }
 
 export function initCourseMarketplace() {
   marketplaceModal = document.getElementById('marketplaceModal');
+  marketPanel = new Modal(marketplaceModal);
   closeMarketBtn = document.getElementById('closeMarketBtn');
   marketGrid = document.getElementById('marketGrid');
 

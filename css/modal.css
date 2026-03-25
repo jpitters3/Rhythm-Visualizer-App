@@ -9,14 +9,17 @@
   background: rgba(0, 0, 0, 0.45);
   z-index: 10000;
 
-  /* Backdrop snaps instantly — no per-frame compositing cost */
   visibility: hidden;
   pointer-events: none;
+  /* Delay visibility so the inner card's close animation finishes before hiding */
+  transition: visibility 0s linear 0.18s;
 }
 
 .modal-overlay.open {
   visibility: visible;
   pointer-events: auto;
+  /* Apply visibility immediately on open so the open animation is visible */
+  transition: visibility 0s linear 0s;
 }
 
 /* Only the inner card animates — small area, cheap to composite */
@@ -55,6 +58,7 @@
   max-height: 90vh;
   overflow-y: auto;
   position: relative;
+  margin: 10px auto;
 }
 
 /* ===== MODAL HEADER ===== */

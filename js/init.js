@@ -38,7 +38,7 @@ import { initGridAutoscroll } from './grid-autoscroll.js';
 import { initGridZoom } from './grid-zoom.js';
 import { initMonetization } from './monetization.js';
 import { initScrollIndicators } from './scroll-indicators.js';
-import { initWindowControls } from './windowControls.js';
+
 
 /**
  * Main application initializer
@@ -76,7 +76,6 @@ async function init() {
     // Admin Tools (Async check inside)
     initAdmin();
 
-    initWindowControls();
     initControls();
     initShortcuts();
     setupAudioUnlock();

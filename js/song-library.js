@@ -5,6 +5,7 @@
 // UI References
 const songLibraryBtn = document.getElementById('songLibraryBtn');
 const songLibraryModal = document.getElementById('songLibraryModal');
+const songLibPanel = new Modal(songLibraryModal);
 const closeSongLibBtn = document.getElementById('closeSongLibBtn');
 const songLibraryList = document.getElementById('songLibraryList');
 
@@ -15,6 +16,7 @@ let librarySongs = [];
 // Better to import it if it is a module.
 // But this file has no imports at the top. It seems to be treated as a module by the bundler/browser if type="module".
 import { alert, confirm } from './alert.js';
+import { Modal } from './modal.js';
 import { renderAllMeasures, checkCellIsMultiMode } from './notegrid.js';
 import { setTimeSignature } from './noteplayer.js';
 import { getScale } from './state.js';
@@ -32,25 +34,12 @@ if (songLibraryBtn) {
   });
 }
 if (closeSongLibBtn) {
-  closeSongLibBtn.addEventListener('click', () => {
-    songLibraryModal.classList.remove('open');
-    songLibraryModal.setAttribute('aria-hidden', 'true');
-  });
-}
-// Close on outside click is handled by generic listener or we add specific one
-if (songLibraryModal) {
-  songLibraryModal.addEventListener('click', (e) => {
-    if (e.target === songLibraryModal) {
-      songLibraryModal.classList.remove('open');
-      songLibraryModal.setAttribute('aria-hidden', 'true');
-    }
-  });
+  closeSongLibBtn.addEventListener('click', () => songLibPanel.close());
 }
 
 function openSongLibrary() {
   if (!supabase1) return;
-  songLibraryModal.classList.add('open');
-  songLibraryModal.setAttribute('aria-hidden', 'false');
+  songLibPanel.open();
   fetchSongs();
 }
 
@@ -208,8 +197,7 @@ async function loadLibrarySong(id) {
     if (typeof renderAllMeasures === 'function') renderAllMeasures(activeGrid);
 
     // 4. Close Modal
-    songLibraryModal.classList.remove('open');
-    songLibraryModal.setAttribute('aria-hidden', 'true');
+    songLibPanel.close();
 
     // 5. Switch to Pitches view automatically? 
     // Since MIDI is absolute pitches, "Numbers" view might show nothing if not mapped.

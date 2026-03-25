@@ -1,4 +1,5 @@
 import { alert, confirm, prompt } from './alert.js';
+import { Sidepanel } from './sidepanel.js';
 import { Bus, BUS_EVENT } from './bus.js';
 import { currentUser, isAdminUser } from './state.js';
 import { applyPattern, serializePattern, dbSavePattern, refreshPatternSelect, hasUnsavedChanges, snapshotCurrentState } from './pattern-crud.js';
@@ -547,14 +548,7 @@ export async function editCourse(courseId) {
 }
 
 export function closeSidebar(options = {}) {
-  const sidebars = document.querySelectorAll('.sidebar');
-  sidebars.forEach(sb => {
-    // Don't close the results modal if it's minimized as a sidebar
-    if (sb.id === 'coachingResultsModal' || sb.closest('#coachingResultsModal')) return;
-
-    sb.classList.remove('open');
-    sb.setAttribute('aria-hidden', 'true');
-  });
+  Sidepanel.closeAll();
 
   // Emit event so other systems (like Coaching Mode) can respond
   Bus.emit(BUS_EVENT.SIDEBAR_CLOSE_ALL, {
@@ -568,40 +562,26 @@ export function closeSidebar(options = {}) {
 export function openLessonSidebar() {
   lastSidebarType = 'lesson';
   closeSidebar({ reason: 'lesson-player', source: 'courses' }); // mutually exclusive
-  const panel = document.getElementById('lessonPlayer');
-  if (panel) {
-    panel.classList.add('open');
-    panel.removeAttribute('aria-hidden');
-  }
+  lessonSidePanel.open();
   updateBodySidebarClass();
 }
 
 export function closeLessonSidebar() {
-  const panel = document.getElementById('lessonPlayer');
-  if (panel) {
-    panel.classList.remove('open');
-    panel.setAttribute('aria-hidden', 'true');
-  }
-  updateBodySidebarClass();
+  lessonSidePanel.close();
 }
 
 export function openSidebar() {
   lastSidebarType = 'course';
   closeSidebar({ reason: 'course-list', source: 'courses' }); // mutually exclusive
-  const sb = document.getElementById('courseSidebar');
-  if (sb && !sb.classList.contains('open')) {
-    sb.classList.add('open');
-    sb.removeAttribute('aria-hidden');
+  if (!courseSidePanel.isOpen) {
+    courseSidePanel.open();
     if (allCourses.length === 0) fetchCourses();
   }
   updateBodySidebarClass();
 }
 
 export function toggleSidebar() {
-  // Toggle Course Sidebar but also close other sidebars
-  const sb = document.getElementById('courseSidebar');
-  const isOpen = sb?.classList.contains('open');
-  if (isOpen) {
+  if (courseSidePanel.isOpen) {
     closeSidebar();
   } else {
     // Note: openSidebar already calls closeSidebar
@@ -610,10 +590,7 @@ export function toggleSidebar() {
 }
 
 export function toggleLastSidebar() {
-  const courseSb = document.getElementById('courseSidebar');
-  const lessonSb = document.getElementById('lessonPlayer');
-
-  const isAnyOpen = (courseSb && courseSb.classList.contains('open')) || (lessonSb && lessonSb.classList.contains('open'));
+  const isAnyOpen = courseSidePanel.isOpen || lessonSidePanel.isOpen;
 
   if (isAnyOpen) {
     closeSidebar();
@@ -885,8 +862,11 @@ document.body.addEventListener('click', async (e) => {
   }
 });
 
-// Sidebar Toggles (Existing ID-based, can stay or move to delegation)
+// Sidepanel instances — onClose calls updateBodySidebarClass for ESC/auto-close
+const courseSidePanel = new Sidepanel(document.getElementById('courseSidebar'), { onClose: updateBodySidebarClass });
+const lessonSidePanel = new Sidepanel(document.getElementById('lessonPlayer'), { onClose: updateBodySidebarClass });
 
+// Sidebar Toggles (Existing ID-based, can stay or move to delegation)
 
 const sidebarCloseBtn = document.getElementById('closeSidebar');
 if (sidebarCloseBtn) sidebarCloseBtn.addEventListener('click', closeSidebar);

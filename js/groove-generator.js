@@ -1,13 +1,15 @@
 
 import { activeGrid } from './grid-context.js';
 import { alert } from './alert.js';
+import { Modal } from './modal.js';
+
+const groovePanel = new Modal(document.getElementById('grooveModal'));
 
 // HELPER FUNTIONS
 
 // GROOVE MODAL FUNCTIONS //
 function openGrooveModal() {
-  grooveModal.classList.add('open');
-  grooveModal.setAttribute('aria-hidden', 'false');
+  groovePanel.open();
   updateGroovePickerLimits();
   updateGrooveHint();
 }
@@ -160,8 +162,7 @@ function applyGroove({ D, T, S, placement = 'none', completelyRandom = false, en
 }
 
 export function closeGrooveModal() {
-  grooveModal.classList.remove('open');
-  grooveModal.setAttribute('aria-hidden', 'true');
+  groovePanel.close();
 }
 
 
@@ -334,9 +335,6 @@ function generateGroove(dCount, tCount, sCount, ctx = activeGrid) {
 // ===== GROOVE MODAL EVENTS =====
 grooveBtn?.addEventListener('click', () => openGrooveModal());
 grooveCancel?.addEventListener('click', () => closeGrooveModal());
-grooveModal?.addEventListener('click', (e) => {
-  if (e.target === grooveModal) closeGrooveModal();
-});
 
 ;[dingCount, takCount, slapCount, complexitySelect].forEach((el) => {
   el?.addEventListener('input', updateGrooveHint);
