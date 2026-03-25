@@ -1085,7 +1085,7 @@
   </div>
 
   <!-- Courses View -->
-  <div id="courseSidebar" class="sidebar" aria-hidden="true">
+  <div id="courseSidebar" class="sidebar" aria-hidden="true" data-panel-type="sidepanel">
     <div class="sidebar-header">
       <h3>Course Library</h3>
       <button id="closeSidebar" class="close-btn">&times;</button>
@@ -1099,7 +1099,7 @@
   </div>
 
   <!-- Practice Sidebar -->
-  <div id="practiceSidebar" class="sidebar" aria-hidden="true">
+  <div id="practiceSidebar" class="sidebar" aria-hidden="true" data-panel-type="sidepanel">
     <div class="sidebar-header">
       <h3>Daily Practice</h3>
       <button id="closePracticeSidebar" class="close-btn">&times;</button>
@@ -1116,7 +1116,7 @@
   </div>
 
   <!-- Coaching Sidebar -->
-  <div id="coachingSidebar" class="sidebar coaching-sidebar" aria-hidden="true">
+  <div id="coachingSidebar" class="sidebar coaching-sidebar" aria-hidden="true" data-panel-type="sidepanel">
     <div class="sidebar-header">
       <h3>Coach Mode</h3>
       <button id="closeCoachingSidebar" class="close-btn">&times;</button>
@@ -1138,7 +1138,7 @@
   </div>
 
   <!-- Coach Results Sidebar -->
-  <div id="coachResultsSidebar" class="sidebar coaching-results-sidebar" aria-hidden="true">
+  <div id="coachResultsSidebar" class="sidebar coaching-results-sidebar" aria-hidden="true" data-panel-type="sidepanel">
     <div class="sidebar-header">
       <h3>Session Results</h3>
       <button id="closeResultsSidebar" class="close-btn">&times;</button>
@@ -1198,7 +1198,7 @@
     </svg>
   </div>
 
-  <div id="aiChatContainer">
+  <div id="aiChatContainer" data-panel-type="sidepanel">
     <div class="ai-header">
       <h3>Composition Assistant</h3>
       <button class="close-ai-btn">✕</button>
@@ -1215,13 +1215,13 @@
   </div>
 
   <!-- My Scales Management Modal -->
-  <div id="myScalesModal" class="profile-modal-overlay" aria-hidden="true" style="display:none;">
-    <div class="profile-modal">
-      <div class="profile-header">
+  <div id="myScalesModal" class="modal-overlay" aria-hidden="true" style="display:none;">
+    <div class="modal">
+      <div class="modal-header">
         <h3 class="modal-title">My Handpans</h3>
         <button id="closeMyScalesBtn" class="close-btn">&times;</button>
       </div>
-      <div class="profile-content">
+      <div class="modal-content">
         <div id="myScalesList" class="my-scales-list">
           <!-- Dynamically populated -->
         </div>

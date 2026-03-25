@@ -5,14 +5,9 @@ import { start, stop, ensureAudio, getAudioCtx } from './noteplayer.js';
 import { clearSelection, deleteSelection, copySelection, pasteSelection, clearGridDom } from './notegrid.js';
 import { getRange, clearRange } from './range-selection.js';
 import { setPresentation } from './presentation-mode.js';
-import { closeSidebar } from './courses.js';
-import { closeCourseCreator } from './course-creator.js';
-import { closeGrooveModal } from './groove-generator.js';
-import { closeAuthModal } from './auth.js';
-import { closeProfileEditor } from './profile.js';
 import { TransportRegistry } from './transport-ui.js';
 import { writeToSelected, getComposeOn } from './compose-mode.js';
-import { aiAssistant } from './ai-assistant.js'; // Assuming aiAssistant is exported as a singleton or similar
+import { handleEscKey } from './windowControls.js';
 
 export function initShortcuts() {
   document.addEventListener('keydown', (e) => {
@@ -21,63 +16,7 @@ export function initShortcuts() {
 
     // Esc
     if (e.key === 'Escape') {
-
-      // e.preventDefault();
-      // e.stopPropagation();
-      // 0. Priorities: Top-most overlays first
-
-      // Guided Calibration
-      const guided = document.getElementById('guidedCalModal');
-      if (guided && guided.classList.contains('open')) {
-        document.getElementById('closeGuidedBtn')?.click();
-        return;
-      }
-
-      // Profile Modal
-      const profileModal = document.getElementById('profileModal');
-      if (profileModal?.classList.contains('open')) {
-        if (typeof closeProfileEditor === 'function') closeProfileEditor();
-        return;
-      }
-
-      // Auth Modal
-      const authModal = document.getElementById('authModal');
-      if (authModal?.classList.contains('open')) {
-        if (typeof closeAuthModal === 'function') closeAuthModal();
-        return;
-      }
-
-      // Groove Modal
-      const grooveModal = document.getElementById('grooveModal');
-      if (grooveModal && grooveModal.classList.contains('open')) {
-        if (typeof closeGrooveModal === 'function') closeGrooveModal();
-        return;
-      }
-
-      // Course Creator Modal
-      const courseModal = document.getElementById('courseModal');
-      if (courseModal?.classList.contains('open')) {
-        if (typeof closeCourseCreator === 'function') closeCourseCreator();
-        return;
-      }
-
-      // AI Assistant
-      const aiCont = document.getElementById('aiChatContainer');
-      if (aiCont && aiCont.classList.contains('open')) {
-        aiCont.classList.remove('open');
-        return;
-      }
-      if (aiAssistant && aiAssistant.isOpen) {
-        aiAssistant.toggleChat(false);
-        return;
-      }
-
-      // Course Sidebar
-      const sb = document.getElementById('courseSidebar');
-      if (sb?.classList.contains('open')) {
-        closeSidebar();
-        return;
-      }
+      if (handleEscKey()) return;
 
       // Presentation Mode
       if (document.body.classList.contains('present')) {
