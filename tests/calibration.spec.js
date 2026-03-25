@@ -20,8 +20,8 @@ test.describe('Calibration Feature', () => {
       return;
     }
 
-    // 0. Create unique test user
-    testUser = await createTestUser();
+    // 0. Create unique test user (admin to bypass CUSTOM_SCALES feature gate)
+    testUser = await createTestUser(true);
 
     // Navigate to context first to allow localStorage access
     await page.goto('/');
@@ -86,8 +86,9 @@ test.describe('Calibration Feature', () => {
       await loginBtn.click();
       await expect(page.locator('#authModal')).toHaveClass(/open/);
       await page.fill('#authEmail', testUser.email);
+      await page.click('#authContinueBtn');
+      await page.locator('#authPasswordRow').waitFor({ state: 'visible', timeout: 10000 });
       await page.fill('#authPass', testUser.password);
-
       await page.click('#authLogin');
 
       // Verify login success with longer timeout

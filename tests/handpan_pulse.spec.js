@@ -6,6 +6,8 @@ test.describe('Handpan Pulse Animations', () => {
     await page.goto('/');
     await page.waitForSelector('.cell');
     await page.click('#clearBtn-A');
+    await page.locator('#confirmModal.open').waitFor({ timeout: 5000 });
+    await page.click('#confirmOkBtn');
   });
 
   test('Grid A playback triggers pulses on handpan', async ({ page }) => {

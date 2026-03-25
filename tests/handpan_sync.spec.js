@@ -13,13 +13,20 @@ test.describe('Virtual Handpan Synchronization', () => {
 
     // 2. Clear both grids just in case
     await page.click('#clearBtn-A');
+    await page.locator('#confirmModal.open').waitFor({ timeout: 5000 });
+    await page.click('#confirmOkBtn');
     await page.click('#clearBtn-B');
+    await page.locator('#confirmModal.open').waitFor({ timeout: 5000 });
+    await page.click('#confirmOkBtn');
 
     // 3. Add a note ONLY to Grid B
     const cellB0 = page.locator('#measures-B .cell').first();
     await cellB0.click();
     await page.keyboard.type('1');
     await expect(cellB0).toHaveText('1');
+
+    // Dismiss selection tools so they don't intercept the play button click
+    await page.keyboard.press('Escape');
 
     // 4. Start Grid B (using its specific play button)
     const playBtnB = page.locator('#mainTransport-B .t-play-btn');
@@ -51,6 +58,9 @@ test.describe('Virtual Handpan Synchronization', () => {
     await cellA0.click();
     await page.keyboard.type('2');
     await expect(cellA0).toHaveText('2');
+
+    // Dismiss selection tools so they don't intercept the play button click
+    await page.keyboard.press('Escape');
 
     // 9. Start Grid A
     const playBtnA = page.locator('#mainTransport-A .t-play-btn');

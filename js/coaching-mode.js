@@ -1251,14 +1251,14 @@ function showCalibrationPrompt(ctx) {
     return;
   }
 
-  modal.style.display = 'flex';
+  modal.classList.add('open');
   modal.setAttribute('aria-hidden', 'false');
 
   const calNowBtn = document.getElementById('calNowBtn');
   const calSkipBtn = document.getElementById('calSkipBtn');
 
   calNowBtn.onclick = () => {
-    modal.style.display = 'none';
+    modal.classList.remove('open');
     modal.setAttribute('aria-hidden', 'true');
     // Open mic calibration
     const micCalBtn = document.getElementById('micCalBtn');
@@ -1271,7 +1271,7 @@ function showCalibrationPrompt(ctx) {
   };
 
   calSkipBtn.onclick = () => {
-    modal.style.display = 'none';
+    modal.classList.remove('open');
     modal.setAttribute('aria-hidden', 'true');
     skipCalibrationCheck[getCurrentScaleId()] = true;
     startCoachingSessionActual(ctx);

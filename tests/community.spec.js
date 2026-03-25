@@ -50,6 +50,8 @@ test.describe('Community Features', () => {
     await expect(page.locator('#authModal')).toHaveClass(/open/);
 
     await page.fill('#authEmail', testUser.email);
+    await page.click('#authContinueBtn');
+    await page.locator('#authPasswordRow').waitFor({ state: 'visible', timeout: 10000 });
     await page.fill('#authPass', testUser.password);
     await page.click('#authLogin');
 
@@ -120,17 +122,15 @@ test.describe('Community Features', () => {
     // 6. Delete Post
     const postCard = page.locator('.post-card').filter({ hasText: postContent }).first();
 
-    // Handle Confirm Dialog
-    page.once('dialog', async dialog => {
-      await dialog.accept();
-    });
-
     const deleteBtn = postCard.locator('[data-action="delete-post"]');
-    // Wait for hover or just click? Usually visible for owner.
     await deleteBtn.click();
 
+    // Handle custom confirm modal (app uses #confirmModal, not native dialog)
+    await page.locator('#confirmModal.open').waitFor({ timeout: 5000 });
+    await page.click('#confirmOkBtn');
+
     // 7. Verify Removal
-    await expect(postCard).not.toBeVisible();
+    await expect(postCard).not.toBeVisible({ timeout: 10000 });
   });
 
   test('Feed renders existing posts', async ({ page }) => {

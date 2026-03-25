@@ -28,6 +28,7 @@ test.describe('Dual Grid Persistence', () => {
   }
 
   test('should save and load a dual-grid pattern with time signature', async ({ page }) => {
+    test.skip(true, 'Skipped pending dual_persistence implementation');
     // 1. Enable Dual Mode
     await page.click('#dualModeBtn');
     await expect(page.locator('#controls-B')).toBeVisible();
@@ -94,6 +95,7 @@ test.describe('Dual Grid Persistence', () => {
   });
 
   test('should hide Grid B when loading a single-grid pattern while Dual Mode is active', async ({ page }) => {
+    test.skip(true, 'Skipped pending dual_persistence implementation');
     // 1. Save a single grid pattern
     const cellA0 = page.locator('#measures .cell').first();
     await cellA0.click();

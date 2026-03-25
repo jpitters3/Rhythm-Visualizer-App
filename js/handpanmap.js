@@ -753,6 +753,10 @@ export function highlightHandpan(note, stepIndex, forceHand = null, latency = 0)
   const visual = el.querySelector('.hp-visual');
   if (!visual) return;
 
+  // Mark dot as active for the duration of the pulse (enables CSS hooks and test assertions)
+  el.classList.add('active');
+  setTimeout(() => el.classList.remove('active'), duration);
+
   // Pulse animation using Web Animations API (WAAPI)
   // This eliminates the non-performant `offsetWidth` reflow hack.
   // We animate the 'visual' child to avoid moving the label/number.

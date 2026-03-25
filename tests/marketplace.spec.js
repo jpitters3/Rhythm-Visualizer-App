@@ -77,35 +77,29 @@ test.describe('Course Marketplace', () => {
     const getBtn = courseCard.locator('button[data-action="unlock-course"]');
     await expect(getBtn).toContainText('Get Course');
 
-    // Handle the success dialog
-    page.once('dialog', async dialog => {
-      console.log(`Dialog message: ${dialog.message()}`);
-      expect(dialog.message()).toContain('Course unlocked');
-      await dialog.accept();
-    });
-
     await getBtn.click();
 
-    await page.waitForTimeout(2000);
+    // Dismiss "Course activated! Let's start learning." custom alert
+    await page.locator('#confirmModal.open').waitFor({ timeout: 10000 });
+    await page.click('#confirmOkBtn');
 
-    // 6. Verify Marketplace closed and course appears in Sidebar
-    await expect(marketModal).not.toBeVisible();
-    // await expect(marketModal).not.toHaveClass(/open/);
-
+    // 6. Verify Marketplace closed (closeMarketplace() called after alert dismissed)
+    await expect(marketModal).not.toHaveClass(/open/, { timeout: 5000 });
     // Give it a moment for the sidebar to refresh
-    await page.waitForTimeout(2000);
+    await page.waitForTimeout(1000);
 
     // 7. Re-open Marketplace to verify "Owned" status
     await openMarketBtn.click();
     await expect(marketModal).toHaveClass(/open/);
 
-    const ownedBtn = marketModal.locator(`.market-card:has-text("${courseTitle}")`).locator('button[data-action="unlock-course"]');
-    await expect(ownedBtn).toBeDisabled();
-    await expect(ownedBtn).toHaveText('Owned');
+    // After unlock, button changes to "Archive" (data-action="archive-course")
+    const ownedBtn = marketModal.locator(`.market-card:has-text("${courseTitle}")`).locator('button[data-action="archive-course"]');
+    await expect(ownedBtn).toBeVisible();
+    await expect(ownedBtn).toContainText('Archive');
 
     // 8. Close Marketplace
     await page.locator('#closeMarketBtn').click();
-    await expect(marketModal).not.toBeVisible();
+    await expect(marketModal).not.toHaveClass(/open/, { timeout: 5000 });
 
     // 9. Verify it exists in the course sidebar (My Courses / Library)
     const courseInSidebar = sidebar.locator(`.course-item:has-text("${courseTitle}")`);
@@ -130,6 +124,8 @@ async function loginUser(page, email, password) {
 
   await expect(page.locator('#authModal')).toHaveClass(/open/);
   await page.fill('#authEmail', email);
+  await page.click('#authContinueBtn');
+  await page.locator('#authPasswordRow').waitFor({ state: 'visible', timeout: 10000 });
   await page.fill('#authPass', password);
   await page.click('#authLogin');
 

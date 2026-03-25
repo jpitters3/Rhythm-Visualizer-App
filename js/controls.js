@@ -18,6 +18,7 @@ import { updateUserGridLabelNotation } from './profile.js';
 import { HistoryManager } from './history.js';
 import { canAccess, FEATURE } from './gated-feature.js';
 import { alert, confirm, prompt } from './alert.js';
+import { Bus, BUS_EVENT } from './bus.js';
 
 // Global references assigned in initControls
 let patternSelect, gridBtn, handBtn, resetBtn, themeBtn, presentBtn, exitPresent, micBtn, saveBtn, renameBtn, deleteBtn, exportBtn, navDashboardBtn, importBtn, loadBtn;

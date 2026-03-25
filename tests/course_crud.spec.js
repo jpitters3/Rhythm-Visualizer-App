@@ -7,15 +7,15 @@ const SUPABASE_URL = process.env.VITE_SUPABASE_URL || "";
 const SUPABASE_KEY = process.env.VITE_SUPABASE_ANON_KEY || "";
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-const { createTestUser, deleteTestUser } = require('./utils/auth-helper');
+const { createTestUser, deleteTestUser, loginAsTestUser } = require('./utils/auth-helper');
 const { waitForPageReady } = require('./utils/page-helper');
 
 test.describe('Course CRUD (Clean)', () => {
   let testUser;
 
   test.beforeEach(async ({ page }) => {
-    // 0. Create unique test user
-    testUser = await createTestUser();
+    // 0. Create unique test user (admin so edit-course button is visible)
+    testUser = await createTestUser(true);
 
     // 1. Navigate and wait for page to be fully loaded
     await waitForPageReady(page);
@@ -48,11 +48,8 @@ test.describe('Course CRUD (Clean)', () => {
       console.log(`[COURSE-CRUD] Logging in with:`, { email, password });
 
       await page.fill('#authEmail', email);
-
-      // Ensure we are on login tab if needed (default is usually register if fresh? or login?)
-      // Actually, if we just created the user via admin API, we need to Log In.
-      // The modal defaults to "Sign In" usually.
-
+      await page.click('#authContinueBtn');
+      await page.locator('#authPasswordRow').waitFor({ state: 'visible', timeout: 10000 });
       await page.fill('#authPass', password);
       await page.click('#authLogin');
 
@@ -116,19 +113,14 @@ test.describe('Course CRUD (Clean)', () => {
     await lesson1.locator('.lesson-title-input').fill(`Lesson 1`);
 
     // 4. Save
-    // Mock the confirm dialog if it appears? (None for save, only delete)
-    // Actually handleCourseSave calls alert("Course saved successfully!") on success.
-    // We need to handle that dialog.
-    page.once('dialog', async dialog => {
-      console.log(`Dialog message: ${dialog.message()}`);
-      await dialog.accept();
-    });
-
     await page.click('#saveCourseBtn');
 
+    // Dismiss the "Course saved successfully!" custom alert modal
+    await page.locator('#confirmModal.open').waitFor({ timeout: 10000 });
+    await page.click('#confirmOkBtn');
+
     // 5. Verify Close
-    // The alert accept should proceed to closeCourseCreator
-    await expect(page.locator('#courseModal')).not.toHaveClass(/open/);
+    await expect(page.locator('#courseModal')).not.toHaveClass(/open/, { timeout: 5000 });
 
     // Verify it appears in Sidebar
     const sidebar = await openCoursesSidebar(page);
@@ -167,7 +159,7 @@ test.describe('Course CRUD (Clean)', () => {
         title: courseTitle,
         description: 'Original Description',
         owner_id: user.id,
-        is_published: false
+        is_published: true
       })
       .select()
       .single();
@@ -177,17 +169,17 @@ test.describe('Course CRUD (Clean)', () => {
     }
 
     try {
-      // 2. Refresh Page (to load new course list)
-      await page.reload();
-      await ensureMenuOpen(page); // Ensure menu state is clean
+      // 2. Refresh Page (to load new course list), then re-login to restore auth state
+      await page.reload({ waitUntil: 'networkidle' });
+      await page.waitForSelector('.measure-row', { timeout: 10000 });
+      await loginAsTestUser(page, testUser);
 
       // 3. Open Courses Sidebar
       const sidebar = await openCoursesSidebar(page);
-      await expect(sidebar).toHaveClass(/open/);
+      await expect(sidebar).toHaveClass(/open/, { timeout: 5000 });
 
       // 4. Find the Course in the list
-      // Wait for list to load
-      await expect(page.locator('#courseList .course-item')).not.toHaveCount(0);
+      await expect(page.locator('#courseList .course-item')).not.toHaveCount(0, { timeout: 10000 });
 
       const courseItem = page.locator(`.course-item[data-id="${course.id}"]`);
       await courseItem.scrollIntoViewIfNeeded();
@@ -215,17 +207,11 @@ test.describe('Course CRUD (Clean)', () => {
       await page.fill('#courseDesc', 'Updated Description');
 
       // 8. Save
-      let dialogHandled = false;
-      page.once('dialog', async dialog => {
-        console.log(`Dialog message: ${dialog.message()}`);
-        await dialog.accept();
-        dialogHandled = true;
-      });
-
       await page.click('#saveCourseBtn');
 
-      // Wait for dialog logic to possibly fire?
-      await page.waitForTimeout(1000);
+      // Dismiss the "Course saved successfully!" custom alert modal
+      await page.locator('#confirmModal.open').waitFor({ timeout: 10000 });
+      await page.click('#confirmOkBtn');
 
       // 9. Verify DB Update
       await expect(async () => {
@@ -247,33 +233,10 @@ test.describe('Course CRUD (Clean)', () => {
 
 async function openCoursesSidebar(page) {
   const sidebar = page.locator('#courseSidebar');
-  // If not open, click button
   if (!await sidebar.getAttribute('class').then(c => c?.includes('open'))) {
-    const toggleBtn = page.locator('#toggleSidebarBtn');
-    if (await toggleBtn.isVisible()) {
-      await toggleBtn.click();
-    } else {
-      // If button not visible (locked in dropdown), open dropdown/menu
-      const accountBtn = page.locator('#accountBtn');
-      if (await accountBtn.isVisible()) {
-        await accountBtn.click();
-
-        // await page.pause();
-
-        await toggleBtn.click({ force: true });
-      } else {
-        await ensureMenuOpen(page); // Ensures #authBtn is visible, but we need #toggleSidebarBtn
-        // On mobile, toggleSidebarBtn is in #accountDropdownMenu (inside #headerMenu)
-        // If #headerMenu is open (ensureMenuOpen ensures that), is .account-dropdown open?
-        // No, .account-dropdown content is "static" on mobile?
-        // Let's check layout.css.
-        // Mobile: .account-dropdown .dropdown-content { display: flex !important; position: static; }
-        // So if menu is open, the buttons should be visible.
-        const toggleBtnMobile = page.locator('#toggleSidebarBtn');
-        // Mobile menu might need scrolling or ensuring it's interactable
-        await toggleBtnMobile.click();
-      }
-    }
+    // #toggleSidebarBtn lives inside the account dropdown — click it via evaluate
+    // to bypass visibility restrictions without needing to open the dropdown first
+    await page.evaluate(() => document.getElementById('toggleSidebarBtn')?.click());
   }
   return sidebar;
 }

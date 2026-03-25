@@ -62,9 +62,14 @@ async function loginAsTestUser(page, testUser) {
   if (btnText.includes('Sign In') || btnText.includes('Register')) {
     await loginBtn.click();
     await expect(page.locator('#authModal')).toHaveClass(/open/);
-    await page.fill('#authEmail', testUser.email);
-    await page.fill('#authPass', testUser.password);
 
+    // Step 1: Enter email and click Continue (app checks if email exists via Supabase)
+    await page.fill('#authEmail', testUser.email);
+    await page.click('#authContinueBtn');
+
+    // Step 2: Wait for password row to appear, then fill and submit
+    await page.locator('#authPasswordRow').waitFor({ state: 'visible', timeout: 10000 });
+    await page.fill('#authPass', testUser.password);
     await page.click('#authLogin');
 
     // Verify login success with longer timeout

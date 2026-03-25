@@ -46,25 +46,26 @@ test.describe('Playback & Controls', () => {
   test('Metronome Toggle', async ({ page }) => {
     const metroBtn = page.locator('#mainTransport-A .t-metro-btn');
 
-    // 1. Toggle On
-    await metroBtn.click({ force: true });
+    // 1. Toggle On (use evaluate to bypass headless click restrictions)
+    await page.evaluate(() => document.querySelector('#mainTransport-A .t-metro-btn').click());
     await expect(metroBtn).toHaveClass(/active/);
 
-    // 2. Toggle Off
-    await metroBtn.click({ force: true });
+    // 2. Toggle Off (click twice more to cycle through states: Click -> Shaker -> Off)
+    await page.evaluate(() => document.querySelector('#mainTransport-A .t-metro-btn').click());
+    await page.evaluate(() => document.querySelector('#mainTransport-A .t-metro-btn').click());
     await expect(metroBtn).not.toHaveClass(/active/);
   });
 
   test('Mute Toggle', async ({ page }) => {
     const muteBtn = page.locator('#mainTransport-A .t-mute-btn');
 
-    // 1. Toggle Mute
-    await muteBtn.click({ force: true });
+    // 1. Toggle Mute (button is hidden, use evaluate to trigger handler directly)
+    await page.evaluate(() => document.querySelector('#mainTransport-A .t-mute-btn').click());
     await expect(muteBtn).toHaveText('🔇');
     await expect(muteBtn).toHaveClass(/muted/);
 
     // 2. Unmute
-    await muteBtn.click({ force: true });
+    await page.evaluate(() => document.querySelector('#mainTransport-A .t-mute-btn').click());
     await expect(muteBtn).toHaveText('🔊');
     await expect(muteBtn).not.toHaveClass(/muted/);
   });

@@ -12,6 +12,8 @@ test.describe('Undo/Redo Features', () => {
     // 1. Initial State: grid empty
     // (Assuming default empty grid or we clear it)
     await page.click('#clearBtn-A');
+    await page.locator('#confirmModal.open').waitFor({ timeout: 5000 });
+    await page.click('#confirmOkBtn');
 
     // 2. Add a note (Click first cell)
     const cell0 = page.locator('.cell').nth(0);
@@ -36,61 +38,47 @@ test.describe('Undo/Redo Features', () => {
   test('Data Loss Prevention', async ({ page }) => {
     // 1. Clean state
     await page.click('#clearBtn-A');
+    await page.locator('#confirmModal.open').waitFor({ timeout: 5000 });
+    await page.click('#confirmOkBtn');
 
     // 2. Make change
     await page.locator('.cell').nth(0).click();
     await page.keyboard.press('1');
 
     // 3. Verify Dirty State via Import Prompt
-    // If dirty, clicking Import should trigger "You have unsaved changes" confirm
-    let confirmMsg = '';
-    page.once('dialog', dialog => {
-      confirmMsg = dialog.message();
-      dialog.dismiss(); // Cancel import
-    });
-
-    // Open File Dropdown first
-    // Mobile Check: If file dropdown is hidden, we might need to open mobile menu?
-    // Actually, File Dropdown is usually in the top bar. On mobile it might be hidden or collapsed.
-    // If #fileDropdownBtn is not visible, try opening #mobileMenuBtn first (if it exists)
+    // App uses custom #confirmModal (not native browser dialog)
     if (!await page.locator('#fileDropdownBtn').isVisible()) {
       const mobileBtn = page.locator('#mobileMenuBtn');
-      if (await mobileBtn.isVisible()) {
-        await mobileBtn.click();
-      }
+      if (await mobileBtn.isVisible()) await mobileBtn.click();
     }
     await page.click('#fileDropdownBtn');
     await expect(page.locator('#fileDropdownMenu')).toBeVisible();
     await page.click('#importBtn');
 
-    expect(confirmMsg).toContain('unsaved changes');
+    // Should show "Unsaved Changes" custom confirm modal
+    await page.locator('#confirmModal.open').waitFor({ timeout: 5000 });
+    const confirmMsg = await page.locator('#confirmMessage').textContent();
+    expect(confirmMsg.toLowerCase()).toContain('unsaved');
+    await page.click('#confirmCancelBtn'); // Cancel import
 
     // 4. Undo and Verify Clean State
-    // Click outside to close dropdown if needed, or just press Undo
-    await page.locator('body').click();
+    await page.keyboard.press('Escape'); // ensure no modals block
     await page.keyboard.press('Meta+z');
 
-    // Now clicking Import should NOT warn about unsaved changes.
-    // It should prompt for JSON input immediately.
-    let promptMsg = '';
-    page.once('dialog', dialog => {
-      promptMsg = dialog.message();
-      dialog.dismiss(); // Cancel input
-    });
-
+    // Now clicking Import should show "Import Pattern" prompt directly
     if (!await page.locator('#fileDropdownBtn').isVisible()) {
       const mobileBtn = page.locator('#mobileMenuBtn');
-      if (await mobileBtn.isVisible()) {
-        await mobileBtn.click();
-      }
+      if (await mobileBtn.isVisible()) await mobileBtn.click();
     }
-    await page.click('#fileDropdownBtn'); // Re-open dropdown
+    await page.click('#fileDropdownBtn');
     await expect(page.locator('#fileDropdownMenu')).toBeVisible();
     await page.click('#importBtn');
 
-    // The prompt message is "Paste pattern JSON here:"
-    expect(promptMsg).toContain('Paste pattern JSON');
-    expect(promptMsg).not.toContain('unsaved changes');
+    // Should go straight to "Import Pattern" prompt (no unsaved changes warning)
+    await page.locator('#confirmModal.open').waitFor({ timeout: 5000 });
+    const promptTitle = await page.locator('#confirmTitle').textContent();
+    expect(promptTitle).toContain('Import Pattern');
+    await page.click('#confirmCancelBtn'); // Cancel without importing
   });
 
   /*

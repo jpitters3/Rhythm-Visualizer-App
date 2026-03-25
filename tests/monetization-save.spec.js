@@ -70,6 +70,8 @@ test.describe('Monetization Save Gating', () => {
     console.log('[TEST] Creating test user and signing in...');
     const user = await createTestUser();
     await page.locator('#authEmail').fill(user.email);
+    await page.click('#authContinueBtn');
+    await page.locator('#authPasswordRow').waitFor({ state: 'visible', timeout: 10000 });
     await page.locator('#authPass').fill(user.password);
     await page.click('#authLogin');
 

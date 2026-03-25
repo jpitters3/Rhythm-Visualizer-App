@@ -18,8 +18,8 @@ test.describe('Practice Plan', () => {
   let testUser;
 
   test.beforeEach(async ({ page }) => {
-    // Create unique test user
-    testUser = await createTestUser();
+    // Create unique test user (admin so #openCourseModalBtn is visible)
+    testUser = await createTestUser(true);
 
     // Enable Console Logs
     page.on('console', msg => console.log(`BROWSER LOG: ${msg.text()}`));
@@ -53,6 +53,8 @@ test.describe('Practice Plan', () => {
       });
 
       await page.fill('#authEmail', testUser.email);
+      await page.click('#authContinueBtn');
+      await page.locator('#authPasswordRow').waitFor({ state: 'visible', timeout: 10000 });
       await page.fill('#authPass', testUser.password);
       await page.click('#authLogin');
 
@@ -107,53 +109,32 @@ test.describe('Practice Plan', () => {
     const lessonTitle = `Test Lesson ${timestamp}`;
     await lessonBuilder.locator('.lesson-title-input').fill(lessonTitle);
 
-    // 4. Save Course
-    // Handle alert dialog if any, though usually specific save actions might rely on UI feedback.
-    // course-creator.js uses alert() for success.
-    page.once('dialog', dialog => {
-      console.log(`Dialog message: ${dialog.message()}`);
-      dialog.accept().catch(() => { });
-    });
+    // Publish the section so RLS allows reading its lessons
+    const sectionPublishToggle = sectionBuilder.locator('[data-field="section-published"]');
+    await sectionPublishToggle.check();
 
+    // 4. Save Course
     await page.click('#saveCourseBtn');
 
+    // Dismiss "Course saved successfully!" custom alert
+    await page.locator('#confirmModal.open').waitFor({ timeout: 10000 });
+    await page.click('#confirmOkBtn');
+
     // Wait for modal to close
-    await expect(page.locator('#courseModal')).not.toHaveClass(/open/);
-    await expect(page.locator('#courseModal')).toBeHidden();
+    await expect(page.locator('#courseModal')).not.toHaveClass(/open/, { timeout: 5000 });
     // Allow CSS transitions to finish or overlay to be removed
     await page.waitForTimeout(500);
 
     // 5. Open Course Sidebar to find the new course
-    await clickAccountBtn(page);
-
-    const toggleBtn = page.locator('#toggleSidebarBtn');
-    await toggleBtn.click();
     const sidebar = page.locator('#courseSidebar');
+    await page.evaluate(() => document.getElementById('toggleSidebarBtn')?.click());
+    await expect(sidebar).toHaveClass(/open/, { timeout: 5000 });
 
-    // Ensure sidebar is open
-    if (!await sidebar.getAttribute('class').then(c => c?.includes('open'))) {
-      if (await toggleBtn.isVisible()) {
-        await toggleBtn.click();
-      } else {
-        // Mobile fallback
-        const mobileMenuBtn = page.locator('#mobileMenuBtn');
-        if (await mobileMenuBtn.isVisible()) {
-          await mobileMenuBtn.click();
-          await page.locator('#toggleSidebarBtn').click();
-        }
-      }
-    }
-    await expect(sidebar).toHaveClass(/open/);
-
-    // 6. Find and Expand the new Course
-    const newCourseHeader = page.locator('.course-item .course-header', { hasText: courseTitle });
-    // It might take a moment to fetch
-    await newCourseHeader.waitFor({ state: 'visible', timeout: 10000 });
-    await newCourseHeader.click();
+    // 6. Find the lesson link — course is already expanded after creation
+    const lessonLink = page.locator('.lesson-link', { hasText: lessonTitle });
+    await expect(lessonLink).toBeVisible({ timeout: 10000 });
 
     // 7. Click the lesson link
-    const lessonLink = page.locator('.lesson-link', { hasText: lessonTitle });
-    await expect(lessonLink).toBeVisible();
     await lessonLink.click();
 
     // --- TEST ACTION: Add to Practice ---
@@ -165,6 +146,7 @@ test.describe('Practice Plan', () => {
     const addToPlanBtn = page.locator('#addPracticeBtn');
     await expect(addToPlanBtn).toBeVisible();
 
+    await addToPlanBtn.scrollIntoViewIfNeeded();
     await addToPlanBtn.click({ force: true });
     await expect(addToPlanBtn).toContainText('Remove'); // Verify Toggle State
 

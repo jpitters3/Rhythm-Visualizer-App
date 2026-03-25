@@ -22,9 +22,10 @@ test.describe('Chords & Chords', () => {
 
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
-    page.once('dialog', dialog => dialog.accept());
     await ensureMenuClosed(page);
     await page.click('#clearBtn-A');
+    await page.locator('#confirmModal.open').waitFor({ timeout: 5000 });
+    await page.click('#confirmOkBtn');
   });
 
   test('Multi-Note (Chord) Entry and Playback', async ({ page, browserName }) => {

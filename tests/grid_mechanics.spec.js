@@ -18,10 +18,10 @@ test.describe('Grid Mechanics', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
     await page.waitForSelector('.measure-row');
-    // Helper to clear grid
-    page.once('dialog', dialog => dialog.accept());
     await ensureMenuClosed(page);
     await page.click('#clearBtn-A');
+    await page.locator('#confirmModal.open').waitFor({ timeout: 5000 });
+    await page.click('#confirmOkBtn');
   });
 
   test('Range Selection', async ({ page }) => {

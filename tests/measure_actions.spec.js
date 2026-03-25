@@ -7,16 +7,9 @@ test.describe('Measure Actions', () => {
     await page.goto('/');
     await page.waitForSelector('.measure-row');
 
-    // Clear any previous state
-    page.once('dialog', dialog => dialog.accept());
-    // Ensure menu closed
-    if (await page.locator('#mobileMenuBtn').isVisible()) {
-      const menu = page.locator('#headerMenu');
-      if (await menu.evaluate(el => el.classList.contains('open'))) {
-        await page.click('#mobileMenuBtn');
-      }
-    }
     await page.click('#clearBtn-A');
+    await page.locator('#confirmModal.open').waitFor({ timeout: 5000 });
+    await page.click('#confirmOkBtn');
   });
 
   /* 
@@ -45,10 +38,9 @@ test.describe('Measure Actions', () => {
     await lastCell.scrollIntoViewIfNeeded();
     await lastCell.click();
 
-    // Stub confirm to return true automatically
-    await page.evaluate(() => window.confirm = () => true);
-
     await page.click('#delMeasureBtn');
+    await page.locator('#confirmModal.open').waitFor({ timeout: 5000 });
+    await page.click('#confirmOkBtn');
 
     // Verify count returned to initial
     await expect(page.locator('#measures .cell')).toHaveCount(initialCells);

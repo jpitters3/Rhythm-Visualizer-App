@@ -6,6 +6,8 @@ test.describe('Keyboard Shortcuts', () => {
     await page.waitForSelector('.measure-row');
     // Clear any existing pattern
     await page.click('#clearBtn-A');
+    await page.locator('#confirmModal.open').waitFor({ timeout: 5000 });
+    await page.click('#confirmOkBtn');
   });
 
   test('Space bar toggles play/pause', async ({ page }) => {

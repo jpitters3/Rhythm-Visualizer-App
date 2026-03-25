@@ -7,6 +7,8 @@ test.describe('Hand Sticking Mechanics', () => {
     await page.goto('/');
     await page.waitForSelector('.measure-row');
     await page.click('#clearBtn-A');
+    await page.locator('#confirmModal.open').waitFor({ timeout: 5000 });
+    await page.click('#confirmOkBtn');
   });
 
   test('Right-click toggles hand sticking (skips redundant state)', async ({ page, isMobile }) => {

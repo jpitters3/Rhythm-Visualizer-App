@@ -105,11 +105,15 @@ test.describe('Dual Grid Functionality', () => {
 
     // Clear Grid B
     await page.click('#clearBtn-B');
+    await page.locator('#confirmModal.open').waitFor({ timeout: 5000 });
+    await page.click('#confirmOkBtn');
     // Grid A should still have its label
     await expect(page.locator('#measures .cell').first()).toHaveClass(/has-label/);
 
     // Clear Grid A
     await page.click('#clearBtn-A');
+    await page.locator('#confirmModal.open').waitFor({ timeout: 5000 });
+    await page.click('#confirmOkBtn');
     await expect(page.locator('#measures .cell').first()).not.toHaveClass(/has-label/);
   });
 
