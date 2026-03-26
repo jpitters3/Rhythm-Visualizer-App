@@ -398,7 +398,7 @@ function renderQuizBuilderHTML(idx) {
           ${opt.correct ? 'checked' : ''} />
         <input type="text" data-field="quiz-option-text"
           data-qidx="${qIdx}" data-oidx="${oIdx}"
-          value="${escapeHtml(opt.text ?? '')}" placeholder="Option ${oIdx + 1}" />
+          value="${escapeHtml(opt.label ?? '')}" placeholder="Option ${oIdx + 1}" />
         <button class="asgn-quiz-option-del"
           data-action="quiz-delete-option"
           data-qidx="${qIdx}" data-oidx="${oIdx}" title="Remove option">✕</button>
@@ -727,9 +727,8 @@ function expandItem(idx) {
   const el = document.getElementById('asgnItemsList');
   if (!el) return;
 
-  const itemCards = el.querySelectorAll('.asgn-item-card-body');
-  const quizItemCard = itemCards[idx];
-  quizItemCard.classList.remove('collapsed');
+  const card = el.querySelector(`.asgn-item-card[data-idx="${idx}"]`);
+  card?.querySelector('.asgn-item-card-body')?.classList.remove('collapsed');
 }
 
 // ===== QUIZ HELPERS =====
