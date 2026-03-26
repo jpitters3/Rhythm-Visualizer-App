@@ -11,9 +11,11 @@ import { dbListPatternNames, dbLoadPatternByName, dbSavePattern, applyPattern } 
 import { start, stop } from './noteplayer.js';
 import { GridContext } from './grid-context.js';
 import { initCourseCopier, openCourseCopier } from './course-copier.js';
-import { initAssignments, openAssignments } from './assignments.js';
+import { initAssignments, openAssignments, prefetchAssignmentsData } from './assignments.js';
+import { Bus, BUS_EVENT } from './bus.js';
 
 let isAdmin = false;
+let adminInitialized = false;
 let patternOrgModal = null;
 let gameConfigModal = null;
 
@@ -24,23 +26,34 @@ let patternCache = [];
 let previewGrid = null;
 let currentPreviewPattern = null;
 
-export async function initAdmin() {
+export function initAdmin() {
+  // Also run on every AUTH_LOGIN so buttons appear without a refresh.
+  Bus.on(BUS_EVENT.AUTH_LOGIN, () => activateAdminIfAuthorized());
+
+  // Run immediately in case auth was already resolved before this module loaded.
+  activateAdminIfAuthorized();
+}
+
+function activateAdminIfAuthorized() {
   const user = currentUser;
-  if (!user || !user.email) return;
+  if (!user?.email) return;
+  if (!ADMIN_EMAILS.has(user.email)) return;
 
-  if (ADMIN_EMAILS.has(user.email)) {
-    console.log('[Admin] Authorized user detected:', user.email);
-    isAdmin = true;
+  isAdmin = true;
+  injectAdminButton(); // safe to call repeatedly — checks #adminBtn exists
 
-    // Initialize preview grid
-    previewGrid = new GridContext('preview', 'preview-grid-container');
-    console.log('[Admin] Preview grid initialized');
+  if (adminInitialized) return; // one-time setup below
+  adminInitialized = true;
 
-    injectAdminButton();
-    setupModals();
-    initCourseCopier();
-    initAssignments();
-  }
+  console.log('[Admin] Authorized user detected:', user.email);
+
+  previewGrid = new GridContext('preview', 'preview-grid-container');
+  console.log('[Admin] Preview grid initialized');
+
+  setupModals();
+  initCourseCopier();
+  initAssignments();
+  setTimeout(() => prefetchAssignmentsData(), 0);
 }
 
 function injectAdminButton() {

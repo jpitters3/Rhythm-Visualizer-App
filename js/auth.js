@@ -5,6 +5,7 @@ import { loadCurrentProfile } from './profile.js';
 import { Modal } from './modal.js';
 
 export async function isAuthed() {
+  if (currentUser) return true; // Fast path: trust already-resolved auth state
   if (typeof supabase === 'undefined' || !supabase.auth) return false;
   try {
     const { data } = await supabase.auth.getUser();

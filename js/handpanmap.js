@@ -1814,4 +1814,19 @@ export async function initScale() {
   setSelectedScaleName(name);
 
   await preloadScaleSamples();
+
+  // Re-apply the user's saved scale after login resolves (auth may not have
+  // been ready when initScale() first ran).
+  Bus.on(BUS_EVENT.AUTH_LOGIN, async () => {
+    const remoteScaleName = await loadScaleRemote();
+    if (remoteScaleName) {
+      setSelectedScaleName(remoteScaleName);
+      await preloadScaleSamples();
+      // For custom handpans, loadAllUserCustomHandpans handles fetching the
+      // layout data and calling applyCustomHandpan() to render it visually.
+      if (remoteScaleName.startsWith('custom:')) {
+        await loadAllUserCustomHandpans();
+      }
+    }
+  });
 }
