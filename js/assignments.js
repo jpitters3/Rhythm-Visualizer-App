@@ -986,13 +986,20 @@ async function handleSave() {
       .eq('assignment_id', saved.id);
     const studentIds = (assignees || []).map(a => a.student_id);
     const teacherName = buildName(currentProfile);
+
+    const body = `${teacherName} assigned you "${saved.title}".`;
+
+    // Insert notification
     await insertNotifications(
       studentIds,
       'new_assignment',
       'New assignment',
-      `${teacherName} assigned you "${saved.title}".`,
+      body,
       { assignment_id: saved.id }
     );
+
+    // Send email to all assigned students
+    sendNotificationEmails(studentIds, 'new_assignment', 'New assignment', body);
   }
 
   // Flash save status
@@ -1073,13 +1080,16 @@ async function handleAssign() {
   // If the assignment is already published, notify the newly-assigned students immediately
   if (currentAssignment.is_published) {
     const teacherName = buildName(currentProfile);
+    const newStudentIds = rows.map(r => r.student_id);
+    const notifBody = `${teacherName} assigned you "${currentAssignment.title}".`;
     await insertNotifications(
-      rows.map(r => r.student_id),
+      newStudentIds,
       'new_assignment',
       'New assignment',
-      `${teacherName} assigned you "${currentAssignment.title}".`,
+      notifBody,
       { assignment_id: currentAssignment.id }
     );
+    sendNotificationEmails(newStudentIds, 'new_assignment', 'New assignment', notifBody);
   }
 }
 
@@ -1190,4 +1200,16 @@ async function insertNotifications(userIds, type, title, body, data = {}) {
   const rows = userIds.map(uid => ({ user_id: uid, type, title, body, data }));
   const { error } = await supabase.from('notifications').insert(rows);
   if (error) console.error('[Assignments] insertNotifications:', error);
+}
+
+async function sendNotificationEmails(userIds, type, title, body) {
+  if (!userIds.length) return;
+  try {
+    const { error } = await supabase.functions.invoke('send-notification-email', {
+      body: { userIds, type, title, body },
+    });
+    if (error) console.warn('[Assignments] sendNotificationEmails error:', error);
+  } catch (err) {
+    console.warn('[Assignments] sendNotificationEmails exception:', err);
+  }
 }
