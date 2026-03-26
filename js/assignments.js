@@ -723,6 +723,15 @@ function moveItem(idx, dir) {
   renderItemsList();
 }
 
+function expandItem(idx) {
+  const el = document.getElementById('asgnItemsList');
+  if (!el) return;
+
+  const itemCards = el.querySelectorAll('.asgn-item-card-body');
+  const quizItemCard = itemCards[idx];
+  quizItemCard.classList.remove('collapsed');
+}
+
 // ===== QUIZ HELPERS =====
 
 function addQuizQuestion(itemIdx) {
@@ -731,11 +740,13 @@ function addQuizQuestion(itemIdx) {
   if (!item.config.questions) item.config.questions = [];
   item.config.questions.push({ id: `q${Date.now()}`, text: '', options: [] });
   renderItemsList();
+  expandItem(itemIdx);
 }
 
 function removeQuizQuestion(itemIdx, qIdx) {
   currentItems[itemIdx].config.questions.splice(qIdx, 1);
   renderItemsList();
+  expandItem(itemIdx);
 }
 
 function addQuizOption(itemIdx, qIdx) {
@@ -743,11 +754,13 @@ function addQuizOption(itemIdx, qIdx) {
   if (!q.options) q.options = [];
   q.options.push({ id: `o${Date.now()}`, label: '', correct: false });
   renderItemsList();
+  expandItem(itemIdx);
 }
 
 function removeQuizOption(itemIdx, qIdx, oIdx) {
   currentItems[itemIdx].config.questions[qIdx].options.splice(oIdx, 1);
   renderItemsList();
+  expandItem(itemIdx);
 }
 
 // ===== EVENT DELEGATION — ITEMS LIST =====
