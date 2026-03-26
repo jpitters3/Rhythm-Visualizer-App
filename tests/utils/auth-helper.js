@@ -27,14 +27,6 @@ async function createTestUser(isAdmin = false) {
     throw new Error(`Failed to create test user: ${error.message}`);
   }
 
-  // Debug auth details
-  // console.log(`[AUTH-HELPER] Created test user:`, {
-  //   email,
-  //   password,
-  //   userId: data.user.id,
-  //   emailConfirmed: data.user.email_confirmed_at
-  // });
-
   return {
     email,
     password,

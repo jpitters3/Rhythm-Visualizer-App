@@ -24,9 +24,8 @@ async function createStudentUser() {
   const user = await createTestUser(false);
   const { error } = await supabaseAdmin
     .from('profiles')
-    .update({ role: 'student' })
-    .eq('user_id', user.user.id);
-  if (error) throw new Error(`Failed to set student role: ${error.message}`);
+    .upsert({ user_id: user.user.id, role: 'student', username: user.email.split('@')[0] });
+  if (error) throw new Error(`Failed to create student profile: ${error.message}`);
   return user;
 }
 
@@ -264,12 +263,7 @@ test.describe('Assignment Workflow', () => {
       await expect(tPage.locator('#asgnReviewPanel')).toBeVisible({ timeout: 5000 });
       await tPage.locator('#asgnMarkCompleteBtn').click();
 
-      // Confirm mark-complete dialog
-      await tPage.locator('#confirmModal.open').waitFor({ timeout: 5000 });
-      await tPage.locator('#confirmOkBtn').click();
-
-      // Submission row disappears (status = reviewed, no longer in 'submitted' filter)
-      // or shows 'Complete' pill — either way the review panel closes
+      // Review panel closes after marking complete
       await expect(tPage.locator('#asgnReviewPanel')).not.toBeVisible({ timeout: 5000 });
 
     } finally {
