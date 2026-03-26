@@ -5,7 +5,7 @@ import { stop, setTimeSignature } from './noteplayer.js';
 import { getScale } from './state.js';
 import { setCaret, setRange, clearRange, getRange, updateDragSelectionOver, startLongPress, cancelLongPress, hasRange } from './range-selection.js';
 import { HistoryManager } from './history.js';
-import { editHandsMode, isEditMulti, longPressFired, setLongPressFired, setIsEditMulti, labelNotation } from './state.js';
+import { editHandsMode, isEditMulti, multiEditSessionSlot, longPressFired, setLongPressFired, setIsEditMulti, labelNotation } from './state.js';
 import { TransportRegistry } from './transport-ui.js';
 import { isReviewing, getFeedbackForStep, showFeedbackTooltip, copyLogsForStep, getExpectedNoteForStep } from './coaching-mode.js';
 import { Bus, BUS_EVENT } from './bus.js';
@@ -133,6 +133,14 @@ export function clearSelection(ctx = activeGrid) {
   });
   setIsEditMulti(false);
   Bus.emit(BUS_EVENT.CARET_CHANGED);
+}
+
+export function updateMultiCursor(ctx = activeGrid) {
+  cells(ctx).forEach(c => c.querySelectorAll('.sub-dot').forEach(s => s.classList.remove('selected')));
+  if (!isEditMulti || multiEditSessionSlot === null || multiEditSessionSlot >= 4) return;
+  if (ctx.caretIndex === null) return;
+  const cell = Array.from(cells(ctx)).find(c => +c.dataset.index === ctx.caretIndex);
+  cell?.querySelector(`.sub-dot[data-idx="${multiEditSessionSlot}"]`)?.classList.add('selected');
 }
 
 export function applySelection(i, ctx = activeGrid) {
@@ -309,6 +317,7 @@ export function renderAllMeasures(ctx = activeGrid) {
         const allSubs = cell.querySelectorAll('.sub-dot');
         for (let idx = 0; idx < allSubs.length; idx++) {
           allSubs[idx].textContent = resolveLabelText(lbl, pref, true, idx);
+          allSubs[idx].classList.toggle('active', !!lbl[idx]);
         };
       }
 
@@ -504,6 +513,10 @@ export function setInnerLabel(i, value, ctx = activeGrid) {
       ctx.innerLabels[i][activeSubIndex] = value;
     }
 
+    if (ctx.innerLabels[i].some(l => !!l)) {
+      cell.classList.add('multi-mode');
+    }
+
     const pref = localStorage.getItem('handpanLabelPref') || 'Numbers';
     const labels = ctx.innerLabels[i].filter(l => l !== '');
     cell.classList.toggle('has-label', labels.length > 0);
@@ -515,7 +528,6 @@ export function setInnerLabel(i, value, ctx = activeGrid) {
         subText = (pref === 'Numbers') ? 'D' : '';
       }
       subs[idx].textContent = subText;
-      subs[idx].classList.toggle('active', !!label);
     });
   }
 
@@ -649,6 +661,7 @@ function attachCellListeners(cell, ctx = activeGrid) {
     cell.classList.add('multi-selected');
     const allSubs = Array.from(cell.querySelectorAll('.sub-dot'));
     allSubs.forEach(s => s.classList.add('active'));
+    updateMultiCursor(ctx);
   });
 
   cell.addEventListener('pointerdown', (ev) => {
@@ -856,7 +869,8 @@ window.addEventListener('click', (e) => {
     !e.target.closest('.sel-bar') &&
     !e.target.closest('.hp-dot') &&
     !e.target.closest('.hp-overlay') &&
-    !e.target.closest('.handpan-tabs')
+    !e.target.closest('.handpan-tabs') &&
+    !e.target.closest('#ghostBtn')
   ) {
     clearSelection(activeGrid);
   }

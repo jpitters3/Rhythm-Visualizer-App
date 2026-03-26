@@ -1,9 +1,10 @@
 import { activeGrid } from './grid-context.js';
 import { setCaret, clearRange } from './range-selection.js';
-import { setInnerLabel, renderAllMeasures } from './notegrid.js';
+import { setInnerLabel, renderAllMeasures, setActiveSubIndex, updateMultiCursor } from './notegrid.js';
 import { HistoryManager } from './history.js';
 import { isReviewing } from './coaching-mode.js';
 import { COMPOSE_KEY } from './config.js';
+import { isEditMulti, multiEditSessionSlot, advanceMultiEditSessionSlot } from './state.js';
 
 let composeOn = (localStorage.getItem(COMPOSE_KEY) === 'on');
 
@@ -63,6 +64,24 @@ export function writeToSelected(label, { advance = true } = {}, ctx) {
 
   // Compose advance unless Alt is held
   if (composeOn && advance) advanceSelection(1, c);
+}
+
+/**
+ * Write a note label respecting the active multi-edit session.
+ * When a session is active (double-click started it), writes to the current
+ * session slot and advances the cursor. Otherwise falls back to writeToSelected.
+ */
+export function writeToSession(label, { advance = true } = {}, ctx) {
+  if (isEditMulti && multiEditSessionSlot !== null) {
+    if (multiEditSessionSlot >= 4) return;
+    setActiveSubIndex(multiEditSessionSlot);
+    writeToSelected(label, { advance: false }, ctx);
+    setActiveSubIndex(null);
+    advanceMultiEditSessionSlot();
+    updateMultiCursor(ctx || activeGrid);
+  } else {
+    writeToSelected(label, { advance }, ctx);
+  }
 }
 
 // Expose for other modules

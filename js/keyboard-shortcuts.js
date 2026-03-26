@@ -2,11 +2,11 @@
 import { gridA } from './grid-context.js';
 import { activeGrid } from './state.js';
 import { start, stop, ensureAudio, getAudioCtx } from './noteplayer.js';
-import { clearSelection, deleteSelection, copySelection, pasteSelection, clearGridDom } from './notegrid.js';
+import { clearSelection, deleteSelection, copySelection, pasteSelection } from './notegrid.js';
 import { getRange, clearRange } from './range-selection.js';
 import { setPresentation } from './presentation-mode.js';
 import { TransportRegistry } from './transport-ui.js';
-import { writeToSelected, getComposeOn } from './compose-mode.js';
+import { writeToSession, getComposeOn } from './compose-mode.js';
 import { Modal } from './modal.js';
 import { Sidepanel } from './sidepanel.js';
 
@@ -110,12 +110,12 @@ export function initShortcuts() {
     const map = { d: 'Ding', t: 'T', s: 'S' };
 
     if (map[lower]) {
-      writeToSelected(map[lower], { advance: !noAdvance }, ctx);
+      writeToSession(map[lower], { advance: !noAdvance }, ctx);
       return;
     }
 
     if (/^[0-9?]$/.test(k)) {
-      writeToSelected(k, { advance: !noAdvance }, ctx);
+      writeToSession(k, { advance: !noAdvance }, ctx);
       return;
     }
 
@@ -126,7 +126,7 @@ export function initShortcuts() {
       if (r && r.length > 1) {
         deleteSelection(ctx);
       } else {
-        writeToSelected('', { advance: !noAdvance }, ctx);
+        writeToSession('', { advance: !noAdvance }, ctx);
       }
     }
   });

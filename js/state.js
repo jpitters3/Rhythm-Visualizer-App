@@ -28,7 +28,14 @@ export let editHandsMode = false;
 export function setEditHandsMode(v) { editHandsMode = v; }
 
 export let isEditMulti = false;
-export function setIsEditMulti(v) { isEditMulti = v; }
+export let multiEditSessionSlot = null; // 0-3 during a session, null when inactive
+export function setIsEditMulti(v) {
+  isEditMulti = v;
+  multiEditSessionSlot = v ? 0 : null; // reset cursor on every new session
+}
+export function advanceMultiEditSessionSlot() {
+  if (multiEditSessionSlot !== null) multiEditSessionSlot++;
+}
 
 export let longPressFired = false;
 export function setLongPressFired(v) { longPressFired = v; }

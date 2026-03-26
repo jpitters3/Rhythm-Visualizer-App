@@ -1,7 +1,7 @@
 import { setCaret } from './range-selection.js';
 import { Modal } from './modal.js';
 import { updateUserLabelPreference } from './profile.js';
-import { writeToSelected, clampIndex, getComposeOn } from './compose-mode.js';
+import { writeToSession, clampIndex, getComposeOn } from './compose-mode.js';
 import { preloadScaleSamples, noteForLabel, isDownbeatStep, registerHighlighter, playNoteByLabel, intervalMs } from './noteplayer.js';
 import { SCALES, SCALE_KEY_LOCAL, BASE_PATH } from './config.js';
 import { currentUser, getScale, getSelectedScaleName, setSelectedScaleName, setCurrentScale } from './state.js';
@@ -1154,50 +1154,32 @@ export function initHandpanMap() {
     }
   });
 
-  handpanOverlay?.addEventListener('click', (e) => {
+  function handleHandpanTap(e) {
     if (calibrating) {
       const dot = e.target.closest('.hp-dot');
       if (!dot) return;
       const note = dot.dataset.note;
       if (!note || !HANDPAN_MAP[note]) return;
       selectHpDot(note);
-    } else {
-      const dot = e.target.closest('.hp-dot');
-      if (!dot) return;
-      const note = dot.dataset.note;
-      if (!note) return;
-      playNoteByLabel(note, null);
-      highlightHandpan(note, null);
-      const selIdx = activeGrid.caretIndex;
-      if (selIdx !== null) {
-        const noAdvance = e.altKey;
-        writeToSelected(note, { advance: !noAdvance });
-      }
+      return;
     }
-  });
 
-  handpanOverlayBottom?.addEventListener('click', (e) => {
-    // Same logic as handpanOverlay click
-    if (calibrating) {
-      const dot = e.target.closest('.hp-dot');
-      if (!dot) return;
-      const note = dot.dataset.note;
-      if (!note || !HANDPAN_MAP[note]) return;
-      selectHpDot(note);
-    } else {
-      const dot = e.target.closest('.hp-dot');
-      if (!dot) return;
-      const note = dot.dataset.note;
-      if (!note) return;
-      playNoteByLabel(note, null);
-      highlightHandpan(note, null);
-      const selIdx = activeGrid.caretIndex;
-      if (selIdx !== null) {
-        const noAdvance = e.altKey;
-        writeToSelected(note, { advance: !noAdvance });
-      }
-    }
-  });
+    const dot = e.target.closest('.hp-dot');
+    if (!dot) return;
+    const note = dot.dataset.note;
+    if (!note) return;
+
+    playNoteByLabel(note, null);
+    highlightHandpan(note, null);
+
+    const selIdx = activeGrid.caretIndex;
+    if (selIdx === null) return;
+
+    writeToSession(note, { advance: !e.altKey });
+  }
+
+  handpanOverlay?.addEventListener('click', handleHandpanTap);
+  handpanOverlayBottom?.addEventListener('click', handleHandpanTap);
 
   handpanOverlayBottom?.addEventListener('mousedown', (e) => {
     if (!calibrating) return;
@@ -1455,12 +1437,7 @@ export function initHandpanMap() {
   });
 
   ghostBtn?.addEventListener('click', () => {
-    const idx = activeGrid.caretIndex;
-    if (idx === null) return;
-    setBeatToGhost(idx);
-    if (getComposeOn && getComposeOn()) {
-      setCaret(clampIndex(idx + 1));
-    }
+    writeToSession('', { advance: getComposeOn?.() ?? false });
   });
 
   ghostBackBtn?.addEventListener('click', () => {
