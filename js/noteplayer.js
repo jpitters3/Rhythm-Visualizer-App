@@ -118,6 +118,13 @@ export async function ensureAudio() {
     if (Ctx) {
       audioCtx = new Ctx();
       console.log('[Audio] AudioContext created:', audioCtx?.state);
+      // Safari aggressively auto-suspends AudioContexts after inactivity.
+      // Re-resume immediately so the next note plays without a 1-2s delay.
+      audioCtx.addEventListener('statechange', () => {
+        if (audioCtx.state === 'suspended' && audioUnlocked) {
+          audioCtx.resume().catch(() => {});
+        }
+      });
     }
   }
 
@@ -680,17 +687,27 @@ export function playNoteSample(n, delay = 0) {
   const buffer = samples[n];
   if (!audioCtx || !buffer) return;
 
+  // Safari fix: if still suspended after ensureAudio(), defer scheduling until
+  // after the resume resolves so the note plays at the correct current time.
+  if (audioCtx.state === 'suspended') {
+    audioCtx.resume().then(() => scheduleNoteSample(n, buffer, 0)).catch(() => {});
+    return;
+  }
+
+  scheduleNoteSample(n, buffer, delay);
+}
+
+function scheduleNoteSample(n, buffer, delay) {
   const src = audioCtx.createBufferSource();
   const gain = audioCtx.createGain();
 
   src.buffer = buffer;
 
-  // Apply instrument volume
   const targetVol = Math.max(0.0001, volInstrument || 1.0);
   const startTime = audioCtx.currentTime + (isFinite(delay) ? delay : 0);
 
   if (!isFinite(targetVol) || !isFinite(startTime)) {
-    console.error('[Audio] Non-finite value in playNoteSample:', { targetVol, startTime, delay });
+    console.error('[Audio] Non-finite value in scheduleNoteSample:', { targetVol, startTime, delay });
     return;
   }
 
