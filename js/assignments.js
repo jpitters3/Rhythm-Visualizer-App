@@ -5,6 +5,7 @@
  */
 
 import { currentUser } from './state.js';
+import { currentProfile } from './profile.js';
 import { Modal } from './modal.js';
 import { supabase } from './supabase-client.js';
 import { alert, confirm } from './alert.js';
@@ -21,6 +22,7 @@ let submissionsLoaded = false;
 let assignmentsList = [];
 let coursesList = [];
 let studentsList = [];
+let cachedAssigneeMap = null; // Map<student_id, status> — cleared when editor opens
 
 let currentAssignment = null;   // null = new; object with .id = editing existing
 let currentItems = [];          // ItemDraft[] — working copy before save
@@ -48,6 +50,13 @@ const ITEM_TYPE_LABELS = {
 };
 
 // ===== INIT =====
+
+// Called at login to warm the Supabase connection and pre-load stable data
+// so the modal opens instantly instead of waiting for a cold-start round-trip.
+export function prefetchAssignmentsData() {
+  if (coursesList.length === 0) loadCourses();
+  if (studentsList.length === 0) loadStudents();
+}
 
 export function initAssignments() {
   modal = document.getElementById('assignmentsModal');
@@ -90,8 +99,10 @@ export function initAssignments() {
     ?.addEventListener('click', handleAssign);
 
   // Review panel
-  document.getElementById('asgnMarkReviewedBtn')
-    ?.addEventListener('click', handleMarkReviewed);
+  document.getElementById('asgnSendBackBtn')
+    ?.addEventListener('click', handleSendBack);
+  document.getElementById('asgnMarkCompleteBtn')
+    ?.addEventListener('click', handleMarkComplete);
   document.getElementById('asgnReviewCloseBtn')
     ?.addEventListener('click', closeReviewPanel);
 
@@ -139,7 +150,14 @@ function switchTab(tabName) {
 // ===== DATA LOADING =====
 
 async function loadInitialData() {
-  await Promise.all([loadAssignmentsList(), loadCourses(), loadStudents()]);
+  // Courses and students are stable — only fetch them once per session.
+  // Assignments always refresh (teacher may have changes from another tab).
+  const tasks = [loadAssignmentsList()];
+  if (coursesList.length === 0) tasks.push(loadCourses());
+  if (studentsList.length === 0) tasks.push(loadStudents());
+  await Promise.all(tasks);
+  // Ensure course select is populated even when courses weren't re-fetched
+  if (tasks.length === 1) populateCourseSelect();
 }
 
 async function loadAssignmentsList() {
@@ -204,11 +222,10 @@ async function loadSubmissionsList() {
     .select(`
       id, assignment_id, student_id, due_date, status,
       assignments!inner(title),
-      profiles!student_id(first_name, last_name, username),
       assignment_submissions(id, submitted_at, reviewed_at, feedback)
     `)
     .eq('assigned_by', currentUser.id)
-    .eq('status', 'submitted');
+    .in('status', ['submitted', 'sent_back', 'reviewed']);
 
   if (error) {
     console.error('[Assignments] loadSubmissions:', error);
@@ -221,13 +238,13 @@ async function loadSubmissionsList() {
     assignment_id: row.assignment_id,
     assignment_title: row.assignments?.title ?? 'Untitled',
     student_id: row.student_id,
-    student_name: buildName(row.profiles),
+    student_name: buildName(studentsList.find(s => s.user_id === row.student_id)),
     due_date: row.due_date,
     status: row.status,
-    submission_id: row.assignment_submissions?.[0]?.id ?? null,
-    submitted_at: row.assignment_submissions?.[0]?.submitted_at ?? null,
-    reviewed_at: row.assignment_submissions?.[0]?.reviewed_at ?? null,
-    feedback: row.assignment_submissions?.[0]?.feedback ?? null,
+    submission_id: row.assignment_submissions?.id ?? null,
+    submitted_at: row.assignment_submissions?.submitted_at ?? null,
+    reviewed_at: row.assignment_submissions?.reviewed_at ?? null,
+    feedback: row.assignment_submissions?.feedback ?? null,
   }));
   renderSubmissionsList();
 }
@@ -420,8 +437,13 @@ async function renderStudentSection(assignmentId) {
   const el = document.getElementById('asgnStudentList');
   if (!el) return;
 
-  el.innerHTML = '<div class="asgn-loading">Loading students…</div>';
-  const existingMap = await loadExistingAssignees(assignmentId);
+  // Use the cached map if available — avoids a round-trip after saves and assigns
+  let existingMap = cachedAssigneeMap;
+  if (!existingMap) {
+    el.innerHTML = '<div class="asgn-loading">Loading students…</div>';
+    existingMap = await loadExistingAssignees(assignmentId);
+    cachedAssigneeMap = existingMap;
+  }
 
   if (studentsList.length === 0) {
     el.innerHTML = '<div class="asgn-no-students">No students found. Make sure student profiles have role = \'student\'.</div>';
@@ -468,10 +490,14 @@ function renderSubmissionsList() {
     const dateStr = row.submitted_at
       ? new Date(row.submitted_at).toLocaleDateString() : '—';
 
+    const STATUS_LABELS = { submitted: 'Submitted', sent_back: 'Sent back', reviewed: 'Complete' };
+    const statusLabel = STATUS_LABELS[row.status] ?? row.status;
+
     el2.innerHTML = `
       <span class="asgn-sub-student">${escapeHtml(row.student_name)}</span>
       <span class="asgn-sub-assignment">${escapeHtml(row.assignment_title)}</span>
       <span class="asgn-sub-date">${dateStr}</span>
+      <span class="student-inbox-status-pill ${escapeHtml(row.status)}">${escapeHtml(statusLabel)}</span>
     `;
     el.appendChild(el2);
   });
@@ -516,6 +542,21 @@ async function openReviewPanel(submissionRow) {
   }
 
   reviewResponses = data || [];
+
+  // Pre-fetch signed URLs for audio/video items (bucket is private)
+  await Promise.all(reviewResponses.map(async resp => {
+    const path = resp.response_data?.storage_path;
+    if (!path) return;
+    const itemType = resp.assignment_items?.item_type;
+    if (itemType !== 'audio' && itemType !== 'video') return;
+    const { data: signed } = await supabase.storage
+      .from('assignment-submissions')
+      .createSignedUrl(path, 3600);
+    if (signed?.signedUrl) {
+      resp.response_data = { ...resp.response_data, signed_url: signed.signedUrl };
+    }
+  }));
+
   renderReviewPanel();
 }
 
@@ -541,17 +582,21 @@ function renderReviewPanel() {
         responseHTML = '<span class="asgn-mark-complete-check">✅ Marked complete</span>';
         break;
       case 'audio': {
-        if (responseData.storage_path) {
-          responseHTML = `<audio controls src="${escapeHtml(responseData.public_url ?? '')}"></audio>
-            <div style="font-size:11px;opacity:0.5;margin-top:4px;">${responseData.storage_path}</div>`;
-        } else {
-          responseHTML = '<em style="opacity:0.5">No audio uploaded.</em>';
-        }
+        const audioUrl = responseData.signed_url ?? '';
+        responseHTML = audioUrl
+          ? `<audio controls src="${escapeHtml(audioUrl)}" style="width:100%"></audio>`
+          : '<em style="opacity:0.5">No audio uploaded.</em>';
         break;
       }
-      case 'video':
+      case 'video': {
+        const videoUrl = responseData.signed_url ?? '';
+        responseHTML = videoUrl
+          ? `<video controls src="${escapeHtml(videoUrl)}" style="max-width:100%"></video>`
+          : '<em style="opacity:0.5">No video uploaded.</em>';
+        break;
+      }
       case 'link': {
-        const url = responseData.url ?? responseData.storage_path ?? '';
+        const url = responseData.url ?? '';
         const label = responseData.label ?? url;
         responseHTML = url
           ? `<a href="${escapeHtml(url)}" target="_blank" rel="noopener">${escapeHtml(label)}</a>`
@@ -620,9 +665,18 @@ async function openEditEditor(assignmentId) {
   const a = assignmentsList.find(x => x.id === assignmentId);
   if (!a) return;
   currentAssignment = { ...a };
-  const items = await loadItemsForAssignment(assignmentId);
+  cachedAssigneeMap = null; // will be populated in parallel below
+
+  // Fetch items and existing assignees in parallel instead of sequentially
+  const [items, assigneeMap] = await Promise.all([
+    loadItemsForAssignment(assignmentId),
+    loadExistingAssignees(assignmentId),
+  ]);
+
   currentItems = items.map(it => ({ ...it }));
   savedItemIds = items.map(it => it.id);
+  cachedAssigneeMap = assigneeMap;
+
   renderEditor();
   document.getElementById('asgnEditor').style.display = '';
   document.getElementById('asgnEditor').scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -634,6 +688,7 @@ function resetEditor() {
   currentAssignment = null;
   currentItems = [];
   savedItemIds = [];
+  cachedAssigneeMap = null;
   closeReviewPanel();
 }
 
@@ -811,6 +866,9 @@ async function handleSave() {
     }
   }
 
+  const wasNew = !currentAssignment?.id;
+  const wasPublished = currentAssignment?.is_published ?? false;
+
   const payload = {
     title,
     description: document.getElementById('asgnDesc')?.value.trim() ?? '',
@@ -888,7 +946,32 @@ async function handleSave() {
     assignmentsList.unshift(currentAssignment);
   }
   renderAssignmentsList();
-  renderEditor();
+
+  if (wasNew) {
+    // First save: full renderEditor to reveal student section and update title
+    renderEditor();
+  } else {
+    // Re-save: editor fields are unchanged and students haven't moved — skip re-render
+    document.getElementById('asgnDeleteBtn').style.display = '';
+  }
+
+  // Notify assigned students when assignment is first published
+  const justPublished = !wasPublished && saved.is_published;
+  if (justPublished) {
+    const { data: assignees } = await supabase
+      .from('student_assignments')
+      .select('student_id')
+      .eq('assignment_id', saved.id);
+    const studentIds = (assignees || []).map(a => a.student_id);
+    const teacherName = buildName(currentProfile);
+    await insertNotifications(
+      studentIds,
+      'new_assignment',
+      'New assignment',
+      `${teacherName} assigned you "${saved.title}".`,
+      { assignment_id: saved.id }
+    );
+  }
 
   // Flash save status
   const statusEl = document.getElementById('asgnSaveStatus');
@@ -960,13 +1043,78 @@ async function handleAssign() {
     setTimeout(() => { assignBtn.textContent = orig; }, 2000);
   }
 
-  // Refresh student section to show updated badges
+  // Update the cache locally — no need to re-query the DB
+  if (!cachedAssigneeMap) cachedAssigneeMap = new Map();
+  rows.forEach(row => cachedAssigneeMap.set(row.student_id, 'pending'));
   renderStudentSection(currentAssignment.id);
+
+  // If the assignment is already published, notify the newly-assigned students immediately
+  if (currentAssignment.is_published) {
+    const teacherName = buildName(currentProfile);
+    await insertNotifications(
+      rows.map(r => r.student_id),
+      'new_assignment',
+      'New assignment',
+      `${teacherName} assigned you "${currentAssignment.title}".`,
+      { assignment_id: currentAssignment.id }
+    );
+  }
 }
 
-// ===== MARK REVIEWED =====
+// ===== REVIEW ACTIONS =====
 
-async function handleMarkReviewed() {
+async function handleSendBack() {
+  if (!currentReview) return;
+
+  const feedback = document.getElementById('asgnFeedback')?.value.trim() ?? '';
+  if (!feedback) {
+    await alert('Please add feedback before sending back — the student needs to know what to fix.');
+    return;
+  }
+
+  if (!currentReview.submission_id) {
+    await alert('No submission record found for this student assignment.');
+    return;
+  }
+
+  const [subRes, saRes] = await Promise.all([
+    supabase.from('assignment_submissions')
+      .update({ feedback })
+      .eq('id', currentReview.submission_id),
+    supabase.from('student_assignments')
+      .update({ status: 'sent_back' })
+      .eq('id', currentReview.id),
+  ]);
+
+  if (subRes.error || saRes.error) {
+    console.error('[Assignments] sendBack error:', subRes.error || saRes.error);
+    await alert('Failed to send back.');
+    return;
+  }
+
+  const teacherName = buildName(currentProfile);
+  await insertNotifications(
+    [currentReview.student_id],
+    'assignment_feedback',
+    'Feedback on your assignment',
+    `${teacherName} sent feedback on "${currentReview.assignment_title}". Please review and resubmit.`,
+    { assignment_id: currentReview.assignment_id }
+  );
+
+  const statusEl = document.getElementById('asgnReviewStatus');
+  if (statusEl) {
+    statusEl.textContent = '✅ Sent back to student';
+    statusEl.style.opacity = '1';
+  }
+
+  setTimeout(() => {
+    closeReviewPanel();
+    submissionsLoaded = false;
+    loadSubmissionsList();
+  }, 1500);
+}
+
+async function handleMarkComplete() {
   if (!currentReview) return;
 
   const feedback = document.getElementById('asgnFeedback')?.value.trim() ?? '';
@@ -980,7 +1128,7 @@ async function handleMarkReviewed() {
 
   const [subRes, saRes] = await Promise.all([
     supabase.from('assignment_submissions')
-      .update({ reviewed_at: now, reviewed_by: currentUser.id, feedback })
+      .update({ reviewed_at: now, reviewed_by: currentUser.id, feedback: feedback || null })
       .eq('id', currentReview.submission_id),
     supabase.from('student_assignments')
       .update({ status: 'reviewed' })
@@ -988,10 +1136,19 @@ async function handleMarkReviewed() {
   ]);
 
   if (subRes.error || saRes.error) {
-    console.error('[Assignments] markReviewed error:', subRes.error || saRes.error);
-    await alert('Failed to mark as reviewed.');
+    console.error('[Assignments] markComplete error:', subRes.error || saRes.error);
+    await alert('Failed to mark as complete.');
     return;
   }
+
+  const teacherName = buildName(currentProfile);
+  await insertNotifications(
+    [currentReview.student_id],
+    'assignment_complete',
+    'Assignment complete!',
+    `${teacherName} marked "${currentReview.assignment_title}" as complete. Great work!`,
+    { assignment_id: currentReview.assignment_id }
+  );
 
   closeReviewPanel();
   submissionsLoaded = false;
@@ -1004,4 +1161,11 @@ function buildName(profile) {
   if (!profile) return 'Unknown';
   const full = [profile.first_name, profile.last_name].filter(Boolean).join(' ').trim();
   return full || profile.username || 'Unknown';
+}
+
+async function insertNotifications(userIds, type, title, body, data = {}) {
+  if (!userIds.length) return;
+  const rows = userIds.map(uid => ({ user_id: uid, type, title, body, data }));
+  const { error } = await supabase.from('notifications').insert(rows);
+  if (error) console.error('[Assignments] insertNotifications:', error);
 }

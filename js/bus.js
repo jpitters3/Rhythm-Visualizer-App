@@ -20,7 +20,8 @@ export const BUS_EVENT = {
   SHOW_UPGRADE_MODAL: 'monetization:show-upgrade-modal',
   SHOW_CONGRATS_MODAL: 'monetization:show-congrats-modal',
   OPEN_AUTH_MODAL: 'auth:open-modal',
-  CARET_CHANGED: 'caret-changed'
+  CARET_CHANGED: 'caret-changed',
+  OPEN_STUDENT_ASSIGNMENTS: 'assignments:open-student',
 };
 
 /**

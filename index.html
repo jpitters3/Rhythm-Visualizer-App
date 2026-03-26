@@ -138,6 +138,7 @@
               <button id="openCourseModalBtn" class="admin-only" style="display: none;">➕ Create Course</button>
               <button id="openPotwModalBtn" class="admin-only" style="display: none;">🛠️ POTW Dashboard</button>
               <button id="openGlossaryModalBtn" class="admin-only" style="display: none;">📖 Glossary Editor</button>
+              <button id="myAssignmentsBtn" style="display:none;">📋 My Assignments</button>
               <button id="togglePracticeBtn">📋 Practice Plan</button>
               <button id="coachModeBtn" title="Practice with real-time feedback">🎯 Coach</button>
               <button id="gamesModeBtn" title="Play games with your handpan">⚄ Games</button>
@@ -204,6 +205,17 @@
 
           <button id="shareBtn" title="Create a share link (public)">Share</button>
           <button id="communityBtn" class="primary-btn" title="Browse Community Rhythms">Community</button>
+
+          <!-- Notification Bell (shown when logged in) -->
+          <div class="notif-bell-wrapper" id="notifBellWrapper" style="display:none;">
+            <button id="notifBell" class="notif-bell-btn" title="Notifications" aria-label="Notifications">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+                <path d="M12 22c1.1 0 2-.9 2-2h-4a2 2 0 002 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/>
+              </svg>
+              <span id="notifBadge" class="notif-badge" style="display:none;">0</span>
+            </button>
+            <div id="notifPanel" class="notif-panel" role="menu" aria-label="Notifications"></div>
+          </div>
         </div>
       </div> <!-- End Wrapper -->
     </div> <!-- End top-row -->
@@ -2151,8 +2163,50 @@
             <textarea id="asgnFeedback" rows="3" placeholder="Leave a note for the student…"></textarea>
           </div>
           <div class="asgn-editor-footer">
-            <button id="asgnMarkReviewedBtn" class="primary-btn">Mark Reviewed</button>
+            <span id="asgnReviewStatus" class="asgn-save-status"></span>
+            <button id="asgnSendBackBtn" class="secondary-btn">↩ Send Back</button>
+            <button id="asgnMarkCompleteBtn" class="primary-btn">✓ Mark Complete</button>
           </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Student Assignments Inbox Modal -->
+  <div id="studentAssignmentsModal" class="modal-overlay" aria-hidden="true">
+    <div class="modal student-inbox-modal">
+
+      <div class="modal-header">
+        <h2 class="modal-title">My Assignments</h2>
+        <button id="closeStudentAssignmentsModal" class="close-btn" aria-label="Close">&times;</button>
+      </div>
+
+      <!-- List view -->
+      <div id="studentInboxListView" class="student-inbox-list-view">
+        <div id="studentInboxList" class="student-inbox-list"></div>
+      </div>
+
+      <!-- Detail view (hidden until an assignment is opened) -->
+      <div id="studentInboxDetailView" class="student-inbox-detail-view" style="display:none;">
+        <div class="student-inbox-detail-header">
+          <button id="studentInboxBackBtn" class="student-inbox-back-btn">← Back</button>
+          <h3 id="studentInboxDetailTitle"></h3>
+        </div>
+        <p id="studentInboxDetailDesc" class="student-inbox-detail-desc"></p>
+
+        <div id="studentInboxItemsList" class="student-inbox-items-list"></div>
+
+        <!-- Teacher feedback (shown when reviewed) -->
+        <div id="studentInboxFeedbackSection" class="student-inbox-feedback-section" style="display:none;">
+          <div class="student-inbox-feedback-label">Teacher Feedback</div>
+          <div id="studentInboxFeedbackText" class="student-inbox-feedback-text"></div>
+        </div>
+
+        <div class="student-inbox-detail-footer">
+          <span id="studentInboxSaveStatus" class="asgn-save-status"></span>
+          <button id="studentInboxSaveBtn" class="secondary-btn">Save Progress</button>
+          <button id="studentInboxSubmitBtn" class="primary-btn">Submit Assignment</button>
         </div>
       </div>
 

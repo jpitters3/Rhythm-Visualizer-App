@@ -31,6 +31,9 @@ import { initCourseMarketplace } from './course-marketplace.js';
 import { initCoachingMode } from './coaching-mode.js';
 import { initGames } from './games.js';
 import { initAdmin } from './admin.js';
+import { prefetchAssignmentsData} from './assignments.js';
+import { initNotifications } from './notifications.js';
+import { initStudentAssignments } from './student-assignments.js';
 import { initRouter } from './router.js';
 import { initComposeWizard } from './compose-wizard.js';
 import { initGlossary } from './glossary.js';
@@ -38,6 +41,7 @@ import { initGridAutoscroll } from './grid-autoscroll.js';
 import { initGridZoom } from './grid-zoom.js';
 import { initMonetization } from './monetization.js';
 import { initScrollIndicators } from './scroll-indicators.js';
+
 
 
 /**
@@ -75,6 +79,8 @@ async function init() {
 
     // Admin Tools (Async check inside)
     initAdmin();
+    initNotifications();
+    initStudentAssignments();
 
     initControls();
     initShortcuts();
@@ -85,6 +91,10 @@ async function init() {
     initGlossary();
     initMonetization();
     initRouter();
+
+    // Load courses and student data
+    // (may take a few seconds to load from cold supabase db but runs asynchronously)
+    prefetchAssignmentsData();
 
     // 3. Launch safeInit (which handles pattern loading and final renders)
     safeInit();

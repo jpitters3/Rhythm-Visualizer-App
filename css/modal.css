@@ -1,4 +1,10 @@
 /* ===== MODAL OVERLAY ===== */
+
+/* Alert/confirm dialogs must always float above all other modals */
+#confirmModal {
+  z-index: 10100;
+}
+
 .modal-overlay {
   position: fixed;
   inset: 0;
