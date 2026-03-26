@@ -61,9 +61,11 @@ export function initStudentAssignments() {
   itemsList?.addEventListener('change', handleItemsChange);
   itemsList?.addEventListener('input', handleItemsChange);
 
-  Bus.on(BUS_EVENT.AUTH_LOGIN, () => {
+  Bus.on(BUS_EVENT.PROFILE_LOADED, () => {
     if (currentProfile?.role === 'student') {
       showStudentButton();
+    } else {
+      hideStudentButton();
     }
   });
 

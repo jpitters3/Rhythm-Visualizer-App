@@ -140,13 +140,21 @@ function renderPanel() {
   `;
 }
 
+const STUDENT_ASSIGNMENT_TYPES = new Set([
+  'new_assignment', 'assignment_assigned', 'assignment_feedback',
+  'assignment_complete', 'assignment_reviewed',
+]);
+const TEACHER_ASSIGNMENT_TYPES = new Set(['assignment_submitted']);
+
 function handlePanelClick(e) {
   const item = e.target.closest('.notif-item');
   if (!item) return;
   closePanel();
   const type = item.dataset.type;
-  if (type === 'new_assignment' || type === 'assignment_feedback' || type === 'assignment_complete') {
+  if (STUDENT_ASSIGNMENT_TYPES.has(type)) {
     Bus.emit(BUS_EVENT.OPEN_STUDENT_ASSIGNMENTS);
+  } else if (TEACHER_ASSIGNMENT_TYPES.has(type)) {
+    Bus.emit(BUS_EVENT.OPEN_ASSIGNMENTS);
   }
 }
 

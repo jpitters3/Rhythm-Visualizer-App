@@ -70,6 +70,7 @@ export async function loadCurrentProfile() {
     }
 
     updateProfileUI(); // Update any UI components depending on profile
+    Bus.emit(BUS_EVENT.PROFILE_LOADED, { profile: currentProfile });
   } catch (err) {
     console.error('Profile load exception:', err);
   }
@@ -114,6 +115,7 @@ async function createDefaultProfile() {
     user_id: currentUser.id,
     username: currentUser.email.split('@')[0], // heuristic
     bio: '',
+    role: currentUser.user_metadata?.is_admin ? 'admin' : 'student',
     updated_at: new Date(),
   };
 

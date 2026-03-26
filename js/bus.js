@@ -11,6 +11,7 @@ export const BUS_EVENT = {
   PLAYBACK_STOP: 'playback:stop',
   PATTERN_REFRESH_NEEDED: 'pattern:refresh-needed',
   PROFILE_LOAD_NEEDED: 'profile:load-needed',
+  PROFILE_LOADED: 'profile:loaded',
   COACHING_EVALUATE: 'coaching:evaluate',
   SET_ACCENT_SENSITIVITY: 'transcription:set-accent-sensitivity',
   NOTE_DETECTED: 'transcription:note-detected',
@@ -22,6 +23,7 @@ export const BUS_EVENT = {
   OPEN_AUTH_MODAL: 'auth:open-modal',
   CARET_CHANGED: 'caret-changed',
   OPEN_STUDENT_ASSIGNMENTS: 'assignments:open-student',
+  OPEN_ASSIGNMENTS: 'assignments:open',
 };
 
 /**

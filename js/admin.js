@@ -5,8 +5,8 @@
 
 import { alert, confirm, prompt } from './alert.js';
 import { Modal } from './modal.js';
-import { currentUser } from './state.js';
-import { ADMIN_EMAILS } from './config.js';
+import { currentUser, isAdminUser } from './state.js';
+
 import { dbListPatternNames, dbLoadPatternByName, dbSavePattern, applyPattern } from './pattern-crud.js';
 import { start, stop } from './noteplayer.js';
 import { GridContext } from './grid-context.js';
@@ -37,7 +37,7 @@ export function initAdmin() {
 function activateAdminIfAuthorized() {
   const user = currentUser;
   if (!user?.email) return;
-  if (!ADMIN_EMAILS.has(user.email)) return;
+  if (!isAdminUser(user)) return;
 
   isAdmin = true;
   injectAdminButton(); // safe to call repeatedly — checks #adminBtn exists

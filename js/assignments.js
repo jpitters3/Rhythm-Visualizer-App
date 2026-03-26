@@ -10,6 +10,7 @@ import { Modal } from './modal.js';
 import { supabase } from './supabase-client.js';
 import { alert, confirm } from './alert.js';
 import { escapeHtml } from './utils.js';
+import { Bus, BUS_EVENT } from './bus.js';
 
 // ===== DOM REFS =====
 let modal = null;
@@ -119,12 +120,21 @@ export function initAssignments() {
   // Event delegation — submissions list
   document.getElementById('asgnSubmissionList')
     ?.addEventListener('click', handleSubmissionListClick);
+
+  Bus.on(BUS_EVENT.OPEN_ASSIGNMENTS, () => openAssignmentsSubmissions());
 }
 
 export function openAssignments() {
   if (!asgnPanel) return;
   asgnPanel.open();
   switchTab('assignments');
+  loadInitialData();
+}
+
+function openAssignmentsSubmissions() {
+  if (!asgnPanel) return;
+  asgnPanel.open();
+  switchTab('submissions');
   loadInitialData();
 }
 
