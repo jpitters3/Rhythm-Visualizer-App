@@ -36,6 +36,7 @@ export function setIsEditMulti(v) {
 export function advanceMultiEditSessionSlot() {
   if (multiEditSessionSlot !== null) multiEditSessionSlot++;
 }
+export function setMultiEditSessionSlot(v) { multiEditSessionSlot = v; }
 
 export let longPressFired = false;
 export function setLongPressFired(v) { longPressFired = v; }

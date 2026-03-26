@@ -5,7 +5,7 @@ import { stop, setTimeSignature } from './noteplayer.js';
 import { getScale } from './state.js';
 import { setCaret, setRange, clearRange, getRange, updateDragSelectionOver, startLongPress, cancelLongPress, hasRange } from './range-selection.js';
 import { HistoryManager } from './history.js';
-import { editHandsMode, isEditMulti, multiEditSessionSlot, longPressFired, setLongPressFired, setIsEditMulti, labelNotation } from './state.js';
+import { editHandsMode, isEditMulti, multiEditSessionSlot, longPressFired, setLongPressFired, setIsEditMulti, setMultiEditSessionSlot, labelNotation } from './state.js';
 import { TransportRegistry } from './transport-ui.js';
 import { isReviewing, getFeedbackForStep, showFeedbackTooltip, copyLogsForStep, getExpectedNoteForStep } from './coaching-mode.js';
 import { Bus, BUS_EVENT } from './bus.js';
@@ -601,7 +601,9 @@ function attachCellListeners(cell, ctx = activeGrid) {
     if (subDot && isEditMulti) {
       cell.classList.add('multi-mode');
       const allSubs = Array.from(cell.querySelectorAll('.sub-dot'));
-      activeSubIndex = allSubs.indexOf(subDot);
+      const slotIdx = allSubs.indexOf(subDot);
+      activeSubIndex = slotIdx;
+      setMultiEditSessionSlot(slotIdx);
 
       // Clear other selections in THIS grid
       cells(ctx).forEach(c => {

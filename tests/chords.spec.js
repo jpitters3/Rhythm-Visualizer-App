@@ -102,4 +102,59 @@ test.describe('Chords & Chords', () => {
     await expect(dot3).toHaveClass(/active/, { timeout: 10000 });
   });
 
+  test('Multi-edit session: sub-dot 0 gets selected cursor on dblclick', async ({ page }) => {
+    const cell0 = page.locator('.cell').nth(0);
+    await cell0.dblclick();
+    await expect(cell0).toHaveClass(/multi-selected/);
+
+    await expect(cell0.locator('.sub-dot[data-idx="0"]')).toHaveClass(/selected/);
+    await expect(cell0.locator('.sub-dot[data-idx="1"]')).not.toHaveClass(/selected/);
+    await expect(cell0.locator('.sub-dot[data-idx="2"]')).not.toHaveClass(/selected/);
+    await expect(cell0.locator('.sub-dot[data-idx="3"]')).not.toHaveClass(/selected/);
+  });
+
+  test('Multi-edit session: cursor advances to next sub-dot after each key press', async ({ page }) => {
+    const cell0 = page.locator('.cell').nth(0);
+    await cell0.dblclick();
+
+    await expect(cell0.locator('.sub-dot[data-idx="0"]')).toHaveClass(/selected/);
+
+    await page.keyboard.press('1');
+    await expect(cell0.locator('.sub-dot[data-idx="0"]')).not.toHaveClass(/selected/);
+    await expect(cell0.locator('.sub-dot[data-idx="1"]')).toHaveClass(/selected/);
+
+    await page.keyboard.press('2');
+    await expect(cell0.locator('.sub-dot[data-idx="1"]')).not.toHaveClass(/selected/);
+    await expect(cell0.locator('.sub-dot[data-idx="2"]')).toHaveClass(/selected/);
+
+    await page.keyboard.press('3');
+    await expect(cell0.locator('.sub-dot[data-idx="2"]')).not.toHaveClass(/selected/);
+    await expect(cell0.locator('.sub-dot[data-idx="3"]')).toHaveClass(/selected/);
+  });
+
+  test('Multi-edit session: cursor disappears after all 4 slots are filled', async ({ page }) => {
+    const cell0 = page.locator('.cell').nth(0);
+    await cell0.dblclick();
+
+    for (const key of ['1', '2', '3', '4']) {
+      await page.keyboard.press(key);
+    }
+
+    for (let i = 0; i < 4; i++) {
+      await expect(cell0.locator(`.sub-dot[data-idx="${i}"]`)).not.toHaveClass(/selected/);
+    }
+  });
+
+  test('Multi-edit session: Escape clears the cursor', async ({ page }) => {
+    const cell0 = page.locator('.cell').nth(0);
+    await cell0.dblclick();
+    await expect(cell0.locator('.sub-dot[data-idx="0"]')).toHaveClass(/selected/);
+
+    await page.keyboard.press('Escape');
+
+    for (let i = 0; i < 4; i++) {
+      await expect(cell0.locator(`.sub-dot[data-idx="${i}"]`)).not.toHaveClass(/selected/);
+    }
+  });
+
 });
