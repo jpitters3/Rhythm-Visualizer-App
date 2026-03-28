@@ -1127,13 +1127,16 @@ async function handleSendBack() {
   }
 
   const teacherName = buildName(currentProfile);
+  const feedbackTitle = 'Feedback on your assignment';
+  const feedbackBody = `${teacherName} sent feedback on "${currentReview.assignment_title}". Please review and resubmit.`;
   await insertNotifications(
     [currentReview.student_id],
     'assignment_feedback',
-    'Feedback on your assignment',
-    `${teacherName} sent feedback on "${currentReview.assignment_title}". Please review and resubmit.`,
+    feedbackTitle,
+    feedbackBody,
     { assignment_id: currentReview.assignment_id }
   );
+  sendNotificationEmails([currentReview.student_id], 'assignment_feedback', feedbackTitle, feedbackBody);
 
   const statusEl = document.getElementById('asgnReviewStatus');
   if (statusEl) {
@@ -1176,13 +1179,16 @@ async function handleMarkComplete() {
   }
 
   const teacherName = buildName(currentProfile);
+  const completeTitle = 'Assignment complete!';
+  const completeBody = `${teacherName} marked "${currentReview.assignment_title}" as complete. Great work!`;
   await insertNotifications(
     [currentReview.student_id],
     'assignment_complete',
-    'Assignment complete!',
-    `${teacherName} marked "${currentReview.assignment_title}" as complete. Great work!`,
+    completeTitle,
+    completeBody,
     { assignment_id: currentReview.assignment_id }
   );
+  sendNotificationEmails([currentReview.student_id], 'assignment_complete', completeTitle, completeBody);
 
   closeReviewPanel();
   submissionsLoaded = false;

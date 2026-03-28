@@ -9,6 +9,7 @@ import { currentUser } from './state.js';
 import { supabase } from './supabase-client.js';
 import { Bus, BUS_EVENT } from './bus.js';
 import { escapeHtml } from './utils.js';
+import { isInAppEnabled } from './notification-settings.js';
 
 // ===== STATE =====
 let bellBtn = null;
@@ -80,7 +81,7 @@ export async function loadNotifications() {
   }
 
   notifications = data || [];
-  unreadCount = notifications.filter(n => !n.read_at).length;
+  unreadCount = notifications.filter(n => !n.read_at && isInAppEnabled(n.type)).length;
   updateBadge();
 }
 
@@ -119,14 +120,16 @@ function closePanel() {
 function renderPanel() {
   if (!panel) return;
 
-  if (notifications.length === 0) {
-    panel.innerHTML = '<div class="notif-empty">No notifications yet.</div>';
+  const visible = notifications.filter(n => isInAppEnabled(n.type));
+
+  if (visible.length === 0) {
+    panel.innerHTML = '<div class="notif-panel-header">Notifications</div><div class="notif-empty">No notifications yet.</div>';
     return;
   }
 
   panel.innerHTML = `
     <div class="notif-panel-header">Notifications</div>
-    ${notifications.map(n => {
+    ${visible.map(n => {
       const timeStr = formatRelativeTime(n.created_at);
       const unreadCls = n.read_at ? '' : ' unread';
       return `

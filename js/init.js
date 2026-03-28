@@ -32,6 +32,8 @@ import { initCoachingMode } from './coaching-mode.js';
 import { initGames } from './games.js';
 import { initAdmin } from './admin.js';
 import { initNotifications } from './notifications.js';
+import { initNotificationSettings } from './notification-settings.js';
+import { initAccountSettings } from './account-settings.js';
 import { initStudentAssignments } from './student-assignments.js';
 import { initRouter } from './router.js';
 import { initComposeWizard } from './compose-wizard.js';
@@ -78,7 +80,9 @@ async function init() {
 
     // Admin Tools (Async check inside)
     initAdmin();
+    initNotificationSettings();
     initNotifications();
+    initAccountSettings();
     initStudentAssignments();
 
     initControls();

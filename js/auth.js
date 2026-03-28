@@ -3,6 +3,7 @@ import { Bus, BUS_EVENT } from './bus.js';
 import { currentUser, setCurrentUser, isAdminUser } from './state.js';
 import { loadCurrentProfile } from './profile.js';
 import { Modal } from './modal.js';
+import { open as openAccountSettings } from './account-settings.js';
 
 export async function isAuthed() {
   if (currentUser) return true; // Fast path: trust already-resolved auth state
@@ -324,7 +325,11 @@ export async function initAuth() {
 
   openAccountAuthBtn?.addEventListener('click', () => {
     accountDropdownMenu?.classList.remove('show');
-    openAuthModal();
+    if (currentUser) {
+      openAccountSettings();
+    } else {
+      openAuthModal();
+    }
   });
 
   authCancel?.addEventListener('click', closeAuthModal);

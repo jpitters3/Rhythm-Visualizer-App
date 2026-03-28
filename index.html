@@ -38,6 +38,7 @@
   <link rel="stylesheet" href="./css/glossary.css">
   <link rel="stylesheet" href="./css/monetization.css">
   <link rel="stylesheet" href="./css/assignments.css">
+  <link rel="stylesheet" href="./css/account-settings.css">
 
   <!-- PWA & Mobile Optimization -->
   <link rel="manifest" href="./manifest.json">
@@ -2217,6 +2218,16 @@
       </div>
 
     </div>
+  </div>
+
+  <!-- Account Settings Sidebar -->
+  <div id="accountSettingsBackdrop" class="acct-settings-backdrop"></div>
+  <div id="accountSettingsSidebar" class="acct-settings-sidebar" aria-hidden="true">
+    <div class="acct-settings-header">
+      <span class="acct-settings-title">Account Settings</span>
+      <button id="closeAccountSettingsSidebar" class="close-btn" aria-label="Close">&times;</button>
+    </div>
+    <div id="accountSettingsBody" class="acct-settings-body"></div>
   </div>
 
   <!-- Service Worker Registration -->

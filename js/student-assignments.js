@@ -600,14 +600,19 @@ async function notifyTeacherSubmitted() {
   if (!currentSA?.assigned_by) return;
   const name = [currentProfile?.first_name, currentProfile?.last_name].filter(Boolean).join(' ').trim()
     || currentProfile?.username || 'A student';
+  const title = 'Assignment submitted';
+  const body = `${name} submitted "${currentSA.title}".`;
   const { error } = await supabase.from('notifications').insert({
     user_id: currentSA.assigned_by,
     type: 'assignment_submitted',
-    title: 'Assignment submitted',
-    body: `${name} submitted "${currentSA.title}".`,
+    title,
+    body,
     data: { assignment_id: currentSA.assignment_id, student_assignment_id: currentSA.id },
   });
   if (error) console.error('[StudentAssignments] notifyTeacher:', error);
+  supabase.functions.invoke('send-notification-email', {
+    body: { userIds: [currentSA.assigned_by], type: 'assignment_submitted', title, body },
+  }).catch(err => console.warn('[StudentAssignments] email notify:', err));
 }
 
 // ===== VIEW SWITCHING =====
