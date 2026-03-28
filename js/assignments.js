@@ -310,6 +310,7 @@ function renderEditor() {
   document.getElementById('asgnEditorTitle').textContent = a?.id ? 'Edit Assignment' : 'New Assignment';
   document.getElementById('asgnTitle').value = a?.title ?? '';
   document.getElementById('asgnDesc').value = a?.description ?? '';
+  document.getElementById('asgnVideoUrl').value = a?.video_url ?? '';
   document.getElementById('asgnDueDate').value = a?.default_due_date
     ? a.default_due_date.slice(0, 10) : '';
   document.getElementById('asgnPublished').checked = a?.is_published ?? false;
@@ -894,6 +895,7 @@ async function handleSave() {
   const payload = {
     title,
     description: document.getElementById('asgnDesc')?.value.trim() ?? '',
+    video_url: document.getElementById('asgnVideoUrl')?.value.trim() || null,
     course_id: document.getElementById('asgnCourseSelect')?.value || null,
     default_due_date: document.getElementById('asgnDueDate')?.value || null,
     is_published: document.getElementById('asgnPublished')?.checked ?? false,

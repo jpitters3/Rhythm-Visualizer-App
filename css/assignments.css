@@ -1020,6 +1020,18 @@ body.dark .student-inbox-item:hover {
   flex-shrink: 0;
 }
 
+.student-inbox-video-container {
+  padding: 12px 28px 0;
+  flex-shrink: 0;
+}
+
+.student-inbox-video-embed {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: 8px;
+  border: none;
+}
+
 .student-inbox-items-list {
   flex: 1;
   overflow-y: auto;

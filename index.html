@@ -2098,6 +2098,10 @@
             <label class="asgn-label" for="asgnDesc">Description</label>
             <textarea id="asgnDesc" rows="3" placeholder="Instructions for the student…"></textarea>
           </div>
+          <div class="asgn-field-group">
+            <label class="asgn-label" for="asgnVideoUrl">Video Link (optional)</label>
+            <input type="url" id="asgnVideoUrl" placeholder="https://youtube.com/watch?v=…" />
+          </div>
           <div class="asgn-field-row">
             <div class="asgn-field-group">
               <label class="asgn-label" for="asgnCourseSelect">Link to Course (optional)</label>
@@ -2194,6 +2198,8 @@
           <h3 id="studentInboxDetailTitle"></h3>
         </div>
         <p id="studentInboxDetailDesc" class="student-inbox-detail-desc"></p>
+
+        <div id="studentInboxDetailVideo" class="student-inbox-video-container" style="display:none;"></div>
 
         <div id="studentInboxItemsList" class="student-inbox-items-list"></div>
 

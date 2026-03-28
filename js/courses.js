@@ -11,6 +11,7 @@ import { loadCourseToEdit } from './course-creator.js';
 import { openMarketplace } from './course-marketplace.js';
 import { autoLinkText } from './glossary.js';
 import { openAuthModal } from './auth.js';
+import { extractYouTubeId } from './utils.js';
 
 // ===== SIDEBAR LOGIC (OWNED COURSES) =====
 
@@ -523,7 +524,7 @@ export async function loadLesson(lessonId) {
       if (lesson.video_url) {
         const videoId = extractYouTubeId(lesson.video_url);
         if (videoId) {
-          videoCont.innerHTML = `<iframe src="https://www.youtube.com/embed/${videoId}?rel=0" frameborder="0" allowfullscreen></iframe>`;
+          videoCont.innerHTML = `<iframe src="https://www.youtube-nocookie.com/embed/${videoId}?rel=0" frameborder="0" allowfullscreen></iframe>`;
         } else {
           // Direct URL (Supabase storage or other)
           videoCont.innerHTML = `<video src="${lesson.video_url}" controls playsinline style="width: 100%; border-radius: 8px;"></video>`;
@@ -607,13 +608,6 @@ export function updateBodySidebarClass() {
   const anyOpen = !!document.querySelector('.sidebar.open');
   document.body.classList.toggle('sidebar-open', anyOpen);
 }
-
-function extractYouTubeId(url) {
-  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=|shorts\/)([^#\&\?]*).*/;
-  const match = url.match(regExp);
-  return (match && match[2].length === 11) ? match[2] : null;
-}
-
 
 export async function toggleLessonCompletion(lessonId) {
   if (!currentUser) {

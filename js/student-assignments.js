@@ -9,7 +9,7 @@ import { currentProfile } from './profile.js';
 import { supabase } from './supabase-client.js';
 import { Modal } from './modal.js';
 import { alert, confirm } from './alert.js';
-import { escapeHtml } from './utils.js';
+import { escapeHtml, extractYouTubeId } from './utils.js';
 import { Bus, BUS_EVENT } from './bus.js';
 
 // ===== CONSTANTS =====
@@ -117,7 +117,7 @@ async function loadAssignments() {
     .from('student_assignments')
     .select(`
       id, assignment_id, status, due_date, assigned_at, assigned_by,
-      assignments(id, title, description, is_published),
+      assignments(id, title, description, video_url, is_published),
       assignment_submissions(id, submitted_at, reviewed_at, feedback)
     `)
     .eq('student_id', currentUser.id)
@@ -140,6 +140,7 @@ async function loadAssignments() {
       assigned_by: row.assigned_by,
       title: row.assignments?.title ?? 'Untitled',
       description: row.assignments?.description ?? '',
+      video_url: row.assignments?.video_url ?? null,
       submission: row.assignment_submissions ?? null,
     }));
 
@@ -212,6 +213,20 @@ async function openDetail(sa) {
   if (descEl) {
     descEl.textContent = sa.description || '';
     descEl.style.display = sa.description ? '' : 'none';
+  }
+
+  const videoEl = document.getElementById('studentInboxDetailVideo');
+  if (videoEl) {
+    if (sa.video_url) {
+      const videoId = extractYouTubeId(sa.video_url);
+      videoEl.style.display = '';
+      videoEl.innerHTML = videoId
+        ? `<iframe class="student-inbox-video-embed" src="https://www.youtube-nocookie.com/embed/${videoId}?rel=0" frameborder="0" allowfullscreen></iframe>`
+        : `<video src="${escapeHtml(sa.video_url)}" controls playsinline style="width:100%;border-radius:8px;"></video>`;
+    } else {
+      videoEl.style.display = 'none';
+      videoEl.innerHTML = '';
+    }
   }
 
   const itemsEl = document.getElementById('studentInboxItemsList');
