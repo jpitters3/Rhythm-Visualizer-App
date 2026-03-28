@@ -265,7 +265,6 @@ div.container {
   width: 98%;
   height: 98vh;
   min-height: 600px;
-  overflow-y: scroll;
   padding: 40px 50px 0 50px;
   /* Reduced bottom padding to align with grid */
   max-width: 1200px;
