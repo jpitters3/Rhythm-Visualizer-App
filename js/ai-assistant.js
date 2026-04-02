@@ -27,8 +27,8 @@ class AiAssistant {
 
   async init() {
     // Toggle Chat
-    this.cursor?.addEventListener('click', () => {
-      this.toggleChat();
+    document.querySelectorAll('[data-action="toggle-ai"]').forEach(el => {
+      el.addEventListener('click', () => this.toggleChat());
     });
 
     // Send Message
@@ -65,6 +65,7 @@ class AiAssistant {
       this.input.focus();
       // Refresh suggestions (remove old, add new to trigger animation)
       this.refreshSuggestions();
+      this.messagesArea.scrollTop = 0;
     } else {
       this.sidePanel.close();
     }
