@@ -35,6 +35,7 @@ import { initNotifications } from './notifications.js';
 import { initNotificationSettings } from './notification-settings.js';
 import { initAccountSettings } from './account-settings.js';
 import { initStudentAssignments } from './student-assignments.js';
+import { initStudentManagement } from './student-management.js';
 import { initRouter } from './router.js';
 import { initComposeWizard } from './compose-wizard.js';
 import { initGlossary } from './glossary.js';
@@ -84,6 +85,7 @@ async function init() {
     initNotifications();
     initAccountSettings();
     initStudentAssignments();
+    initStudentManagement();
 
     initControls();
     initShortcuts();

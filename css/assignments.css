@@ -1421,6 +1421,49 @@ body.dark .notif-item:hover {
   opacity: 0.4;
 }
 
+.notif-item-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.notif-accept-btn,
+.notif-decline-btn {
+  padding: 5px 14px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+}
+
+.notif-accept-btn {
+  background: var(--accent, #6c63ff);
+  color: #fff;
+}
+
+.notif-accept-btn:hover { opacity: 0.88; }
+.notif-accept-btn:disabled,
+.notif-decline-btn:disabled { opacity: 0.5; cursor: default; }
+
+.notif-decline-btn {
+  background: transparent;
+  border: 1px solid rgba(0,0,0,0.15);
+  color: var(--text-muted, #777);
+}
+
+.notif-decline-btn:hover { background: rgba(0,0,0,0.05); }
+
+.notif-invite-result {
+  font-size: 12px;
+  color: #22c55e;
+  font-weight: 600;
+}
+
+.notif-invite-result--declined {
+  color: var(--text-muted, #999);
+}
+
 /* ===== RESPONSIVE ===== */
 
 @media (max-width: 600px) {

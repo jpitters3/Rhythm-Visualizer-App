@@ -49,10 +49,22 @@ export function noteForLabel(label) {
   return null;
 }
 
+// Build note → filename map from all .wav files in the audio folder.
+// Strips any scale-name suffix so "As3-laSirena.wav" maps to the key "As3",
+// the same as a plain "As3.wav" would. New files are picked up automatically.
+const _audioFilePaths = Object.keys(import.meta.glob('../public/assets/audio/*.wav'));
+const NOTE_FILE_MAP = {};
+for (const path of _audioFilePaths) {
+  const filename = path.split('/').pop();
+  const stem = filename.replace(/\.wav$/, '');
+  const noteKey = stem.split('-')[0];
+  NOTE_FILE_MAP[noteKey] = filename;
+}
+
 function noteToFile(note) {
-  // "C#3" -> "Cs3.wav", "F#3" -> "Fs3.wav", "Bb3" -> "Bb3.wav"
   if (!note) return '';
-  return note.replace('#', 's') + '.wav';
+  const base = note.replace('#', 's');
+  return NOTE_FILE_MAP[base] ?? (base + '.wav');
 }
 
 /* Player Functionality */

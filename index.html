@@ -39,6 +39,7 @@
   <link rel="stylesheet" href="./css/monetization.css">
   <link rel="stylesheet" href="./css/assignments.css">
   <link rel="stylesheet" href="./css/account-settings.css">
+  <link rel="stylesheet" href="./css/student-management.css">
 
   <!-- PWA & Mobile Optimization -->
   <link rel="manifest" href="./manifest.json">
@@ -2221,6 +2222,16 @@
       </div>
 
     </div>
+  </div>
+
+  <!-- Student Management Sidebar -->
+  <div id="studentMgmtBackdrop" class="stmgmt-backdrop"></div>
+  <div id="studentMgmtSidebar" class="stmgmt-sidebar" aria-hidden="true">
+    <div class="stmgmt-header">
+      <span class="stmgmt-title">Students</span>
+      <button id="closeStudentMgmtSidebar" class="close-btn" aria-label="Close">&times;</button>
+    </div>
+    <div id="studentMgmtBody" class="stmgmt-body"></div>
   </div>
 
   <!-- Account Settings Sidebar -->

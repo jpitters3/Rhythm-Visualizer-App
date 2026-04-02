@@ -132,6 +132,22 @@ function renderPanel() {
     ${visible.map(n => {
       const timeStr = formatRelativeTime(n.created_at);
       const unreadCls = n.read_at ? '' : ' unread';
+      if (n.type === 'teacher_invitation') {
+        const invId = n.data?.invitation_id ?? '';
+        const result = n.data?.result;
+        const actionsHtml = result
+          ? `<span class="notif-invite-result${result === 'declined' ? ' notif-invite-result--declined' : ''}">${result === 'accepted' ? 'Accepted' : 'Declined'}</span>`
+          : `<button class="notif-accept-btn" data-inv-id="${escapeHtml(invId)}">Accept</button>
+             <button class="notif-decline-btn" data-inv-id="${escapeHtml(invId)}">Decline</button>`;
+        return `
+          <div class="notif-item${unreadCls}" data-id="${n.id}" data-type="teacher_invitation" data-inv-id="${escapeHtml(invId)}">
+            <div class="notif-item-title">${escapeHtml(n.title)}</div>
+            ${n.body ? `<div class="notif-item-body">${escapeHtml(n.body)}</div>` : ''}
+            <div class="notif-item-time">${timeStr}</div>
+            <div class="notif-item-actions">${actionsHtml}</div>
+          </div>
+        `;
+      }
       return `
         <div class="notif-item${unreadCls}" data-id="${n.id}" data-type="${escapeHtml(n.type)}">
           <div class="notif-item-title">${escapeHtml(n.title)}</div>
@@ -149,7 +165,61 @@ const STUDENT_ASSIGNMENT_TYPES = new Set([
 ]);
 const TEACHER_ASSIGNMENT_TYPES = new Set(['assignment_submitted']);
 
-function handlePanelClick(e) {
+async function resolveInvitationNotification(item, result) {
+  const notifId = item.dataset.id;
+  const notif = notifications.find(n => n.id === notifId);
+  if (notif) {
+    notif.data = { ...notif.data, result };
+    await supabase
+      .from('notifications')
+      .update({ data: notif.data })
+      .eq('id', notifId);
+  }
+  const resultCls = result === 'declined' ? ' notif-invite-result--declined' : '';
+  const label = result === 'accepted' ? 'Accepted' : 'Declined';
+  item.querySelector('.notif-item-actions').innerHTML =
+    `<span class="notif-invite-result${resultCls}">${label}</span>`;
+}
+
+async function handlePanelClick(e) {
+  // Accept invitation button
+  if (e.target.classList.contains('notif-accept-btn')) {
+    const invId = e.target.dataset.invId;
+    const item = e.target.closest('.notif-item');
+    e.target.disabled = true;
+    const { error } = await supabase.rpc('accept_teacher_invitation', { p_invitation_id: invId });
+    if (error) {
+      if (error.message?.includes('not found or already processed')) {
+        await resolveInvitationNotification(item, 'accepted');
+      } else {
+        e.target.disabled = false;
+        console.error('[Notifications] accept error:', error);
+      }
+      return;
+    }
+    await resolveInvitationNotification(item, 'accepted');
+    return;
+  }
+
+  // Decline invitation button
+  if (e.target.classList.contains('notif-decline-btn')) {
+    const invId = e.target.dataset.invId;
+    const item = e.target.closest('.notif-item');
+    e.target.disabled = true;
+    const { error } = await supabase.rpc('decline_teacher_invitation', { p_invitation_id: invId });
+    if (error) {
+      if (error.message?.includes('not found or already processed')) {
+        await resolveInvitationNotification(item, 'accepted');
+      } else {
+        e.target.disabled = false;
+        console.error('[Notifications] decline error:', error);
+      }
+      return;
+    }
+    await resolveInvitationNotification(item, 'declined');
+    return;
+  }
+
   const item = e.target.closest('.notif-item');
   if (!item) return;
   closePanel();

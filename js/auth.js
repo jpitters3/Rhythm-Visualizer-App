@@ -231,9 +231,10 @@ export async function initAuthSession() {
 
   if (!supabase) return;
 
-  // 1. Initial Synchronous Check (to block init)
-  const { data } = await supabase.auth.getUser();
-  setCurrentUser(data?.user ?? null);
+  // 1. Fast path: read session from localStorage (no network round-trip).
+  //    If the JWT is expired, getSession() uses the refresh token automatically.
+  const { data: sessionData } = await supabase.auth.getSession();
+  setCurrentUser(sessionData?.session?.user ?? null);
   await loadCurrentProfile();
   updateAccountUI();
   updateAdminUI();
@@ -241,6 +242,17 @@ export async function initAuthSession() {
   if (currentUser) {
     Bus.emit(BUS_EVENT.AUTH_LOGIN, { user: currentUser });
   }
+
+  // 2. Background: validate token server-side without blocking init.
+  //    onAuthStateChange will fire and correct state if the token is revoked.
+  supabase.auth.getUser().then(({ data }) => {
+    if (!data?.user && currentUser) {
+      setCurrentUser(null);
+      updateAccountUI();
+      updateAdminUI();
+      logout();
+    }
+  });
 
   // 2. Subscribe for future changes
   supabase.auth.onAuthStateChange(async (event, session) => {

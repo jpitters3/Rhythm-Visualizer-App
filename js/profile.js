@@ -1,7 +1,6 @@
-import { currentUser, isAdminUser, } from './state.js';
+import { currentUser } from './state.js';
 import { Modal } from './modal.js';
 import { supabase } from './supabase-client.js';
-import { buildHandpanOverlay } from './handpanmap.js';
 import { renderAllMeasures } from './notegrid.js';
 import { Bus, BUS_EVENT } from './bus.js';
 
@@ -14,6 +13,10 @@ export let currentProfile = null;
 export async function loadCurrentProfile() {
   if (!currentUser) {
     currentProfile = null;
+    return;
+  }
+
+  if (currentProfile !== null) {
     return;
   }
 
@@ -121,7 +124,7 @@ async function createDefaultProfile() {
 
   const { data, error } = await supabase
     .from('profiles')
-    .insert([defaultUser])
+    .upsert([defaultUser], { onConflict: 'user_id' })
     .select()
     .single();
 
