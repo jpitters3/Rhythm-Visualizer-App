@@ -36,7 +36,7 @@ export function noteForLabel(label) {
   const scale = getScale();
   if (!scale) return null;
 
-  if (label === 'Ding') return `${scale.ding}_ding`;
+  if (label === 'Ding' || label === 'D') return `${scale.ding}_ding`;
 
   // Return Pitch if found in map (e.g. "1" -> "A3")
   if (scale.map && scale.map[label]) return scale.map[label];
