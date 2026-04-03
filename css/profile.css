@@ -131,8 +131,6 @@ button#saveProfileBtn:disabled {
 .my-scales-list {
   max-height: 350px;
   overflow-y: auto;
-  border-top: 1px solid var(--panel-border);
-  margin-top: 10px;
 }
 
 .scale-list-item {

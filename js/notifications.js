@@ -35,6 +35,15 @@ export function initNotifications() {
     togglePanel();
   });
 
+  // Mobile notif bell delegates to main bell
+  const mobileNotifBtn = document.getElementById('mobileNotifBtn');
+  if (mobileNotifBtn) {
+    mobileNotifBtn.addEventListener('click', e => {
+      e.stopPropagation();
+      togglePanel();
+    });
+  }
+
   document.addEventListener('click', e => {
     if (panelOpen && !panel.contains(e.target) && e.target !== bellBtn) {
       closePanel();
@@ -45,11 +54,15 @@ export function initNotifications() {
 
   Bus.on(BUS_EVENT.AUTH_LOGIN, () => {
     if (wrapperEl) wrapperEl.style.display = '';
+    const mobileBtn = document.getElementById('mobileNotifBtn');
+    if (mobileBtn) mobileBtn.style.display = '';
     loadNotifications();
   });
 
   Bus.on(BUS_EVENT.AUTH_LOGOUT, () => {
     if (wrapperEl) wrapperEl.style.display = 'none';
+    const mobileBtn = document.getElementById('mobileNotifBtn');
+    if (mobileBtn) mobileBtn.style.display = 'none';
     notifications = [];
     unreadCount = 0;
     updateBadge();
@@ -59,6 +72,8 @@ export function initNotifications() {
   // AUTH_LOGIN may have already fired before this module initialized
   if (currentUser) {
     if (wrapperEl) wrapperEl.style.display = '';
+    const mobileBtn = document.getElementById('mobileNotifBtn');
+    if (mobileBtn) mobileBtn.style.display = '';
     loadNotifications();
   }
 }
@@ -88,12 +103,15 @@ export async function loadNotifications() {
 // ===== BADGE =====
 
 function updateBadge() {
-  if (!badgeEl) return;
-  if (unreadCount > 0) {
-    badgeEl.textContent = unreadCount > 9 ? '9+' : String(unreadCount);
-    badgeEl.style.display = '';
-  } else {
-    badgeEl.style.display = 'none';
+  const count = unreadCount > 9 ? '9+' : String(unreadCount);
+  if (badgeEl) {
+    badgeEl.textContent = count;
+    badgeEl.style.display = unreadCount > 0 ? '' : 'none';
+  }
+  const mobileBadge = document.getElementById('mobileNotifBadge');
+  if (mobileBadge) {
+    mobileBadge.textContent = count;
+    mobileBadge.style.display = unreadCount > 0 ? '' : 'none';
   }
 }
 

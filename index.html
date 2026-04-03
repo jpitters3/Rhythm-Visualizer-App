@@ -97,11 +97,11 @@
             <line x1="9" y1="3" x2="9" y2="21"></line>
           </svg>
         </button>
-        <button id="mobileFileOptionsBtn" class="hamburger-btn mobile-only" title="File Options">
-          <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none">
-            <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path>
-            <polyline points="13 2 13 9 20 9"></polyline>
+        <button id="mobileNotifBtn" class="hamburger-btn mobile-only" title="Notifications" style="display:none; position:relative;">
+          <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
+            <path d="M12 22c1.1 0 2-.9 2-2h-4a2 2 0 002 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/>
           </svg>
+          <span id="mobileNotifBadge" class="notif-badge" style="display:none;">0</span>
         </button>
         <button id="mobileControlsBtn" class="hamburger-btn mobile-only" title="Toggle Controls">
           <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none">
@@ -124,90 +124,8 @@
       <div id="headerMenu" class="header-menu-items">
 
         <!-- Account Moved to TOP for Mobile Priority -->
-        <div class="pattern-row grid-child account">
-          <div class="dropdown account-dropdown">
-            <button id="accountBtn" title="Account">Account</button>
-            <div id="accountDropdownMenu" class="dropdown-content right-aligned">
-              <button id="navDashboardBtn" class="admin-only"
-                style="display:none; font-weight:bold; color:var(--primary);">Dashboard</button>
-              <div class="dropdown-divider"></div>
-              <button id="authBtn" style="display:none; font-weight:bold; color:var(--primary);">Sign In /
-                Register</button>
-              <button id="openProfileBtn">👤 Edit Profile</button>
-              <button id="openAccountAuthBtn">⚙️ Account Settings</button>
-              <div class="dropdown-divider"></div>
-              <button id="toggleSidebarBtn" data-action="toggle-sidebar">📚 Courses</button>
-              <button id="openCourseModalBtn" class="admin-only" style="display: none;">➕ Create Course</button>
-              <button id="openPotwModalBtn" class="admin-only" style="display: none;">🛠️ POTW Dashboard</button>
-              <button id="openGlossaryModalBtn" class="admin-only" style="display: none;">📖 Glossary Editor</button>
-              <button id="myAssignmentsBtn" style="display:none;">📋 My Assignments</button>
-              <button id="togglePracticeBtn">📋 Practice Plan</button>
-              <button id="coachModeBtn" title="Practice with real-time feedback">🎯 Coach</button>
-              <button id="gamesModeBtn" title="Play games with your handpan">⚄ Games</button>
-              <div class="dropdown-divider"></div>
-              <button id="myScalesBtn" style="display:none;">🛸 My Scales</button>
-              <button id="authLogoutDropdown">🚪 Sign out</button>
-            </div>
-          </div>
-          <span id="accountStatus" style="opacity:.75;font-size:13px;"></span>
-        </div>
-
-        <!-- Pattern select, save, load, etc. -->
-        <div class="pattern-row grid-child pattern-select">
-          <h3>Select pattern:</h3>
-          <select id="patternSelect" style="width:160px" title="Saved patterns">
-            <option value="">(no saved patterns)</option>
-          </select>
-          <!-- File Dropdown -->
-          <div class="dropdown" id="desktopFileDropdown">
-            <button id="fileDropdownBtn" class="dropdown-toggle">File ▾</button>
-            <div id="fileDropdownMenu" class="dropdown-content">
-              <button id="saveBtn" title="Save current pattern">Save</button>
-              <button id="loadBtn" title="Load selected pattern">Load</button>
-              <button id="renameBtn" title="Rename selected pattern">Rename</button>
-              <button id="deleteBtn" title="Delete selected pattern">Delete</button>
-              <div class="dropdown-divider"></div>
-              <button id="exportBtn" title="Copy pattern JSON to clipboard">Export</button>
-              <button id="importBtn" title="Paste JSON to load a pattern">Import</button>
-              <div class="dropdown-divider"></div>
-              <button id="songLibraryBtn" style="display:none;" title="Browse playable songs">Song Library</button>
-              <button id="importMidiBtn" style="display:none;" title="Import MIDI file">Import MIDI</button>
-              <input type="file" id="midiFileInput" style="display:none;" accept=".mid,.midi,.kar">
-
-              <!-- Export Audio (moved from side menu) -->
-              <div id="exportAudioWrapper" style="display:none;">
-                <div class="dropdown-divider"></div>
-                <button id="exportAudioBtn" title="Download current pattern as WAV"
-                  style="display: flex; align-items: center; gap: 8px;">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
-                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                    <polyline points="7 10 12 15 17 10"></polyline>
-                    <line x1="12" y1="15" x2="12" y2="3"></line>
-                  </svg>
-                  Download Audio
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <!-- Native Mobile File Dropdown -->
-          <select id="mobileFileSelect" class="mobile-only-select">
-            <option value="" disabled selected>File...</option>
-            <option value="save">Save</option>
-            <option value="load">Load</option>
-            <option value="rename">Rename</option>
-            <option value="delete">Delete</option>
-            <optgroup label="Advanced">
-              <option value="export">Export</option>
-              <option value="import">Import</option>
-              <!-- <option value="midi">Import MIDI</option> -->
-            </optgroup>
-          </select>
-
-          <button id="shareBtn" title="Create a share link (public)">Share</button>
-          <button id="communityBtn" class="primary-btn" title="Browse Community Rhythms">Community</button>
-
+        <div class="pattern-row grid-child community">
+          <button id="communityBtn" class="primary-btn" data-action="open-community" title="Browse Community Rhythms">Community</button>
           <!-- Notification Bell (shown when logged in) -->
           <div class="notif-bell-wrapper" id="notifBellWrapper" style="display:none;">
             <button id="notifBell" class="notif-bell-btn" title="Notifications" aria-label="Notifications">
@@ -219,15 +137,86 @@
             <div id="notifPanel" class="notif-panel" role="menu" aria-label="Notifications"></div>
           </div>
         </div>
+        <div class="pattern-row grid-child account">
+        <div class="dropdown account-dropdown">
+          <button id="accountBtn" title="Account">Account</button>
+          <div id="accountDropdownMenu" class="dropdown-content right-aligned">
+            <button id="navDashboardBtn" style="font-weight:bold; color:var(--primary);">🖥️ Dashboard</button>
+            <div class="dropdown-divider"></div>
+            <!-- PROJECT SECTION -->
+            <button id="projectMenuBtn" class="project-menu-btn">📂 Project ▾</button>
+            <div id="projectSubmenu" class="project-submenu">
+              <div class="project-submenu-inner">
+                <button id="newProjectBtn" class="new-project-btn">+ New</button>
+                <button id="openProjectBtn" title="Open a saved project">Open...</button>
+                <div class="dropdown-divider"></div>
+                <div class="project-current-name" id="currentProjectName">Untitled Project</div>
+                <button id="saveBtn" title="Save current project">Save</button>
+                <button id="renameBtn" title="Rename current project" disabled>Rename</button>
+                <button id="deleteBtn" title="Delete current project" disabled>Delete</button>
+                <button id="shareBtn" title="Create a share link (public)">Share</button>
+                <button id="exportBtn" title="Copy project JSON to clipboard">Export JSON</button>
+                <button id="importBtn" title="Paste JSON to load a project">Import JSON</button>
+                <div id="exportAudioWrapper" style="display:none;">
+                  <button id="exportAudioBtn" title="Download current project as WAV"
+                    style="display: flex; align-items: center; gap: 8px;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                      stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                      <polyline points="7 10 12 15 17 10"></polyline>
+                      <line x1="12" y1="15" x2="12" y2="3"></line>
+                    </svg>
+                    Download Audio
+                  </button>
+                </div>
+                <!-- Hidden: kept for JS wiring -->
+                <button id="songLibraryBtn" style="display:none;" title="Browse playable songs">Song Library</button>
+                <button id="importMidiBtn" style="display:none;" title="Import MIDI file">Import MIDI</button>
+                <input type="file" id="midiFileInput" style="display:none;" accept=".mid,.midi,.kar">
+              </div>
+            </div>
+            <div class="dropdown-divider"></div>
+            <button class="community-btn mobile-only" data-action="open-community" title="Browse Community Rhythms">👥 Community</button>
+            <div class="dropdown-divider mobile-only"></div>
+            <!-- ACCOUNT ITEMS -->
+            <button id="authBtn" style="display:none; font-weight:bold; color:var(--primary);">Sign In /
+              Register</button>
+            <button id="openProfileBtn">👤 Edit Profile</button>
+            <button id="openAccountAuthBtn">⚙️ Account Settings</button>
+            <!-- ADMIN SECTION (hidden until authorized) -->
+            <div id="adminSection" class="admin-only" style="display:none;">
+              <div class="dropdown-divider"></div>
+              <button id="adminMenuBtn" class="project-menu-btn" style="color:var(--accent-glow);">⚙️ Admin Tools ▾</button>
+              <div id="adminSubmenu" class="project-submenu">
+                <div class="project-submenu-inner">
+                  <button id="openCourseCopierAdminBtn">📋 Manage Courses</button>
+                  <button id="openPatternOrgAdminBtn">🔍 Pattern Recognition</button>
+                  <button id="openGameConfigAdminBtn">⚄ Game Configuration</button>
+                  <button id="openGlossaryModalBtn">📖 Glossary Editor</button>
+                  <button id="openPotwModalBtn">🛠️ POTW Dashboard</button>
+                </div>
+              </div>
+            </div>
+            <div class="dropdown-divider"></div>
+            <button id="toggleSidebarBtn" data-action="toggle-sidebar">📚 Courses</button>
+            <button id="openCourseModalBtn" class="admin-only" style="display: none;">➕ Create Course</button>
+            <button id="myAssignmentsBtn" style="display:none;">📋 My Assignments</button>
+            <button id="togglePracticeBtn">📋 Practice Plan</button>
+            <button id="coachModeBtn" title="Practice with real-time feedback">🎯 Coach</button>
+            <button id="gamesModeBtn" title="Play games with your handpan">⚄ Games</button>
+            <div class="dropdown-divider"></div>
+            <button id="myScalesBtn" style="display:none;">🛸 My Scales</button>
+            <button id="authLogoutDropdown">🚪 Sign out</button>
+          </div>
+        </div>
+        </div>
+        <span id="accountStatus" style="opacity:.75;font-size:13px;"></span>
+        <!-- Hidden state elements for JS compatibility -->
+        <select id="patternSelect" aria-hidden="true" style="display:none;"></select>
+        <button id="loadBtn" style="display:none;" aria-hidden="true"></button>
       </div> <!-- End Wrapper -->
     </div> <!-- End top-row -->
 
-    <!-- Mobile File Options Drawer (Hidden by default) -->
-    <div id="mobileFileOptionsDrawer" class="mobile-drawer">
-      <div id="fileOptionsMobilePlaceholder"></div>
-      <!-- These elements will be moved here on mobile via JS if needed, 
-           or we can just place mobile-specific copies here. -->
-    </div>
 
     <!-- FREE PLAY VIEW -->
     <div id="view-freeplay" class="route-view active">
@@ -245,7 +234,7 @@
       </div>
 
       <!-- Control buttons -->
-      <div id="primaryControlsWrapper" class="controls pattern-row">
+      <div id="primaryControlsWrapper" class="controls pattern-row player">
         <div class="scrollable-controls-wrapper">
           <div class="scroll-indicator left">◂</div>
           <div class="controls-primary scrollable-controls-content" id="primaryControlsRow">
@@ -397,9 +386,8 @@
 
       <!-- Grid -->
       <div id="main" class="main">
-
         <div class="left">
-          <div id="measures" class="measures" aria-label="Rhythm grid"></div>
+          <div id="measures" class="measures player" aria-label="Rhythm grid"></div>
 
           <!-- Secondary Grid (Only shows in Dual Mode) -->
           <div id="controls-B" class="controls secondary-controls" style="display:none;">
@@ -417,7 +405,7 @@
         <!-- HANDPAN OPTIONS -->
         <div class="handpan-panel" aria-label="Handpan map">
           <!-- TABS -->
-          <div class="handpan-tabs">
+          <div class="handpan-tabs player">
             <div class="measure-group mobile-only"
               style="display: flex; flex-direction: column; align-items: center; gap: 2px;">
               <span style="font-size: 11px; opacity: 0.7; margin-bottom: -2px;">Measures</span>
@@ -461,7 +449,7 @@
             <img id="handpanImgBottom" class="handpan-img" src="" alt="Handpan Bottom" />
             <div class="handpan-overlay" id="handpanOverlayBottom"></div>
           </div>
-          <div id="ghostNoteSection" class="under-handpan pill-group">
+          <div id="ghostNoteSection" class="under-handpan pill-group player">
             <button id="ghostBackBtn" title="Move caret left" disabled>◂</button>
             <button id="ghostBtn" title="Place ghost note" disabled><img src="./assets/images/ghost.png" /></button>
             <button id="ghostFwdBtn" title="Move caret right" disabled>▸</button>
@@ -483,7 +471,7 @@
       </div>
 
       <!-- Measure Actions -->
-      <div class="grid-bottom-row">
+      <div class="grid-bottom-row player">
         
         <div class="measure-tools" id="measureTools">
           <div class="measure-group desktop-only"
@@ -721,6 +709,83 @@
   </div>
   <!-- END PRESENTATION MODE PLAYBACK MENU -->
 
+  <!-- Getting Started Modal -->
+  <div id="welcomeModal" class="modal-overlay dark-bg" aria-hidden="true">
+    <div class="modal welcome-modal">
+      <button class="welcome-close-btn" id="welcomeCloseBtn" aria-label="Close">&times;</button>
+
+      <!-- Authenticated: Dashboard -->
+      <div id="welcomeDashboard" class="welcome-dashboard" style="display:none;">
+        <div class="welcome-dashboard-header">
+          <h2 style="color: white;">Dashboard</h2>
+          <hr/>
+          <p><span class="welcome-heading">Welcome back, </span><span id="welcomeGreetName" class="welcome-heading"></span></p>
+        </div>
+        <div class="welcome-dashboard-body">
+          <!-- Handpan preview -->
+          <div class="welcome-hp-preview">
+            <div class="welcome-hp-wrap">
+              <img class="welcome-hp-img" src="./public/assets/images/handpan-for-groovepan.png" alt="">
+              <div class="welcome-hp-overlay" id="welcomeHpOverlay"></div>
+            </div>
+          </div>
+          <!-- Sections -->
+          <div class="welcome-dashboard-sections">
+            <div class="welcome-section">
+              <div class="welcome-section-label">Continue Composing</div>
+              <div class="welcome-section-items" id="dashRecentProjects"></div>
+            </div>
+            <div class="welcome-section">
+              <div class="welcome-section-label">Continue Learning</div>
+              <div class="welcome-section-items" id="dashRecentCourses"></div>
+            </div>
+            <div class="welcome-section">
+              <div class="welcome-section-label">Continue Practicing</div>
+              <div class="welcome-section-items" id="dashRecentPractice"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Unauthenticated: Full-width decorative background + tutorial video -->
+      <div id="welcomeVideoPreview" class="welcome-video-preview">
+        <video class="welcome-bg-video" autoplay muted loop playsinline>
+          <!-- <source src="./public/assets/video/welcome-bg.mp4" type="video/mp4"> -->
+        </video>
+        <div class="welcome-preview-overlay"></div>
+        <div class="welcome-title-block">
+          <h2 class="welcome-heading">Welcome to Panafide</h2>
+          <p class="welcome-subheading">Your creative space for handpan composition</p>
+        </div>
+        <!-- Playable tutorial video -->
+        <div id="welcomeVideo" class="welcome-video-player">
+          <button class="welcome-play-btn" id="welcomePlayBtn" aria-label="Play Getting Started video">
+            <div class="welcome-play-icon">
+              <svg viewBox="0 0 24 24" width="28" height="28" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+            </div>
+            <span>Watch: Getting Started</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Action buttons -->
+      <div id="welcomeOptions" class="welcome-options">
+        <button id="newProjectWelcomeBtn" class="welcome-btn welcome-btn--primary">
+          <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          New Project
+        </button>
+        <button id="coursesWelcomeBtn" class="welcome-btn welcome-btn--ghost">
+          <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+          Courses
+        </button>
+        <button id="justPlayWelcomeBtn" class="welcome-btn welcome-btn--ghost">
+          <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          Just Play
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Groove Generator Modal -->
   <div id="grooveModal" class="modal-overlay" aria-hidden="true">
     <div class="modal">
@@ -794,6 +859,18 @@
         <label id="authPasswordConfirmRow" class="modal-row" style="display:none;">
           <span>Confirm Password</span>
           <input id="authPassConfirm" type="password" autocomplete="new-password" placeholder="Confirm new password"
+            style="width:200px;padding:10px 12px;border-radius:999px;border:1px solid var(--panel-border);background:var(--panel);color:var(--text);" />
+        </label>
+
+        <!-- Step 2b: Name fields (signup only) -->
+        <label id="authFirstNameRow" class="modal-row" style="display:none;">
+          <span>First Name <span style="color:var(--accent,#6366f1);">*</span></span>
+          <input id="authFirstName" type="text" autocomplete="given-name" placeholder="Your first name"
+            style="width:200px;padding:10px 12px;border-radius:999px;border:1px solid var(--panel-border);background:var(--panel);color:var(--text);" />
+        </label>
+        <label id="authLastNameRow" class="modal-row" style="display:none;">
+          <span>Last Name</span>
+          <input id="authLastName" type="text" autocomplete="family-name" placeholder="Optional"
             style="width:200px;padding:10px 12px;border-radius:999px;border:1px solid var(--panel-border);background:var(--panel);color:var(--text);" />
         </label>
 
@@ -1496,69 +1573,101 @@
   </div>
 
 
-  <div id="handpanSettingsDrawer" class="tab-pane">
-
-    <div class="drawer-content">
-      <div class="setting-row">
-        <label>Scale:</label>
-        <select id="scaleSelect" title="Choose your handpan scale"></select>
-        <span id="scaleStatus" style="display:none; opacity:.7;font-size:13px;"></span>
+  <div id="handpanSettingsDrawer" class="modal-overlay" aria-hidden="true">
+    <div class="modal-content hp-drawer-modal">
+      <div class="modal-header">
+        <h3 class="modal-title">Settings</h3>
+        <button class="close-modal-btn">&times;</button>
       </div>
+      <div class="drawer-content">
+        <div class="setting-row">
+          <label>Scale:</label>
+          <select id="scaleSelect" title="Choose your handpan scale"></select>
+          <span id="scaleStatus" style="display:none; opacity:.7;font-size:13px;"></span>
+        </div>
 
-      <div class="setting-row">
-        <label>Color:</label>
-        <select id="handpanColorSelect" title="Choose your handpan color">
-          <option value="Bronze">Bronze</option>
-          <option value="Sketch">Sketch</option>
-        </select>
-      </div>
+        <div class="setting-row">
+          <label>Color:</label>
+          <select id="handpanColorSelect" title="Choose your handpan color">
+            <option value="Bronze">Bronze</option>
+            <option value="Sketch">Sketch</option>
+          </select>
+        </div>
 
-      <div class="setting-row">
-        <label>Labels:</label>
-        <select id="numberPitchSelect" title="Display numbers or pitches">
-          <option value="default">-----</option>
-          <option value="Numbers">Numbers</option>
-          <option value="Pitches">Pitches</option>
-        </select>
-      </div>
+        <div class="setting-row">
+          <label>Labels:</label>
+          <select id="numberPitchSelect" title="Display numbers or pitches">
+            <option value="default">-----</option>
+            <option value="Numbers">Numbers</option>
+            <option value="Pitches">Pitches</option>
+          </select>
+        </div>
 
-      <div class="setting-row">
-        <label>Hands:</label>
-        <div class="toggle-wrapper" style="display:flex; align-items:center; gap:8px;">
-          <input type="checkbox" id="vHandsToggle" checked style="width:auto;">
-          <label for="vHandsToggle" style="font-size:12px; font-weight:400; cursor:pointer; margin:0;">Show Ghost
-            Hands</label>
+        <div class="setting-row">
+          <label>Hands:</label>
+          <div class="toggle-wrapper" style="display:flex; align-items:center; gap:8px;">
+            <input type="checkbox" id="vHandsToggle" checked style="width:auto;">
+            <label for="vHandsToggle" style="font-size:12px; font-weight:400; cursor:pointer; margin:0;">Show Ghost
+              Hands</label>
+          </div>
         </div>
       </div>
     </div>
   </div>
 
-  <div id="chordDrawer" class="tab-pane">
-    <div id="chordList" class="drawer-content">
-      <!-- Chords injected here -->
-    </div>
-    <div class="drawer-meta" style="text-align:center; font-size:12px; margin-top:8px; opacity:0.7">
-      <span id="chordCount">0</span> chords available
-    </div>
-  </div>
-
-  <div id="customizeDrawer" class="tab-pane">
-    <div id="hpCustomizeControls">
-      <div class="setting-row" style="margin-top: 5px;">
-        <button id="calBtn" class="secondary-btn small-btn" style="width:100%">Adjust Tonefields</button>
+  <div id="chordDrawer" class="modal-overlay" aria-hidden="true">
+    <div class="modal-content hp-drawer-modal">
+      <div class="modal-header">
+        <h3 class="modal-title">Chords</h3>
+        <button class="close-modal-btn">&times;</button>
       </div>
-      <div class="setting-row" style="margin-top: 5px;">
-        <button id="calibrateHandpanBtn" class="secondary-btn small-btn" style="width:100%">Calibrate Handpan</button>
+      <div id="chordList" class="drawer-content">
+        <!-- Chords injected here -->
       </div>
-      <div class="setting-row" style="margin-top: 10px; border-top: 1px solid var(--panel-border); padding-top: 10px;">
-        <button id="buildScaleBtn" class="primary-btn small-btn"
-          style="width:100%; background: linear-gradient(135deg, #6366f1, #8b5cf6); border:none; color:white;">Build
-          Custom Scale</button>
+      <div class="drawer-meta" style="text-align:center; font-size:12px; margin-top:8px; opacity:0.7">
+        <span id="chordCount">0</span> chords available
       </div>
     </div>
   </div>
 
-  <div id="drawerBackdrop" class="drawer-backdrop"></div>
+  <div id="customizeDrawer" class="modal-overlay" aria-hidden="true">
+    <div class="modal-content hp-drawer-modal">
+      <div class="modal-header">
+        <h3 class="modal-title">Customize</h3>
+        <button class="close-modal-btn">&times;</button>
+      </div>
+      <div id="hpCustomizeControls">
+        <div class="setting-row" style="margin-top: 5px;">
+          <button id="calBtn" class="secondary-btn small-btn" style="width:100%">Adjust Tonefields</button>
+        </div>
+        <div class="setting-row" style="margin-top: 5px;">
+          <button id="calibrateHandpanBtn" class="secondary-btn small-btn" style="width:100%">Calibrate Handpan</button>
+        </div>
+        <div class="setting-row" style="margin-top: 10px; border-top: 1px solid var(--panel-border); padding-top: 10px;">
+          <button id="buildScaleBtn" class="primary-btn small-btn"
+            style="width:100%; background: linear-gradient(135deg, #6366f1, #8b5cf6); border:none; color:white;">Build
+            Custom Scale</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- OPEN PROJECT MODAL -->
+  <div id="openProjectModal" class="modal-overlay" aria-hidden="true">
+    <div class="modal-content open-project-modal">
+      <div class="modal-header">
+        <h3 class="modal-title">Open Project</h3>
+        <button class="close-modal-btn">&times;</button>
+      </div>
+      <div class="open-project-search">
+        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none">
+          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <input type="text" id="projectSearchInput" placeholder="Search projects…" autocomplete="off" spellcheck="false">
+      </div>
+      <div id="projectList" class="project-list"></div>
+    </div>
+  </div>
 
   <!-- POTW MODAL -->
   <div id="potwModal" class="modal-overlay" aria-hidden="true">

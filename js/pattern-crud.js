@@ -12,6 +12,12 @@ import { Bus, BUS_EVENT } from './bus.js';
 export const STORAGE_KEY = 'groovepan_patterns';
 export const LAST_USED_KEY = 'groovepan_last_pattern';
 
+function syncProjectNameDisplay() {
+  const patternSelect = document.getElementById('patternSelect');
+  const el = document.getElementById('currentProjectName');
+  if (el && patternSelect) el.textContent = patternSelect.value || 'Untitled';
+}
+
 let lastSavedState = ''; // Snapshot for data loss prevention
 
 export function hasUnsavedChanges() {
@@ -175,6 +181,7 @@ export async function refreshPatternSelect(selectedName = '') {
       opt.textContent = '(no saved patterns)';
       patternSelect.appendChild(opt);
       updatePatternButtons();
+      syncProjectNameDisplay();
       return;
     }
 
@@ -191,6 +198,7 @@ export async function refreshPatternSelect(selectedName = '') {
     else patternSelect.value = names[0];
 
     updatePatternButtons();
+    syncProjectNameDisplay();
   } catch (err) {
     console.error('refreshPatternSelect error:', err);
   }
@@ -297,6 +305,7 @@ export async function applyPattern(state, ctx = gridA) {
     }
     // Only save the top-level state as lastSavedState
     lastSavedState = JSON.stringify(state);
+    syncProjectNameDisplay();
   }
 }
 

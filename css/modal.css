@@ -21,6 +21,10 @@
   transition: visibility 0s linear 0.18s;
 }
 
+.modal-overlay.dark-bg {
+  background: rgba(0, 0, 0, 0.65);
+}
+
 .modal-overlay.open {
   visibility: visible;
   pointer-events: auto;
@@ -67,12 +71,23 @@
   margin: 10px auto;
 }
 
+/* Compact size for handpan drawer modals */
+.hp-drawer-modal {
+  max-width: 400px;
+  padding: 0;
+}
+
+.hp-drawer-modal .drawer-content,
+.hp-drawer-modal #hpCustomizeControls {
+  padding: 16px;
+}
+
 /* ===== MODAL HEADER ===== */
 .modal-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 20px 24px;
+  padding: 10px 24px;
   border-bottom: 1px solid var(--panel-border);
   position: sticky;
   top: 0;
@@ -179,4 +194,394 @@
 
 .modal-actions button:hover {
   transform: translateY(-1px);
+}
+
+/* ===== WELCOME MODAL ===== */
+.welcome-modal {
+  width: min(1000px, 100%);
+  background: #0d1728;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 20px;
+  padding: 0;
+  overflow: hidden;
+  box-shadow:
+    0 32px 80px rgba(0, 0, 0, 0.65),
+    0 0 0 1px rgba(200, 169, 81, 0.1);
+  position: relative;
+  margin-bottom: 100px;
+}
+
+/* Floating close button */
+.welcome-close-btn {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 20;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: rgba(255, 255, 255, 0.65);
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s, color 0.2s;
+}
+.welcome-close-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+
+/* ── Background video section ─────────────────────────── */
+.welcome-video-preview {
+  position: relative;
+  width: 100%;
+  min-height: 300px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  padding: 32px 24px;
+  /* Animated gradient fallback when video has no source */
+  background: linear-gradient(135deg, #0d1728 0%, #1a1040 50%, #0d1728 100%);
+  background-size: 300% 300%;
+  animation: welcomeBgShift 10s ease-in-out infinite;
+}
+
+@keyframes welcomeBgShift {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.welcome-bg-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.3;
+  pointer-events: none;
+}
+
+.welcome-preview-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to bottom, rgba(13, 23, 40, 0.25) 0%, rgba(13, 23, 40, 0.65) 100%);
+  pointer-events: none;
+}
+
+/* Title */
+.welcome-title-block {
+  position: relative;
+  z-index: 2;
+  text-align: center;
+}
+.welcome-heading {
+  font-size: 24px;
+  font-weight: 600;
+  margin: 0 0 6px;
+  letter-spacing: -0.2px;
+  color: #f5efe8;
+}
+.welcome-subheading {
+  font-size: 14px;
+  color: rgba(245, 239, 232, 0.55);
+  margin: 0;
+}
+
+/* ── Tutorial video player ────────────────────────────── */
+.welcome-video-player {
+  position: relative;
+  z-index: 2;
+  width: min(460px, calc(100% - 32px));
+  aspect-ratio: 16 / 9;
+  border-radius: 12px;
+  overflow: hidden;
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(200, 169, 81, 0.2);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.55);
+}
+
+.welcome-play-btn {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  background: rgba(13, 23, 40, 0.45);
+  border: none;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.welcome-play-btn:hover {
+  background: rgba(13, 23, 40, 0.25);
+}
+.welcome-play-btn:hover .welcome-play-icon {
+  transform: scale(1.08);
+  box-shadow: 0 6px 28px rgba(123, 34, 64, 0.75);
+}
+.welcome-play-btn span {
+  font-size: 13px;
+  font-weight: 500;
+  color: rgba(245, 239, 232, 0.75);
+  letter-spacing: 0.4px;
+}
+
+.welcome-play-icon {
+  width: 62px;
+  height: 62px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #7b2240 0%, #a83258 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-left: 4px;
+  box-shadow: 0 4px 20px rgba(123, 34, 64, 0.55);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  color: #fff;
+}
+
+.welcome-video-player iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+  display: block;
+}
+
+/* ── Action buttons ───────────────────────────────────── */
+.welcome-options {
+  display: flex;
+  gap: 10px;
+  padding: 18px 22px 22px;
+  flex-wrap: wrap;
+  background: #0d1728;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.welcome-btn {
+  flex: 1;
+  min-width: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+  letter-spacing: 0.15px;
+}
+.welcome-btn:hover {
+  transform: translateY(-2px);
+}
+.welcome-btn:active {
+  transform: translateY(0);
+}
+
+.welcome-btn--primary {
+  background: linear-gradient(135deg, #7b2240 0%, #a83258 100%);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 4px 18px rgba(123, 34, 64, 0.4);
+}
+.welcome-btn--primary:hover {
+  background: linear-gradient(135deg, #8c2849 0%, #b83665 100%);
+  box-shadow: 0 6px 26px rgba(123, 34, 64, 0.6);
+}
+
+.welcome-btn--ghost {
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(245, 239, 232, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+.welcome-btn--ghost:hover {
+  background: rgba(255, 255, 255, 0.09);
+  border-color: rgba(200, 169, 81, 0.3);
+  color: #f5efe8;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+}
+
+/* ===== WELCOME DASHBOARD ===== */
+.welcome-dashboard {
+  padding: 28px 28px 16px;
+  background: #111f35;
+}
+
+.welcome-dashboard-header {
+  margin-bottom: 22px;
+}
+
+.welcome-dashboard-header .welcome-heading {
+  font-size: 22px;
+  margin-bottom: 4px;
+}
+
+.welcome-dashboard-header .welcome-subheading {
+  font-size: 14px;
+  color: rgba(245, 239, 232, 0.5);
+}
+
+.welcome-dashboard-body {
+  display: flex;
+  gap: 24px;
+  align-items: flex-start;
+}
+
+/* ── Handpan preview ─────────────────────────────────── */
+.welcome-hp-preview {
+  flex: 0 0 38%;
+}
+
+.welcome-hp-wrap {
+  position: relative;
+  width: 100%;
+  padding: 14px;
+}
+
+.welcome-hp-img {
+  width: 100%;
+  height: auto;
+  display: block;
+  border-radius: 12px;
+}
+
+.welcome-hp-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.welcome-dashboard-sections {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 26px;
+  margin-top: 20px;
+}
+
+.welcome-section-label {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+  color: rgba(200, 169, 81, 0.75);
+  margin-bottom: 10px;
+}
+
+.welcome-section-items {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.welcome-item-card {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 10px;
+  padding: 10px 12px;
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+  min-width: 0;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  transition: background 0.15s, border-color 0.15s, transform 0.15s;
+}
+
+.welcome-item-card:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(200, 169, 81, 0.22);
+  transform: translateY(-2px);
+}
+
+.welcome-item-card.active {
+  background: rgba(200, 169, 81, 0.1);
+  border-color: rgba(200, 169, 81, 0.5);
+  box-shadow: 0 0 0 1px rgba(200, 169, 81, 0.2);
+}
+
+.welcome-item-icon {
+  font-size: 16px;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.welcome-item-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.welcome-item-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #f0e8e0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.welcome-item-meta {
+  font-size: 11px;
+  color: rgba(245, 239, 232, 0.38);
+}
+
+.welcome-dash-empty {
+  font-size: 13px;
+  color: rgba(245, 239, 232, 0.28);
+  padding: 2px 0;
+  font-style: italic;
+  grid-column: 1 / -1;
+}
+
+
+@media (max-width: 768px) {
+  .welcome-options {
+    flex-direction: column;
+    padding: 14px 16px 18px;
+  }
+  .welcome-video-preview {
+    min-height: 260px;
+    gap: 16px;
+    padding: 28px 16px;
+  }
+  .welcome-heading {
+    font-size: 20px;
+  }
+  .welcome-section-items {
+    grid-template-columns: 1fr;
+    width: 100%;
+  }
+  .welcome-item-card {
+    width: 100%;
+  }
+  .welcome-dashboard {
+    padding: 20px 16px 12px;
+  }
+  .welcome-hp-preview {
+    display: none;
+  }
+  .welcome-dashboard-sections {
+    margin: 10px 0px;
+  }
+  .welcome-modal {
+    margin-bottom: 0px;
+  }
 }

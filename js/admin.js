@@ -3,7 +3,7 @@
  * Handles restricted features like Pattern Tagging and Game Config.
  */
 
-import { alert, confirm, prompt } from './alert.js';
+import { alert, prompt } from './alert.js';
 import { Modal } from './modal.js';
 import { currentUser, isAdminUser } from './state.js';
 
@@ -57,38 +57,51 @@ function activateAdminIfAuthorized() {
 }
 
 function injectAdminButton() {
-  const dropdown = document.getElementById('accountDropdownMenu');
-  const accountSettingsBtn = document.getElementById('openAccountAuthBtn');
+  const adminSection = document.getElementById('adminSection');
+  if (!adminSection) return;
 
-  if (!dropdown || !accountSettingsBtn) return;
+  // Reveal admin section and all other admin-only elements
+  document.querySelectorAll('.admin-only').forEach(el => el.style.display = '');
 
-  // Check if already exists
-  if (document.getElementById('adminBtn')) return;
+  // Wire submenu toggle (only once)
+  if (adminSection.dataset.wired) return;
+  adminSection.dataset.wired = '1';
 
-  const btn = document.createElement('button');
-  btn.id = 'adminBtn';
-  btn.innerHTML = '⚙️ Admin Tools';
-  btn.style.marginTop = '4px';
-  btn.style.color = 'var(--accent-glow)';
+  const adminMenuBtn = document.getElementById('adminMenuBtn');
+  const adminSubmenu = document.getElementById('adminSubmenu');
 
-  btn.onclick = openAdminMenu;
+  adminMenuBtn?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (!adminSubmenu) return;
+    const isOpen = adminSubmenu.classList.contains('open');
+    adminSubmenu.classList.toggle('open', !isOpen);
+    adminMenuBtn.textContent = isOpen ? '⚙️ Admin Tools ▾' : '⚙️ Admin Tools ▴';
+  });
 
-  // Insert after Account Settings
-  dropdown.insertBefore(btn, accountSettingsBtn.nextSibling);
+  document.getElementById('openCourseCopierAdminBtn')?.addEventListener('click', () => {
+    document.getElementById('accountDropdownMenu')?.classList.remove('show');
+    openCourseCopier();
+  });
 
-  // Assignments button
+  document.getElementById('openPatternOrgAdminBtn')?.addEventListener('click', () => {
+    document.getElementById('accountDropdownMenu')?.classList.remove('show');
+    openPatternOrgModal();
+  });
+
+  document.getElementById('openGameConfigAdminBtn')?.addEventListener('click', () => {
+    document.getElementById('accountDropdownMenu')?.classList.remove('show');
+    alert('Game Config coming soon!');
+  });
+
+  // Assignments button (injected if not already present)
   if (!document.getElementById('assignmentsBtn')) {
     const assignBtn = document.createElement('button');
     assignBtn.id = 'assignmentsBtn';
     assignBtn.innerHTML = '📋 Assignments';
     assignBtn.style.marginTop = '4px';
     assignBtn.onclick = openAssignments;
-    dropdown.insertBefore(assignBtn, btn.nextSibling);
+    adminSection.insertAdjacentElement('afterend', assignBtn);
   }
-
-  // Also enable other admin-only buttons in the dropdown if they exist
-  const adminElements = document.querySelectorAll('.admin-only');
-  adminElements.forEach(el => el.style.display = 'block');
 }
 
 function setupModals() {
@@ -112,18 +125,6 @@ function setupModals() {
   gameConfigModal = document.getElementById('gameConfigModal');
 }
 
-async function openAdminMenu() {
-  // Simple menu to choose tool
-  const choice = await prompt("Admin Tools:\n1. Pattern Organization (Tagging)\n2. Game Configuration\n3. Copy Sections Between Courses", "1");
-
-  if (choice === '1') {
-    openPatternOrgModal();
-  } else if (choice === '2') {
-    await alert("Game Config coming soon!");
-  } else if (choice === '3') {
-    openCourseCopier();
-  }
-}
 
 async function openPatternOrgModal() {
   if (!patternOrgModal) return;

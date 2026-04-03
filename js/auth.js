@@ -33,7 +33,6 @@ export function updateAdminUI() {
 }
 
 // Elements (Globals previously, now local resolution if possible, or assume global ID access)
-// Elements (Globals previously, now local resolution if possible, or assume global ID access)
 let authModal = null;
 let authPanel = null;
 let authEmail = null;
@@ -430,6 +429,13 @@ export async function initAuth() {
       tosCheckbox?.focus();
       return;
     }
+    const firstName = document.getElementById('authFirstName')?.value.trim();
+    if (!firstName) {
+      authHint.textContent = 'Please enter your first name.';
+      document.getElementById('authFirstName')?.focus();
+      return;
+    }
+    const lastName = document.getElementById('authLastName')?.value.trim() || null;
     const email = confirmedEmail || authEmail.value.trim();
     const password = authPass.value;
     const confirm = authPassConfirm?.value;
@@ -441,9 +447,21 @@ export async function initAuth() {
     authHint.textContent = 'Creating account…';
     const { data, error } = await supabase.auth.signUp({ email, password });
     if (error) { authHint.textContent = error.message; return; }
+
+    // Save name to profile (upsert in case trigger already created the row)
+    if (data?.user) {
+      await supabase.from('profiles').upsert({
+        user_id: data.user.id,
+        first_name: firstName,
+        last_name: lastName,
+      }, { onConflict: 'user_id' });
+    }
+
     authHint.textContent = 'Account created! Please check your email to confirm, then log in.';
     authPass.value = '';
     if (authPassConfirm) authPassConfirm.value = '';
+    document.getElementById('authFirstName').value = '';
+    if (document.getElementById('authLastName')) document.getElementById('authLastName').value = '';
   });
 
   // ── Forgot password ──────────────────────────────────────────────────────
@@ -584,6 +602,8 @@ function resetToEmailStep() {
   document.getElementById('authEmailRow').style.display = '';
   document.getElementById('authPasswordRow').style.display = 'none';
   document.getElementById('authPasswordConfirmRow').style.display = 'none';
+  document.getElementById('authFirstNameRow').style.display = 'none';
+  document.getElementById('authLastNameRow').style.display = 'none';
   document.getElementById('authTosRow').style.display = 'none';
   if (authForgotPassword) authForgotPassword.style.display = 'none';
   if (authBackBtn) authBackBtn.style.display = 'none';
@@ -644,6 +664,8 @@ function showSignupStep(email) {
   document.getElementById('authEmailRow').style.display = 'none';
   document.getElementById('authPasswordRow').style.display = '';
   document.getElementById('authPasswordConfirmRow').style.display = '';
+  document.getElementById('authFirstNameRow').style.display = '';
+  document.getElementById('authLastNameRow').style.display = '';
   if (tosRow) { tosRow.style.display = 'flex'; }
   if (tosCheckbox) tosCheckbox.checked = false;
   if (authForgotPassword) authForgotPassword.style.display = 'none';

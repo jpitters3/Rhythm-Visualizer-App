@@ -1,5 +1,5 @@
 import { gridA, gridB } from './grid-context.js';
-import { activeGrid, setActiveGrid } from './state.js';
+import { activeGrid, currentUser, setActiveGrid } from './state.js';
 import { getTimeSignature, calculateSteps } from './rhythm-core.js';
 import { stop, setTimeSignature } from './noteplayer.js';
 import { getScale } from './state.js';

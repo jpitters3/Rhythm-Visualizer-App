@@ -1,6 +1,7 @@
 // ==== EVENTS FOR BUTTONS / CONTROLS ====
 import { gridA, gridB, activeGrid } from './grid-context.js';
 import { isAuthed, openAuthModal } from './auth.js';
+import { openWelcomeDashboard } from './dashboard.js';
 import { start, stop, setMode, addTickObserver } from './noteplayer.js';
 import { renderAllMeasures, invertRange, invertFollowing, setDualGrid, clearGrid, resetGridToDefault } from './notegrid.js';
 import { TransportRegistry, TransportUI } from './transport-ui.js';
@@ -19,6 +20,8 @@ import { HistoryManager } from './history.js';
 import { canAccess, FEATURE } from './gated-feature.js';
 import { alert, confirm, prompt } from './alert.js';
 import { Bus, BUS_EVENT } from './bus.js';
+import { Modal } from './modal.js';
+import { escapeHtml } from './utils.js';
 
 // Global references assigned in initControls
 let patternSelect, gridBtn, handBtn, resetBtn, themeBtn, presentBtn, exitPresent, micBtn, saveBtn, renameBtn, deleteBtn, exportBtn, navDashboardBtn, importBtn, loadBtn;
@@ -140,6 +143,7 @@ export async function saveCurrentPatternAs(name) {
     await dbSavePattern(trimmed, serializePattern());
     localStorage.setItem(LAST_USED_KEY, trimmed);
     await refreshPatternSelect(trimmed);
+    updateCurrentProjectName(trimmed);
     return true;
   } catch (err) {
     console.error(err);
@@ -221,6 +225,103 @@ export function syncVirtualHandpanControls() {
   TransportRegistry.updateAll(gridA);
 }
 
+function closeAccountDropdown() {
+  document.getElementById('accountDropdownMenu')?.classList.remove('show');
+  document.getElementById('projectSubmenu')?.classList.remove('open');
+  const btn = document.getElementById('projectMenuBtn');
+  if (btn) btn.textContent = '📂 Project ▾';
+  document.getElementById('adminSubmenu')?.classList.remove('open');
+  const adminBtn = document.getElementById('adminMenuBtn');
+  if (adminBtn) adminBtn.textContent = '⚙️ Admin Tools ▾';
+}
+
+export function updateCurrentProjectName(name) {
+  const el = document.getElementById('currentProjectName');
+  if (el) el.textContent = name || 'Untitled';
+}
+
+async function showOpenProjectModal() {
+  const overlayEl = document.getElementById('openProjectModal');
+  if (!overlayEl) return;
+
+  const modal = new Modal(overlayEl);
+  overlayEl.querySelector('.close-modal-btn')?.addEventListener('click', () => modal.close(), { once: true });
+
+  const listEl = document.getElementById('projectList');
+  const searchInput = document.getElementById('projectSearchInput');
+  if (searchInput) searchInput.value = '';
+
+  listEl.innerHTML = '<div class="project-list-loading">Loading…</div>';
+  modal.open();
+  if (searchInput) searchInput.focus();
+
+  try {
+    let names = [];
+    if (await isAuthed()) {
+      names = await dbListPatternNames();
+    } else {
+      const saved = getSavedPatterns();
+      names = Object.keys(saved).sort((a, b) => a.localeCompare(b));
+    }
+
+    const current = getSelectedPatternName();
+
+    function renderList(filter = '') {
+      const filtered = filter
+        ? names.filter(n => n.toLowerCase().includes(filter.toLowerCase()))
+        : names;
+
+      listEl.innerHTML = '';
+
+      if (names.length === 0) {
+        listEl.innerHTML = '<div class="project-list-empty"><span>No saved projects yet.</span></div>';
+        return;
+      }
+
+      if (filtered.length === 0) {
+        listEl.innerHTML = '<div class="project-list-empty"><span>No matches.</span></div>';
+        return;
+      }
+
+      filtered.forEach(name => {
+        const isCurrent = name === current;
+        const btn = document.createElement('button');
+        btn.className = 'project-list-item' + (isCurrent ? ' current' : '');
+        btn.innerHTML = `
+          <svg class="project-item-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+          </svg>
+          <span class="project-item-name">${escapeHtml(name)}</span>
+          ${isCurrent ? '<span class="project-item-badge">open</span>' : ''}
+        `;
+        btn.addEventListener('click', async () => {
+          modal.close();
+          if (hasUnsavedChanges()) {
+            const ok = await confirm('You have unsaved changes. Discard and open this project?');
+            if (!ok) return;
+          }
+          await loadPatternByName(name);
+          updateCurrentProjectName(name);
+          updatePatternButtons();
+        });
+        listEl.appendChild(btn);
+      });
+    }
+
+    renderList();
+
+    if (searchInput) {
+      searchInput.addEventListener('input', () => renderList(searchInput.value), { signal: modal.el._abortController?.signal });
+      searchInput.addEventListener('keydown', e => {
+        if (e.key === 'Escape') modal.close();
+      });
+    }
+
+  } catch (err) {
+    listEl.innerHTML = `<div class="project-list-empty" style="color:var(--danger,#e74c3c);">Failed to load: ${escapeHtml(err.message)}</div>`;
+  }
+}
+
 /**
  * Initialize all controls and listeners
  */
@@ -250,18 +351,11 @@ export function initControls() {
   });
 
   // 2. Dropdown Setup
-  const fileDropdownBtn = document.getElementById('fileDropdownBtn');
-  const fileDropdownMenu = document.getElementById('fileDropdownMenu');
-  setupDropdown(fileDropdownBtn, fileDropdownMenu);
-
   const micDropdownMenu = document.getElementById('micDropdownMenu');
   setupDropdown(micBtn, micDropdownMenu);
 
   // Close dropdowns on outside click
   window.addEventListener('click', (e) => {
-    if (fileDropdownBtn && fileDropdownMenu && !fileDropdownBtn.contains(e.target) && !fileDropdownMenu.contains(e.target)) {
-      fileDropdownMenu.classList.remove('show');
-    }
     if (micBtn && micDropdownMenu && !micBtn.contains(e.target) && !micDropdownMenu.contains(e.target)) {
       micDropdownMenu.classList.remove('show');
     }
@@ -289,10 +383,12 @@ export function initControls() {
       });
       if (ok) {
         await loadPatternByName(selected);
+        updateCurrentProjectName(selected);
         updatePatternButtons();
       }
     } else {
       await loadPatternByName(selected);
+      updateCurrentProjectName(selected);
       updatePatternButtons();
     }
   });
@@ -300,9 +396,6 @@ export function initControls() {
   // 5. Save / Load / Rename / Delete
   saveBtn?.addEventListener('click', async (e) => {
     if (e) e.stopPropagation();
-
-    // Close dropdown
-    if (fileDropdownMenu) fileDropdownMenu.classList.remove('show');
 
     // Auth Check BEFORE prompt
     if (!(await isAuthed())) {
@@ -315,9 +408,9 @@ export function initControls() {
       return;
     }
 
-    const defaultName = `Pattern ${new Date().toLocaleString()}`;
+    const defaultName = `Project ${new Date().toLocaleString()}`;
     const name = await showCustomModal({
-      title: 'Save Pattern',
+      title: 'Save Project',
       message: 'Enter a name for your pattern:',
       mode: 'prompt',
       defaultValue: getSelectedPatternName() || defaultName
@@ -330,9 +423,6 @@ export function initControls() {
 
   loadBtn?.addEventListener('click', async (e) => {
     if (e) e.stopPropagation();
-
-    // Close dropdown
-    if (fileDropdownMenu) fileDropdownMenu.classList.remove('show');
 
     const selected = getSelectedPatternName();
     if (!selected) {
@@ -360,11 +450,61 @@ export function initControls() {
     }
   });
 
+  // Project Menu Toggle
+  document.getElementById('projectMenuBtn')?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const submenu = document.getElementById('projectSubmenu');
+    const btn = document.getElementById('projectMenuBtn');
+    if (!submenu) return;
+    const isOpen = submenu.classList.contains('open');
+    submenu.classList.toggle('open', !isOpen);
+    if (btn) btn.textContent = isOpen ? '📂 Project ▾' : '📂 Project ▴';
+  });
+
+  // Close project submenu when account dropdown closes
+  document.getElementById('accountBtn')?.addEventListener('click', () => {
+    // Reset submenu state when dropdown closes (handled via accountDropdownMenu hide)
+  });
+
+  // New Project
+  document.getElementById('newProjectBtn')?.addEventListener('click', async (e) => {
+    e.stopPropagation();
+    closeAccountDropdown();
+
+    if (hasUnsavedChanges()) {
+      const ok = await confirm('You have unsaved changes. Discard and start a new project?');
+      if (!ok) return;
+    }
+
+    const name = await prompt('Name your new project:', 'Untitled');
+    if (!name?.trim()) return;
+
+    resetGridToDefault(gridA);
+    await saveCurrentPatternAs(name.trim());
+  });
+
+  // Open Project
+  document.getElementById('openProjectBtn')?.addEventListener('click', async (e) => {
+    e.stopPropagation();
+    closeAccountDropdown();
+    await showOpenProjectModal();
+  });
+
+  // Close submenus when account dropdown is closed (outside click)
+  document.addEventListener('click', (e) => {
+    const dropdown = document.getElementById('accountDropdownMenu');
+    if (!dropdown?.classList.contains('show')) {
+      document.getElementById('projectSubmenu')?.classList.remove('open');
+      const btn = document.getElementById('projectMenuBtn');
+      if (btn) btn.textContent = '📂 Project ▾';
+      document.getElementById('adminSubmenu')?.classList.remove('open');
+      const adminBtn = document.getElementById('adminMenuBtn');
+      if (adminBtn) adminBtn.textContent = '⚙️ Admin Tools ▾';
+    }
+  });
+
   renameBtn?.addEventListener('click', async (e) => {
     if (e) e.stopPropagation();
-
-    // Close dropdown
-    if (fileDropdownMenu) fileDropdownMenu.classList.remove('show');
 
     if (!await ensureHasSelection()) return;
 
@@ -419,9 +559,6 @@ export function initControls() {
   deleteBtn?.addEventListener('click', async (e) => {
     if (e) e.stopPropagation();
 
-    // Close dropdown
-    if (fileDropdownMenu) fileDropdownMenu.classList.remove('show');
-
     if (!await ensureHasSelection()) return;
 
     const name = getSelectedPatternName();
@@ -459,9 +596,6 @@ export function initControls() {
   exportBtn?.addEventListener('click', async (e) => {
     if (e) e.stopPropagation();
 
-    // Close dropdown
-    if (fileDropdownMenu) fileDropdownMenu.classList.remove('show');
-
     const data = JSON.stringify(serializePattern(), null, 2);
     try {
       await navigator.clipboard.writeText(data);
@@ -482,9 +616,6 @@ export function initControls() {
 
   importBtn?.addEventListener('click', async (e) => {
     if (e) e.stopPropagation();
-
-    // Close dropdown
-    if (fileDropdownMenu) fileDropdownMenu.classList.remove('show');
 
     if (hasUnsavedChanges()) {
       const ok = await showCustomModal({
@@ -618,7 +749,10 @@ export function initControls() {
     }
   });
 
-  navDashboardBtn?.addEventListener('click', async () => {
+  navDashboardBtn?.addEventListener('click', () => openWelcomeDashboard());
+
+  // eslint-disable-next-line no-unused-vars
+  async function openLegacyDashboard() {
     if (hasUnsavedChanges()) {
       const ok = await showCustomModal({
         title: 'Unsaved Changes',
@@ -629,7 +763,7 @@ export function initControls() {
     } else {
       window.location.hash = '#dashboard';
     }
-  });
+  }
 
   // 7. Sticking Mode
   const stickingBtn = document.getElementById('stickingBtn');

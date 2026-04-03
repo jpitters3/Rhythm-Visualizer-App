@@ -21,6 +21,11 @@ div.grid-container.top-row {
   /* Context for absolute menu */
 }
 
+#accountDropdownMenu {
+  max-height: 700px;
+  overflow-y: scroll;
+}
+
 /* Hamburger Button (Hidden on Desktop) */
 .hamburger-btn {
   display: none;
@@ -43,9 +48,7 @@ div.grid-container.top-row {
   display: flex;
   align-items: center;
   flex: 1;
-  /* Take remaining space */
-  justify-content: space-between;
-  /* Spread Pattern vs Account */
+  justify-content: flex-end;
   gap: 20px;
   z-index: 3000;
 }
@@ -54,23 +57,19 @@ div.grid-container.top-row {
   display: none;
 }
 
-/* Force Pattern Select to Left (1) and Account to Right (2) on Desktop */
-@media (min-width: 901px) {
-  .grid-child.pattern-select {
-    order: 1;
-  }
-
-  .grid-child.account {
-    order: 2;
-  }
-}
-
 /* Mobile Responsive */
 @media (max-width: 900px) {
 
   /* Show Hamburger earlier (tablets too) */
   .hamburger-btn {
     display: block;
+  }
+
+  /* Hidden on mobile: community is in account dropdown, notif is in top bar */
+  #communityBtn,
+  #notifBellWrapper,
+  #accountStatus {
+    display: none !important;
   }
 
   /* Adjust Logo */
@@ -123,25 +122,18 @@ div.grid-container.top-row {
     z-index: 3000;
     flex-direction: column;
     align-items: stretch;
-    /* Full width items */
     gap: 16px;
     max-height: 80dvh;
     overflow-y: auto;
   }
 
   /* Layout inside menu */
-  div.grid-child.pattern-select,
-  div.grid-child.account {
-    flex-direction: column;
-    align-items: stretch;
-    width: 100%;
-    justify-content: center;
-    gap: 12px;
+  .grid-child.community {
+    display: none;
   }
 
-  /* Reset account alignment */
-  div.grid-child.account {
-    justify-content: center;
+ .grid-child.account {
+    overflow-y: scroll;
   }
 
   /* Make buttons bigger on mobile menu */
@@ -154,14 +146,23 @@ div.grid-container.top-row {
 
   /* Open State */
   .header-menu-items.open {
+    justify-self: right;
+    width: 80vw;
+    top: 70px;
     display: flex;
     animation: slideDown 0.2s ease-out;
+    text-align: right;
   }
 
   /* ===== FLATTEN ACCOUNT DROPDOWN ON MOBILE ===== */
   /* Hide the trigger button ("Account" or "J") */
   .account-dropdown #accountBtn {
     display: none;
+  }
+
+  .account-dropdown {
+    overflow: none;
+    width: 100%
   }
 
   /* Make the dropdown content always visible and static */
@@ -180,6 +181,10 @@ div.grid-container.top-row {
     opacity: 1;
     pointer-events: auto;
     transform: none;
+  }
+
+  .account-dropdown .dropdown-content .dropdown-divider {
+    flex-shrink: 0;
   }
 
   /* Style items to match other menu buttons */
@@ -210,15 +215,6 @@ div.logo img.logo-img {
   padding-bottom: 20px;
 }
 
-div.grid-child.pattern-select {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  /* Allow wrapping on small screens */
-  gap: 8px;
-  /* Add spacing between elements */
-}
-
 /* Ensure buttons don't shrink too much */
 button {
   min-width: 50px;
@@ -228,7 +224,8 @@ div.grid-child.account {
   justify-content: right;
   justify-self: right;
   display: flex;
-  /* Ensure alignment */
+  align-items: center;
+  gap: 8px;
 }
 
 div.grid-container.handpan-options {
@@ -263,7 +260,6 @@ div.container {
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  /* Full width items */
   gap: 16px;
   position: relative;
   transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
@@ -310,18 +306,9 @@ div.container {
 .container::before {
   content: "";
   position: absolute;
-  /* Expand slightly to ensure blur covers edges without artifacts */
-  /* inset: -40px;
-  background-image: url('../public/assets/images/backgrounds/river_wallpaper.jpg');
-  background-attachment: fixed;
-  background-size: cover;
-  background-position: center top; */
-  /* filter: blur(10px); */
-  /* Balanced opacity to blend with the panel color */
   opacity: 0;
   z-index: -1;
   pointer-events: none;
-  /* Performance optimization */
   will-change: transform;
   transform: translateZ(0);
   border: 1px solid white;
@@ -376,7 +363,6 @@ body.dark div.container {
     display: flex !important;
     flex-direction: column !important;
     overflow: hidden;
-    /* height: 100% !important; */
     min-height: 0 !important;
     flex: 1 1 0 !important;
   }
@@ -410,8 +396,7 @@ body.dark div.container {
   }
 
   /* Make top controls scroll horizontally to save vertical space! */
-  .controls-primary,
-  .grid-child.pattern-select {
+  .controls-primary {
     flex-wrap: nowrap !important;
     overflow-x: auto !important;
     justify-content: flex-start !important;
@@ -423,14 +408,12 @@ body.dark div.container {
     padding-bottom: 5px;
   }
 
-  .controls-primary::-webkit-scrollbar,
-  .grid-child.pattern-select::-webkit-scrollbar {
+  .controls-primary::-webkit-scrollbar {
     display: none;
   }
 
   /* Expanded Floating Controls Drawer */
   #primaryControlsWrapper,
-  #mobileFileOptionsDrawer,
   .measure-tools {
     display: none;
     width: 93vw;
@@ -452,59 +435,12 @@ body.dark div.container {
 
   /* Reset some inner paddings for the floating menu */
   #primaryControlsWrapper .scrollable-controls-wrapper,
-  #mobileFileOptionsDrawer .grid-child.pattern-select,
   .measure-tools .selection-group {
     padding: 0;
   }
 
-  #primaryControlsWrapper.open,
-  #mobileFileOptionsDrawer.open {
+  #primaryControlsWrapper.open {
     display: block;
-  }
-
-  /* High-Level Toggle for mobile file layout */
-  #mobileFileOptionsDrawer .grid-child.pattern-select {
-    display: flex !important;
-    background: transparent !important;
-    border: none !important;
-    box-shadow: none !important;
-    padding: 0 !important;
-    margin: 0 !important;
-    overflow: visible !important;
-  }
-
-  #mobileFileOptionsDrawer .grid-child.pattern-select h3 {
-    display: none;
-    /* Already obvious */
-  }
-
-  #mobileFileOptionsDrawer #shareBtn {
-    margin-top: 10px;
-    width: 100%;
-    min-height: 44px;
-    background: var(--primary);
-    color: black;
-    border: none;
-    border-radius: 8px;
-    font-weight: 600;
-  }
-
-  #mobileFileOptionsDrawer.open {
-    display: block;
-    animation: slideDown 0.2s ease-out;
-  }
-
-
-
-  /* Hide desktop dropdown on mobile, show native select */
-  #desktopFileDropdown {
-    display: none !important;
-  }
-
-  #mobileFileSelect {
-    display: block !important;
-    flex: 1;
-    min-width: 100px;
   }
 
   /* Push handpan above transport controls at bottom */
@@ -514,20 +450,11 @@ body.dark div.container {
   }
 }
 
-select#patternSelect,
-select#mobileFileSelect {
+select#patternSelect {
   max-width: 160px;
 }
 
-#mobileFileSelect {
-  display: none;
-}
-
 /* ===== ROUTE-SPECIFIC GLOBAL STYLING ===== */
-body.route-dashboard .grid-child.pattern-select {
-  display: none !important;
-}
-
 body.route-dashboard .header-menu-items {
   justify-content: flex-end;
 }
@@ -538,4 +465,260 @@ body.route-dashboard .header-menu-items {
     padding-left: 360px;
     /* Width of the sidebar */
   }
+}
+
+/* ===== PROJECT MENU IN ACCOUNT DROPDOWN ===== */
+.project-current-name {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  opacity: 0.5;
+  padding: 4px 14px 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 220px;
+  pointer-events: none;
+  text-align: left;
+}
+
+.project-menu-btn {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 8px 14px;
+  font-weight: 500;
+  font-size: 14px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--text);
+  border-radius: 6px;
+  min-width: auto;
+}
+
+.project-menu-btn:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+body.dark .project-menu-btn:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+/* Animated submenu using CSS grid trick */
+.project-submenu {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.project-submenu.open {
+  grid-template-rows: 1fr;
+}
+
+.project-submenu-inner {
+  overflow: hidden;
+  padding: 0 6px;
+}
+
+.project-submenu button {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+
+/* Dropdown Content (Hidden by Default) */
+.dropdown-content {
+  display: none;
+  min-width: 200px !important;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  background-color: var(--panel);
+  min-width: 160px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  border-radius: 12px;
+  z-index: 4000;
+  padding: 8px;
+  border: 1px solid var(--panel-border);
+  margin-top: 8px;
+}
+
+/* Show the dropdown menu (use JS to add this class) */
+.dropdown-content.show {
+  display: block;
+  animation: fadeIn 0.1s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Links inside the dropdown */
+.dropdown-content button {
+  color: var(--text);
+  padding: 10px 16px;
+  text-decoration: none;
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border-radius: 8px;
+  margin-bottom: 2px;
+  border: none;
+  align-items: center !important;
+}
+
+/* Change color of dropdown links on hover */
+.dropdown-content button:hover {
+  background-color: var(--btn-active);
+  color: #000;
+}
+
+.dropdown-divider {
+  height: 1px;
+  background-color: var(--panel-border);
+  margin: 6px 0;
+}
+
+/* Right-aligned dropdown */
+.dropdown-content.right-aligned {
+  left: auto;
+  right: 0;
+}
+
+.dropdown-header-item {
+  color: var(--text);
+  font-weight: 500;
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px;
+}
+
+
+/* ===== OPEN PROJECT MODAL ===== */
+.open-project-modal {
+  max-width: 460px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  max-height: 80vh;
+}
+
+.open-project-search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--panel-border);
+  color: var(--text);
+  opacity: 0.7;
+  flex-shrink: 0;
+}
+
+#projectSearchInput {
+  flex: 1;
+  border: none;
+  background: transparent;
+  font-size: 14px;
+  color: var(--text);
+  outline: none;
+}
+
+#projectSearchInput::placeholder {
+  opacity: 0.5;
+}
+
+.project-list {
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.project-list-loading,
+.project-list-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 16px;
+  font-size: 14px;
+  opacity: 0.5;
+}
+
+.project-list-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: transparent;
+  border: 1px solid transparent;
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--text);
+  transition: background 0.15s, border-color 0.15s, transform 0.1s;
+  min-width: auto;
+}
+
+.project-list-item:hover {
+  background: rgba(0, 0, 0, 0.04);
+  border-color: var(--panel-border);
+  transform: translateX(2px);
+}
+
+body.dark .project-list-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.project-item-icon {
+  opacity: 0.45;
+  flex-shrink: 0;
+}
+
+.project-item-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.project-item-badge {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--btn-active);
+  background: rgba(var(--panel-rgb), 0.6);
+  border: 1px solid var(--btn-active);
+  border-radius: 4px;
+  padding: 2px 6px;
+  flex-shrink: 0;
+}
+
+.project-list-item.current {
+  background: rgba(0, 0, 0, 0.03);
+  border-color: var(--panel-border);
+}
+
+.project-list-item.current .project-item-icon,
+.project-list-item.current .project-item-name {
+  font-weight: 600;
+}
+
+body.dark .project-list-item.current {
+  background: rgba(255, 255, 255, 0.04);
 }

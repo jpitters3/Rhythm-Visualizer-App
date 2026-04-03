@@ -621,16 +621,6 @@ body.dark .icon-btn.active {
   }
 }
 
-
-.tab-pane .drawer-content {
-  padding: 0;
-  border: none;
-  overflow: visible;
-  max-height: none;
-  background-color: var(--offwhite);
-}
-
-/* Restore Chord List Scroll & Layout */
 #chordList.drawer-content {
   display: flex;
   flex-wrap: wrap;
@@ -638,6 +628,7 @@ body.dark .icon-btn.active {
   max-height: 220px;
   overflow-y: auto;
   padding: 2px;
+  justify-content: center;
 }
 
 .empty-state {
@@ -824,4 +815,12 @@ body.dark .hp-loader {
 
 .flip-btn:hover {
   background: rgba(255, 255, 255, 0.4);
+}
+
+#myScalesModal .modal {
+  width: 700px;
+}
+
+#myScalesModal .modal-content {
+  padding: 20px;
 }

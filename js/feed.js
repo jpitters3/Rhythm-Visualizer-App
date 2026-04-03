@@ -36,14 +36,12 @@ export function initFeed() {
   compositionsView = document.getElementById('compositionsView');
   discussionView = document.getElementById('discussionView');
 
-  const commBtn = document.getElementById('communityBtn');
-  if (commBtn && !commBtn.dataset.listenerAttached) {
-    commBtn.addEventListener('click', () => {
-      openFeedModal();
-    });
-    commBtn.dataset.jsReady = 'true';
-    commBtn.dataset.listenerAttached = 'true';
-  }
+  document.querySelectorAll('[data-action="open-community"]').forEach(btn => {
+    if (!btn.dataset.listenerAttached) {
+      btn.addEventListener('click', () => openFeedModal());
+      btn.dataset.listenerAttached = 'true';
+    }
+  });
 
   closeFeedBtn?.addEventListener('click', () => feedPanel.close());
 

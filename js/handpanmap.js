@@ -522,9 +522,10 @@ function renderMyScalesList() {
 
   // Add "Create New" button at the top
   const createContainer = document.createElement('div');
-  createContainer.style.marginBottom = '10px';
-  createContainer.style.marginTop = '10px';
+  createContainer.id = 'createNewHandpan';
+  createContainer.style.paddingBottom = '20px';
   createContainer.style.textAlign = 'center';
+  createContainer.style.borderBottom = '1px solid var(--panel-border)';
   const createBtn = document.createElement('button');
   createBtn.id = 'createHandpanBtn';
   createBtn.className = 'primary-btn small-btn';
@@ -550,6 +551,8 @@ function renderMyScalesList() {
     myScalesList.appendChild(createContainer);
     return;
   }
+
+  myScalesList.appendChild(createContainer);
 
   customHandpansCache.forEach((hp, index) => {
     const item = document.createElement('div');
@@ -626,9 +629,6 @@ function renderMyScalesList() {
     item.append(nameDiv, actionsDiv);
     myScalesList.appendChild(item);
   });
-
-  // Append create button at the bottom
-  myScalesList.appendChild(createContainer);
 }
 
 
@@ -1466,11 +1466,6 @@ export function initHandpanMap() {
     hpSettingsToggle.classList.toggle('active', isHidden);
   });
 
-  buildScaleBtn?.addEventListener('click', () => {
-    closeAllDrawers();
-    openMyScalesModal('list');
-  });
-
   cancelBuildBtn?.addEventListener('click', () => {
     // Return to list view within modal
     openMyScalesModal('list');
@@ -1483,39 +1478,37 @@ export function initHandpanMap() {
 
 
 
-  // Tab Manager logic
-  const tabs = document.querySelectorAll('.tab-btn');
-  const panes = document.querySelectorAll('.tab-pane');
-  tabs.forEach(btn => {
+  // Modal Manager for handpan drawers
+  const drawerModals = {};
+  ['handpanSettingsDrawer', 'chordDrawer', 'customizeDrawer'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const modal = new Modal(el, {
+      onClose: () => document.querySelectorAll(`.tab-btn[data-tab="${id}"]`).forEach(b => b.classList.remove('active'))
+    });
+    drawerModals[id] = modal;
+    el.querySelector('.close-modal-btn')?.addEventListener('click', () => modal.close());
+  });
+
+  buildScaleBtn?.addEventListener('click', () => {
+    drawerModals['customizeDrawer'].close();
+    openMyScalesModal('list');
+  });
+
+  document.querySelectorAll('.tab-btn[data-tab]').forEach(btn => {
     btn.addEventListener('click', (e) => {
       e.preventDefault();
       const targetId = btn.getAttribute('data-tab');
-      const targetPane = document.getElementById(targetId);
-      if (!targetPane) return;
-      const wasActive = btn.classList.contains('active');
-
-      closeAllDrawers();
-
-      if (!wasActive) {
+      const modal = drawerModals[targetId];
+      if (!modal) return;
+      const wasOpen = modal.isOpen;
+      Object.values(drawerModals).forEach(m => m.close());
+      if (!wasOpen) {
+        modal.open();
         btn.classList.add('active');
-        targetPane.classList.add('active');
-        document.getElementById('drawerBackdrop')?.classList.add('active');
-
-
       }
-
     });
   });
-
-  document.getElementById('drawerBackdrop')?.addEventListener('click', () => {
-    closeAllDrawers();
-  });
-
-  function closeAllDrawers() {
-    document.querySelectorAll('.tab-btn').forEach(t => t.classList.remove('active'));
-    document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
-    document.getElementById('drawerBackdrop')?.classList.remove('active');
-  }
 
   // Final initial calls
   registerHighlighter(highlightHandpan);
