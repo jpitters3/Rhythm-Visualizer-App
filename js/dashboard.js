@@ -3,6 +3,7 @@ import { currentUser } from './state.js';
 import { gridA } from './grid-context.js';
 import { playNoteByLabel, intervalMs, resolveHand } from './noteplayer.js';
 import { dbLoadPatternByName } from './pattern-crud.js';
+import { fetchCourses, openSidebar, setActiveCourse } from './courses.js';
 
 // Note positions — matches HANDPAN_MAP_BRONZE in handpanmap.js (calibrated for handpan-for-groovepan.png)
 const PREVIEW_HP_MAP = {
@@ -26,6 +27,7 @@ let hpPreviewInterval = null;
 const hpPreviewDots = new Map();
 let previewCardEl = null;
 let welcomeModalInitialized = false;
+let previewMuted = false;
 
 // ── Public API ────────────────────────────────────────────────────────────────
 
@@ -64,6 +66,8 @@ function closeWelcomeModal() {
   modal.setAttribute('aria-hidden', 'true');
   clearInterval(hpPreviewInterval);
   hpPreviewInterval = null;
+  hpPreviewDots.clear();
+  previewCardEl = null;
 }
 
 function buildWelcomeHandpan(modal, override = {}) {
@@ -125,8 +129,8 @@ function buildWelcomeHandpan(modal, override = {}) {
     const { note, rawLabel, stepIndex } = playSequence[i % playSequence.length];
     i++;
 
-    // Play sound only when explicitly enabled (i.e. a card was clicked)
-    if (rawLabel && override.sound) {
+    // Play sound only when explicitly enabled (i.e. a card was clicked) and not muted
+    if (rawLabel && override.sound && !previewMuted) {
       if (Array.isArray(rawLabel)) {
         rawLabel.forEach(l => { if (l) playNoteByLabel(l, stepIndex); });
       } else {
@@ -160,6 +164,13 @@ function buildWelcomeHandpan(modal, override = {}) {
 
 function initWelcomeModal(modal) {
   modal.querySelector('#welcomeCloseBtn')?.addEventListener('click', closeWelcomeModal);
+
+  // Mute toggle
+  const muteBtn = modal.querySelector('#welcomeMuteBtn');
+  muteBtn?.addEventListener('click', () => {
+    previewMuted = !previewMuted;
+    muteBtn.textContent = previewMuted ? '🔈' : '🔇';
+  });
 
   modal.addEventListener('click', (e) => {
     if (e.target === modal) closeWelcomeModal();
@@ -201,6 +212,9 @@ async function loadWelcomeDashboard(modal) {
 
   previewCardEl = null;
   buildWelcomeHandpan(modal);
+
+  // Prefetch courses in the background so the sidebar opens instantly
+  fetchCourses();
 
   // Greet by first name → username → email prefix
   const greetEl = modal.querySelector('#welcomeGreetName');
@@ -261,7 +275,7 @@ async function loadWelcomeDashboard(modal) {
       .from('user_lesson_progress')
       .select('lesson_id, lessons(title, pattern_json, sections(course_id))')
       .eq('user_id', currentUser.id)
-      .order('created_at', { ascending: false })
+      .order('completed_at', { ascending: false })
       .limit(50);
     for (const entry of (progressData || [])) {
       const courseId = entry.lessons?.sections?.course_id;
@@ -278,7 +292,7 @@ async function loadWelcomeDashboard(modal) {
     modal.querySelector('#dashRecentCourses'),
     coursesData,
     (c) => ({ icon: '📚', name: c.title, meta: lastLessonByCourse[c.id]?.title || '' }),
-    () => { document.getElementById('toggleSidebarBtn')?.click(); closeWelcomeModal(); },
+    (c) => { openSidebar(); setActiveCourse(c.id); closeWelcomeModal(); },
     'No enrolled courses yet',
     (c) => {
       const pattern = lastLessonByCourse[c.id]?.pattern;

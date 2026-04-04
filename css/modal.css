@@ -211,6 +211,31 @@
   margin-bottom: 100px;
 }
 
+/* Floating mute button */
+.welcome-mute-btn {
+  position: absolute;
+  top: 14px;
+  right: 72px;
+  z-index: 20;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: rgba(255, 255, 255, 0.65);
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s, color 0.2s;
+}
+.welcome-mute-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+
 /* Floating close button */
 .welcome-close-btn {
   position: absolute;
@@ -514,6 +539,14 @@
   background: rgba(200, 169, 81, 0.1);
   border-color: rgba(200, 169, 81, 0.5);
   box-shadow: 0 0 0 1px rgba(200, 169, 81, 0.2);
+}
+.welcome-item-card.active::after {
+  content: 'Open';
+  font-size: 10px;
+  color: rgba(200, 169, 81, 0.7);
+  white-space: nowrap;
+  margin-left: auto;
+  flex-shrink: 0;
 }
 
 .welcome-item-icon {
