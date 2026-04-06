@@ -143,7 +143,7 @@ export async function saveCurrentPatternAs(name) {
     await dbSavePattern(trimmed, serializePattern());
     localStorage.setItem(LAST_USED_KEY, trimmed);
     await refreshPatternSelect(trimmed);
-    updateCurrentProjectName(trimmed);
+    updateCurrentPhraseName(trimmed);
     return true;
   } catch (err) {
     console.error(err);
@@ -227,31 +227,31 @@ export function syncVirtualHandpanControls() {
 
 function closeAccountDropdown() {
   document.getElementById('accountDropdownMenu')?.classList.remove('show');
-  document.getElementById('projectSubmenu')?.classList.remove('open');
-  const btn = document.getElementById('projectMenuBtn');
-  if (btn) btn.textContent = '📂 Project ▾';
+  document.getElementById('phraseSubmenu')?.classList.remove('open');
+  const btn = document.getElementById('phraseMenuBtn');
+  if (btn) btn.textContent = '📂 Phrase ▾';
   document.getElementById('adminSubmenu')?.classList.remove('open');
   const adminBtn = document.getElementById('adminMenuBtn');
   if (adminBtn) adminBtn.textContent = '⚙️ Admin Tools ▾';
 }
 
-export function updateCurrentProjectName(name) {
-  const el = document.getElementById('currentProjectName');
+export function updateCurrentPhraseName(name) {
+  const el = document.getElementById('currentPhraseName');
   if (el) el.textContent = name || 'Untitled';
 }
 
-async function showOpenProjectModal() {
-  const overlayEl = document.getElementById('openProjectModal');
+async function showOpenPhraseModal() {
+  const overlayEl = document.getElementById('openPhraseModal');
   if (!overlayEl) return;
 
   const modal = new Modal(overlayEl);
   overlayEl.querySelector('.close-modal-btn')?.addEventListener('click', () => modal.close(), { once: true });
 
-  const listEl = document.getElementById('projectList');
-  const searchInput = document.getElementById('projectSearchInput');
+  const listEl = document.getElementById('phraseList');
+  const searchInput = document.getElementById('phraseSearchInput');
   if (searchInput) searchInput.value = '';
 
-  listEl.innerHTML = '<div class="project-list-loading">Loading…</div>';
+  listEl.innerHTML = '<div class="phrase-list-loading">Loading…</div>';
   modal.open();
   if (searchInput) searchInput.focus();
 
@@ -274,34 +274,34 @@ async function showOpenProjectModal() {
       listEl.innerHTML = '';
 
       if (names.length === 0) {
-        listEl.innerHTML = '<div class="project-list-empty"><span>No saved projects yet.</span></div>';
+        listEl.innerHTML = '<div class="phrase-list-empty"><span>No saved phrases yet.</span></div>';
         return;
       }
 
       if (filtered.length === 0) {
-        listEl.innerHTML = '<div class="project-list-empty"><span>No matches.</span></div>';
+        listEl.innerHTML = '<div class="phrase-list-empty"><span>No matches.</span></div>';
         return;
       }
 
       filtered.forEach(name => {
         const isCurrent = name === current;
         const btn = document.createElement('button');
-        btn.className = 'project-list-item' + (isCurrent ? ' current' : '');
+        btn.className = 'phrase-list-item' + (isCurrent ? ' current' : '');
         btn.innerHTML = `
-          <svg class="project-item-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <svg class="phrase-item-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
             <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
           </svg>
-          <span class="project-item-name">${escapeHtml(name)}</span>
-          ${isCurrent ? '<span class="project-item-badge">open</span>' : ''}
+          <span class="phrase-item-name">${escapeHtml(name)}</span>
+          ${isCurrent ? '<span class="phrase-item-badge">open</span>' : ''}
         `;
         btn.addEventListener('click', async () => {
           modal.close();
           if (hasUnsavedChanges()) {
-            const ok = await confirm('You have unsaved changes. Discard and open this project?');
+            const ok = await confirm('You have unsaved changes. Discard and open this phrase?');
             if (!ok) return;
           }
           await loadPatternByName(name);
-          updateCurrentProjectName(name);
+          updateCurrentPhraseName(name);
           updatePatternButtons();
         });
         listEl.appendChild(btn);
@@ -318,7 +318,7 @@ async function showOpenProjectModal() {
     }
 
   } catch (err) {
-    listEl.innerHTML = `<div class="project-list-empty" style="color:var(--danger,#e74c3c);">Failed to load: ${escapeHtml(err.message)}</div>`;
+    listEl.innerHTML = `<div class="phrase-list-empty" style="color:var(--danger,#e74c3c);">Failed to load: ${escapeHtml(err.message)}</div>`;
   }
 }
 
@@ -383,12 +383,12 @@ export function initControls() {
       });
       if (ok) {
         await loadPatternByName(selected);
-        updateCurrentProjectName(selected);
+        updateCurrentPhraseName(selected);
         updatePatternButtons();
       }
     } else {
       await loadPatternByName(selected);
-      updateCurrentProjectName(selected);
+      updateCurrentPhraseName(selected);
       updatePatternButtons();
     }
   });
@@ -408,9 +408,9 @@ export function initControls() {
       return;
     }
 
-    const defaultName = `Project ${new Date().toLocaleString()}`;
+    const defaultName = `Phrase ${new Date().toLocaleString()}`;
     const name = await showCustomModal({
-      title: 'Save Project',
+      title: 'Save Phrase',
       message: 'Enter a name for your pattern:',
       mode: 'prompt',
       defaultValue: getSelectedPatternName() || defaultName
@@ -450,53 +450,53 @@ export function initControls() {
     }
   });
 
-  // Project Menu Toggle
-  document.getElementById('projectMenuBtn')?.addEventListener('click', (e) => {
+  // Phrase Menu Toggle
+  document.getElementById('phraseMenuBtn')?.addEventListener('click', (e) => {
     e.stopPropagation();
-    const submenu = document.getElementById('projectSubmenu');
-    const btn = document.getElementById('projectMenuBtn');
+    const submenu = document.getElementById('phraseSubmenu');
+    const btn = document.getElementById('phraseMenuBtn');
     if (!submenu) return;
     const isOpen = submenu.classList.contains('open');
     submenu.classList.toggle('open', !isOpen);
-    if (btn) btn.textContent = isOpen ? '📂 Project ▾' : '📂 Project ▴';
+    if (btn) btn.textContent = isOpen ? '📂 Phrase ▾' : '📂 Phrase ▴';
   });
 
-  // Close project submenu when account dropdown closes
+  // Close phrase submenu when account dropdown closes
   document.getElementById('accountBtn')?.addEventListener('click', () => {
     // Reset submenu state when dropdown closes (handled via accountDropdownMenu hide)
   });
 
-  // New Project
-  document.getElementById('newProjectBtn')?.addEventListener('click', async (e) => {
+  // New Phrase
+  document.getElementById('newPhraseBtn')?.addEventListener('click', async (e) => {
     e.stopPropagation();
     closeAccountDropdown();
 
     if (hasUnsavedChanges()) {
-      const ok = await confirm('You have unsaved changes. Discard and start a new project?');
+      const ok = await confirm('You have unsaved changes. Discard and start a new phrase?');
       if (!ok) return;
     }
 
-    const name = await prompt('Name your new project:', 'Untitled');
+    const name = await prompt('Name your new phrase:', 'Untitled');
     if (!name?.trim()) return;
 
     resetGridToDefault(gridA);
     await saveCurrentPatternAs(name.trim());
   });
 
-  // Open Project
-  document.getElementById('openProjectBtn')?.addEventListener('click', async (e) => {
+  // Open Phrase
+  document.getElementById('openPhraseBtn')?.addEventListener('click', async (e) => {
     e.stopPropagation();
     closeAccountDropdown();
-    await showOpenProjectModal();
+    await showOpenPhraseModal();
   });
 
   // Close submenus when account dropdown is closed (outside click)
   document.addEventListener('click', (e) => {
     const dropdown = document.getElementById('accountDropdownMenu');
     if (!dropdown?.classList.contains('show')) {
-      document.getElementById('projectSubmenu')?.classList.remove('open');
-      const btn = document.getElementById('projectMenuBtn');
-      if (btn) btn.textContent = '📂 Project ▾';
+      document.getElementById('phraseSubmenu')?.classList.remove('open');
+      const btn = document.getElementById('phraseMenuBtn');
+      if (btn) btn.textContent = '📂 Phrase ▾';
       document.getElementById('adminSubmenu')?.classList.remove('open');
       const adminBtn = document.getElementById('adminMenuBtn');
       if (adminBtn) adminBtn.textContent = '⚙️ Admin Tools ▾';

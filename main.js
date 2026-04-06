@@ -83,6 +83,8 @@ import './js/pattern-of-the-week.js';
 import './js/midi-importer.js';
 import './js/song-library.js';
 import './js/games.js';
+import './css/song-composer.css';
+import './js/song-composer.js';
 import './css/admin.css'; // Admin Styles
 import './js/admin.js';   // Admin Logic
 import './js/assignments.js';

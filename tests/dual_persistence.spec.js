@@ -59,7 +59,7 @@ test.describe('Dual Grid Persistence', () => {
     });
 
     await ensureHeaderMenuOpen(page);
-    await page.click('#fileDropdownBtn');
+    await page.click('#phraseMenuBtn');
     await page.click('#saveBtn');
 
     // WAIT for the pattern select to have the new option before reload
@@ -81,7 +81,7 @@ test.describe('Dual Grid Persistence', () => {
     }, 'DualPersistenceTest', { timeout: 10000 });
 
     await page.selectOption('#patternSelect', 'DualPersistenceTest');
-    await page.click('#fileDropdownBtn');
+    await page.click('#phraseMenuBtn');
     await page.click('#loadBtn');
 
     await page.waitForTimeout(1000);
@@ -108,7 +108,7 @@ test.describe('Dual Grid Persistence', () => {
     });
 
     await ensureHeaderMenuOpen(page);
-    await page.click('#fileDropdownBtn');
+    await page.click('#phraseMenuBtn');
     await page.click('#saveBtn');
 
     await page.waitForFunction((val) => {
@@ -141,7 +141,7 @@ test.describe('Dual Grid Persistence', () => {
     }
 
     await ensureHeaderMenuOpen(page);
-    await page.click('#fileDropdownBtn');
+    await page.click('#phraseMenuBtn');
 
     await page.click('#loadBtn');
 

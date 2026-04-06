@@ -1,6 +1,23 @@
 // @ts-check
 const { test, expect } = require('@playwright/test');
 
+async function openPhraseMenu(page) {
+  if (await page.locator('#mobileMenuBtn').isVisible()) {
+    const menu = page.locator('#headerMenu');
+    if (!await menu.evaluate(el => el.classList.contains('open'))) {
+      await page.click('#mobileMenuBtn');
+    }
+  }
+  const accountDropdown = page.locator('#accountDropdownMenu');
+  if (!await accountDropdown.evaluate(el => el.classList.contains('show'))) {
+    await page.click('#accountBtn');
+  }
+  const phraseSubmenu = page.locator('#phraseSubmenu');
+  if (!await phraseSubmenu.evaluate(el => el.classList.contains('open'))) {
+    await page.click('#phraseMenuBtn');
+  }
+}
+
 test.describe('Undo/Redo Features', () => {
 
   test.beforeEach(async ({ page }) => {
@@ -47,12 +64,7 @@ test.describe('Undo/Redo Features', () => {
 
     // 3. Verify Dirty State via Import Prompt
     // App uses custom #confirmModal (not native browser dialog)
-    if (!await page.locator('#fileDropdownBtn').isVisible()) {
-      const mobileBtn = page.locator('#mobileMenuBtn');
-      if (await mobileBtn.isVisible()) await mobileBtn.click();
-    }
-    await page.click('#fileDropdownBtn');
-    await expect(page.locator('#fileDropdownMenu')).toBeVisible();
+    await openPhraseMenu(page);
     await page.click('#importBtn');
 
     // Should show "Unsaved Changes" custom confirm modal
@@ -66,12 +78,7 @@ test.describe('Undo/Redo Features', () => {
     await page.keyboard.press('Meta+z');
 
     // Now clicking Import should show "Import Pattern" prompt directly
-    if (!await page.locator('#fileDropdownBtn').isVisible()) {
-      const mobileBtn = page.locator('#mobileMenuBtn');
-      if (await mobileBtn.isVisible()) await mobileBtn.click();
-    }
-    await page.click('#fileDropdownBtn');
-    await expect(page.locator('#fileDropdownMenu')).toBeVisible();
+    await openPhraseMenu(page);
     await page.click('#importBtn');
 
     // Should go straight to "Import Pattern" prompt (no unsaved changes warning)
@@ -92,14 +99,7 @@ test.describe('Undo/Redo Features', () => {
       dialog.accept();
     });
 
-    // Mobile Handling
-    if (await page.locator('#mobileMenuBtn').isVisible()) {
-      const menu = page.locator('#headerMenu');
-      if (!await menu.evaluate(el => el.classList.contains('open'))) {
-        await page.click('#mobileMenuBtn');
-      }
-    }
-
+    await openPhraseMenu(page);
     await page.click('#shareBtn');
   });
 

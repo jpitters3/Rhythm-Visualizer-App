@@ -144,21 +144,21 @@
             <button id="navDashboardBtn" style="font-weight:bold; color:var(--primary);">🖥️ Dashboard</button>
             <div class="dropdown-divider"></div>
             <!-- PROJECT SECTION -->
-            <button id="projectMenuBtn" class="project-menu-btn">📂 Project ▾</button>
-            <div id="projectSubmenu" class="project-submenu">
-              <div class="project-submenu-inner">
-                <button id="newProjectBtn" class="new-project-btn">+ New</button>
-                <button id="openProjectBtn" title="Open a saved project">Open...</button>
+            <button id="phraseMenuBtn" class="phrase-menu-btn">📂 Phrase ▾</button>
+            <div id="phraseSubmenu" class="phrase-submenu">
+              <div class="phrase-submenu-inner">
+                <button id="newPhraseBtn" class="new-phrase-btn">+ New</button>
+                <button id="openPhraseBtn" title="Open a saved phrase">Open...</button>
                 <div class="dropdown-divider"></div>
-                <div class="project-current-name" id="currentProjectName">Untitled Project</div>
-                <button id="saveBtn" title="Save current project">Save</button>
-                <button id="renameBtn" title="Rename current project" disabled>Rename</button>
-                <button id="deleteBtn" title="Delete current project" disabled>Delete</button>
+                <div class="phrase-current-name" id="currentPhraseName">Untitled Phrase</div>
+                <button id="saveBtn" title="Save current phrase">Save</button>
+                <button id="renameBtn" title="Rename current phrase" disabled>Rename</button>
+                <button id="deleteBtn" title="Delete current phrase" disabled>Delete</button>
                 <button id="shareBtn" title="Create a share link (public)">Share</button>
-                <button id="exportBtn" title="Copy project JSON to clipboard">Export JSON</button>
-                <button id="importBtn" title="Paste JSON to load a project">Import JSON</button>
+                <button id="exportBtn" title="Copy phrase JSON to clipboard">Export JSON</button>
+                <button id="importBtn" title="Paste JSON to load a phrase">Import JSON</button>
                 <div id="exportAudioWrapper" style="display:none;">
-                  <button id="exportAudioBtn" title="Download current project as WAV"
+                  <button id="exportAudioBtn" title="Download current phrase as WAV"
                     style="display: flex; align-items: center; gap: 8px;">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
                       stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -186,9 +186,9 @@
             <!-- ADMIN SECTION (hidden until authorized) -->
             <div id="adminSection" class="admin-only" style="display:none;">
               <div class="dropdown-divider"></div>
-              <button id="adminMenuBtn" class="project-menu-btn" style="color:var(--accent-glow);">⚙️ Admin Tools ▾</button>
-              <div id="adminSubmenu" class="project-submenu">
-                <div class="project-submenu-inner">
+              <button id="adminMenuBtn" class="admin-menu-btn" style="color:var(--accent-glow);">⚙️ Admin Tools ▾</button>
+              <div id="adminSubmenu" class="admin-submenu">
+                <div class="admin-submenu-inner">
                   <button id="openCourseCopierAdminBtn">📋 Manage Courses</button>
                   <button id="openPatternOrgAdminBtn">🔍 Pattern Recognition</button>
                   <button id="openGameConfigAdminBtn">⚄ Game Configuration</button>
@@ -199,6 +199,7 @@
             </div>
             <div class="dropdown-divider"></div>
             <button id="toggleSidebarBtn" data-action="toggle-sidebar">📚 Courses</button>
+            <button id="toggleComposerBtn">🎼 Composer</button>
             <button id="openCourseModalBtn" class="admin-only" style="display: none;">➕ Create Course</button>
             <button id="myAssignmentsBtn" style="display:none;">📋 My Assignments</button>
             <button id="togglePracticeBtn">📋 Practice Plan</button>
@@ -733,8 +734,8 @@
           <!-- Sections -->
           <div class="welcome-dashboard-sections">
             <div class="welcome-section">
-              <div class="welcome-section-label">Continue Composing</div>
-              <div class="welcome-section-items" id="dashRecentProjects"></div>
+              <div class="welcome-section-label">Recent Phrases</div>
+              <div class="welcome-section-items" id="dashRecentPhrases"></div>
             </div>
             <div class="welcome-section">
               <div class="welcome-section-label">Continue Learning</div>
@@ -771,9 +772,9 @@
 
       <!-- Action buttons -->
       <div id="welcomeOptions" class="welcome-options">
-        <button id="newProjectWelcomeBtn" class="welcome-btn welcome-btn--primary">
+        <button id="newPhraseWelcomeBtn" class="welcome-btn welcome-btn--primary">
           <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          New Project
+          New Phrase
         </button>
         <button id="coursesWelcomeBtn" class="welcome-btn welcome-btn--ghost">
           <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
@@ -1195,6 +1196,51 @@
     </div>
     <div id="courseList">
       <p class="loading">Loading courses...</p>
+    </div>
+  </div>
+
+  <!-- Song Composer Sidebar -->
+  <div id="composerSidebar" class="sidebar composer-sidebar" aria-hidden="true" data-panel-type="sidepanel">
+    <div class="sidebar-header">
+      <h3>🎼 Song Composer</h3>
+      <button id="closeComposerSidebar" class="close-btn">&times;</button>
+    </div>
+    <div class="composer-toolbar">
+      <button id="newCompositionBtn" class="primary-btn composer-new-btn">+ New Composition</button>
+    </div>
+    <div id="compositionList" class="composition-list">
+      <p class="loading">Loading...</p>
+    </div>
+    <!-- Playback bar -->
+    <div id="composerPlaybar" class="composer-playbar" style="display:none;" aria-hidden="true">
+      <div class="playbar-info">
+        <span id="composerPlaybarTitle" class="playbar-title"></span>
+        <span id="composerPlaybarSection" class="playbar-section"></span>
+      </div>
+      <div id="composerSeekRow" class="playbar-seek-row" style="display:none;">
+        <span id="composerSeekCurrent" class="playbar-time">0:00</span>
+        <input id="composerSeekBar" type="range" min="0" max="100" value="0" step="0.1" class="playbar-seek">
+        <span id="composerSeekDuration" class="playbar-time">0:00</span>
+      </div>
+      <!-- Trim panel — replaces seek row + controls when active -->
+      <div id="composerTrimPanel" class="composer-trim-panel" style="display:none;">
+        <canvas id="composerWaveform" class="trim-waveform"></canvas>
+        <div class="trim-times">
+          <span id="trimStartDisplay" class="trim-time">0:00</span>
+          <span class="trim-hint">drag handles to trim</span>
+          <span id="trimEndDisplay" class="trim-time">0:00</span>
+        </div>
+        <div class="trim-actions">
+          <button id="trimCancelBtn" class="trim-btn">Cancel</button>
+          <button id="trimPreviewBtn" class="trim-btn">▶ Preview</button>
+          <button id="trimApplyBtn" class="trim-btn trim-btn-primary">Apply</button>
+        </div>
+      </div>
+      <div class="playbar-controls">
+        <button id="composerPrevBtn" title="Previous section">⏮</button>
+        <button id="composerPlayBtn" title="Toggle playback">▶</button>
+        <button id="composerNextBtn" title="Next section">⏭</button>
+      </div>
     </div>
   </div>
 
@@ -1653,20 +1699,20 @@
     </div>
   </div>
 
-  <!-- OPEN PROJECT MODAL -->
-  <div id="openProjectModal" class="modal-overlay" aria-hidden="true">
-    <div class="modal-content open-project-modal">
+  <!-- OPEN PHRASE MODAL -->
+  <div id="openPhraseModal" class="modal-overlay" aria-hidden="true">
+    <div class="modal-content open-phrase-modal">
       <div class="modal-header">
-        <h3 class="modal-title">Open Project</h3>
+        <h3 class="modal-title">Open Phrase</h3>
         <button class="close-modal-btn">&times;</button>
       </div>
-      <div class="open-project-search">
+      <div class="open-phrase-search">
         <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none">
           <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
         </svg>
-        <input type="text" id="projectSearchInput" placeholder="Search projects…" autocomplete="off" spellcheck="false">
+        <input type="text" id="phraseSearchInput" placeholder="Search phrases…" autocomplete="off" spellcheck="false">
       </div>
-      <div id="projectList" class="project-list"></div>
+      <div id="phraseList" class="phrase-list"></div>
     </div>
   </div>
 

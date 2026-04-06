@@ -1,6 +1,26 @@
 // @ts-check
 const { test, expect } = require('@playwright/test');
 
+async function openPhraseMenu(page) {
+  // Open mobile menu if needed
+  if (await page.locator('#mobileMenuBtn').isVisible()) {
+    const menu = page.locator('#headerMenu');
+    if (!await menu.evaluate(el => el.classList.contains('open'))) {
+      await page.click('#mobileMenuBtn');
+    }
+  }
+  // Open account dropdown
+  const accountDropdown = page.locator('#accountDropdownMenu');
+  if (!await accountDropdown.evaluate(el => el.classList.contains('show'))) {
+    await page.click('#accountBtn');
+  }
+  // Expand phrase submenu
+  const phraseSubmenu = page.locator('#phraseSubmenu');
+  if (!await phraseSubmenu.evaluate(el => el.classList.contains('open'))) {
+    await page.click('#phraseMenuBtn');
+  }
+}
+
 test.describe('Import / Export Features', () => {
 
   test.beforeEach(async ({ page }) => {
@@ -28,16 +48,8 @@ test.describe('Import / Export Features', () => {
     await cell0.click();
     await page.keyboard.press('1');
 
-    // Open File Dropdown
-    if (await page.locator('#mobileMenuBtn').isVisible()) {
-      const menu = page.locator('#headerMenu');
-      if (!await menu.evaluate(el => el.classList.contains('open'))) {
-        await page.click('#mobileMenuBtn');
-      }
-    }
-    if (await page.locator('#fileDropdownBtn').isVisible()) {
-      await page.click('#fileDropdownBtn');
-    }
+    // Open phrase menu (account dropdown → phrase submenu)
+    await openPhraseMenu(page);
 
     // 2. EXPORT
     await page.click('#exportBtn');
@@ -51,17 +63,8 @@ test.describe('Import / Export Features', () => {
     expect(exportedData).toContain('"version":');
     expect(exportedData).toContain('"steps":');
 
-    // Close menus
-    if (await page.locator('#fileDropdownBtn').isVisible()) {
-      const menu = page.locator('#fileDropdownMenu');
-      if (await menu.isVisible()) await page.click('#fileDropdownBtn');
-    }
-    if (await page.locator('#mobileMenuBtn').isVisible()) {
-      const menu = page.locator('#headerMenu');
-      if (await menu.evaluate(el => el.classList.contains('open'))) {
-        await page.click('#mobileMenuBtn');
-      }
-    }
+    // Close menus by clicking outside
+    await page.keyboard.press('Escape');
 
     // 3. CLEAR GRID
     await page.click('#clearBtn-A');
@@ -70,16 +73,7 @@ test.describe('Import / Export Features', () => {
     await expect(cell0.locator('.inner')).toBeEmpty();
 
     // 4. IMPORT
-    if (await page.locator('#mobileMenuBtn').isVisible()) {
-      const menu = page.locator('#headerMenu');
-      if (!await menu.evaluate(el => el.classList.contains('open'))) {
-        await page.click('#mobileMenuBtn');
-      }
-    }
-    if (await page.locator('#fileDropdownBtn').isVisible()) {
-      const menu = page.locator('#fileDropdownMenu');
-      if (!await menu.isVisible()) await page.click('#fileDropdownBtn');
-    }
+    await openPhraseMenu(page);
 
     await page.click('#importBtn');
 

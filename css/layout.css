@@ -467,8 +467,8 @@ body.route-dashboard .header-menu-items {
   }
 }
 
-/* ===== PROJECT MENU IN ACCOUNT DROPDOWN ===== */
-.project-current-name {
+/* ===== PHRASE MENU IN ACCOUNT DROPDOWN ===== */
+.phrase-current-name {
   font-size: 11px;
   font-weight: 600;
   text-transform: uppercase;
@@ -483,7 +483,7 @@ body.route-dashboard .header-menu-items {
   text-align: left;
 }
 
-.project-menu-btn {
+.phrase-menu-btn {
   display: block;
   width: 100%;
   text-align: left;
@@ -498,31 +498,73 @@ body.route-dashboard .header-menu-items {
   min-width: auto;
 }
 
-.project-menu-btn:hover {
+.phrase-menu-btn:hover {
   background: rgba(0, 0, 0, 0.05);
 }
 
-body.dark .project-menu-btn:hover {
+body.dark .phrase-menu-btn:hover {
   background: rgba(255, 255, 255, 0.05);
 }
 
 /* Animated submenu using CSS grid trick */
-.project-submenu {
+.phrase-submenu {
   display: grid;
   grid-template-rows: 0fr;
   transition: grid-template-rows 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.project-submenu.open {
+.phrase-submenu.open {
   grid-template-rows: 1fr;
 }
 
-.project-submenu-inner {
+.phrase-submenu-inner {
   overflow: hidden;
   padding: 0 6px;
 }
 
-.project-submenu button {
+.phrase-submenu button {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+
+/* Admin submenu — same animated grid trick, separate class */
+.admin-menu-btn {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 8px 14px;
+  font-weight: 500;
+  font-size: 14px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  border-radius: 6px;
+  min-width: auto;
+}
+
+.admin-menu-btn:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+body.dark .admin-menu-btn:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.admin-submenu {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.admin-submenu.open {
+  grid-template-rows: 1fr;
+}
+
+.admin-submenu-inner {
+  overflow: hidden;
+  padding: 0 6px;
+}
+
+.admin-submenu button {
   background: rgba(255, 255, 255, 0.4) !important;
 }
 
@@ -605,8 +647,8 @@ body.dark .project-menu-btn:hover {
 }
 
 
-/* ===== OPEN PROJECT MODAL ===== */
-.open-project-modal {
+/* ===== OPEN PHRASE MODAL ===== */
+.open-phrase-modal {
   max-width: 460px;
   padding: 0;
   display: flex;
@@ -614,7 +656,7 @@ body.dark .project-menu-btn:hover {
   max-height: 80vh;
 }
 
-.open-project-search {
+.open-phrase-search {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -625,7 +667,7 @@ body.dark .project-menu-btn:hover {
   flex-shrink: 0;
 }
 
-#projectSearchInput {
+#phraseSearchInput {
   flex: 1;
   border: none;
   background: transparent;
@@ -634,11 +676,11 @@ body.dark .project-menu-btn:hover {
   outline: none;
 }
 
-#projectSearchInput::placeholder {
+#phraseSearchInput::placeholder {
   opacity: 0.5;
 }
 
-.project-list {
+.phrase-list {
   padding: 8px;
   display: flex;
   flex-direction: column;
@@ -647,8 +689,8 @@ body.dark .project-menu-btn:hover {
   flex: 1;
 }
 
-.project-list-loading,
-.project-list-empty {
+.phrase-list-loading,
+.phrase-list-empty {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -657,7 +699,7 @@ body.dark .project-menu-btn:hover {
   opacity: 0.5;
 }
 
-.project-list-item {
+.phrase-list-item {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -674,29 +716,29 @@ body.dark .project-menu-btn:hover {
   min-width: auto;
 }
 
-.project-list-item:hover {
+.phrase-list-item:hover {
   background: rgba(0, 0, 0, 0.04);
   border-color: var(--panel-border);
   transform: translateX(2px);
 }
 
-body.dark .project-list-item:hover {
+body.dark .phrase-list-item:hover {
   background: rgba(255, 255, 255, 0.05);
 }
 
-.project-item-icon {
+.phrase-item-icon {
   opacity: 0.45;
   flex-shrink: 0;
 }
 
-.project-item-name {
+.phrase-item-name {
   flex: 1;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.project-item-badge {
+.phrase-item-badge {
   font-size: 10px;
   font-weight: 700;
   text-transform: uppercase;
@@ -709,16 +751,16 @@ body.dark .project-list-item:hover {
   flex-shrink: 0;
 }
 
-.project-list-item.current {
+.phrase-list-item.current {
   background: rgba(0, 0, 0, 0.03);
   border-color: var(--panel-border);
 }
 
-.project-list-item.current .project-item-icon,
-.project-list-item.current .project-item-name {
+.phrase-list-item.current .phrase-item-icon,
+.phrase-list-item.current .phrase-item-name {
   font-weight: 600;
 }
 
-body.dark .project-list-item.current {
+body.dark .phrase-list-item.current {
   background: rgba(255, 255, 255, 0.04);
 }

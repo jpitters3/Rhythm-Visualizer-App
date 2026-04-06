@@ -31,11 +31,13 @@ let previewMuted = false;
 
 // ── Public API ────────────────────────────────────────────────────────────────
 
-export function initDashboard() {
+export function initDashboard() {   
   openWelcomeDashboard();
 }
 
 export function openWelcomeDashboard() {
+  if (new URLSearchParams(window.location.search).has('noWelcome')) return;
+  if (localStorage.getItem('noWelcome') === '1') return;
   const welcomeModal = document.getElementById('welcomeModal');
   if (!welcomeModal) return;
   welcomeModal.classList.add('open');
@@ -176,10 +178,10 @@ function initWelcomeModal(modal) {
     if (e.target === modal) closeWelcomeModal();
   });
 
-  // New Project
-  modal.querySelector('#newProjectWelcomeBtn')?.addEventListener('click', () => {
+  // New Phrase
+  modal.querySelector('#newPhraseWelcomeBtn')?.addEventListener('click', () => {
     closeWelcomeModal();
-    document.getElementById('newProjectBtn')?.click();
+    document.getElementById('newPhraseBtn')?.click();
   });
 
   // Just Play
@@ -225,7 +227,7 @@ async function loadWelcomeDashboard(modal) {
 
   const itemLimit = window.innerWidth <= 768 ? 1 : 3;
 
-  const [projectsRes, coursesRes, practiceRes] = await Promise.all([
+  const [phrasesRes, coursesRes, practiceRes] = await Promise.all([
     supabase.from('patterns').select('name, updated_at')
       .eq('user_id', currentUser.id)
       .order('updated_at', { ascending: false })
@@ -252,8 +254,8 @@ async function loadWelcomeDashboard(modal) {
   }
 
   renderDashItems(
-    modal.querySelector('#dashRecentProjects'),
-    projectsRes.data || [],
+    modal.querySelector('#dashRecentPhrases'),
+    phrasesRes.data || [],
     (p) => ({ icon: '🎵', name: p.name, meta: formatDashDate(p.updated_at) }),
     (p) => {
       const sel = document.getElementById('patternSelect');
@@ -261,7 +263,7 @@ async function loadWelcomeDashboard(modal) {
       if (sel && loadBtn) { sel.value = p.name; loadBtn.click(); }
       closeWelcomeModal();
     },
-    'No saved projects yet',
+    'No saved phrases yet',
     async (p) => {
       const data = await dbLoadPatternByName(p.name);
       if (data) buildWelcomeHandpan(modal, { ...data, sound: true });

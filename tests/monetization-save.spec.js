@@ -11,6 +11,23 @@ const { createTestUser, deleteTestUser, loginAsTestUser } = require('./utils/aut
  * 4. Save 5 patterns successfully.
  * 5. Attempt to save a 6th pattern -> Prompted to upgrade to Pro.
  */
+async function openPhraseMenu(page) {
+  if (await page.locator('#mobileMenuBtn').isVisible()) {
+    const menu = page.locator('#headerMenu');
+    if (!await menu.evaluate(el => el.classList.contains('open'))) {
+      await page.click('#mobileMenuBtn');
+    }
+  }
+  const accountDropdown = page.locator('#accountDropdownMenu');
+  if (!await accountDropdown.evaluate(el => el.classList.contains('show'))) {
+    await page.click('#accountBtn');
+  }
+  const phraseSubmenu = page.locator('#phraseSubmenu');
+  if (!await phraseSubmenu.evaluate(el => el.classList.contains('open'))) {
+    await page.click('#phraseMenuBtn');
+  }
+}
+
 test.describe('Monetization Save Gating', () => {
 
   let testUser;
@@ -50,7 +67,7 @@ test.describe('Monetization Save Gating', () => {
     console.log('[TEST] Checking guest save blocking...');
 
     // Open File dropdown and click Save
-    await page.click('#fileDropdownBtn');
+    await openPhraseMenu(page);
     await page.click('#saveBtn');
 
     // Wait for Custom Confirm Modal (Alert mode for guest check)
@@ -84,7 +101,7 @@ test.describe('Monetization Save Gating', () => {
       console.log(`[TEST] Saving pattern ${i}/5...`);
       const patternName = `Sample Pattern ${i}`;
 
-      await page.click('#fileDropdownBtn');
+      await openPhraseMenu(page);
       await page.click('#saveBtn');
 
       // Wait for Custom Confirm Modal (Prompt mode)
@@ -100,7 +117,7 @@ test.describe('Monetization Save Gating', () => {
 
     // 7. Attempt to save 6th pattern -> Upgrade Modal should appear
     console.log('[TEST] Attempting to save 6th pattern (over the limit)...');
-    await page.click('#fileDropdownBtn');
+    await page.click('#phraseMenuBtn');
     await page.click('#saveBtn');
 
     // Custom Modal (Prompt mode for 6th save)
