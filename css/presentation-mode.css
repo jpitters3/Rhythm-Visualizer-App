@@ -107,6 +107,8 @@ body.present #measures {
   /* Force full height usage to prevent collapse */
   min-height: 0;
   overflow: hidden;
+  margin: 0 auto;
+  min-width: 900px;
 }
 
 /* Base Measure Row Style (Hidden/Off-screen) */
@@ -184,7 +186,7 @@ body.present .measure-row.current-measure {
   opacity: 1;
   transform: translateX(-50%) scale(1.1);
   z-index: 10;
-  filter: drop-shadow(0 10px 30px rgba(0, 0, 0, 0.3));
+  /* filter: drop-shadow(0 10px 30px rgba(0, 0, 0, 0.3)); */
   width: 600px;
 }
 
@@ -361,6 +363,11 @@ body.present div.present-controls {
     /* Prevent horizontal scroll */
   }
 
+  body.present #measures {
+    min-width: unset;
+    width: 100%;
+  }
+
   body.present .handpan-wrap {
     transform: translateX(0) scale(0.8) !important;
     bottom: 10vh;
@@ -370,14 +377,12 @@ body.present div.present-controls {
     max-width: 90vw !important;
   }
 
-  /* 1. Constrain Measure Width */
-  /* Target the absolute rows (current, next, etc.) */
+  /* Switch measure rows and static-labels to fixed so % is viewport-relative */
   body.present .measure-row.current-measure,
   body.present .measure-row.next-measure,
-  body.present .measure-row.next-measure-2,
-  body.present .static-labels {
+  body.present .measure-row.next-measure-2 {
+    position: fixed !important;
     width: 80vw !important;
-    /* Force to fit screen */
     max-width: 80vw !important;
     left: 50% !important;
     transform: translateX(-50%) !important;
@@ -389,29 +394,29 @@ body.present div.present-controls {
 
   body.present .measure-row.next-measure-2 {
     transform: translateX(-50%) scale(0.65) !important;
-    top: calc(30% - 160px) !important;
-    /* Tighter gap */
+    top: calc(30vh - 160px) !important;
   }
 
   body.present .measure-row.next-measure {
     transform: translateX(-50%) scale(0.75) !important;
-    top: calc(30% - 100px) !important;
-    /* Tighter gap */
+    top: calc(30vh - 100px) !important;
   }
 
   body.present .static-labels {
     transform: translateX(-50%) scale(1) !important;
-    top: calc(30% + 10px) !important;
+    top: 30vh !important;
+    /* Horizon: labels anchor */
     font-size: 18px;
+    width: 80vw !important;
+    max-width: 80vw !important;
+    left: 50% !important;
   }
 
-  /* Specific scaling adjustments for mobile depth */
+  /* Current measure sits just below the labels row */
   body.present .measure-row.current-measure {
     transform: translateX(-50%) scale(0.85) !important;
-    top: 30%;
-    /* Mobile Horizon */
+    top: calc(30vh + 36px) !important;
     width: 70vw !important;
-    /* Force to fit screen */
     max-width: 70vw !important;
     gap: 15px !important;
   }
