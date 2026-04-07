@@ -16,7 +16,8 @@
   gap: 20px;
   align-items: center;
   margin-bottom: 24px;
-  width: 100%;
+  width: 80%;
+  margin: 0px auto 20px auto;
 }
 
 .controls-primary {
