@@ -17,6 +17,7 @@ export const BUS_EVENT = {
   NOTE_DETECTED: 'transcription:note-detected',
   ACCENT_DETECTED: 'transcription:accent-detected',
   GRID_RENDERED: 'grid:rendered',
+  GRID_CHANGED: 'grid:changed',
   CHALLENGE_CORRECTION: 'transcription:challenge-correction',
   SHOW_UPGRADE_MODAL: 'monetization:show-upgrade-modal',
   SHOW_CONGRATS_MODAL: 'monetization:show-congrats-modal',

@@ -4,6 +4,7 @@ import { gridA } from './grid-context.js';
 import { playNoteByLabel, intervalMs, resolveHand } from './noteplayer.js';
 import { dbLoadPatternByName } from './pattern-crud.js';
 import { fetchCourses, openSidebar, setActiveCourse } from './courses.js';
+import { updateDashboardMute } from './profile.js';
 
 // Note positions — matches HANDPAN_MAP_BRONZE in handpanmap.js (calibrated for handpan-for-groovepan.png)
 const PREVIEW_HP_MAP = {
@@ -171,7 +172,8 @@ function initWelcomeModal(modal) {
   const muteBtn = modal.querySelector('#welcomeMuteBtn');
   muteBtn?.addEventListener('click', () => {
     previewMuted = !previewMuted;
-    muteBtn.textContent = previewMuted ? '🔈' : '🔇';
+    muteBtn.textContent = previewMuted ? '🔇' : '🔊';
+    updateDashboardMute(previewMuted);
   });
 
   modal.addEventListener('click', (e) => {
@@ -218,11 +220,18 @@ async function loadWelcomeDashboard(modal) {
   // Prefetch courses in the background so the sidebar opens instantly
   fetchCourses();
 
-  // Greet by first name → username → email prefix
+  // Greet by first name → username → email prefix; load mute preference
+  const { currentProfile } = await import('./profile.js');
   const greetEl = modal.querySelector('#welcomeGreetName');
   if (greetEl) {
-    const { currentProfile } = await import('./profile.js');
     greetEl.textContent = currentProfile?.first_name || currentProfile?.username || currentUser.email.split('@')[0];
+  }
+
+  // Restore mute preference
+  if (currentProfile?.dashboard_mute != null) {
+    previewMuted = !!currentProfile.dashboard_mute;
+    const muteBtn = modal.querySelector('#welcomeMuteBtn');
+    if (muteBtn) muteBtn.textContent = previewMuted ? '🔇' : '🔊';
   }
 
   const itemLimit = window.innerWidth <= 768 ? 1 : 3;

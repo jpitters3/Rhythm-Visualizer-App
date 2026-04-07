@@ -9,7 +9,7 @@ import {
   dbSavePattern, dbDeletePattern, dbRenamePattern, dbLoadPatternByName, dbListPatternNames,
   serializePattern, applyPattern, getSavedPatterns, setSavedPatterns,
   getSelectedPatternName, refreshPatternSelect, updatePatternButtons, ensureHasSelection,
-  LAST_USED_KEY, hasUnsavedChanges
+  LAST_USED_KEY, hasUnsavedChanges, syncPhraseNameDisplay
 } from './pattern-crud.js';
 import { setPresentation } from './presentation-mode.js';
 import { getRange } from './range-selection.js';
@@ -144,6 +144,7 @@ export async function saveCurrentPatternAs(name) {
     localStorage.setItem(LAST_USED_KEY, trimmed);
     await refreshPatternSelect(trimmed);
     updateCurrentPhraseName(trimmed);
+    Bus.emit(BUS_EVENT.GRID_CHANGED);
     return true;
   } catch (err) {
     console.error(err);
@@ -175,6 +176,7 @@ export async function loadPatternByName(pattern) {
       }
       await applyPattern(state);
       localStorage.setItem(LAST_USED_KEY, pattern);
+      updateCurrentPhraseName(pattern);
       return;
     }
 
@@ -189,6 +191,7 @@ export async function loadPatternByName(pattern) {
     if (!saved[name]) return;
     await applyPattern(saved[name]);
     localStorage.setItem(LAST_USED_KEY, name);
+    updateCurrentPhraseName(name);
   } catch (err) {
     console.error(err);
     await showCustomModal({
@@ -236,8 +239,7 @@ function closeAccountDropdown() {
 }
 
 export function updateCurrentPhraseName(name) {
-  const el = document.getElementById('currentPhraseName');
-  if (el) el.textContent = name || 'Untitled';
+  syncPhraseNameDisplay(name);
 }
 
 async function showOpenPhraseModal() {
@@ -345,6 +347,19 @@ export function initControls() {
 
   setupGridControls(gridA);
   setupGridControls(gridB);
+
+  // Quick-save button
+  const quickSaveBtn = document.getElementById('quickSaveBtn');
+  if (quickSaveBtn) {
+    const updateQuickSave = () => {
+      quickSaveBtn.classList.toggle('visible', hasUnsavedChanges() && !!getSelectedPatternName());
+    };
+    Bus.on(BUS_EVENT.GRID_CHANGED, updateQuickSave);
+    Bus.on(BUS_EVENT.GRID_RENDERED, updateQuickSave);
+    quickSaveBtn.addEventListener('click', () => {
+      saveBtn?.click();
+    });
+  }
 
   confirmModal?.addEventListener('click', (e) => {
     if (e.target === confirmModal) closeConfirmModal();
@@ -508,7 +523,7 @@ export function initControls() {
 
     if (!await ensureHasSelection()) return;
 
-    const oldName = getSelectedPatternName();
+    const oldName = document.getElementById('currentPhraseName')?.textContent?.trim() || getSelectedPatternName();
     const nextName = await showCustomModal({
       title: 'Rename Pattern',
       message: `Enter new name for "${oldName}":`,
@@ -526,6 +541,7 @@ export function initControls() {
         await dbRenamePattern(oldName, trimmed);
         localStorage.setItem(LAST_USED_KEY, trimmed);
         await refreshPatternSelect(trimmed);
+        updateCurrentPhraseName(trimmed);
       } else {
         // local
         const saved = getSavedPatterns();
@@ -545,6 +561,7 @@ export function initControls() {
         localStorage.setItem(LAST_USED_KEY, trimmed);
         setSavedPatterns(saved);
         await refreshPatternSelect(trimmed);
+        updateCurrentPhraseName(trimmed);
       }
     } catch (err) {
       console.error(err);
@@ -637,6 +654,7 @@ export function initControls() {
     try {
       const obj = JSON.parse(raw);
       await applyPattern(obj);
+      updateCurrentPhraseName(obj.name || 'Imported');
 
       const wantSave = await showCustomModal({
         title: 'Import Success',

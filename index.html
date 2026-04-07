@@ -181,14 +181,21 @@
             <!-- ACCOUNT ITEMS -->
             <button id="authBtn" style="display:none; font-weight:bold; color:var(--primary);">Sign In /
               Register</button>
-            <button id="openProfileBtn">👤 Edit Profile</button>
-            <button id="openAccountAuthBtn">⚙️ Account Settings</button>
+            <button id="toggleSidebarBtn" data-action="toggle-sidebar">📚 Courses</button>
+            <button id="toggleComposerBtn">🎼 Composer</button>
+            <button id="myAssignmentsBtn" style="display:none;">📋 My Assignments</button>
+            <button id="togglePracticeBtn">📋 Practice Plan</button>
+            <button id="coachModeBtn" style="display:none;" title="Practice with real-time feedback">🎯 Coach</button>
+            <button id="gamesModeBtn" style="display:none;" title="Play games with your handpan">⚄ Games</button>
+            <div class="dropdown-divider"></div>
+            <button id="myScalesBtn" style="display:none;">🛸 My Scales</button>
             <!-- ADMIN SECTION (hidden until authorized) -->
             <div id="adminSection" class="admin-only" style="display:none;">
               <div class="dropdown-divider"></div>
               <button id="adminMenuBtn" class="admin-menu-btn" style="color:var(--accent-glow);">⚙️ Admin Tools ▾</button>
               <div id="adminSubmenu" class="admin-submenu">
                 <div class="admin-submenu-inner">
+                  <button id="openCourseModalBtn" class="admin-only" style="display: none;">➕ Create Course</button>
                   <button id="openCourseCopierAdminBtn">📋 Manage Courses</button>
                   <button id="openPatternOrgAdminBtn">🔍 Pattern Recognition</button>
                   <button id="openGameConfigAdminBtn">⚄ Game Configuration</button>
@@ -198,15 +205,8 @@
               </div>
             </div>
             <div class="dropdown-divider"></div>
-            <button id="toggleSidebarBtn" data-action="toggle-sidebar">📚 Courses</button>
-            <button id="toggleComposerBtn">🎼 Composer</button>
-            <button id="openCourseModalBtn" class="admin-only" style="display: none;">➕ Create Course</button>
-            <button id="myAssignmentsBtn" style="display:none;">📋 My Assignments</button>
-            <button id="togglePracticeBtn">📋 Practice Plan</button>
-            <button id="coachModeBtn" title="Practice with real-time feedback">🎯 Coach</button>
-            <button id="gamesModeBtn" title="Play games with your handpan">⚄ Games</button>
-            <div class="dropdown-divider"></div>
-            <button id="myScalesBtn" style="display:none;">🛸 My Scales</button>
+            <button id="openProfileBtn">👤 Edit Profile</button>
+            <button id="openAccountAuthBtn">⚙️ Account Settings</button>
             <button id="authLogoutDropdown">🚪 Sign out</button>
           </div>
         </div>
@@ -388,6 +388,10 @@
       <!-- Grid -->
       <div id="main" class="main">
         <div class="left">
+          <div class="grid-phrase-name-row">
+            <div id="gridPhraseName" class="grid-phrase-name">Untitled</div>
+            <button id="quickSaveBtn" class="quick-save-btn" title="Save phrase" aria-label="Quick save">Save</button>
+          </div>
           <div id="measures" class="measures player" aria-label="Rhythm grid"></div>
 
           <!-- Secondary Grid (Only shows in Dual Mode) -->
@@ -410,7 +414,7 @@
             <div class="measure-group mobile-only"
               style="display: flex; flex-direction: column; align-items: center; gap: 2px;">
               <span style="font-size: 11px; opacity: 0.7; margin-bottom: -2px;">Measures</span>
-              <div style="display: flex; gap: 8px;">
+              <div class="tab-btn-row" style="display: flex; gap: 8px;">
                 <button title="Add a new measure" class="addMeasureBtn tab-btn"
                   style="font-size: 16px; padding: 6px 12px;">＋</button>
                 <button title="Delete active measure" class="delMeasureBtn tab-btn"
@@ -419,7 +423,7 @@
             </div>
             <div style="display: flex; flex-direction: column; align-items: center; gap: 2px;">
               <span style="font-size: 11px; opacity: 0.7; margin-bottom: -2px;">Scale Options</span>
-              <div style="display: flex; gap: 12px;">
+              <div class="tab-btn-row" style="display: flex; gap: 12px;">
                 <button class="tab-btn" data-tab="handpanSettingsDrawer" title="Settings">🛸</button>
                 <button class="tab-btn" data-tab="chordDrawer" title="Chords">🎶</button>
                 <button class="tab-btn" data-tab="customizeDrawer" title="Customize">⚙️</button>
@@ -713,7 +717,7 @@
   <!-- Getting Started Modal -->
   <div id="welcomeModal" class="modal-overlay dark-bg" aria-hidden="true">
     <div class="modal welcome-modal">
-      <button class="welcome-mute-btn" id="welcomeMuteBtn" aria-label="Mute preview">🔇</button>
+      <button class="welcome-mute-btn" id="welcomeMuteBtn" aria-label="Mute preview">🔊</button>
       <button class="welcome-close-btn" id="welcomeCloseBtn" aria-label="Close">&times;</button>
 
       <!-- Authenticated: Dashboard -->

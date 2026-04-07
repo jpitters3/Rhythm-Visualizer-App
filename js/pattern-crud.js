@@ -12,15 +12,21 @@ import { Bus, BUS_EVENT } from './bus.js';
 export const STORAGE_KEY = 'groovepan_patterns';
 export const LAST_USED_KEY = 'groovepan_last_pattern';
 
-function syncPhraseNameDisplay() {
+export function syncPhraseNameDisplay(name) {
   const patternSelect = document.getElementById('patternSelect');
-  const el = document.getElementById('currentProjectName');
-  if (el && patternSelect) el.textContent = patternSelect.value || 'Untitled';
+  if (name !== undefined && patternSelect) patternSelect.value = name;
+  const label = (patternSelect?.value || name) || 'Untitled';
+  const ids = ['currentProjectName', 'currentPhraseName', 'gridPhraseName'];
+  for (const id of ids) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = label;
+  }
 }
 
 let lastSavedState = ''; // Snapshot for data loss prevention
 
 export function hasUnsavedChanges() {
+  if (!lastSavedState) return false;
   if (typeof serializePattern !== 'function') return false;
   const current = JSON.stringify(serializePattern());
   return current !== lastSavedState;
@@ -287,26 +293,24 @@ export async function applyPattern(state, ctx = gridA) {
     ctx.tags = [];
   }
 
-  renderAllMeasures(ctx);
-
-  clearSelection(ctx);
-
-  if (wasPlaying) start(ctx);
-
   // Dual Grid Handling
   if (ctx === gridA) {
     if (state.gridB) {
       setDualGrid(true);
       await applyPattern(state.gridB, gridB);
     } else {
-      // If loading a single-grid pattern, hide grid B
-      // But only if we are currently looking at Grid A
       setDualGrid(false);
     }
-    // Only save the top-level state as lastSavedState
-    lastSavedState = JSON.stringify(state);
+    // Snapshot before render so GRID_RENDERED listeners see a clean state
+    lastSavedState = JSON.stringify(serializePattern());
     syncPhraseNameDisplay();
   }
+
+  renderAllMeasures(ctx);
+
+  clearSelection(ctx);
+
+  if (wasPlaying) start(ctx);
 }
 
 export async function ensureHasSelection() {

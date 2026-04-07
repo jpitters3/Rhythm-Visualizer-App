@@ -1,5 +1,6 @@
 // TransportUI manages a set of transport controls
 import { start, stop, getMetronomeSound, setMetronomeSound } from './noteplayer.js';
+import { Bus, BUS_EVENT } from './bus.js';
 
 export class TransportUI {
   constructor(ctx, container) {
@@ -57,6 +58,9 @@ export class TransportUI {
           realInput.value = val;
         }
         TransportRegistry.updateAll(this.ctx);
+      };
+      this.bpmInput.onchange = () => {
+        Bus.emit(BUS_EVENT.GRID_CHANGED);
       };
     }
 

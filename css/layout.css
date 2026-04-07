@@ -291,6 +291,48 @@ div.container {
   min-height: 0;
 }
 
+.grid-phrase-name-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-bottom: 20px;
+}
+
+.grid-phrase-name {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-secondary, #4d4d4d);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  opacity: 0.7;
+}
+
+.quick-save-btn {
+  display: none;
+  height: 20px;
+  padding: 0px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 12px;
+  border: 1px solid currentColor;
+  background: transparent;
+  cursor: pointer;
+  white-space: nowrap;
+  color: var(--accent, #6366f1);
+  opacity: 0.85;
+  transition: opacity 0.15s, background 0.15s;
+}
+
+.quick-save-btn:hover {
+  opacity: 1;
+  background: rgba(99, 102, 241, 0.1);
+}
+
+.quick-save-btn.visible {
+  display: inline-block;
+}
+
 .auth-panel::before {
   content: "";
   position: absolute;
@@ -448,6 +490,12 @@ body.dark div.container {
     order: 10;
     flex-shrink: 0;
   }
+
+  .grid-phrase-name-row {
+    justify-content: center;
+    padding-bottom: 5px;
+    padding-top: 10px;
+}
 }
 
 select#patternSelect {
@@ -526,6 +574,11 @@ body.dark .phrase-menu-btn:hover {
   background: rgba(255, 255, 255, 0.4) !important;
 }
 
+.phrase-submenu button:hover {
+  background-color: var(--btn-active) !important;
+  color: #000;
+}
+
 /* Admin submenu — same animated grid trick, separate class */
 .admin-menu-btn {
   display: block;
@@ -566,6 +619,11 @@ body.dark .admin-menu-btn:hover {
 
 .admin-submenu button {
   background: rgba(255, 255, 255, 0.4) !important;
+}
+
+.admin-submenu button:hover {
+  background-color: var(--btn-active) !important;
+  color: #000;
 }
 
 /* Dropdown Content (Hidden by Default) */

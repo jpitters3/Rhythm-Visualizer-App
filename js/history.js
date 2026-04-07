@@ -1,4 +1,5 @@
 import { serializePattern, applyPattern } from './pattern-crud.js';
+import { Bus, BUS_EVENT } from './bus.js';
 
 export const HistoryManager = {
   undoStack: [],
@@ -49,6 +50,7 @@ export const HistoryManager = {
     this.redoStack = [];
 
     this.updateUI();
+    setTimeout(() => Bus.emit(BUS_EVENT.GRID_CHANGED), 0);
   },
 
   async undo() {
@@ -67,6 +69,7 @@ export const HistoryManager = {
     }
 
     this.updateUI();
+    Bus.emit(BUS_EVENT.GRID_CHANGED);
   },
 
   async redo() {
@@ -85,6 +88,7 @@ export const HistoryManager = {
     }
 
     this.updateUI();
+    Bus.emit(BUS_EVENT.GRID_CHANGED);
   },
 
   updateUI() {

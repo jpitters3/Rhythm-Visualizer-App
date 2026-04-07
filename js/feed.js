@@ -4,6 +4,7 @@ import { currentUser } from './state.js';
 import { supabase } from './supabase-client.js';
 import { addToPractice } from './practice.js';
 import { applyPattern } from './pattern-crud.js';
+import { updateCurrentPhraseName } from './controls.js';
 import { alert, confirm } from './alert.js';
 
 // Community Feed Logic
@@ -12,6 +13,7 @@ export async function loadPatternFromFeed(json, name) {
   if (await confirm(`Load pattern "${name}"? Unsaved changes will be lost.`)) {
     await applyPattern(json);
     document.title = `Panafide — ${name}`;
+    updateCurrentPhraseName(name);
   }
 }
 

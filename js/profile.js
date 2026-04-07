@@ -111,6 +111,19 @@ export async function updateUserGridLabelNotation(newNotation) {
   }
 }
 
+export async function updateDashboardMute(muted) {
+  if (!currentUser) return;
+  if (currentProfile) currentProfile.dashboard_mute = muted;
+  try {
+    await supabase
+      .from('profiles')
+      .update({ dashboard_mute: muted, updated_at: new Date() })
+      .eq('user_id', currentUser.id);
+  } catch (e) {
+    console.warn('Failed to save dashboard mute preference:', e);
+  }
+}
+
 async function createDefaultProfile() {
   if (!currentUser) return;
 

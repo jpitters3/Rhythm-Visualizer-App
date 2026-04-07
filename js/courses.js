@@ -8,6 +8,7 @@ import { supabase } from './supabase-client.js';
 import { updateAdminUI } from './auth.js';
 import { isItemInPractice, togglePracticeItem, closePracticeSidebar } from './practice.js';
 import { loadCourseToEdit } from './course-creator.js';
+import { updateCurrentPhraseName } from './controls.js';
 import { openMarketplace } from './course-marketplace.js';
 import { autoLinkText } from './glossary.js';
 import { openAuthModal } from './auth.js';
@@ -310,6 +311,7 @@ export async function loadLesson(lessonId) {
     // 1. Apply the groove to the grid
     if (lesson.pattern_json) {
       await applyPattern(lesson.pattern_json);
+      updateCurrentPhraseName(lesson.title || 'Lesson');
       // Update last saved state to prevent false dirty check
       snapshotCurrentState();
     }

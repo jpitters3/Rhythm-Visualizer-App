@@ -7,27 +7,27 @@
 import { supabase } from './supabase-client.js';
 
 // ── State ──────────────────────────────────────────────────────────────────
-let _audioPath  = null;   // storage path (section.audio_url)
-let _sectionId  = null;
-let _trimStart  = 0;
-let _trimEnd    = null;   // set once audio is decoded
-let _duration   = 0;
-let _buffer     = null;   // AudioBuffer — waveform + rendering
-let _dragging   = null;   // 'start' | 'end'
-let _preview    = null;   // HTMLAudioElement for preview
-let _previewRaf = null;   // rAF handle for playhead animation
-let _signedUrl  = null;
-let _onClose    = null;
-let _onApply    = null;
+let audioPath  = null;   // storage path (section.audio_url)
+let sectionId  = null;
+let trimStart  = 0;
+let trimEnd    = null;   // set once audio is decoded
+let duration   = 0;
+let buffer     = null;   // AudioBuffer — waveform + rendering
+let dragging   = null;   // 'start' | 'end'
+let preview    = null;   // HTMLAudioElement for preview
+let previewRaf = null;   // rAF handle for playhead animation
+let signedUrl  = null;
+let closeCallback    = null;
+let applyCallback    = null;
 
 // ── DOM refs ───────────────────────────────────────────────────────────────
-const _panel    = () => document.getElementById('composerTrimPanel');
-const _canvas   = () => document.getElementById('composerWaveform');
-const _seekRow  = () => document.getElementById('composerSeekRow');
-const _controls = () => document.querySelector('.playbar-controls');
+const panel    = () => document.getElementById('composerTrimPanel');
+const canvas   = () => document.getElementById('composerWaveform');
+const seekRow  = () => document.getElementById('composerSeekRow');
+const controls = () => document.querySelector('.playbar-controls');
 
 // ── Helpers ────────────────────────────────────────────────────────────────
-function _fmt(secs) {
+function fmt(secs) {
   if (!isFinite(secs) || isNaN(secs)) return '0:00';
   const m = Math.floor(secs / 60);
   const s = Math.floor(secs % 60);
@@ -35,9 +35,9 @@ function _fmt(secs) {
 }
 
 // ── Waveform + playhead drawing ────────────────────────────────────────────
-function _draw() {
-  const cvs = _canvas();
-  if (!cvs || !_buffer) return;
+function draw() {
+  const cvs = canvas();
+  if (!cvs || !buffer) return;
 
   const rect = cvs.getBoundingClientRect();
   if (!rect.width) return;
@@ -65,7 +65,7 @@ function _draw() {
   ctx.stroke();
 
   // Waveform bars (min/max amplitude per pixel column)
-  const data         = _buffer.getChannelData(0);
+  const data         = buffer.getChannelData(0);
   const samplesPerPx = data.length / W;
 
   for (let x = 0; x < W; x++) {
@@ -83,20 +83,20 @@ function _draw() {
   }
 
   // Trimmed-out overlays
-  const startX = (_trimStart / _duration) * W;
-  const endX   = ((_trimEnd  ?? _duration) / _duration) * W;
+  const startX = (trimStart / duration) * W;
+  const endX   = ((trimEnd  ?? duration) / duration) * W;
 
   ctx.fillStyle = 'rgba(0,0,0,0.58)';
   if (startX > 0) ctx.fillRect(0,    0, startX,   H);
   if (endX   < W) ctx.fillRect(endX, 0, W - endX, H);
 
   // Trim handles
-  _drawHandle(ctx, startX, W, H, 'start');
-  _drawHandle(ctx, endX,   W, H, 'end');
+  drawHandle(ctx, startX, W, H, 'start');
+  drawHandle(ctx, endX,   W, H, 'end');
 
   // Playhead (drawn last so it's always on top)
-  if (_preview && isFinite(_preview.currentTime) && _duration > 0) {
-    const px = (_preview.currentTime / _duration) * W;
+  if (preview && isFinite(preview.currentTime) && duration > 0) {
+    const px = (preview.currentTime / duration) * W;
     ctx.strokeStyle = '#ffffff';
     ctx.lineWidth   = 1;
     ctx.beginPath();
@@ -106,7 +106,7 @@ function _draw() {
   }
 }
 
-function _drawHandle(ctx, x, W, H, side) {
+function drawHandle(ctx, x, W, H, side) {
   const color = '#e2714a';
   const cx    = Math.max(1, Math.min(W - 1, x));
 
@@ -123,7 +123,7 @@ function _drawHandle(ctx, x, W, H, side) {
   const tabY = H / 2 - tabH / 2;
 
   ctx.fillStyle = color;
-  _roundRect(ctx, tabX, tabY, tabW, tabH, 3);
+  roundRect(ctx, tabX, tabY, tabW, tabH, 3);
   ctx.fill();
 
   ctx.fillStyle    = '#fff';
@@ -133,7 +133,7 @@ function _drawHandle(ctx, x, W, H, side) {
   ctx.fillText(side === 'start' ? '◀' : '▶', cx + (side === 'start' ? tabW / 2 : -tabW / 2), H / 2);
 }
 
-function _roundRect(ctx, x, y, w, h, r) {
+function roundRect(ctx, x, y, w, h, r) {
   ctx.beginPath();
   ctx.moveTo(x + r, y);
   ctx.lineTo(x + w - r, y);
@@ -148,104 +148,104 @@ function _roundRect(ctx, x, y, w, h, r) {
 }
 
 // ── Time display ───────────────────────────────────────────────────────────
-function _updateTimes() {
-  document.getElementById('trimStartDisplay').textContent = _fmt(_trimStart);
-  document.getElementById('trimEndDisplay').textContent   = _fmt(_trimEnd ?? _duration);
+function updateTimes() {
+  document.getElementById('trimStartDisplay').textContent = fmt(trimStart);
+  document.getElementById('trimEndDisplay').textContent   = fmt(trimEnd ?? duration);
 }
 
 // ── Canvas pointer interaction ─────────────────────────────────────────────
 const HIT = 14;
 
-function _xToTime(x, W) {
-  return Math.max(0, Math.min(_duration, (x / W) * _duration));
+function xToTime(x, W) {
+  return Math.max(0, Math.min(duration, (x / W) * duration));
 }
 
-function _hitHandle(x, W) {
-  const startX = (_trimStart / _duration) * W;
-  const endX   = ((_trimEnd  ?? _duration) / _duration) * W;
+function hitHandle(x, W) {
+  const startX = (trimStart / duration) * W;
+  const endX   = ((trimEnd  ?? duration) / duration) * W;
   if (Math.abs(x - startX) <= HIT) return 'start';
   if (Math.abs(x - endX)   <= HIT) return 'end';
   return null;
 }
 
-function _clientX(e) {
-  const rect = _canvas().getBoundingClientRect();
+function clientX(e) {
+  const rect = canvas().getBoundingClientRect();
   const cx   = e.touches ? e.touches[0].clientX : e.clientX;
   return cx - rect.left;
 }
 
-function _onDown(e) {
-  const W = _canvas().getBoundingClientRect().width;
-  _dragging = _hitHandle(_clientX(e), W);
-  if (_dragging) e.preventDefault();
+function onDown(e) {
+  const W = canvas().getBoundingClientRect().width;
+  dragging = hitHandle(clientX(e), W);
+  if (dragging) e.preventDefault();
 }
 
-function _onMove(e) {
-  const cvs = _canvas();
+function onMove(e) {
+  const cvs = canvas();
   const W   = cvs.getBoundingClientRect().width;
-  const x   = _clientX(e);
+  const x   = clientX(e);
 
-  cvs.style.cursor = _hitHandle(x, W) ? 'ew-resize' : 'default';
+  cvs.style.cursor = hitHandle(x, W) ? 'ew-resize' : 'default';
 
-  if (!_dragging) return;
+  if (!dragging) return;
   e.preventDefault();
 
-  const t = _xToTime(x, W);
-  if (_dragging === 'start') {
-    _trimStart = Math.min(t, (_trimEnd ?? _duration) - 0.05);
+  const t = xToTime(x, W);
+  if (dragging === 'start') {
+    trimStart = Math.min(t, (trimEnd ?? duration) - 0.05);
   } else {
-    _trimEnd = Math.max(t, _trimStart + 0.05);
+    trimEnd = Math.max(t, trimStart + 0.05);
   }
 
-  _draw();
-  _updateTimes();
+  draw();
+  updateTimes();
 }
 
-function _onUp() { _dragging = null; }
+function onUp() { dragging = null; }
 
 // ── Preview ────────────────────────────────────────────────────────────────
-function _stopPreviewRaf() {
-  if (_previewRaf) { cancelAnimationFrame(_previewRaf); _previewRaf = null; }
+function stopPreviewRaf() {
+  if (previewRaf) { cancelAnimationFrame(previewRaf); previewRaf = null; }
 }
 
-function _animatePlayhead() {
-  _draw();
-  if (_preview && !_preview.paused) {
-    _previewRaf = requestAnimationFrame(_animatePlayhead);
+function animatePlayhead() {
+  draw();
+  if (preview && !preview.paused) {
+    previewRaf = requestAnimationFrame(animatePlayhead);
   } else {
-    _previewRaf = null;
-    _draw(); // final draw without playhead running
+    previewRaf = null;
+    draw(); // final draw without playhead running
   }
 }
 
-function _stopPreview() {
-  _stopPreviewRaf();
-  if (_preview) { _preview.pause(); _preview = null; }
+function stopPreview() {
+  stopPreviewRaf();
+  if (preview) { preview.pause(); preview = null; }
   const btn = document.getElementById('trimPreviewBtn');
   if (btn) btn.textContent = '▶ Preview';
-  _draw(); // clear playhead
+  draw(); // clear playhead
 }
 
-function _togglePreview() {
-  if (_preview && !_preview.paused) { _stopPreview(); return; }
-  _stopPreview();
+function togglePreview() {
+  if (preview && !preview.paused) { stopPreview(); return; }
+  stopPreview();
 
-  _preview = new Audio(_signedUrl);
-  _preview.currentTime = _trimStart;
+  preview = new Audio(signedUrl);
+  preview.currentTime = trimStart;
 
-  _preview.ontimeupdate = () => {
-    if (_preview && _preview.currentTime >= (_trimEnd ?? _duration)) _stopPreview();
+  preview.ontimeupdate = () => {
+    if (preview && preview.currentTime >= (trimEnd ?? duration)) stopPreview();
   };
-  _preview.onended = _stopPreview;
+  preview.onended = stopPreview;
 
-  _preview.play();
+  preview.play();
   document.getElementById('trimPreviewBtn').textContent = '■ Stop';
 
-  _previewRaf = requestAnimationFrame(_animatePlayhead);
+  previewRaf = requestAnimationFrame(animatePlayhead);
 }
 
 // ── WAV encoder ────────────────────────────────────────────────────────────
-function _encodeWav(audioBuffer) {
+function encodeWav(audioBuffer) {
   const numCh     = audioBuffer.numberOfChannels;
   const rate      = audioBuffer.sampleRate;
   const numFrames = audioBuffer.length;
@@ -285,29 +285,29 @@ function _encodeWav(audioBuffer) {
 }
 
 // ── Apply (destructive) ────────────────────────────────────────────────────
-async function _applyTrim() {
+async function applyTrim() {
   const applyBtn = document.getElementById('trimApplyBtn');
   if (applyBtn) { applyBtn.disabled = true; applyBtn.textContent = 'Applying…'; }
 
   try {
     // 1. Render trimmed region into a new AudioBuffer
-    const trimLen = (_trimEnd ?? _duration) - _trimStart;
+    const trimLen = (trimEnd ?? duration) - trimStart;
     const offline = new OfflineAudioContext(
-      _buffer.numberOfChannels,
-      Math.ceil(trimLen * _buffer.sampleRate),
-      _buffer.sampleRate,
+      buffer.numberOfChannels,
+      Math.ceil(trimLen * buffer.sampleRate),
+      buffer.sampleRate,
     );
     const src = offline.createBufferSource();
-    src.buffer = _buffer;
+    src.buffer = buffer;
     src.connect(offline.destination);
-    src.start(0, _trimStart, trimLen);
+    src.start(0, trimStart, trimLen);
     const rendered = await offline.startRendering();
 
     // 2. Encode to WAV
-    const wavBlob = _encodeWav(rendered);
+    const wavBlob = encodeWav(rendered);
 
     // 3. Upload to a unique .wav path — timestamp ensures no CDN cache collision
-    const oldPath = _audioPath;
+    const oldPath = audioPath;
     const base    = oldPath.replace(/\.[^/.]+$/, '').replace(/_\d{13}$/, ''); // strip prev timestamp
     const newPath = `${base}_${Date.now()}.wav`;
 
@@ -321,7 +321,7 @@ async function _applyTrim() {
     const { error: dbErr } = await supabase
       .from('composition_sections')
       .update({ audio_url: newPath })
-      .eq('id', _sectionId);
+      .eq('id', sectionId);
 
     if (dbErr) throw dbErr;
 
@@ -331,7 +331,7 @@ async function _applyTrim() {
     }
 
     // 6. Tell song-composer to update local state with the new path
-    _onApply?.(newPath);
+    applyCallback?.(newPath);
     closeTrimUI();
   } catch (e) {
     console.error('[Trim] apply failed', e);
@@ -340,40 +340,40 @@ async function _applyTrim() {
 }
 
 // ── ResizeObserver ─────────────────────────────────────────────────────────
-let _resizeObserver = null;
+let resizeObserver = null;
 
-function _attachResize() {
-  _resizeObserver = new ResizeObserver(() => _draw());
-  _resizeObserver.observe(_canvas());
+function attachResize() {
+  resizeObserver = new ResizeObserver(() => draw());
+  resizeObserver.observe(canvas());
 }
 
-function _detachResize() {
-  _resizeObserver?.disconnect();
-  _resizeObserver = null;
+function detachResize() {
+  resizeObserver?.disconnect();
+  resizeObserver = null;
 }
 
 // ── Canvas event attach / detach ───────────────────────────────────────────
-function _attachCanvas() {
-  const cvs = _canvas();
-  cvs.addEventListener('mousedown',  _onDown);
-  cvs.addEventListener('mousemove',  _onMove);
-  cvs.addEventListener('mouseup',    _onUp);
-  cvs.addEventListener('mouseleave', _onUp);
-  cvs.addEventListener('touchstart', _onDown,  { passive: false });
-  cvs.addEventListener('touchmove',  _onMove,  { passive: false });
-  cvs.addEventListener('touchend',   _onUp);
+function attachCanvas() {
+  const cvs = canvas();
+  cvs.addEventListener('mousedown',  onDown);
+  cvs.addEventListener('mousemove',  onMove);
+  cvs.addEventListener('mouseup',    onUp);
+  cvs.addEventListener('mouseleave', onUp);
+  cvs.addEventListener('touchstart', onDown,  { passive: false });
+  cvs.addEventListener('touchmove',  onMove,  { passive: false });
+  cvs.addEventListener('touchend',   onUp);
 }
 
-function _detachCanvas() {
-  const cvs = _canvas();
+function detachCanvas() {
+  const cvs = canvas();
   if (!cvs) return;
-  cvs.removeEventListener('mousedown',  _onDown);
-  cvs.removeEventListener('mousemove',  _onMove);
-  cvs.removeEventListener('mouseup',    _onUp);
-  cvs.removeEventListener('mouseleave', _onUp);
-  cvs.removeEventListener('touchstart', _onDown);
-  cvs.removeEventListener('touchmove',  _onMove);
-  cvs.removeEventListener('touchend',   _onUp);
+  cvs.removeEventListener('mousedown',  onDown);
+  cvs.removeEventListener('mousemove',  onMove);
+  cvs.removeEventListener('mouseup',    onUp);
+  cvs.removeEventListener('mouseleave', onUp);
+  cvs.removeEventListener('touchstart', onDown);
+  cvs.removeEventListener('touchmove',  onMove);
+  cvs.removeEventListener('touchend',   onUp);
 }
 
 // ── Public API ─────────────────────────────────────────────────────────────
@@ -389,34 +389,34 @@ function _detachCanvas() {
  * @param {Function} opts.onClose    - called when trim UI closes
  * @param {Function} opts.onApply    - called with (newAudioUrl | null) on successful apply
  */
-export async function openTrimUI(sectionId, { section, compTitle, signedUrl, onClose, onApply }) {
-  _sectionId = sectionId;
-  _signedUrl = signedUrl;
-  _audioPath = section.audio_url;
+export async function openTrimUI(inputSectionId, { section, compTitle, signedUrl: inputSignedUrl, onClose, onApply }) {
+  sectionId = inputSectionId;
+  signedUrl = inputSignedUrl;
+  audioPath = section.audio_url;
 
-  _onClose   = onClose;
-  _onApply   = onApply;
+  closeCallback   = onClose;
+  applyCallback   = onApply;
 
   // Decode audio into an AudioBuffer for waveform drawing and OfflineAudioContext rendering
   try {
     const response    = await fetch(signedUrl);
     const arrayBuffer = await response.arrayBuffer();
     const audioCtx    = new AudioContext();
-    _buffer           = await audioCtx.decodeAudioData(arrayBuffer);
+    buffer           = await audioCtx.decodeAudioData(arrayBuffer);
     audioCtx.close();
   } catch (e) {
     console.error('[Trim] audio decode failed', e);
     return;
   }
 
-  _duration  = _buffer.duration;
-  _trimStart = 0;
-  _trimEnd   = _duration;
+  duration  = buffer.duration;
+  trimStart = 0;
+  trimEnd   = duration;
 
   // Swap playbar into trim mode
-  _seekRow()?.style.setProperty('display', 'none');
-  _controls()?.style.setProperty('display', 'none');
-  _panel().style.display = '';
+  seekRow()?.style.setProperty('display', 'none');
+  controls()?.style.setProperty('display', 'none');
+  panel().style.display = '';
 
   const bar = document.getElementById('composerPlaybar');
   bar.style.display = '';
@@ -428,32 +428,32 @@ export async function openTrimUI(sectionId, { section, compTitle, signedUrl, onC
   const applyBtn = document.getElementById('trimApplyBtn');
   if (applyBtn) { applyBtn.disabled = false; applyBtn.textContent = 'Apply'; }
 
-  _updateTimes();
-  _attachCanvas();
-  _attachResize();
-  requestAnimationFrame(_draw);
+  updateTimes();
+  attachCanvas();
+  attachResize();
+  requestAnimationFrame(draw);
 }
 
 export function closeTrimUI() {
-  _stopPreview();
-  _detachCanvas();
-  _detachResize();
+  stopPreview();
+  detachCanvas();
+  detachResize();
 
-  _panel().style.display = 'none';
-  _controls()?.style.setProperty('display', '');
+  panel().style.display = 'none';
+  controls()?.style.setProperty('display', '');
 
-  _sectionId = null;
-  _audioPath = null;
-  _buffer    = null;
-  _dragging  = null;
-  _signedUrl = null;
+  sectionId = null;
+  audioPath = null;
+  buffer    = null;
+  dragging  = null;
+  signedUrl = null;
 
-  _onClose?.();
-  _onClose = null;
-  _onApply = null;
+  closeCallback?.();
+  closeCallback = null;
+  applyCallback = null;
 }
 
 // ── Button wiring ──────────────────────────────────────────────────────────
 document.getElementById('trimCancelBtn')?.addEventListener('click', closeTrimUI);
-document.getElementById('trimPreviewBtn')?.addEventListener('click', _togglePreview);
-document.getElementById('trimApplyBtn')?.addEventListener('click', _applyTrim);
+document.getElementById('trimPreviewBtn')?.addEventListener('click', togglePreview);
+document.getElementById('trimApplyBtn')?.addEventListener('click', applyTrim);

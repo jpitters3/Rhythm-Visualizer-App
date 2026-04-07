@@ -8,7 +8,7 @@ import { supabase } from './supabase-client.js';
 import { currentUser } from './state.js';
 import {
   dbLoadPatternByName, dbSavePattern, applyPattern, serializePattern,
-  dbListPatternNames,
+  dbListPatternNames, hasUnsavedChanges,
 } from './pattern-crud.js';
 import { addTickObserver, removeTickObserver, start, stop } from './noteplayer.js';
 import { TransportRegistry } from './transport-ui.js';
@@ -16,6 +16,7 @@ import { gridA } from './grid-context.js';
 import { alert, confirm, prompt } from './alert.js';
 import { closeSidebar } from './courses.js';
 import { openTrimUI, closeTrimUI } from './recording-trim.js';
+import { updateCurrentPhraseName } from './controls.js';
 
 // ============================================================
 // State
@@ -31,7 +32,7 @@ let lastPlayback      = null;
 // stitched: { compositionId, boundaries, savedState }  — set independently of playback
 // savedState holds the pre-stitch grid state so it can be restored on toggle-off
 let stitched          = null;
-let _isLoadingSection = false; // true while stitching/loading to block premature cleanup
+let isLoadingSection = false; // true while stitching/loading to block premature cleanup
 
 // Default colours auto-assigned to new sections
 const PALETTE = ['#4a90e2','#e2714a','#4ae291','#c44ae2','#e2c14a','#4ac9e2','#e24a7a','#8fe24a'];
@@ -43,7 +44,7 @@ const composerEl = document.getElementById('composerSidebar');
 const composerPanel = new Sidepanel(composerEl, { onClose: () => {
   stopPlayback();
   closeTrimUI();
-  _removeContextMenu();
+  removeContextMenu();
 }});
 
 // Register with TransportRegistry so the composer play button stays in sync
@@ -51,8 +52,8 @@ const composerPanel = new Sidepanel(composerEl, { onClose: () => {
 TransportRegistry.register({
   ctx: gridA,
   update() {
-    if (playback && !gridA.playing && !_isLoadingSection) {
-      _cleanupPlayback();
+    if (playback && !gridA.playing && !isLoadingSection) {
+      cleanupPlayback();
       renderCompositions();
     }
   },
@@ -117,7 +118,7 @@ async function createComposition() {
   compositions.unshift({ ...data, sections: [] });
   expandedId = data.id;
   showPlaybar(songTitle);
-  _updatePlaybarSection();
+  updatePlaybarSection();
   renderCompositions();
 }
 
@@ -299,7 +300,7 @@ async function updateSectionColor(sectionId, color) {
       playback.boundaries = playback.boundaries.map(b =>
         b.sectionId === sectionId ? { ...b, color } : b
       );
-      _applyGridSectionColors(playback.boundaries);
+      applyGridSectionColors(playback.boundaries);
     }
     renderCompositions();
     return;
@@ -333,7 +334,7 @@ async function startRecording(sectionId) {
   mediaRecorder.ondataavailable = e => { if (e.data.size) recordingChunks.push(e.data); };
   mediaRecorder.onstop = () => {
     stream.getTracks().forEach(t => t.stop());
-    _onRecordingComplete();
+    onRecordingComplete();
   };
   mediaRecorder.start(250);
 
@@ -357,7 +358,7 @@ function stopRecording() {
   recordingTimer = null;
 }
 
-async function _onRecordingComplete() {
+async function onRecordingComplete() {
   const blob = new Blob(recordingChunks, { type: 'audio/webm' });
   mediaRecorder = null;
   recordingChunks = [];
@@ -393,30 +394,30 @@ async function _onRecordingComplete() {
 // ============================================================
 async function toggleStitch(compositionId) {
   if (stitched?.compositionId === compositionId) {
-    _doUnstitch();
+    doUnstitch();
     renderCompositions();
     return;
   }
-  await _ensureStitched(compositionId);
+  await ensureStitched(compositionId);
   renderCompositions();
 }
 
 // Restores the grid to the state it was in before stitching.
-function _doUnstitch() {
+function doUnstitch() {
   if (!stitched) return;
   stopPlayback();
   if (stitched.savedState) {
-    _isLoadingSection = true;
-    applyPattern(stitched.savedState, gridA).finally(() => { _isLoadingSection = false; });
+    isLoadingSection = true;
+    applyPattern(stitched.savedState, gridA).finally(() => { isLoadingSection = false; });
   }
-  _clearGridSectionColors();
+  clearGridSectionColors();
   stitched = null;
 }
 
 // Loads + stitches all phrases for compositionId into the grid (from fromSectionIdx).
 // Returns the boundaries array, or null on failure.
 // Re-uses the existing stitched state if it's already for this composition.
-async function _ensureStitched(compositionId, fromSectionIdx = 0) {
+async function ensureStitched(compositionId, fromSectionIdx = 0) {
   // Already stitched for this comp from the beginning — reuse
   if (stitched?.compositionId === compositionId && fromSectionIdx === 0) {
     return stitched.boundaries;
@@ -446,7 +447,7 @@ async function _ensureStitched(compositionId, fromSectionIdx = 0) {
   let baseMode = '16';
   let baseBpm  = null;
 
-  _isLoadingSection = true;
+  isLoadingSection = true;
   stop(gridA);
 
   try {
@@ -469,7 +470,7 @@ async function _ensureStitched(compositionId, fromSectionIdx = 0) {
     }
 
     if (!allLabels.length) {
-      _isLoadingSection = false;
+      isLoadingSection = false;
       await alert('Could not load any phrases.');
       return null;
     }
@@ -479,14 +480,14 @@ async function _ensureStitched(compositionId, fromSectionIdx = 0) {
     await applyPattern(pattern, gridA);
   } catch (e) {
     console.error('[Composer] stitch error', e);
-    _isLoadingSection = false;
+    isLoadingSection = false;
     return null;
   }
 
-  _isLoadingSection = false;
+  isLoadingSection = false;
 
   stitched = { compositionId, boundaries, savedState };
-  _applyGridSectionColors(boundaries);
+  applyGridSectionColors(boundaries);
   return boundaries;
 }
 
@@ -496,7 +497,7 @@ async function _ensureStitched(compositionId, fromSectionIdx = 0) {
 async function startPlayback(compositionId, fromSectionIdx = 0) {
   stopPlayback();
 
-  const boundaries = await _ensureStitched(compositionId, fromSectionIdx);
+  const boundaries = await ensureStitched(compositionId, fromSectionIdx);
   if (!boundaries) return;
 
   const comp = compositions.find(c => c.id === compositionId);
@@ -506,8 +507,8 @@ async function startPlayback(compositionId, fromSectionIdx = 0) {
   playback = { compositionId, boundaries, currentSectionIdx: 0 };
   showPlaybar(comp.title);
   document.getElementById('composerPlayBtn').innerText = '■';
-  _updatePlaybarSection();
-  _highlightCurrentSection();
+  updatePlaybarSection();
+  highlightCurrentSection();
 
   // ── Tick observer: track section + stop at end ───────────────
   const lastStep = boundaries[boundaries.length - 1].end;
@@ -518,8 +519,8 @@ async function startPlayback(compositionId, fromSectionIdx = 0) {
     const idx = playback.boundaries.findIndex(b => step >= b.start && step <= b.end);
     if (idx !== -1 && idx !== playback.currentSectionIdx) {
       playback.currentSectionIdx = idx;
-      _highlightCurrentSection();
-      _updatePlaybarSection();
+      highlightCurrentSection();
+      updatePlaybarSection();
     }
 
     if (step === lastStep) stopPlayback();
@@ -533,7 +534,7 @@ async function startPlayback(compositionId, fromSectionIdx = 0) {
 
 // Cleans up composer state without touching the transport — used when the
 // grid stops externally (transport button) so we don't double-stop.
-function _cleanupPlayback() {
+function cleanupPlayback() {
   if (!playback) return;
   // Preserve last playback so the bar stays in context after stopping
   lastPlayback = {
@@ -544,14 +545,14 @@ function _cleanupPlayback() {
   if (playback.loopObserver) removeTickObserver(playback.loopObserver);
   playback = null;
   // Only clear grid colours if we're not still in stitched/compose mode
-  if (!stitched) _clearGridSectionColors();
+  if (!stitched) clearGridSectionColors();
   document.querySelectorAll('.section-item.playing').forEach(el => {
     el.classList.remove('playing');
     el.style.removeProperty('background');
     el.style.removeProperty('--section-playing-color');
   });
   // Keep playbar visible with last section info
-  _updatePlaybarSection();
+  updatePlaybarSection();
 }
 
 // Header play button: always starts from section 0; stops if already playing this comp.
@@ -571,7 +572,7 @@ async function togglePlaybarPlayback() {
     const compId = playback?.compositionId || lastPlayback?.compositionId;
     if (!compId) return;
     const fromIdx = lastPlayback
-      ? _absoluteSectionIdx(lastPlayback.compositionId, lastPlayback.currentSectionIdx)
+      ? absoluteSectionIdx(lastPlayback.compositionId, lastPlayback.currentSectionIdx)
       : 0;
     await startPlayback(compId, fromIdx);
   }
@@ -579,7 +580,7 @@ async function togglePlaybarPlayback() {
 
 function stopPlayback() {
   if (!playback) return;
-  _cleanupPlayback();
+  cleanupPlayback();
   stop(gridA);
   TransportRegistry.updateAll(gridA);
   renderCompositions();
@@ -592,11 +593,11 @@ function nextSection() {
   const next = Math.min(ctx.currentSectionIdx + 1, ctx.boundaries.length - 1);
   if (next === ctx.currentSectionIdx) return;
   if (playback) {
-    startPlayback(ctx.compositionId, _absoluteSectionIdx(ctx.compositionId, next));
+    startPlayback(ctx.compositionId, absoluteSectionIdx(ctx.compositionId, next));
   } else {
     // Not playing — just update the displayed section in lastPlayback
     lastPlayback.currentSectionIdx = next;
-    _updatePlaybarSection();
+    updatePlaybarSection();
   }
 }
 
@@ -606,17 +607,17 @@ function prevSection() {
   const prev = Math.max(ctx.currentSectionIdx - 1, 0);
   if (prev === ctx.currentSectionIdx) return;
   if (playback) {
-    startPlayback(ctx.compositionId, _absoluteSectionIdx(ctx.compositionId, prev));
+    startPlayback(ctx.compositionId, absoluteSectionIdx(ctx.compositionId, prev));
   } else {
     // Not playing — just update the displayed section in lastPlayback
     lastPlayback.currentSectionIdx = prev;
-    _updatePlaybarSection();
+    updatePlaybarSection();
   }
 }
 
 // Map a boundary index (within fromSections slice) back to the composition's
 // full phrase-section list so startPlayback(fromSectionIdx) is correct.
-function _absoluteSectionIdx(compositionId, boundaryIdx) {
+function absoluteSectionIdx(compositionId, boundaryIdx) {
   const comp = compositions.find(c => c.id === compositionId);
   if (!comp) return 0;
   const phraseSections = comp.sections.filter(s => s.type === 'phrase' && s.phrase_name);
@@ -632,9 +633,9 @@ function showPlaybar(title) {
   bar.removeAttribute('aria-hidden');
   document.getElementById('composerPlaybarTitle').textContent = title;
   // Seek bar is only shown for audio recordings; hide it for phrase playback
-  _hideSeekBar();
-  _audioSectionId = null;
-  _updatePlaybarSection();
+  hideSeekBar();
+  audioSectionId = null;
+  updatePlaybarSection();
 }
 
 function hidePlaybar() {
@@ -644,7 +645,7 @@ function hidePlaybar() {
   bar.setAttribute('aria-hidden', 'true');
 }
 
-function _updatePlaybarSection() {
+function updatePlaybarSection() {
   const el = document.getElementById('composerPlaybarSection');
   if (!el) return;
   const ctx = playback || lastPlayback;
@@ -658,20 +659,20 @@ function _updatePlaybarSection() {
 // ============================================================
 // Grid section colouring
 // ============================================================
-function _hexToRgba(hex, alpha) {
+function hexToRgba(hex, alpha) {
   const r = parseInt(hex.slice(1, 3), 16);
   const g = parseInt(hex.slice(3, 5), 16);
   const b = parseInt(hex.slice(5, 7), 16);
   return `rgba(${r},${g},${b},${alpha})`;
 }
 
-function _applyGridSectionColors(boundaries) {
-  _clearGridSectionColors();
+function applyGridSectionColors(boundaries) {
+  clearGridSectionColors();
   const cells = gridA.cells;
   boundaries.forEach(({ start, end, color }, i) => {
     const hex  = color || PALETTE[i % PALETTE.length];
-    const fill = _hexToRgba(hex, 0.18);
-    const border = _hexToRgba(hex, 0.7);
+    const fill = hexToRgba(hex, 0.18);
+    const border = hexToRgba(hex, 0.7);
     for (let step = start; step <= end; step++) {
       const cell = cells[step];
       if (!cell) continue;
@@ -683,7 +684,7 @@ function _applyGridSectionColors(boundaries) {
   });
 }
 
-function _clearGridSectionColors() {
+function clearGridSectionColors() {
   gridA.container?.querySelectorAll('.composer-section-tinted').forEach(cell => {
     cell.style.removeProperty('--section-bg');
     cell.style.removeProperty('--section-border');
@@ -691,7 +692,7 @@ function _clearGridSectionColors() {
   });
 }
 
-function _highlightCurrentSection() {
+function highlightCurrentSection() {
   document.querySelectorAll('.section-item.playing').forEach(el => {
     el.classList.remove('playing');
     el.style.removeProperty('background');
@@ -703,7 +704,7 @@ function _highlightCurrentSection() {
   if (!el) return;
   const color = b.color || PALETTE[playback.currentSectionIdx % PALETTE.length];
   el.classList.add('playing');
-  el.style.background = _hexToRgba(color, 0.3);
+  el.style.background = hexToRgba(color, 0.3);
   el.style.setProperty('--section-playing-color', color);
   el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
@@ -731,7 +732,7 @@ function renderCompositions(forceExpandId = null, opts = {}) {
 
   const html = compositions.map(comp => renderCompositionItem(comp, opts)).join('');
   setListHTML(html);
-  _bindSectionListeners();
+  bindSectionListeners();
 }
 
 function renderCompositionItem(comp, opts = {}) {
@@ -763,7 +764,7 @@ function renderCompositionItem(comp, opts = {}) {
     <div class="composition-item${isExpanded ? ' expanded' : ''}" data-id="${comp.id}">
       <div class="composition-header" data-action="toggle-comp" data-id="${comp.id}">
         <span class="composition-chevron">▶</span>
-        <span class="composition-title">${_esc(comp.title)}</span>
+        <span class="composition-title">${esc(comp.title)}</span>
         <button class="composition-stitch-btn${isStitched ? ' active' : ''}"
           data-action="toggle-stitch" data-id="${comp.id}" title="${isStitched ? 'Exit compose view' : 'Show song in grid'}">
           🎨
@@ -789,11 +790,11 @@ function renderSectionItem(s, _index = 0, phraseIndex = 0) {
   const swatchColor = s.color || PALETTE[phraseIndex % PALETTE.length];
   const isPlayingSection = playback?.boundaries?.[playback?.currentSectionIdx]?.sectionId === s.id;
   const playingStyle = isPlayingSection
-    ? `background:${_hexToRgba(swatchColor, 0.3)};--section-playing-color:${swatchColor};`
+    ? `background:${hexToRgba(swatchColor, 0.3)};--section-playing-color:${swatchColor};`
     : '';
   const colorSwatch = s.type === 'phrase'
     ? `<button class="section-color-swatch" data-action="pick-color" data-id="${s.id}"
-    style="background:${_esc(swatchColor)}" title="Change section colour"></button>`
+    style="background:${esc(swatchColor)}" title="Change section colour"></button>`
     : '';
 
   const recordControls = s.type === 'recording' ? `
@@ -812,18 +813,19 @@ function renderSectionItem(s, _index = 0, phraseIndex = 0) {
   const noteEditor = s.type === 'note' ? `
     <div class="note-editor">
       <textarea rows="2" data-note-section="${s.id}"
-        placeholder="Add notes…">${_esc(s.note_text || '')}</textarea>
+        placeholder="Add notes…">${esc(s.note_text || '')}</textarea>
     </div>` : '';
 
   return `
     <div class="section-item${isPlayingSection ? ' playing' : ''}" draggable="true"
-      data-id="${s.id}" data-type="${s.type}" data-comp="${_sectionCompId(s.id)}"
+      data-id="${s.id}" data-type="${s.type}" data-comp="${sectionCompId(s.id)}"
       style="${playingStyle}">
       <span class="drag-handle" title="Drag to reorder">⠿⠿</span>
       <span class="section-icon">${icon}</span>
-      <div class="section-info">
-        <span class="section-title">${_esc(label)}</span>
-        ${sub ? `<span class="section-subtitle">${_esc(sub)}</span>` : ''}
+      <div class="section-info${s.type === 'phrase' ? ' clickable' : ''}"
+        ${s.type === 'phrase' ? `data-action="edit-section" data-id="${s.id}"` : ''}>
+        <span class="section-title">${esc(label)}</span>
+        ${sub ? `<span class="section-subtitle">${esc(sub)}</span>` : ''}
       </div>
       ${s.type === 'phrase' ? `
       <button class="section-action-btn" data-action="play-section" data-id="${s.id}" title="Play phrase">▶</button>
@@ -842,19 +844,19 @@ function renderPhrasePicker(compId, names) {
     </div>`;
   }
   const items = names.map(n =>
-    `<div class="phrase-picker-item" data-action="pick-phrase" data-comp="${compId}" data-name="${_esc(n)}">${_esc(n)}</div>`
+    `<div class="phrase-picker-item" data-action="pick-phrase" data-comp="${compId}" data-name="${esc(n)}">${esc(n)}</div>`
   ).join('');
   return `<div class="phrase-picker"><div class="phrase-picker-list">${items}</div></div>`;
 }
 
-function _sectionCompId(sectionId) {
+function sectionCompId(sectionId) {
   for (const comp of compositions) {
     if (comp.sections.find(s => s.id === sectionId)) return comp.id;
   }
   return '';
 }
 
-function _esc(str) {
+function esc(str) {
   return String(str ?? '')
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
@@ -863,17 +865,17 @@ function _esc(str) {
 // ============================================================
 // Event delegation (all clicks inside #composerSidebar)
 // ============================================================
-function _bindSectionListeners() {
+function bindSectionListeners() {
   document.querySelectorAll('.section-item[draggable]').forEach(el => {
-    el.addEventListener('dragstart', _onDragStart);
-    el.addEventListener('dragover',  _onDragOver);
-    el.addEventListener('dragleave', _onDragLeave);
-    el.addEventListener('drop',      _onDrop);
-    el.addEventListener('dragend',   _onDragEnd);
+    el.addEventListener('dragstart', onDragStart);
+    el.addEventListener('dragover',  onDragOver);
+    el.addEventListener('dragleave', onDragLeave);
+    el.addEventListener('drop',      onDrop);
+    el.addEventListener('dragend',   onDragEnd);
   });
 
   document.querySelectorAll('[data-note-section]').forEach(ta => {
-    ta.addEventListener('input', _debounce(() => {
+    ta.addEventListener('input', debounce(() => {
       updateNoteText(ta.dataset.noteSection, ta.value);
     }, 600));
   });
@@ -884,24 +886,24 @@ function _bindSectionListeners() {
 // ============================================================
 let dragSrcId = null;
 
-function _onDragStart(e) {
+function onDragStart(e) {
   dragSrcId = this.dataset.id;
   this.classList.add('dragging');
   e.dataTransfer.effectAllowed = 'move';
 }
 
-function _onDragOver(e) {
+function onDragOver(e) {
   e.preventDefault();
   e.dataTransfer.dropEffect = 'move';
   document.querySelectorAll('.section-item.drag-over').forEach(el => el.classList.remove('drag-over'));
   if (this.dataset.id !== dragSrcId) this.classList.add('drag-over');
 }
 
-function _onDragLeave() {
+function onDragLeave() {
   this.classList.remove('drag-over');
 }
 
-async function _onDrop(e) {
+async function onDrop(e) {
   e.preventDefault();
   this.classList.remove('drag-over');
   const targetId = this.dataset.id;
@@ -928,7 +930,7 @@ async function _onDrop(e) {
   }
 }
 
-function _onDragEnd() {
+function onDragEnd() {
   dragSrcId = null;
   document.querySelectorAll('.section-item.dragging, .section-item.drag-over')
     .forEach(el => el.classList.remove('dragging', 'drag-over'));
@@ -937,30 +939,36 @@ function _onDragEnd() {
 // ============================================================
 // Context menu
 // ============================================================
-let _contextMenu = null;
+let contextMenu = null;
+let contextMenuTrigger = null;
 
-async function _editSection(sectionId) {
-  const section = _findSection(sectionId);
+async function editSection(sectionId) {
+  let section = null;
+  for (const c of compositions) {
+    section = c.sections.find(s => s.id === sectionId);
+    if (section) break;
+  }
   if (!section) return;
-  if (stitched) _doUnstitch();
+  if (hasUnsavedChanges()) {
+    if (!await confirm('You have unsaved changes. Discard them?')) return;
+  }
+  if (stitched) doUnstitch();
   const state = await dbLoadPatternByName(section.phrase_name);
   if (state) {
-    _isLoadingSection = true;
+    isLoadingSection = true;
     await applyPattern(state, gridA);
-    _isLoadingSection = false;
+    isLoadingSection = false;
+    updateCurrentPhraseName(section.phrase_name);
   }
   renderCompositions();
 }
 
-function _showSectionMenu(triggerBtn, sectionId, sectionType) {
-  _removeContextMenu();
+function showSectionMenu(triggerBtn, sectionId, sectionType) {
+  removeContextMenu();
   const menu = document.createElement('div');
   menu.className = 'composer-context-menu';
 
   const items = [];
-  if (sectionType === 'phrase') {
-    items.push(`<button data-action="edit">✏️ Edit phrase</button>`);
-  }
   items.push(`<button data-action="copy">⧉ Duplicate</button>`);
   items.push(`<button data-action="delete" class="danger">✕ Delete</button>`);
   menu.innerHTML = items.join('');
@@ -971,24 +979,25 @@ function _showSectionMenu(triggerBtn, sectionId, sectionType) {
   menu.style.top   = `${rect.bottom + 4}px`;
   menu.style.left  = 'auto';
   document.body.appendChild(menu);
-  _contextMenu = menu;
+  contextMenu = menu;
+  contextMenuTrigger = triggerBtn;
 
   menu.addEventListener('click', async e => {
     const btn = e.target.closest('button');
     if (!btn) return;
-    _removeContextMenu();
-    if (btn.dataset.action === 'edit')   await _editSection(sectionId);
+    removeContextMenu();
+    if (btn.dataset.action === 'edit')   await editSection(sectionId);
     if (btn.dataset.action === 'copy')   await copySection(sectionId);
     if (btn.dataset.action === 'delete') await deleteSection(sectionId);
   });
 
   setTimeout(() => {
-    document.addEventListener('click', _removeContextMenu, { once: true });
+    document.addEventListener('click', removeContextMenu, { once: true });
   }, 0);
 }
 
-function _showContextMenu(x, y, compId) {
-  _removeContextMenu();
+function showContextMenu(x, y, compId) {
+  removeContextMenu();
   const menu = document.createElement('div');
   menu.className = 'composer-context-menu';
   menu.innerHTML = `
@@ -997,69 +1006,70 @@ function _showContextMenu(x, y, compId) {
   menu.style.left = `${x}px`;
   menu.style.top  = `${y}px`;
   document.body.appendChild(menu);
-  _contextMenu = menu;
+  contextMenu = menu;
 
   menu.addEventListener('click', e => {
     const btn = e.target.closest('button');
     if (!btn) return;
-    _removeContextMenu();
+    removeContextMenu();
     if (btn.dataset.action === 'rename') renameComposition(btn.dataset.id);
     else if (btn.dataset.action === 'delete') deleteComposition(btn.dataset.id);
   });
 
   setTimeout(() => {
-    document.addEventListener('click', _removeContextMenu, { once: true });
+    document.addEventListener('click', removeContextMenu, { once: true });
   }, 0);
 }
 
-function _removeContextMenu() {
-  _contextMenu?.remove();
-  _contextMenu = null;
+function removeContextMenu() {
+  contextMenu?.remove();
+  contextMenu = null;
+  contextMenuTrigger = null;
 }
 
 // ============================================================
 // Recording playback
 // ============================================================
-let _audioPlayer    = null;
-let _audioSectionId = null; // section currently loaded in _audioPlayer
+let audioPlayer    = null;
+let audioSectionId = null; // section currently loaded in audioPlayer
 
-function _fmtTime(secs) {
+function fmtTime(secs) {
   if (!isFinite(secs) || isNaN(secs)) return '0:00';
   const m = Math.floor(secs / 60);
   const s = Math.floor(secs % 60);
   return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
-function _showSeekBar() {
+function showSeekBar() {
   document.getElementById('composerSeekRow').style.display = '';
 }
 
-function _hideSeekBar() {
+function hideSeekBar() {
   document.getElementById('composerSeekRow').style.display = 'none';
 }
 
-function _updateSeek() {
-  if (!_audioPlayer) return;
-  const dur = isFinite(_audioPlayer.duration) ? _audioPlayer.duration : 0;
-  const pct = dur ? (_audioPlayer.currentTime / dur) * 100 : 0;
+function updateSeek() {
+  if (!audioPlayer) return;
+  const dur = isFinite(audioPlayer.duration) ? audioPlayer.duration : 0;
+  const pct = dur ? (audioPlayer.currentTime / dur) * 100 : 0;
   document.getElementById('composerSeekBar').value            = pct;
-  document.getElementById('composerSeekCurrent').textContent  = _fmtTime(_audioPlayer.currentTime);
-  document.getElementById('composerSeekDuration').textContent = _fmtTime(dur);
+  document.getElementById('composerSeekCurrent').textContent  = fmtTime(audioPlayer.currentTime);
+  document.getElementById('composerSeekDuration').textContent = fmtTime(dur);
 }
 
 function stopAudioPlayback() {
-  if (!_audioPlayer) return;
-  _audioPlayer.pause();
-  _audioPlayer.onloadedmetadata  = null;
-  _audioPlayer.ondurationchange  = null;
-  _audioPlayer.ontimeupdate      = null;
-  _audioPlayer.onended           = null;
-  _audioPlayer = null;
+  if (!audioPlayer) return;
+  audioPlayer.pause();
+  audioPlayer.onloadedmetadata  = null;
+  audioPlayer.ondurationchange  = null;
+  audioPlayer.ontimeupdate      = null;
+  audioPlayer.onended           = null;
+  audioPlayer = null;
   document.getElementById('composerPlayBtn').innerText = '▶';
 }
 
 // Returns all recording sections (with audio) across a composition, in order.
-function _recordingSectionsForComp(compositionId) {
+function recordingSectionsForComp(compositionId) {
   const comp = compositions.find(c => c.id === compositionId);
   if (!comp) return [];
   return comp.sections.filter(s => s.type === 'recording' && s.audio_url);
@@ -1083,64 +1093,64 @@ async function playRecording(sectionId) {
   stopAudioPlayback();
   stopPlayback(); // stop phrase playback if running
 
-  _audioPlayer = new Audio(data.signedUrl);
+  audioPlayer = new Audio(data.signedUrl);
 
-  // Show playbar in audio mode (showPlaybar resets _audioSectionId, so set it after)
+  // Show playbar in audio mode (showPlaybar resets audioSectionId, so set it after)
   const comp = compositions.find(c => c.id === compId);
   showPlaybar(comp?.title ?? 'Recording');
-  _audioSectionId = sectionId;
+  audioSectionId = sectionId;
   document.getElementById('composerPlaybarSection').textContent = section.title || '(untitled recording)';
-  _showSeekBar();
+  showSeekBar();
   document.getElementById('composerPlayBtn').innerText = '■';
 
-  _audioPlayer.ontimeupdate = _updateSeek;
+  audioPlayer.ontimeupdate = updateSeek;
 
-  _audioPlayer.onended = () => {
+  audioPlayer.onended = () => {
     document.getElementById('composerPlayBtn').innerText = '▶';
-    _audioPlayer.ontimeupdate = null;
+    audioPlayer.ontimeupdate = null;
   };
 
-  _audioPlayer.onloadedmetadata = () => {
-    if (!isFinite(_audioPlayer.duration)) {
+  audioPlayer.onloadedmetadata = () => {
+    if (!isFinite(audioPlayer.duration)) {
       // Seek past the end to force the browser to discover the real duration via range requests.
       // We do NOT call play() yet — we wait for ondurationchange to reset to 0 first.
-      _audioPlayer.currentTime = 1e10;
+      audioPlayer.currentTime = 1e10;
     } else {
-      _updateSeek();
-      _audioPlayer.play();
+      updateSeek();
+      audioPlayer.play();
     }
   };
 
-  _audioPlayer.ondurationchange = () => {
-    if (isFinite(_audioPlayer.duration)) {
-      _audioPlayer.ondurationchange = null; // only handle once
-      _audioPlayer.currentTime = 0;
-      _updateSeek();
-      _audioPlayer.play();
+  audioPlayer.ondurationchange = () => {
+    if (isFinite(audioPlayer.duration)) {
+      audioPlayer.ondurationchange = null; // only handle once
+      audioPlayer.currentTime = 0;
+      updateSeek();
+      audioPlayer.play();
     }
   };
 }
 
-function _audioNextSection() {
-  if (!_audioSectionId) return;
+function audioNextSection() {
+  if (!audioSectionId) return;
   let compId = null;
   for (const comp of compositions) {
-    if (comp.sections.find(s => s.id === _audioSectionId)) { compId = comp.id; break; }
+    if (comp.sections.find(s => s.id === audioSectionId)) { compId = comp.id; break; }
   }
-  const recs = _recordingSectionsForComp(compId);
-  const idx  = recs.findIndex(s => s.id === _audioSectionId);
+  const recs = recordingSectionsForComp(compId);
+  const idx  = recs.findIndex(s => s.id === audioSectionId);
   if (idx === -1 || idx >= recs.length - 1) return;
   playRecording(recs[idx + 1].id);
 }
 
-function _audioPrevSection() {
-  if (!_audioSectionId) return;
+function audioPrevSection() {
+  if (!audioSectionId) return;
   let compId = null;
   for (const comp of compositions) {
-    if (comp.sections.find(s => s.id === _audioSectionId)) { compId = comp.id; break; }
+    if (comp.sections.find(s => s.id === audioSectionId)) { compId = comp.id; break; }
   }
-  const recs = _recordingSectionsForComp(compId);
-  const idx  = recs.findIndex(s => s.id === _audioSectionId);
+  const recs = recordingSectionsForComp(compId);
+  const idx  = recs.findIndex(s => s.id === audioSectionId);
   if (idx <= 0) return;
   playRecording(recs[idx - 1].id);
 }
@@ -1175,7 +1185,7 @@ composerEl?.addEventListener('click', async (e) => {
       if (!el) el = e.target.querySelector('span.composition-title');
       if (el) songTitle = el.innerText;
       showPlaybar(songTitle);
-      _updatePlaybarSection();
+      updatePlaybarSection();
       break;
 
     case 'toggle-stitch':
@@ -1188,7 +1198,7 @@ composerEl?.addEventListener('click', async (e) => {
 
     case 'menu-comp': {
       const rect = btn.getBoundingClientRect();
-      _showContextMenu(rect.left, rect.bottom + 4, id);
+      showContextMenu(rect.left, rect.bottom + 4, id);
       break;
     }
 
@@ -1217,24 +1227,29 @@ composerEl?.addEventListener('click', async (e) => {
       break;
 
     case 'section-menu':
-      _showSectionMenu(btn, id, btn.dataset.type);
+      if (contextMenuTrigger === btn) {
+        removeContextMenu();
+      } else {
+        showSectionMenu(btn, id, btn.dataset.type);
+      }
       break;
 
     case 'edit-section':
-      await _editSection(id);
+      await editSection(id);
       break;
 
     case 'play-section': {
       // Exit stitch mode, load just this phrase, and play it on loop
-      const playSection = _findSection(id);
+      let playSection = null;
+      for (const c of compositions) { playSection = c.sections.find(s => s.id === id); if (playSection) break; }
       if (!playSection) break;
-      if (stitched) _doUnstitch();
+      if (stitched) doUnstitch();
       stopPlayback();
       const playState = await dbLoadPatternByName(playSection.phrase_name);
       if (playState) {
-        _isLoadingSection = true;
+        isLoadingSection = true;
         await applyPattern(playState, gridA);
-        _isLoadingSection = false;
+        isLoadingSection = false;
       }
       if (!playback) { // not cancelled
         await start(gridA);
@@ -1286,7 +1301,7 @@ composerEl?.addEventListener('click', async (e) => {
         compTitle:  trimComp.title,
         signedUrl:  trimUrlData.signedUrl,
         onClose() {
-          if (_audioSectionId) document.getElementById('composerSeekRow').style.display = '';
+          if (audioSectionId) document.getElementById('composerSeekRow').style.display = '';
         },
         onApply(newAudioUrl) {
           if (newAudioUrl) trimSection.audio_url = newAudioUrl;
@@ -1325,15 +1340,15 @@ composerEl?.addEventListener('click', async (e) => {
 
 // Playbar buttons — audio-mode aware
 document.getElementById('composerPlayBtn')?.addEventListener('click', () => {
-  if (_audioSectionId) {
-    if (_audioPlayer && !_audioPlayer.paused) {
-      _audioPlayer.pause();
+  if (audioSectionId) {
+    if (audioPlayer && !audioPlayer.paused) {
+      audioPlayer.pause();
       document.getElementById('composerPlayBtn').innerText = '▶';
-    } else if (_audioPlayer) {
-      _audioPlayer.play();
+    } else if (audioPlayer) {
+      audioPlayer.play();
       document.getElementById('composerPlayBtn').innerText = '■';
     } else {
-      playRecording(_audioSectionId); // replay from start
+      playRecording(audioSectionId); // replay from start
     }
   } else {
     togglePlaybarPlayback();
@@ -1341,18 +1356,18 @@ document.getElementById('composerPlayBtn')?.addEventListener('click', () => {
 });
 
 document.getElementById('composerNextBtn')?.addEventListener('click', () => {
-  if (_audioSectionId) _audioNextSection(); else nextSection();
+  if (audioSectionId) audioNextSection(); else nextSection();
 });
 
 document.getElementById('composerPrevBtn')?.addEventListener('click', () => {
-  if (_audioSectionId) _audioPrevSection(); else prevSection();
+  if (audioSectionId) audioPrevSection(); else prevSection();
 });
 
 // Seek bar
 document.getElementById('composerSeekBar')?.addEventListener('input', (e) => {
-  if (!_audioPlayer || !isFinite(_audioPlayer.duration) || !_audioPlayer.duration) return;
-  _audioPlayer.currentTime = (_audioPlayer.duration * e.target.value) / 100;
-  _updateSeek();
+  if (!audioPlayer || !isFinite(audioPlayer.duration) || !audioPlayer.duration) return;
+  audioPlayer.currentTime = (audioPlayer.duration * e.target.value) / 100;
+  updateSeek();
 });
 
 // Header "Composer" button
@@ -1370,7 +1385,7 @@ document.getElementById('closeComposerSidebar')?.addEventListener('click', close
 // ============================================================
 // Utilities
 // ============================================================
-function _debounce(fn, ms) {
+function debounce(fn, ms) {
   let t;
   return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
 }

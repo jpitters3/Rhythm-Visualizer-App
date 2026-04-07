@@ -475,6 +475,10 @@ body.dark .icon-btn.active {
   /* Reduced from 10px */
 }
 
+.tab-btn-row {
+  margin-top: 5px;
+}
+
 .tab-btn {
   background: var(--panel);
   border: 1px solid var(--panel-border);

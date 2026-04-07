@@ -214,6 +214,14 @@
   min-width: 0;
 }
 
+.section-info.clickable {
+  cursor: pointer;
+}
+
+.section-info.clickable:hover .section-title {
+  text-decoration: underline;
+}
+
 .section-title {
   font-size: 13px;
   white-space: nowrap;
@@ -278,6 +286,8 @@
   display: flex;
   gap: 6px;
   padding: 8px 16px 4px 20px;
+  margin-top: 10px;
+  border-top: 4px solid rgba(99, 102, 241, 0.22);
 }
 
 .add-section-btn {
