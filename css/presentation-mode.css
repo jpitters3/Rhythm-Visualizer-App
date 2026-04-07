@@ -75,6 +75,7 @@ body.present .cell .inner {
   cursor: pointer;
   font-weight: 600;
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+  z-index: 10000;
 }
 
 body.present .present-exit {
