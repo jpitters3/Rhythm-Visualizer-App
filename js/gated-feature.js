@@ -16,7 +16,8 @@ export const FEATURE = {
   CUSTOM_SCALES: new GatedFeature('custom_scales', 'Custom Handpan Scales'),
   UNLIMITED_PATTERNS: new GatedFeature('unlimited_patterns', 'Unlimited Cloud Patterns'),
   MIDI_EXPORT: new GatedFeature('midi_export', 'MIDI Export'),
-  DOWNLOAD_WAV: new GatedFeature('download_wav', 'Download Audio')
+  DOWNLOAD_WAV: new GatedFeature('download_wav', 'Download Audio'),
+  UNLIMITED_COMPOSITIONS: new GatedFeature('unlimited_compositions', 'Unlimited Compositions'),
 };
 
 export function canAccess(feature, context = {}) {
@@ -36,7 +37,8 @@ export function canAccess(feature, context = {}) {
     'custom_scales': false,
     'midi_export': false,
     'download_wav': false,
-    'unlimited_patterns': (context.count || 0) < 5
+    'unlimited_patterns': (context.count || 0) < 5,
+    'unlimited_compositions': (context.count || 0) < 1,
   };
 
   return accessMap[slug] ?? true;

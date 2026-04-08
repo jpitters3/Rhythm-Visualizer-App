@@ -18,6 +18,7 @@ import { alert, confirm, prompt } from './alert.js';
 import { closeSidebar } from './courses.js';
 import { openTrimUI, closeTrimUI } from './recording-trim.js';
 import { updateCurrentPhraseName } from './controls.js';
+import { canAccess, FEATURE } from './gated-feature.js';
 
 // ============================================================
 // State
@@ -106,6 +107,14 @@ async function fetchCompositions() {
 
 async function createComposition() {
   if (!currentUser) { await alert('Sign in to use Song Composer.'); return; }
+
+  if (!canAccess(FEATURE.UNLIMITED_COMPOSITIONS, { count: compositions.length })) {
+    Bus.emit(BUS_EVENT.SHOW_UPGRADE_MODAL, {
+      feature: FEATURE.UNLIMITED_COMPOSITIONS,
+    });
+    return;
+  }
+
   const title = await prompt('Composition title:', 'Untitled Composition');
   if (!title?.trim()) return;
 
