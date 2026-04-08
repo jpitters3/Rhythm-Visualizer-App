@@ -782,6 +782,51 @@ async function ensureStitched(compositionId, fromSectionIdx = 0) {
 // ============================================================
 // Playback — uses stitched grid; stitches first if needed
 // ============================================================
+
+// Play a single phrase section in isolation (loops). Sets up playback state so
+// the playbar stop button and forward/back controls all work.
+async function playSingleSection(comp, section) {
+  if (stitched) doUnstitch();
+  stopPlayback();
+
+  const playState = await loadSectionPattern(section);
+  if (!playState) return;
+
+  isLoadingSection = true;
+  await applyPattern(playState, gridA);
+  isLoadingSection = false;
+
+  if (playback) return; // another action started during applyPattern
+
+  const phraseSections = comp.sections.filter(s => s.type === 'phrase' && s.phrase_name);
+  const phraseIdx = phraseSections.findIndex(s => s.id === section.id);
+
+  playback = {
+    compositionId: comp.id,
+    boundaries: [{
+      start: 0,
+      end: (playState.labels?.length ?? 1) - 1,
+      sectionId: section.id,
+      color: section.color ?? null,
+      title: section.title || section.phrase_name,
+    }],
+    currentSectionIdx: 0,
+    singleSection: true,
+    phraseIdx,
+    // No loopObserver — the grid loops naturally; stop is user-initiated.
+  };
+
+  showPlaybar(comp.title);
+  document.getElementById('composerPlayBtn').innerText = '■';
+  updatePlaybarSection();
+  highlightCurrentSection();
+  applyGridSectionColors(playback.boundaries);
+
+  await start(gridA);
+  renderCompositions();
+  TransportRegistry.updateAll(gridA);
+}
+
 async function startPlayback(compositionId, fromSectionIdx = 0) {
   stopPlayback();
 
@@ -878,6 +923,17 @@ function stopPlayback() {
 function nextSection() {
   const ctx = playback || lastPlayback;
   if (!ctx?.boundaries) return;
+
+  if (playback?.singleSection) {
+    const comp = compositions.find(c => c.id === playback.compositionId);
+    if (!comp) return;
+    const phraseSections = comp.sections.filter(s => s.type === 'phrase' && s.phrase_name);
+    const next = Math.min(playback.phraseIdx + 1, phraseSections.length - 1);
+    if (next === playback.phraseIdx) return;
+    playSingleSection(comp, phraseSections[next]);
+    return;
+  }
+
   const next = Math.min(ctx.currentSectionIdx + 1, ctx.boundaries.length - 1);
   if (next === ctx.currentSectionIdx) return;
   if (playback) {
@@ -892,6 +948,17 @@ function nextSection() {
 function prevSection() {
   const ctx = playback || lastPlayback;
   if (!ctx?.boundaries) return;
+
+  if (playback?.singleSection) {
+    const comp = compositions.find(c => c.id === playback.compositionId);
+    if (!comp) return;
+    const phraseSections = comp.sections.filter(s => s.type === 'phrase' && s.phrase_name);
+    const prev = Math.max(playback.phraseIdx - 1, 0);
+    if (prev === playback.phraseIdx) return;
+    playSingleSection(comp, phraseSections[prev]);
+    return;
+  }
+
   const prev = Math.max(ctx.currentSectionIdx - 1, 0);
   if (prev === ctx.currentSectionIdx) return;
   if (playback) {
@@ -1549,23 +1616,13 @@ composerEl?.addEventListener('click', async (e) => {
       break;
 
     case 'play-section': {
-      // Exit stitch mode, load just this phrase, and play it on loop
-      let playSection = null;
-      for (const c of compositions) { playSection = c.sections.find(s => s.id === id); if (playSection) break; }
-      if (!playSection) break;
-      if (stitched) doUnstitch();
-      stopPlayback();
-      const playState = await loadSectionPattern(playSection);
-      if (playState) {
-        isLoadingSection = true;
-        await applyPattern(playState, gridA);
-        isLoadingSection = false;
+      let playComp = null, playSection = null;
+      for (const c of compositions) {
+        const found = c.sections.find(s => s.id === id);
+        if (found) { playComp = c; playSection = found; break; }
       }
-      if (!playback) { // not cancelled
-        await start(gridA);
-        TransportRegistry.updateAll(gridA);
-        renderCompositions();
-      }
+      if (!playSection || !playComp) break;
+      await playSingleSection(playComp, playSection);
       break;
     }
 
