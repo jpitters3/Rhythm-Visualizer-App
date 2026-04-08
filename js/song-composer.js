@@ -212,6 +212,153 @@ async function saveAsPhrase(id) {
   }
 }
 
+// ============================================================
+// Print
+// ============================================================
+
+const PRINT_CSS = `
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Georgia', serif; padding: 32px; background: #fff; color: #000; font-size: 13px; }
+  h1 { font-size: 20px; font-weight: bold; margin-bottom: 24px; }
+  .section { margin-bottom: 32px; }
+  .section-label { font-size: 12px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 6px; color: #333; }
+  .measure { margin-bottom: 14px; }
+  .measure-label { font-size: 11px; color: #666; margin-bottom: 3px; }
+  .beat-row { display: flex; gap: 0; }
+  .beat { display: flex; flex-direction: column; align-items: center; min-width: 32px; border-right: 1px solid #ddd; padding: 0 4px; }
+  .beat:last-child { border-right: none; }
+  .beat-label { font-size: 10px; color: #999; margin-bottom: 3px; min-height: 14px; }
+  .note { font-size: 13px; font-weight: 600; min-height: 20px; display: flex; align-items: center; justify-content: center; }
+  .note-multi { font-size: 11px; font-weight: 600; min-height: 20px; display: flex; align-items: center; justify-content: center; white-space: nowrap; }
+  .note-empty { color: #ccc; font-size: 11px; }
+  .rh { color: #610a42; }
+  .lh { color: #1a55cc; }
+  .section + .section { border-top: 1px dashed #ccc; padding-top: 24px; }
+  @media print { body { padding: 16px; } .section + .section { border-top: none; } }
+`;
+
+function _pEsc(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function _printBeatLabels(stepsPerMeasure, mode) {
+  const labels = [];
+  if (mode === '16') {
+    const beats = Math.ceil(stepsPerMeasure / 4);
+    for (let b = 1; b <= beats; b++) labels.push(String(b), 'e', '&', 'a');
+  } else {
+    const beats = Math.ceil(stepsPerMeasure / 2);
+    for (let b = 1; b <= beats; b++) labels.push(String(b), '&');
+  }
+  return labels.slice(0, stepsPerMeasure);
+}
+
+function _printEffectiveHand(index, hands, mode) {
+  const manual = Array.isArray(hands) ? (hands[index] || null) : null;
+  if (manual) return manual;
+  if (mode === '8') return index % 2 === 0 ? 'R' : 'L';
+  const pos = index % 4;
+  return (pos === 0 || pos === 2) ? 'R' : 'L';
+}
+
+function _buildPrintHTML(title, sectionData) {
+  let sectionsHTML = '';
+  sectionData.forEach(({ section, state }, si) => {
+    const mode = state.mode || '8';
+    const spm = state.steps || (mode === '16' ? 16 : 8);
+    const measureCount = Math.ceil(state.labels.length / spm);
+    const beatLbls = _printBeatLabels(spm, mode);
+
+    let measuresHTML = '';
+    for (let m = 0; m < measureCount; m++) {
+      let rowHTML = '';
+      for (let s = 0; s < spm; s++) {
+        const idx = m * spm + s;
+        const label = state.labels[idx];
+        const beatLabel = beatLbls[s] || '';
+        let noteHTML;
+
+        if (Array.isArray(label)) {
+          const hand = _printEffectiveHand(idx, state.hands, mode);
+          const cls = hand === 'R' ? 'rh' : 'lh';
+          const filled = label.filter(v => v && v !== '');
+          filled.sort((a, b) => {
+            const na = parseFloat(a), nb = parseFloat(b);
+            return (isNaN(na) ? 999 : na) - (isNaN(nb) ? 999 : nb);
+          });
+          while (filled.length < 4) filled.push(null);
+          const parts = filled.slice(0, 4).map(v =>
+            v ? `<span class="${cls}">${_pEsc(v)}</span>` : `<span class="note-empty">·</span>`
+          ).join(', ');
+          noteHTML = `<div class="note-multi">[${parts}]</div>`;
+        } else if (!label || label === '') {
+          noteHTML = `<div class="note note-empty">·</div>`;
+        } else {
+          const hand = _printEffectiveHand(idx, state.hands, mode);
+          const cls = hand === 'R' ? 'rh' : 'lh';
+          noteHTML = `<div class="note ${cls}">${_pEsc(label)}</div>`;
+        }
+
+        rowHTML += `<div class="beat"><div class="beat-label">${_pEsc(beatLabel)}</div>${noteHTML}</div>`;
+      }
+      measuresHTML += `
+        <div class="measure">
+          <div class="measure-label">Measure ${m + 1}</div>
+          <div class="beat-row">${rowHTML}</div>
+        </div>`;
+    }
+
+    sectionsHTML += `
+      <div class="section">
+        <div class="section-label">${_pEsc(section.title || section.phrase_name || `Section ${si + 1}`)}</div>
+        ${measuresHTML}
+      </div>`;
+  });
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><title>${_pEsc(title)}</title>
+<style>${PRINT_CSS}</style>
+</head>
+<body>
+<h1>${_pEsc(title)}</h1>
+${sectionsHTML}
+</body>
+</html>`;
+}
+
+async function printComposition(id) {
+  const comp = compositions.find(c => c.id === id);
+  if (!comp) return;
+
+  const phraseSections = comp.sections.filter(s => s.type === 'phrase' && s.phrase_name);
+  if (!phraseSections.length) {
+    await alert('This composition has no phrase sections to print.');
+    return;
+  }
+
+  const sectionData = [];
+  for (const section of phraseSections) {
+    try {
+      const state = await dbLoadPatternByName(section.phrase_name);
+      if (state?.labels?.length) sectionData.push({ section, state });
+    } catch (_) {}
+  }
+
+  if (!sectionData.length) {
+    await alert('Could not load any phrase patterns.');
+    return;
+  }
+
+  const html = _buildPrintHTML(comp.title, sectionData);
+  const win = window.open('', '_blank');
+  if (!win) { await alert('Please allow pop-ups for this site to print.'); return; }
+  win.document.write(html);
+  win.document.close();
+  win.focus();
+  setTimeout(() => win.print(), 400);
+}
+
 async function deleteComposition(id) {
   const comp = compositions.find(c => c.id === id);
   if (!comp) return;
@@ -1128,6 +1275,7 @@ function showContextMenu(x, y, compId) {
   const menu = document.createElement('div');
   menu.className = 'composer-context-menu';
   menu.innerHTML = `
+    <button data-action="print" data-id="${compId}">🖨 Print</button>
     <button data-action="share" data-id="${compId}">🔗 Share</button>
     <button data-action="save-as" data-id="${compId}">💾 Save As...</button>
     <button data-action="rename" data-id="${compId}">✏️ Rename</button>
@@ -1141,7 +1289,8 @@ function showContextMenu(x, y, compId) {
     const btn = e.target.closest('button');
     if (!btn) return;
     removeContextMenu();
-    if (btn.dataset.action === 'share') shareComposition(btn.dataset.id);
+    if (btn.dataset.action === 'print') printComposition(btn.dataset.id);
+    else if (btn.dataset.action === 'share') shareComposition(btn.dataset.id);
     else if (btn.dataset.action === 'save-as') saveAsPhrase(btn.dataset.id);
     else if (btn.dataset.action === 'rename') renameComposition(btn.dataset.id);
     else if (btn.dataset.action === 'delete') deleteComposition(btn.dataset.id);
