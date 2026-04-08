@@ -35,6 +35,7 @@
   display: inline-flex;
   align-items: center;
   padding: 6px 14px;
+  height: auto;
   border-radius: 8px;
   font-size: 14px;
   font-weight: 500;

@@ -70,15 +70,16 @@ export async function dbLoadPatternByName(name) {
   return data?.data || null;
 }
 
-export async function dbSavePattern(name, stateObj) {
+export async function dbSavePattern(name, stateObj, source = 'manual') {
   // Ensure we have current user
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Not authenticated');
 
   const row = {
-    user_id: user.id, // Explicitly set user_id
+    user_id: user.id,
     name,
     data: stateObj,
+    source,
     updated_at: new Date().toISOString(),
   };
 

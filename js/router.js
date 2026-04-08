@@ -3,6 +3,7 @@
  */
 import { stop } from './noteplayer.js';
 import { gridA } from './grid-context.js';
+import { Sidepanel } from './sidepanel.js';
 
 const validRoutes = ['freeplay', 'dashboard', 'compose', 'community'];
 let currentRoute = '';
@@ -23,9 +24,10 @@ function handleHashChange() {
   const prev = currentRoute;
   currentRoute = hash;
 
-  // Pause playback when leaving studio
+  // Leaving freeplay: stop playback and close all panels (clears panel nav highlights)
   if (prev === 'freeplay' && hash !== 'freeplay') {
     if (gridA.playing) stop(gridA);
+    Sidepanel.closeAll();
   }
 
   // Body class

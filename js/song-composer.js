@@ -138,6 +138,36 @@ async function renameComposition(id) {
   renderCompositions();
 }
 
+async function saveAsPhrase(id) {
+  const comp = compositions.find(c => c.id === id);
+  if (!comp) return;
+
+  const phraseSections = (comp.sections || []).filter(s => s.type === 'phrase' && s.phrase_name);
+  if (!phraseSections.length) {
+    await alert('This composition has no phrase sections to export.');
+    return;
+  }
+
+  const name = await prompt('Save stitched composition as phrase:', comp.title);
+  if (!name?.trim()) return;
+
+  const boundaries = await ensureStitched(id);
+  if (!boundaries) return;
+
+  // Build the state from the currently stitched grid
+  const state = serializePattern(gridA);
+  // Tag it so the system knows where it came from
+  state.source = 'composition';
+  state.composition_id = id;
+
+  try {
+    await dbSavePattern(name.trim(), state, 'composition');
+    await alert(`Saved as "${name.trim()}".`);
+  } catch (e) {
+    await alert('Could not save phrase. ' + e.message);
+  }
+}
+
 async function deleteComposition(id) {
   const comp = compositions.find(c => c.id === id);
   if (!comp) return;
@@ -1042,6 +1072,7 @@ function showContextMenu(x, y, compId) {
   const menu = document.createElement('div');
   menu.className = 'composer-context-menu';
   menu.innerHTML = `
+    <button data-action="save-as" data-id="${compId}">💾 Save As...</button>
     <button data-action="rename" data-id="${compId}">✏️ Rename</button>
     <button data-action="delete" data-id="${compId}" class="danger">🗑 Delete</button>`;
   menu.style.left = `${x}px`;
@@ -1053,7 +1084,8 @@ function showContextMenu(x, y, compId) {
     const btn = e.target.closest('button');
     if (!btn) return;
     removeContextMenu();
-    if (btn.dataset.action === 'rename') renameComposition(btn.dataset.id);
+    if (btn.dataset.action === 'save-as') saveAsPhrase(btn.dataset.id);
+    else if (btn.dataset.action === 'rename') renameComposition(btn.dataset.id);
     else if (btn.dataset.action === 'delete') deleteComposition(btn.dataset.id);
   });
 
