@@ -28,8 +28,8 @@ export function canAccess(feature, context = {}) {
   // TEST BYPASS: If in automated test mode
   if (document.documentElement.getAttribute('data-gp-test-mode') === 'true') return true;
 
-  const tier = currentProfile?.subscription_tier || 'free';
-  if (tier === 'pro') return true;
+  const tier = currentProfile?.subscription_tier || 'player';
+  if (tier === 'player_plus' || tier === 'pro') return true; // 'pro' retained for legacy rows
 
   const accessMap = {
     'ai_assistant': false,

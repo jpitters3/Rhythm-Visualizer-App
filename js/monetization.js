@@ -66,7 +66,7 @@ function openUpgradeModal(payload) {
     // Update title or description based on feature
     const intro = upgradeModal.querySelector('.upgrade-intro');
     if (intro && featureName) {
-        intro.innerHTML = `Get instant access to <strong>${featureName}</strong>, and everything else in the <strong>Pro Bundle</strong>, by upgrading today!`;
+        intro.innerHTML = `Get instant access to <strong>${featureName}</strong>, and everything else in <strong>Player+</strong> by upgrading today!`;
     }
 
     upgradePanel.open();
@@ -94,7 +94,7 @@ function checkUpgradeSuccess() {
 
 async function handleUpgradeClick(btn) {
     if (!currentUser) {
-        await alert("Please sign in or register to upgrade to Pro.");
+        await alert("Please sign in or register to upgrade to Player+.");
         Bus.emit(BUS_EVENT.OPEN_AUTH_MODAL);
         closeUpgradeModal();
         return;
@@ -126,7 +126,7 @@ async function handleUpgradeClick(btn) {
         await alert("Sorry, we couldn't start the checkout process. Please try again later.");
         if (btn) {
             btn.disabled = false;
-            btn.textContent = "Upgrade to Pro";
+            btn.textContent = "Upgrade to Player+";
         }
     }
 }
