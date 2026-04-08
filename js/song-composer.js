@@ -1878,12 +1878,14 @@ async function addSharedCompToMyComposer(sourceComp) {
     });
   }
 
+  let insertedSections = sectionsToInsert;
   if (sectionsToInsert.length) {
-    await supabase.from('composition_sections').insert(sectionsToInsert);
+    const { data } = await supabase.from('composition_sections').insert(sectionsToInsert).select();
+    if (data) insertedSections = data.sort((a, b) => a.position - b.position);
   }
 
   hideSharedCompBanner();
-  compositions.unshift({ ...newComp, sections: sectionsToInsert });
+  compositions.unshift({ ...newComp, sections: insertedSections });
   expandedId = newComp.id;
   renderCompositions();
   await alert(`"${title.trim()}" added to your Composer!`);
