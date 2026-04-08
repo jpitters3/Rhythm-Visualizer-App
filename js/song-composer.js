@@ -117,7 +117,7 @@ async function createComposition() {
   if (error) { await alert('Could not create composition.'); return; }
   compositions.unshift({ ...data, sections: [] });
   expandedId = data.id;
-  showPlaybar(songTitle);
+  showPlaybar(data.title);
   updatePlaybarSection();
   renderCompositions();
 }
@@ -386,6 +386,46 @@ async function onRecordingComplete() {
     if (section) { section.audio_url = path; break; }
   }
   renderCompositions();
+}
+
+// ============================================================
+// Audio upload — creates a recording section from a local file
+// ============================================================
+function uploadAudioForComp(compId) {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'audio/*';
+  input.onchange = async () => {
+    const file = input.files?.[0];
+    if (!file || !currentUser) return;
+
+    const title = file.name.replace(/\.[^/.]+$/, '');
+    const section = await addSection(compId, 'recording', { title });
+    if (!section?.id) return;
+
+    const ext = file.name.split('.').pop() || 'audio';
+    const path = `${currentUser.id}/${section.id}.${ext}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('composition-audio')
+      .upload(path, file, { upsert: true, contentType: file.type });
+
+    if (uploadError) { await alert('Failed to upload audio.'); return; }
+
+    const { error } = await supabase
+      .from('composition_sections')
+      .update({ audio_url: path })
+      .eq('id', section.id);
+
+    if (error) { await alert('Failed to save audio reference.'); return; }
+
+    for (const comp of compositions) {
+      const s = comp.sections.find(s => s.id === section.id);
+      if (s) { s.audio_url = path; break; }
+    }
+    renderCompositions();
+  };
+  input.click();
 }
 
 // ============================================================
@@ -755,6 +795,7 @@ function renderCompositionItem(comp, opts = {}) {
           <button class="add-section-btn" data-action="add-phrase" data-comp="${comp.id}">➕ Phrase</button>
           <button class="add-section-btn" data-action="add-from-grid" data-comp="${comp.id}">➕ From Grid</button>
           <button class="add-section-btn" data-action="add-recording" data-comp="${comp.id}">🎙 Record</button>
+          <button class="add-section-btn" data-action="add-upload" data-comp="${comp.id}">⬆ Upload</button>
           <button class="add-section-btn" data-action="add-note" data-comp="${comp.id}">✏️ Note</button>
         </div>
       </div>`
@@ -1220,6 +1261,10 @@ composerEl?.addEventListener('click', async (e) => {
 
     case 'add-recording':
       await addSection(comp, 'recording', { title: 'Recording' });
+      break;
+
+    case 'add-upload':
+      uploadAudioForComp(comp);
       break;
 
     case 'add-note':

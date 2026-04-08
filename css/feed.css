@@ -1,4 +1,4 @@
-/* Feed Modal */
+/* Feed Modal (legacy — no longer used as modal) */
 .feed-modal {
   width: 90%;
   max-width: 900px;
@@ -8,10 +8,8 @@
   padding: 0;
   overflow: hidden;
   background: var(--bg);
-  /* Adapts to light/dark */
   color: var(--text);
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
-  /* Strong shadow for modal pop */
 }
 
 /* --- Top Level Navigation (Header) --- */
@@ -99,25 +97,29 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
-  height: 100%;
   min-height: 0;
-  /* Important for nested flex scroll */
   background: var(--bg);
+  overflow-y: auto;
 }
 
 .feed-grid {
   flex: 1;
   padding: 24px;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  grid-template-columns: repeat(3, 1fr);
   gap: 20px;
+  align-content: start;
 }
 
-#compositionsView,
-#discussionView {
-  overflow-y: scroll;
-  min-height: 0;
+@media (max-width: 768px) {
+  .feed-grid {
+    grid-template-columns: 1fr;
+    padding: 16px;
+  }
+
+  .feed-card {
+    max-width: 85vw;
+  }
 }
 
 .delete-pattern-btn {

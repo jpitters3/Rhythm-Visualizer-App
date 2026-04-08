@@ -125,8 +125,10 @@ export function updateAccountUI() {
     const signOutBtn = document.getElementById('signOutBtn') || document.getElementById('authLogoutDropdown');
     if (signOutBtn) signOutBtn.style.display = 'block';
 
-    const authBtnLink = document.getElementById('authBtn'); // "Sign In / Register" in dropdown
-    if (authBtnLink) authBtnLink.style.display = 'none'; // Hide "Sign In" link
+    const authBtnLink = document.getElementById('authBtn');
+    if (authBtnLink) authBtnLink.style.display = 'none';
+    const navAccountWrapper = document.getElementById('navAccountWrapper');
+    if (navAccountWrapper) navAccountWrapper.style.display = '';
 
     // Default state: Hidden password update
     const upPass = document.getElementById('authUpdatePassword');
@@ -190,9 +192,9 @@ export function updateAccountUI() {
     // Let's assume hiding them when logged out is cleaner for now.
 
     const authBtnLink = document.getElementById('authBtn');
-    if (authBtnLink) {
-      authBtnLink.style.display = 'block';
-    }
+    if (authBtnLink) authBtnLink.style.display = 'block';
+    const navAccountWrapper = document.getElementById('navAccountWrapper');
+    if (navAccountWrapper) navAccountWrapper.style.display = 'none';
 
     if (authLogout) authLogout.style.display = 'none';
     // Reset auth modal to email step — the step helpers control form rows

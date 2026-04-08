@@ -1,13 +1,31 @@
 .pattern-row {
   display: flex;
-  gap: 12px;
+  gap: 8px;
   align-items: center;
-  margin-bottom: 16px;
   flex-wrap: wrap;
-  padding: 12px 14px;
+  padding: 8px 14px;
   border-radius: 16px;
   background: var(--offwhite);
   border: 1px solid var(--panel-border);
+}
+
+/* Primary controls bar — flush below header, semi-transparent strip */
+#primaryControlsWrapper.pattern-row.player {
+  border-radius: 0;
+  border-left: none;
+  border-right: none;
+  border-top: none;
+  border-bottom: 1px solid var(--panel-border);
+  background: rgba(var(--panel-rgb, 255,255,255), 0.6);
+  padding: 6px 24px;
+  gap: 6px;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+#primaryControlsWrapper.pattern-row.player::-webkit-scrollbar {
+  display: none;
 }
 
 .controls {
@@ -16,13 +34,13 @@
   gap: 20px;
   align-items: center;
   margin-bottom: 24px;
-  width: 80%;
+  width: 100%;
   margin: 0px auto 20px auto;
 }
 
 .controls-primary {
   display: flex;
-  gap: 12px;
+  gap: 8px;
   align-items: center;
   justify-content: center;
   flex-wrap: wrap;
@@ -30,16 +48,16 @@
 }
 
 button {
-  height: 50px;
-  padding: 10px 16px;
+  height: 36px;
+  padding: 6px 14px;
   border-radius: 999px;
   border: none;
   background: var(--btn-bg);
   color: var(--text);
   cursor: pointer;
   font-weight: 500;
-  position: relative;
-  z-index: 10;
+  font-size: 13px;
+  white-space: nowrap;
 }
 
 button.active {
@@ -65,11 +83,13 @@ button#presentBtn {
 }
 
 select {
-  padding: 10px 14px;
+  padding: 5px 14px;
+  height: 36px;
   border-radius: 999px;
   border: 1px solid var(--panel-border);
   background: var(--panel);
   color: var(--text);
+  font-size: 13px;
 }
 
 .bpm-control input[type=range] {
@@ -99,7 +119,7 @@ select {
   background: var(--btn-bg);
   padding: 0 12px;
   border-radius: 999px;
-  height: 50px;
+  height: 36px;
   box-sizing: border-box;
 }
 
@@ -203,7 +223,7 @@ select {
 }
 
 .scroll-indicator.active {
-  opacity: 1;
+  opacity: 0.8;
 }
 
 .scroll-indicator.left {
@@ -222,7 +242,7 @@ select {
 #clearBtn-B,
 .compose-btn,
 #stickingBtn {
-  min-width: 70px;
+  min-width: 52px;
 }
 
 @media (max-width: 768px) {
@@ -232,5 +252,28 @@ select {
 
   .bpm-control input[type=range] {
     width: 100px;
+  }
+
+  /* Primary controls bar hidden on mobile until toggled */
+  .mobile-controls-btn {
+    display: flex !important;
+  }
+
+  #primaryControlsWrapper {
+    display: none;
+  }
+
+  #primaryControlsWrapper.mobile-open {
+    display: flex;
+    background: var(--panel);
+    backdrop-filter: none;
+  }
+  #primaryControlsWrapper.pattern-row.player {
+    background: var(--panel);
+    backdrop-filter: none;
+  }
+
+  #primaryControlsWrapper.pattern-row.player button {
+    padding: 0 10px;
   }
 }

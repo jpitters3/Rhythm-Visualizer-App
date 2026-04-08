@@ -1,74 +1,59 @@
 /**
  * Simple ESM-based hash router for switching views.
  */
+import { stop } from './noteplayer.js';
+import { gridA } from './grid-context.js';
 
-// We maintain a list of valid routes here
-const validRoutes = ['freeplay', 'dashboard', 'compose'];
+const validRoutes = ['freeplay', 'dashboard', 'compose', 'community'];
 let currentRoute = '';
 
-/**
- * Initializes the router, attaching the hashchange listener.
- * Called once during app startup.
- */
 export function initRouter() {
   window.addEventListener('hashchange', handleHashChange);
-
-  // Trigger initial route based on current URL hash
   handleHashChange();
 }
 
-/**
- * The core routing logic. Hides all views and shows the one matching the hash.
- */
 function handleHashChange() {
   let hash = window.location.hash.replace('#', '');
 
-  // Default to freeplay if no hash or invalid hash
   if (!hash || !validRoutes.includes(hash)) {
     hash = 'freeplay';
-    // Update the URL without triggering another hashchange event unnecessarily
     history.replaceState(null, null, `#${hash}`);
   }
 
+  const prev = currentRoute;
   currentRoute = hash;
 
-  // Sync body class for route-specific global styling
+  // Pause playback when leaving studio
+  if (prev === 'freeplay' && hash !== 'freeplay') {
+    if (gridA.playing) stop(gridA);
+  }
+
+  // Body class
   document.body.classList.forEach(cls => {
     if (cls.startsWith('route-')) document.body.classList.remove(cls);
   });
   document.body.classList.add(`route-${hash}`);
 
-  // Find all elements with the 'route-view' class
-  const views = document.querySelectorAll('.route-view');
-
-  views.forEach(view => {
-    if (view.id === `view-${hash}`) {
-      view.style.display = 'block';
-      view.classList.add('active');
-    } else {
-      view.style.display = 'none';
-      view.classList.remove('active');
-    }
+  // Show/hide views via class only (CSS handles display)
+  document.querySelectorAll('.route-view').forEach(view => {
+    view.classList.toggle('active', view.id === `view-${hash}`);
+    view.style.display = '';
   });
 
-  // Optional: We can dispatch a custom event here if other modules need to know 
-  // that the view changed (e.g. to pause audio if they leave freeplay).
+  // Sync nav link active states
+  document.querySelectorAll('.nav-link[data-route]').forEach(link => {
+    link.classList.toggle('active', link.dataset.route === hash);
+  });
+
   window.dispatchEvent(new CustomEvent('routeChanged', { detail: { route: hash } }));
 }
 
-/**
- * Programmatically navigate to a route.
- * @param {string} routeName - the name of the route (e.g., 'dashboard')
- */
 export function navigate(routeName) {
   if (validRoutes.includes(routeName)) {
     window.location.hash = `#${routeName}`;
   }
 }
 
-/**
- * Retrieves the currently active route.
- */
 export function getCurrentRoute() {
   return currentRoute;
 }

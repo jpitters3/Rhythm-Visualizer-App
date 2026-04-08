@@ -208,13 +208,15 @@ button {
   /* Gold/Yellow from mockup */
   color: #3b3005;
   border: none;
-  padding: 14px 40px;
+  padding: 8px 20px;
   border-radius: 999px;
   font-size: 16px;
   font-weight: 600;
   box-shadow: 0 4px 15px rgba(241, 196, 15, 0.4);
   /* width: auto; removed full width to sit next to add section */
   margin-top: 0;
+  text-align: center;
+  vertical-align: center;
 }
 
 .primary-btn:hover {

@@ -1,3 +1,174 @@
+/* ===== APP HEADER / NAV ===== */
+.app-header {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 0 24px;
+  height: 64px;
+  border-bottom: 1px solid var(--panel-border);
+  position: relative;
+  flex-shrink: 0;
+}
+
+.app-logo {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.app-logo .logo-img {
+  height: 40px;
+  width: auto;
+}
+
+.app-nav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 4000;
+}
+
+.nav-link {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  text-decoration: none;
+  opacity: 0.65;
+  transition: opacity 0.15s, background 0.15s;
+  white-space: nowrap;
+}
+
+.nav-link:hover {
+  opacity: 1;
+  background: var(--btn-active, rgba(0,0,0,0.06));
+}
+
+.nav-link.active {
+  opacity: 1;
+  background: var(--btn-active, rgba(0,0,0,0.08));
+  font-weight: 600;
+}
+
+/* Always-visible header actions (hamburger + account + notif bell) */
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+/* Account button sits at the right end */
+.nav-account {
+  position: relative;
+}
+
+.nav-account-btn {
+  opacity: 1;
+  font-weight: 600;
+  background: var(--primary, #6366f1);
+  color: #fff !important;
+  border-radius: 20px;
+  padding: 6px 16px;
+  min-width: 36px;
+  text-align: center;
+}
+
+.nav-account-btn:hover {
+  background: var(--primary-dark, #4f46e5) !important;
+  opacity: 1;
+}
+
+/* Community view */
+.community-view {
+  overflow-y: auto;
+}
+
+.community-view-inner {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+  .app-header {
+    padding: 0 16px;
+    height: 56px;
+  }
+
+  .app-nav {
+    display: none;
+    position: fixed;
+    top: 64px;
+    left: 0;
+    right: 0;
+    transform: none;
+    flex-direction: column;
+    align-items: stretch;
+    background: var(--panel);
+    border-bottom: 1px solid var(--panel-border);
+    padding: 8px;
+    gap: 2px;
+    z-index: 5000;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+    max-height: calc(100vh - 64px);
+    overflow-y: auto;
+  }
+
+  .app-nav.open {
+    display: flex;
+  }
+
+  .nav-link {
+    height: 44px;
+    border-radius: 10px;
+    font-size: 15px;
+    padding: 0 16px;
+    justify-content: center;
+    text-align: center;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .nav-account {
+    margin-left: 0;
+    width: 100%;
+  }
+
+  #accountDropdownMenu {
+    position: fixed;
+    left: 0;
+    right: 0;
+    top: auto;
+    width: 100%;
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+    box-sizing: border-box;
+  }
+
+  #accountDropdownMenu button {
+    text-align: center;
+    justify-content: center;
+  }
+
+  .hamburger-btn {
+    display: flex !important;
+  }
+}
+
 /* ===== GLOBAL LAYOUT & HEADER ===== */
 body {
   transition: padding-left 0.4s cubic-bezier(0.16, 1, 0.3, 1);
@@ -12,18 +183,14 @@ body {
   opacity: 0.6;
 }
 
-div.grid-container.top-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 20px;
-  position: relative;
-  /* Context for absolute menu */
-}
-
 #accountDropdownMenu {
   max-height: 700px;
   overflow-y: scroll;
+}
+
+/* Mobile controls toggle button (hidden on desktop) */
+.mobile-controls-btn {
+  display: none;
 }
 
 /* Hamburger Button (Hidden on Desktop) */
@@ -43,152 +210,11 @@ div.grid-container.top-row {
   background: rgba(0, 0, 0, 0.05);
 }
 
-/* Menu Items Wrapper (Desktop) */
-.header-menu-items {
-  display: flex;
-  align-items: center;
-  flex: 1;
-  justify-content: flex-end;
-  gap: 20px;
-  z-index: 3000;
-}
-
-#mobileControlsWrapper {
-  display: none;
-}
-
 /* Mobile Responsive */
-@media (max-width: 900px) {
+@media (max-width: 768px) {
 
-  /* Show Hamburger earlier (tablets too) */
-  .hamburger-btn {
-    display: block;
-  }
-
-  /* Hidden on mobile: community is in account dropdown, notif is in top bar */
-  #communityBtn,
-  #notifBellWrapper,
-  #accountStatus {
-    display: none !important;
-  }
-
-  /* Adjust Logo */
-  div.logo img.logo-img {
-    height: 80px;
-    width: auto;
-    position: absolute;
-    top: -10px;
-    margin-bottom: 60px;
-  }
-
-  #mobileControlsWrapper {
-    display: flex;
-    gap: 8px;
-    justify-content: right;
-    width: 100%;
-  }
-
-  #mobileControlsBtn {
-    justify-content: center;
-    align-items: center;
-  }
-
-  /* Compact Top Row */
-  div.grid-container.top-row {
-    height: 44px;
-    padding: 0 10px;
-    gap: 0;
-    flex-shrink: 0;
-    /* Header should never shrink */
-  }
-
-  .mobile-only {
-    display: block !important;
-  }
-
-  /* Hide Menu Items by default */
-  .header-menu-items {
-    display: none;
-    position: fixed;
-    top: 44px;
-    /* Just below the header row */
-    left: 0;
-    right: 0;
-    background: var(--panel);
-    border: 1px solid var(--panel-border);
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-    border-radius: 12px;
-    padding: 20px;
-    z-index: 3000;
-    flex-direction: column;
-    align-items: stretch;
-    gap: 16px;
-    max-height: 80dvh;
-    overflow-y: auto;
-  }
-
-  /* Layout inside menu */
-  .grid-child.community {
-    display: none;
-  }
-
- .grid-child.account {
-    overflow-y: scroll;
-  }
-
-  /* Make buttons bigger on mobile menu */
-  .header-menu-items button,
-  .header-menu-items select {
-    width: 100%;
-    min-height: 44px;
-    /* Touch target */
-  }
-
-  /* Open State */
-  .header-menu-items.open {
-    justify-self: right;
-    width: 80vw;
-    top: 70px;
-    display: flex;
-    animation: slideDown 0.2s ease-out;
-    text-align: right;
-  }
-
-  /* ===== FLATTEN ACCOUNT DROPDOWN ON MOBILE ===== */
-  /* Hide the trigger button ("Account" or "J") */
-  .account-dropdown #accountBtn {
-    display: none;
-  }
-
-  .account-dropdown {
-    overflow: none;
-    width: 100%
-  }
-
-  /* Make the dropdown content always visible and static */
-  .account-dropdown .dropdown-content {
-    display: flex !important;
-    /* Override inline/JS toggles */
-    flex-direction: column;
-    position: static;
-    /* Flow naturally */
-    box-shadow: none;
-    border: none;
-    background: transparent;
-    padding: 0;
-    width: 100%;
-    gap: 4px;
-    opacity: 1;
-    pointer-events: auto;
-    transform: none;
-  }
-
-  .account-dropdown .dropdown-content .dropdown-divider {
-    flex-shrink: 0;
-  }
-
-  /* Style items to match other menu buttons */
-  .account-dropdown .dropdown-content button {
+  /* Style items to match other menu buttons — mobile nav */
+  .nav-account .dropdown-content button {
     text-align: left;
     padding: 12px;
     background: rgba(0, 0, 0, 0.03);
@@ -209,11 +235,6 @@ div.grid-container.top-row {
   }
 }
 
-div.logo img.logo-img {
-  max-width: 150px;
-  max-height: 150px;
-  padding-bottom: 20px;
-}
 
 /* Ensure buttons don't shrink too much */
 button {
@@ -248,10 +269,8 @@ div.container {
   width: 98%;
   height: 98vh;
   min-height: 600px;
-  padding: 40px 50px 0 50px;
-  /* Reduced bottom padding to align with grid */
+  padding: 0;
   max-width: 1200px;
-  /* Glassmorphism Illusion: Remove expensive real-time filter */
   background: rgba(var(--panel-rgb), 0.7);
   border: 1px solid rgba(255, 255, 255, 0.4);
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25),
@@ -260,17 +279,39 @@ div.container {
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  gap: 16px;
+  gap: 0;
   position: relative;
   transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden;
 }
 
 .route-view {
   display: none;
-  /* Hidden by default */
   flex-direction: column;
   flex: 1;
   min-height: 0;
+  overflow-y: auto;
+}
+
+.route-view.active {
+  display: flex;
+}
+
+#view-freeplay {
+  padding: 0;
+}
+
+#view-freeplay > *:not(#primaryControlsWrapper) {
+  padding-left: 32px;
+  padding-right: 32px;
+}
+
+#view-freeplay > #sharedBanner {
+  padding-top: 16px;
+}
+
+#view-freeplay > #main {
+  padding-top: 24px;
 }
 
 .route-view.active {
@@ -400,29 +441,30 @@ body.dark div.container {
     display: none;
   }
 
-  /* Force vertical layout for mobile */
-  #view-freeplay {
-    display: flex !important;
-    flex-direction: column !important;
+  /* Route-scoped mobile view layout.
+     Each active route enables its own view's layout via body.route-{name}.
+     This avoids !important overrides fighting each other when adding new routes. */
+  body.route-freeplay #view-freeplay {
+    display: flex;
+    flex-direction: column;
     overflow: hidden;
-    min-height: 0 !important;
-    flex: 1 1 0 !important;
+    min-height: 0;
+    flex: 1 1 0;
   }
 
-  #main {
-    display: flex !important;
-    flex-direction: column !important;
-    flex: 1 1 0 !important;
-    min-height: 0 !important;
-    gap: 0 !important;
-    /* Remove gap between grid and handpan panel */
+  body.route-freeplay #main {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 0;
+    min-height: 0;
+    gap: 0;
   }
 
-  .left {
-    display: flex !important;
-    flex-direction: column !important;
-    flex: 1 1 0 !important;
-    min-height: 0 !important;
+  body.route-freeplay .left {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 0;
+    min-height: 0;
   }
 
   #measures {
@@ -503,9 +545,6 @@ select#patternSelect {
 }
 
 /* ===== ROUTE-SPECIFIC GLOBAL STYLING ===== */
-body.route-dashboard .header-menu-items {
-  justify-content: flex-end;
-}
 
 /* ===== SIDEBAR DOCKING (Large Screens Only) ===== */
 @media (min-width: 1201px) {

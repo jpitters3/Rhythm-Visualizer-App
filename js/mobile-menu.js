@@ -1,59 +1,54 @@
 // Mobile UI Logic (Hamburger and Controls)
 export function initMobileMenu() {
   const mobileMenuBtn = document.getElementById('mobileMenuBtn');
-  const headerMenu = document.getElementById('headerMenu');
   const mobileControlsBtn = document.getElementById('mobileControlsBtn');
+  const appNav = document.getElementById('appNav');
   const primaryControlsWrapper = document.getElementById('primaryControlsWrapper');
 
-  if (!mobileMenuBtn || !headerMenu) return;
+  if (!mobileMenuBtn || !appNav) return;
 
-  // Toggle Main Menu
   mobileMenuBtn.addEventListener('click', (e) => {
     e.stopPropagation();
-    if (primaryControlsWrapper) primaryControlsWrapper.classList.remove('open');
-    headerMenu.classList.toggle('open');
-    const isOpen = headerMenu.classList.contains('open');
-    mobileMenuBtn.setAttribute('aria-expanded', isOpen);
+    if (primaryControlsWrapper) primaryControlsWrapper.classList.remove('mobile-open');
+    appNav.classList.toggle('open');
+    mobileMenuBtn.setAttribute('aria-expanded', appNav.classList.contains('open'));
   });
 
-  // Toggle Primary Controls Drawer
   if (mobileControlsBtn && primaryControlsWrapper) {
     mobileControlsBtn.addEventListener('click', (e) => {
       e.stopPropagation();
-      headerMenu.classList.remove('open');
+      appNav.classList.remove('open');
       mobileMenuBtn.setAttribute('aria-expanded', 'false');
-      primaryControlsWrapper.classList.toggle('open');
+      primaryControlsWrapper.classList.toggle('mobile-open');
+      mobileControlsBtn.setAttribute('aria-expanded', primaryControlsWrapper.classList.contains('mobile-open'));
     });
+
   }
 
-  // Close drawers when a button inside them is clicked
-  [headerMenu, primaryControlsWrapper].forEach(panel => {
-    if (!panel) return;
-    panel.addEventListener('click', (e) => {
-      if (e.target.tagName === 'BUTTON' || e.target.closest('button')) {
-        if (e.target.classList.contains('dropdown-toggle')) return;
-        if (e.target.id === 'projectMenuBtn') return;
-        if (e.target.id === 'adminMenuBtn') return;
-        panel.classList.remove('open');
-        if (panel === headerMenu) mobileMenuBtn.setAttribute('aria-expanded', 'false');
-      }
-    });
+  // Close nav when a nav link is clicked
+  appNav.addEventListener('click', (e) => {
+    const btn = e.target.closest('button, a');
+    if (!btn) return;
+    // Don't close for dropdown triggers
+    if (btn.id === 'accountBtn' || btn.id === 'phraseMenuBtn' || btn.id === 'adminMenuBtn') return;
+    appNav.classList.remove('open');
+    mobileMenuBtn.setAttribute('aria-expanded', 'false');
   });
 
-  // CLICK OUTSIDE to close all
+  // Use capture phase so stopPropagation in child handlers (handpan, notegrid) doesn't block us
   document.addEventListener('click', (e) => {
-    const panels = [
-      { el: headerMenu, btn: mobileMenuBtn },
-      { el: primaryControlsWrapper, btn: mobileControlsBtn }
-    ];
-
-    panels.forEach(({ el, btn }) => {
-      if (el && btn && el.classList.contains('open')) {
-        if (!el.contains(e.target) && !btn.contains(e.target)) {
-          el.classList.remove('open');
-          if (btn === mobileMenuBtn) btn.setAttribute('aria-expanded', 'false');
-        }
-      }
-    });
-  });
+    if (appNav.classList.contains('open') && !appNav.contains(e.target) && !mobileMenuBtn.contains(e.target)) {
+      appNav.classList.remove('open');
+      mobileMenuBtn.setAttribute('aria-expanded', 'false');
+    }
+    if (
+      primaryControlsWrapper &&
+      primaryControlsWrapper.classList.contains('mobile-open') &&
+      !primaryControlsWrapper.contains(e.target) &&
+      !mobileControlsBtn.contains(e.target)
+    ) {
+      primaryControlsWrapper.classList.remove('mobile-open');
+      mobileControlsBtn?.setAttribute('aria-expanded', 'false');
+    }
+  }, true);
 }

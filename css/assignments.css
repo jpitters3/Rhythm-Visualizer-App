@@ -1280,6 +1280,7 @@ body.dark .student-inbox-url-input {
   position: relative;
   display: flex;
   align-items: center;
+  z-index: 4500;
 }
 
 .notif-bell-btn {
