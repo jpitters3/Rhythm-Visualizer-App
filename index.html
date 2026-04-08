@@ -1188,6 +1188,17 @@
       <h3>🎼 Song Composer</h3>
       <button id="closeComposerSidebar" class="close-btn">&times;</button>
     </div>
+    <!-- Shared composition banner (shown when viewing via share link) -->
+    <div id="sharedCompBanner" class="shared-banner" style="display:none;">
+      <div class="shared-left">
+        <div class="shared-title">Viewing shared composition</div>
+        <div class="shared-sub" id="sharedCompBannerSub"></div>
+      </div>
+      <div class="shared-actions">
+        <button id="sharedCompAddBtn" class="active" title="Add a copy to your composer">Add to my Composer</button>
+        <button id="sharedCompExitBtn" title="Exit shared view">Exit</button>
+      </div>
+    </div>
     <div class="composer-toolbar">
       <button id="newCompositionBtn" class="primary-btn composer-new-btn">+ New Composition</button>
     </div>

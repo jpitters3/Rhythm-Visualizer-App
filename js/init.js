@@ -6,6 +6,7 @@ import { ADMIN_EMAILS, COMPOSE_KEY } from './config.js';
 import { TransportRegistry } from './transport-ui.js';
 import { stop, setMode, initNotePlayer, unlockAudio } from './noteplayer.js';
 import { loadSharedFromURL } from './share-patterns.js';
+import { loadSharedCompositionFromURL, resumePendingSharedComp } from './song-composer.js';
 import { refreshPatternSelect, updatePatternButtons, snapshotCurrentState } from './pattern-crud.js';
 import { initCourseCreator } from './course-creator.js';
 import { alert } from './alert.js';
@@ -29,6 +30,7 @@ import { initAiAssistant } from './ai-assistant.js';
 import { initCalibration } from './calibration.js';
 import { initFeed } from './feed.js';
 import { initCourseMarketplace } from './course-marketplace.js';
+import { Bus, BUS_EVENT } from './bus.js';
 import { initCoachingMode } from './coaching-mode.js';
 import { initGames } from './games.js';
 import { initAdmin } from './admin.js';
@@ -284,6 +286,10 @@ function safeInit() {
 
     (async () => {
       await loadSharedFromURL();
+      await loadSharedCompositionFromURL();
+
+      // After login, open any composition the user was trying to view before auth
+      Bus.on(BUS_EVENT.PROFILE_LOADED, resumePendingSharedComp);
       // refreshPatternSelect imported from pattern-crud.js
       await refreshPatternSelect();
 

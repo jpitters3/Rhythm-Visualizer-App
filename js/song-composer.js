@@ -19,6 +19,7 @@ import { closeSidebar } from './courses.js';
 import { openTrimUI, closeTrimUI } from './recording-trim.js';
 import { updateCurrentPhraseName } from './controls.js';
 import { canAccess, FEATURE } from './gated-feature.js';
+import { Bus, BUS_EVENT } from './bus.js';
 
 // ============================================================
 // State
@@ -130,6 +131,39 @@ async function createComposition() {
   showPlaybar(data.title);
   updatePlaybarSection();
   renderCompositions();
+}
+
+function genCompShareToken(len = 12) {
+  const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  const bytes = new Uint8Array(len);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes, b => chars[b % chars.length]).join('');
+}
+
+async function shareComposition(id) {
+  const comp = compositions.find(c => c.id === id);
+  if (!comp) return;
+
+  // Generate token if not already set
+  let token = comp.share_token;
+  if (!token) {
+    token = genCompShareToken();
+    const { error } = await supabase
+      .from('compositions')
+      .update({ share_token: token })
+      .eq('id', id);
+    if (error) { await alert('Could not generate share link.'); return; }
+    comp.share_token = token;
+  }
+
+  const url = `${location.origin}${location.pathname}?comp=${encodeURIComponent(token)}`;
+
+  try {
+    await navigator.clipboard.writeText(url);
+    await alert('Share link copied to clipboard!');
+  } catch {
+    await prompt('Copy this link:', url);
+  }
 }
 
 async function renameComposition(id) {
@@ -882,8 +916,8 @@ function renderSectionItem(s, _index = 0, phraseIndex = 0) {
 
   const swatchColor = s.color || PALETTE[phraseIndex % PALETTE.length];
   const isPlayingSection = playback?.boundaries?.[playback?.currentSectionIdx]?.sectionId === s.id;
-  const playingStyle = isPlayingSection
-    ? `background:${hexToRgba(swatchColor, 0.3)};--section-playing-color:${swatchColor};`
+  const playingStyle = s.type === 'phrase'
+    ? `background:${hexToRgba(swatchColor, isPlayingSection ? 0.45 : 0.25)};--section-playing-color:${swatchColor};`
     : '';
   const colorSwatch = s.type === 'phrase'
     ? `<button class="section-color-swatch" data-action="pick-color" data-id="${s.id}"
@@ -1094,6 +1128,7 @@ function showContextMenu(x, y, compId) {
   const menu = document.createElement('div');
   menu.className = 'composer-context-menu';
   menu.innerHTML = `
+    <button data-action="share" data-id="${compId}">🔗 Share</button>
     <button data-action="save-as" data-id="${compId}">💾 Save As...</button>
     <button data-action="rename" data-id="${compId}">✏️ Rename</button>
     <button data-action="delete" data-id="${compId}" class="danger">🗑 Delete</button>`;
@@ -1106,7 +1141,8 @@ function showContextMenu(x, y, compId) {
     const btn = e.target.closest('button');
     if (!btn) return;
     removeContextMenu();
-    if (btn.dataset.action === 'save-as') saveAsPhrase(btn.dataset.id);
+    if (btn.dataset.action === 'share') shareComposition(btn.dataset.id);
+    else if (btn.dataset.action === 'save-as') saveAsPhrase(btn.dataset.id);
     else if (btn.dataset.action === 'rename') renameComposition(btn.dataset.id);
     else if (btn.dataset.action === 'delete') deleteComposition(btn.dataset.id);
   });
@@ -1461,6 +1497,164 @@ document.getElementById('composerNextBtn')?.addEventListener('click', () => {
 document.getElementById('composerPrevBtn')?.addEventListener('click', () => {
   if (audioSectionId) audioPrevSection(); else prevSection();
 });
+
+// ============================================================
+// Shared Composition Link Handling
+// ============================================================
+
+const SHARED_COMP_KEY = 'pendingSharedComp';
+
+let sharedCompToken = null;
+
+function clearSharedCompURL() {
+  const url = new URL(location.href);
+  url.searchParams.delete('comp');
+  history.replaceState({}, '', url.toString());
+}
+
+function updateSharedCompBanner(comp, creatorName) {
+  const banner = document.getElementById('sharedCompBanner');
+  const sub = document.getElementById('sharedCompBannerSub');
+  if (!banner) return;
+  const by = creatorName && creatorName !== 'Unknown' ? ` by ${creatorName}` : '';
+  sub.textContent = `"${comp.title}"${by} — you can view and add this to your Composer.`;
+  banner.style.display = 'flex';
+}
+
+function hideSharedCompBanner() {
+  const banner = document.getElementById('sharedCompBanner');
+  if (banner) banner.style.display = 'none';
+  sharedCompToken = null;
+}
+
+export async function loadSharedCompositionFromURL() {
+  const sp = new URLSearchParams(location.search);
+  const token = sp.get('comp');
+  if (!token) return false;
+
+  sharedCompToken = token;
+
+  // Not logged in — store token and prompt auth
+  if (!currentUser) {
+    sessionStorage.setItem(SHARED_COMP_KEY, token);
+    clearSharedCompURL();
+    Bus.emit(BUS_EVENT.OPEN_AUTH_MODAL);
+    return false;
+  }
+
+  return _openSharedComposition(token);
+}
+
+async function _openSharedComposition(token) {
+  const { data, error } = await supabase
+    .from('compositions')
+    .select('id, title, user_id, share_token, composition_sections(*)')
+    .eq('share_token', token)
+    .maybeSingle();
+
+  if (error || !data) {
+    await alert('That share link is invalid or the composition is no longer shared.');
+    clearSharedCompURL();
+    return false;
+  }
+
+  // Build comp object and inject into panel
+  const comp = {
+    ...data,
+    sections: (data.composition_sections || []).sort((a, b) => a.position - b.position),
+  };
+
+  // Get creator name
+  let creatorName = 'Unknown';
+  const { getProfileById } = await import('./profile.js');
+  if (data.user_id) {
+    const profile = await getProfileById(data.user_id);
+    if (profile?.username) creatorName = profile.username;
+  }
+
+  // Open composer and display the shared comp (read-only — not in user's compositions array)
+  openComposer();
+  const list = document.getElementById('compositionList');
+  if (list) {
+    list.innerHTML = '';
+    // Temporarily render just this shared comp
+    const placeholder = document.createElement('div');
+    placeholder.className = 'shared-comp-preview';
+    placeholder.innerHTML = renderSharedCompPreview(comp);
+    list.appendChild(placeholder);
+  }
+
+  updateSharedCompBanner(comp, creatorName);
+  clearSharedCompURL();
+
+  // Wire Add + Exit buttons
+  document.getElementById('sharedCompAddBtn')?.addEventListener('click', () => addSharedCompToMyComposer(comp), { once: true });
+  document.getElementById('sharedCompExitBtn')?.addEventListener('click', () => {
+    hideSharedCompBanner();
+    fetchCompositions(); // restore user's own compositions
+  }, { once: true });
+
+  return true;
+}
+
+function renderSharedCompPreview(comp) {
+  const sections = comp.sections || [];
+  const rows = sections.map(s => {
+    const icon = s.type === 'phrase' ? '🎵' : s.type === 'recording' ? '🎙' : '✏️';
+    return `<div class="section-row">${icon} ${esc(s.title || s.phrase_name || 'Untitled')}</div>`;
+  }).join('');
+  return `
+    <div class="composition-header" style="cursor:default;">
+      <span class="comp-title">${esc(comp.title)}</span>
+    </div>
+    <div class="section-list">${rows || '<div class="empty-state">No sections</div>'}</div>`;
+}
+
+async function addSharedCompToMyComposer(sourceComp) {
+  if (!currentUser) { await alert('Sign in to add this composition.'); return; }
+
+  const title = await prompt('Save composition as:', sourceComp.title);
+  if (!title?.trim()) return;
+
+  // Create new composition
+  const { data: newComp, error } = await supabase
+    .from('compositions')
+    .insert({ user_id: currentUser.id, title: title.trim() })
+    .select('id, title, created_at')
+    .single();
+
+  if (error) { await alert('Could not add composition.'); return; }
+
+  // Copy sections
+  const sectionsToInsert = (sourceComp.sections || []).map((s, i) => ({
+    composition_id: newComp.id,
+    position: i,
+    type: s.type,
+    title: s.title,
+    phrase_name: s.phrase_name,
+    note_text: s.note_text,
+    color: s.color,
+    // audio_url intentionally omitted — recordings are user-specific storage paths
+  }));
+
+  if (sectionsToInsert.length) {
+    await supabase.from('composition_sections').insert(sectionsToInsert);
+  }
+
+  hideSharedCompBanner();
+  compositions.unshift({ ...newComp, sections: sectionsToInsert });
+  expandedId = newComp.id;
+  renderCompositions();
+  await alert(`"${title.trim()}" added to your Composer!`);
+}
+
+// After login, check if there's a pending shared composition to open
+export async function resumePendingSharedComp() {
+  const token = sessionStorage.getItem(SHARED_COMP_KEY);
+  if (!token) return;
+  sessionStorage.removeItem(SHARED_COMP_KEY);
+  await _openSharedComposition(token);
+}
 
 // Seek bar
 document.getElementById('composerSeekBar')?.addEventListener('input', (e) => {
