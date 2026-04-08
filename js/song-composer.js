@@ -1123,7 +1123,7 @@ function renderCompositionItem(comp, opts = {}) {
         <span class="composition-title">${esc(comp.title)}</span>
         <button class="composition-stitch-btn${isStitched ? ' active' : ''}"
           data-action="toggle-stitch" data-id="${comp.id}" title="${isStitched ? 'Exit compose view' : 'Show song in grid'}">
-          🎨
+          ≡
         </button>
         <button class="composition-play-btn${isPlaying ? ' active' : ''}"
           data-action="play-comp" data-id="${comp.id}" title="${playTitle}">
