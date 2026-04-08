@@ -221,9 +221,20 @@ export function renderAllMeasures(ctx = activeGrid) {
   const measuresEl = ctx.container;
   if (!measuresEl) return;
 
-  const s = ctx.stepsPerMeasure; // Used to be getStepCountPerMeasure(ctx)
-  const totalSteps = Array.isArray(ctx.innerLabels) ? ctx.innerLabels.length : 0;
-  const measureCount = Math.max(1, Math.ceil(totalSteps / s));
+  const s = ctx.stepsPerMeasure;
+  const rawSteps = Array.isArray(ctx.innerLabels) ? ctx.innerLabels.length : 0;
+  const measureCount = Math.max(1, Math.ceil(rawSteps / s));
+  // Ensure innerLabels is aligned to a whole number of measures.
+  // If stepsPerMeasure changed (e.g. time sig / mode change), the array may be
+  // a non-multiple of s, which causes cursor wrap and duplicate-paste bugs.
+  const targetLength = measureCount * s;
+  if (Array.isArray(ctx.innerLabels) && ctx.innerLabels.length < targetLength) {
+    ctx.innerLabels.push(...Array(targetLength - ctx.innerLabels.length).fill(''));
+  }
+  if (Array.isArray(ctx.innerHands) && ctx.innerHands.length < targetLength) {
+    ctx.innerHands.push(...Array(targetLength - ctx.innerHands.length).fill(null));
+  }
+  const totalSteps = targetLength;
 
   measuresEl.innerHTML = '<div class="measures-scroller"></div>';
   const scroller = measuresEl.firstChild;
