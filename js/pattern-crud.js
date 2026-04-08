@@ -1,5 +1,5 @@
 // SAVE / LOAD PATTERNS WITH SUPABASE
-import { alert } from './alert.js';
+import { alert, confirm } from './alert.js';
 import { supabase } from './supabase-client.js';
 import { isAuthed } from './auth.js';
 import { gridA, gridB } from './grid-context.js';
@@ -71,9 +71,21 @@ export async function dbLoadPatternByName(name) {
 }
 
 export async function dbSavePattern(name, stateObj, source = 'manual') {
-  // Ensure we have current user
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Not authenticated');
+
+  // Check for existing pattern with the same name and warn before overwriting
+  const { data: existing } = await supabase
+    .from('patterns')
+    .select('name')
+    .eq('user_id', user.id)
+    .eq('name', name)
+    .maybeSingle();
+
+  if (existing) {
+    const ok = await confirm(`A phrase named "${name}" already exists. Overwrite it?`);
+    if (!ok) return false;
+  }
 
   const row = {
     user_id: user.id,
@@ -83,13 +95,13 @@ export async function dbSavePattern(name, stateObj, source = 'manual') {
     updated_at: new Date().toISOString(),
   };
 
-  // unique(user_id, name) => upsert to overwrite
   const { error } = await supabase
     .from('patterns')
     .upsert(row, { onConflict: 'user_id,name' });
 
   if (error) throw error;
   lastSavedState = JSON.stringify(stateObj);
+  return true;
 }
 
 function withTimeout(promise, ms = 3000, label = 'timeout') {

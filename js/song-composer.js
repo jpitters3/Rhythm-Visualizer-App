@@ -10,6 +10,7 @@ import {
   dbLoadPatternByName, dbSavePattern, applyPattern, serializePattern,
   dbListPatternNames, hasUnsavedChanges,
 } from './pattern-crud.js';
+import { getRange } from './range-selection.js';
 import { addTickObserver, removeTickObserver, start, stop } from './noteplayer.js';
 import { TransportRegistry } from './transport-ui.js';
 import { gridA } from './grid-context.js';
@@ -282,8 +283,15 @@ async function showPhrasePicker(compositionId) {
 // Add phrase from grid
 // ============================================================
 async function addPhraseFromGrid(compositionId) {
-  // Check if grid has content
-  const labels = gridA.innerLabels || [];
+  const allLabels = gridA.innerLabels || [];
+
+  // Determine the slice to save — use selection if present, otherwise full grid
+  const range = getRange(gridA);
+  const labels = range ? allLabels.slice(range.start, range.end + 1) : allLabels;
+  const hands  = range
+    ? (gridA.innerHands || []).slice(range.start, range.end + 1)
+    : (gridA.innerHands || []);
+
   const isEmpty = labels.every(l =>
     !l || l === '' || (Array.isArray(l) && l.every(s => !s || s === ''))
   );
@@ -293,18 +301,23 @@ async function addPhraseFromGrid(compositionId) {
     return;
   }
 
-  const name = await prompt('Name this phrase:', 'New Phrase');
+  const rangeLabel = range ? ` (beats ${range.start + 1} – ${range.end + 1})` : '';
+  const name = await prompt(`Name this new phrase${rangeLabel}:`, 'New Phrase');
   if (!name?.trim()) return;
 
+  const trimmed = name.trim();
+
   try {
-    const state = serializePattern(gridA);
-    await dbSavePattern(name.trim(), state);
+    const base = serializePattern(gridA);
+    const state = { ...base, labels, hands, measures: Math.ceil(labels.length / base.steps) };
+    const saved = await dbSavePattern(trimmed, state);
+    if (!saved) return; // user cancelled overwrite
   } catch (e) {
     await alert('Could not save phrase. Make sure you are signed in.');
     return;
   }
 
-  await addSection(compositionId, 'phrase', { title: name.trim(), phrase_name: name.trim() });
+  await addSection(compositionId, 'phrase', { title: trimmed, phrase_name: trimmed });
 }
 
 // ============================================================
