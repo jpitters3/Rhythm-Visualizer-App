@@ -92,7 +92,7 @@ async function fetchCompositions() {
 
   const { data, error } = await supabase
     .from('compositions')
-    .select('id, title, created_at, composition_sections(id, position, type, title, phrase_name, audio_url, note_text, color)')
+    .select('id, title, created_at, composition_sections(id, position, type, title, phrase_name, audio_url, note_text, color, pattern_snapshot)')
     .eq('user_id', currentUser.id)
     .order('created_at', { ascending: false });
 
@@ -104,6 +104,22 @@ async function fetchCompositions() {
   }));
 
   renderCompositions();
+  prefetchMissingSnapshots();
+}
+
+// Silently pre-load pattern data for any phrase section that doesn't yet have
+// a snapshot, so play-section is instant when the user clicks it.
+async function prefetchMissingSnapshots() {
+  for (const comp of compositions) {
+    for (const section of comp.sections) {
+      if (section.type !== 'phrase' || !section.phrase_name) continue;
+      if (section.pattern_snapshot?.labels?.length) continue;
+      try {
+        const state = await dbLoadPatternByName(section.phrase_name);
+        if (state?.labels?.length) section.pattern_snapshot = state;
+      } catch (_) {}
+    }
+  }
 }
 
 async function createComposition() {
@@ -339,10 +355,8 @@ async function printComposition(id) {
 
   const sectionData = [];
   for (const section of phraseSections) {
-    try {
-      const state = await dbLoadPatternByName(section.phrase_name);
-      if (state?.labels?.length) sectionData.push({ section, state });
-    } catch (_) {}
+    const state = await loadSectionPattern(section);
+    if (state?.labels?.length) sectionData.push({ section, state });
   }
 
   if (!sectionData.length) {
@@ -408,14 +422,15 @@ async function copySection(sectionId) {
   const { data, error } = await supabase
     .from('composition_sections')
     .insert({
-      composition_id: comp.id,
-      position:    insertAt,
-      type:        src.type,
-      title:       src.title       ?? null,
-      phrase_name: src.phrase_name ?? null,
-      audio_url:   src.audio_url   ?? null,
-      note_text:   src.note_text   ?? null,
-      color:       src.color       ?? null,
+      composition_id:   comp.id,
+      position:         insertAt,
+      type:             src.type,
+      title:            src.title            ?? null,
+      phrase_name:      src.phrase_name      ?? null,
+      audio_url:        src.audio_url        ?? null,
+      note_text:        src.note_text        ?? null,
+      color:            src.color            ?? null,
+      pattern_snapshot: src.pattern_snapshot ?? null,
     })
     .select()
     .single();
@@ -507,7 +522,7 @@ async function addPhraseFromGrid(compositionId) {
     return;
   }
 
-  await addSection(compositionId, 'phrase', { title: trimmed, phrase_name: trimmed });
+  await addSection(compositionId, 'phrase', { title: trimmed, phrase_name: trimmed, pattern_snapshot: state });
 }
 
 // ============================================================
@@ -727,7 +742,7 @@ async function ensureStitched(compositionId, fromSectionIdx = 0) {
     let offset = 0;
     for (const section of fromSections) {
       let state;
-      try { state = await dbLoadPatternByName(section.phrase_name); } catch (_) {}
+      state = await loadSectionPattern(section);
       if (!state?.labels?.length) continue;
       if (!offset) { baseMode = state.mode || '16'; baseBpm = state.bpm ?? null; }
       boundaries.push({
@@ -1216,6 +1231,15 @@ function onDragEnd() {
 let contextMenu = null;
 let contextMenuTrigger = null;
 
+// Prefer the stored snapshot; fall back to a live name lookup for older sections.
+async function loadSectionPattern(section) {
+  if (section.pattern_snapshot?.labels?.length) return section.pattern_snapshot;
+  if (section.phrase_name) {
+    try { return await dbLoadPatternByName(section.phrase_name); } catch (_) {}
+  }
+  return null;
+}
+
 async function editSection(sectionId) {
   let section = null;
   for (const c of compositions) {
@@ -1227,7 +1251,7 @@ async function editSection(sectionId) {
     if (!await confirm('You have unsaved changes. Discard them?')) return;
   }
   if (stitched) doUnstitch();
-  const state = await dbLoadPatternByName(section.phrase_name);
+  const state = await loadSectionPattern(section);
   if (state) {
     isLoadingSection = true;
     await applyPattern(state, gridA);
@@ -1492,7 +1516,9 @@ composerEl?.addEventListener('click', async (e) => {
 
     case 'pick-phrase': {
       const name = btn.dataset.name;
-      await addSection(comp, 'phrase', { title: name, phrase_name: name });
+      let snapshot = null;
+      try { snapshot = await dbLoadPatternByName(name); } catch (_) {}
+      await addSection(comp, 'phrase', { title: name, phrase_name: name, pattern_snapshot: snapshot });
       expandedId = comp;
       renderCompositions();
       break;
@@ -1529,7 +1555,7 @@ composerEl?.addEventListener('click', async (e) => {
       if (!playSection) break;
       if (stitched) doUnstitch();
       stopPlayback();
-      const playState = await dbLoadPatternByName(playSection.phrase_name);
+      const playState = await loadSectionPattern(playSection);
       if (playState) {
         isLoadingSection = true;
         await applyPattern(playState, gridA);
@@ -1774,17 +1800,26 @@ async function addSharedCompToMyComposer(sourceComp) {
 
   if (error) { await alert('Could not add composition.'); return; }
 
-  // Copy sections
-  const sectionsToInsert = (sourceComp.sections || []).map((s, i) => ({
-    composition_id: newComp.id,
-    position: i,
-    type: s.type,
-    title: s.title,
-    phrase_name: s.phrase_name,
-    note_text: s.note_text,
-    color: s.color,
-    // audio_url intentionally omitted — recordings are user-specific storage paths
-  }));
+  // Copy sections — for phrase sections without a snapshot, fetch pattern data now
+  // while we still have read access via the source composition's RLS context.
+  const sectionsToInsert = [];
+  for (const [i, s] of (sourceComp.sections || []).entries()) {
+    let snapshot = s.pattern_snapshot ?? null;
+    if (!snapshot && s.type === 'phrase' && s.phrase_name) {
+      try { snapshot = await dbLoadPatternByName(s.phrase_name); } catch (_) {}
+    }
+    sectionsToInsert.push({
+      composition_id:   newComp.id,
+      position:         i,
+      type:             s.type,
+      title:            s.title,
+      phrase_name:      s.phrase_name,
+      note_text:        s.note_text,
+      color:            s.color,
+      pattern_snapshot: snapshot,
+      // audio_url intentionally omitted — recordings are user-specific storage paths
+    });
+  }
 
   if (sectionsToInsert.length) {
     await supabase.from('composition_sections').insert(sectionsToInsert);
