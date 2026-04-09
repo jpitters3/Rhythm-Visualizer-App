@@ -1122,7 +1122,7 @@ function renderCompositionItem(comp, opts = {}) {
         <span class="composition-chevron">▶</span>
         <span class="composition-title">${esc(comp.title)}</span>
         <button class="composition-stitch-btn${isStitched ? ' active' : ''}"
-          data-action="toggle-stitch" data-id="${comp.id}" title="${isStitched ? 'Exit compose view' : 'Show song in grid'}">
+          data-action="toggle-stitch" data-id="${comp.id}" title="${isStitched ? 'Exit compose view' : 'Show composition in studio'}">
           ≡
         </button>
         <button class="composition-play-btn${isPlaying ? ' active' : ''}"

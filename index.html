@@ -730,8 +730,11 @@
   <!-- Getting Started Modal -->
   <div id="welcomeModal" class="modal-overlay dark-bg" aria-hidden="true">
     <div class="modal welcome-modal">
-      <button class="welcome-mute-btn" id="welcomeMuteBtn" aria-label="Mute preview">🔊</button>
-      <button class="welcome-close-btn" id="welcomeCloseBtn" aria-label="Close">&times;</button>
+      <div class="welcome-modal-actions">
+        <button class="welcome-auth-btn" id="welcomeAuthBtn" aria-label="Sign in or out"></button>
+        <button class="welcome-mute-btn" id="welcomeMuteBtn" aria-label="Mute preview">🔊</button>
+        <button class="welcome-close-btn" id="welcomeCloseBtn" aria-label="Close">&times;</button>
+      </div>
 
       <!-- Authenticated: Dashboard -->
       <div id="welcomeDashboard" class="welcome-dashboard" style="display:none;">
@@ -763,6 +766,11 @@
               <div class="welcome-section-items" id="dashRecentPractice"></div>
             </div>
           </div>
+        </div>
+        <div class="welcome-dashboard-footer">
+          <label class="welcome-nowelcome-label">
+            <input type="checkbox" id="welcomeNoShowCheck"> Don't show Dashboard when app loads
+          </label>
         </div>
       </div>
 

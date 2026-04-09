@@ -5,6 +5,7 @@ import { playNoteByLabel, intervalMs, resolveHand } from './noteplayer.js';
 import { dbLoadPatternByName } from './pattern-crud.js';
 import { fetchCourses, openSidebar, setActiveCourse } from './courses.js';
 import { updateDashboardMute } from './profile.js';
+import { openAuthModal } from './auth.js';
 
 // Note positions — matches HANDPAN_MAP_BRONZE in handpanmap.js (calibrated for handpan-for-groovepan.png)
 const PREVIEW_HP_MAP = {
@@ -33,12 +34,12 @@ let previewMuted = false;
 // ── Public API ────────────────────────────────────────────────────────────────
 
 export function initDashboard() {   
+  if (localStorage.getItem('noWelcome') === '1') return;
   openWelcomeDashboard();
 }
 
 export function openWelcomeDashboard() {
   if (new URLSearchParams(window.location.search).has('noWelcome')) return;
-  if (localStorage.getItem('noWelcome') === '1') return;
   const welcomeModal = document.getElementById('welcomeModal');
   if (!welcomeModal) return;
   welcomeModal.classList.add('open');
@@ -47,6 +48,7 @@ export function openWelcomeDashboard() {
     welcomeModalInitialized = true;
     initWelcomeModal(welcomeModal);
   }
+  updateAuthBtn(welcomeModal);
   // Show correct section based on auth state
   const dashboard   = welcomeModal.querySelector('#welcomeDashboard');
   const videoPreview = welcomeModal.querySelector('#welcomeVideoPreview');
@@ -165,6 +167,12 @@ function buildWelcomeHandpan(modal, override = {}) {
   }, ms);
 }
 
+function updateAuthBtn(modal) {
+  const btn = modal.querySelector('#welcomeAuthBtn');
+  if (!btn) return;
+  btn.textContent = currentUser ? 'Sign Out' : 'Sign In';
+}
+
 function initWelcomeModal(modal) {
   modal.querySelector('#welcomeCloseBtn')?.addEventListener('click', closeWelcomeModal);
 
@@ -175,6 +183,27 @@ function initWelcomeModal(modal) {
     muteBtn.textContent = previewMuted ? '🔇' : '🔊';
     updateDashboardMute(previewMuted);
   });
+
+  // Sign in / Sign out
+  const authBtn = modal.querySelector('#welcomeAuthBtn');
+  updateAuthBtn(modal);
+  authBtn?.addEventListener('click', async () => {
+    if (currentUser) {
+      await supabase.auth.signOut();
+    } else {
+      closeWelcomeModal();
+      openAuthModal();
+    }
+  });
+
+  // Don't show on load
+  const noShowCheck = modal.querySelector('#welcomeNoShowCheck');
+  if (noShowCheck) {
+    noShowCheck.checked = localStorage.getItem('noWelcome') === '1';
+    noShowCheck.addEventListener('change', () => {
+      localStorage.setItem('noWelcome', noShowCheck.checked ? '1' : '0');
+    });
+  }
 
   modal.addEventListener('click', (e) => {
     if (e.target === modal) closeWelcomeModal();
