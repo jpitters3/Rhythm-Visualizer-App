@@ -5,11 +5,13 @@ body.composeOn .hp-dot { cursor: pointer; }
 body.composeOn {
   overflow-y: auto !important;
   height: auto !important;
-  min-height: 100vh;
+  min-height: 100dvh;
+  min-height: var(--app-height, 100dvh);
 }
 
 body.composeOn div.container {
   overflow-y: auto !important;
   height: auto !important;
-  min-height: 100vh;
+  min-height: 100dvh;
+  min-height: var(--app-height, 100dvh);
 }

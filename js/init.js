@@ -252,6 +252,14 @@ async function showFatalError(err) {
   };
 }
 
+// ── Viewport height fix ────────────────────────────────────────────────────────
+// dvh tracks the actual visible height (shrinks when browser chrome is visible).
+// --app-height is a fallback for browsers that don't support dvh.
+const setAppHeight = () =>
+  document.documentElement.style.setProperty('--app-height', `${window.innerHeight}px`);
+window.addEventListener('resize', setAppHeight);
+setAppHeight();
+
 // Global error handlers
 window.addEventListener('error', (e) => {
   if (document.getElementById('__fatal_panel__')) return;

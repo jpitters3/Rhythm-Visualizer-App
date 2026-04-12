@@ -10,7 +10,8 @@ body {
   background: var(--bg);
   /* background-blend-mode: overlay; -> REMOVED: massive GPU bottleneck on macOS */
   color: var(--text);
-  min-height: 100vh;
+  min-height: 100dvh;
+  min-height: var(--app-height, 100dvh);
   /* Ensure body fills screen */
   position: relative;
 }

@@ -1,6 +1,7 @@
 /* ===== PRESENTATION MODE ===== */
 body.present {
-  height: 100vh;
+  height: 100dvh;
+  height: var(--app-height, 100dvh);
   margin: 0;
   overflow: hidden;
   /* Prevent body scroll */
@@ -116,7 +117,8 @@ body.present #measures {
 body.present .measure-row {
   position: absolute;
   left: 50%;
-  top: 100vh;
+  top: 100dvh;
+  top: var(--app-height, 100dvh);
   /* Start below screen */
   transform: translateX(-50%) scale(0.8);
   opacity: 0;
@@ -459,7 +461,8 @@ body.present div.present-controls {
   top: 0;
   left: 0;
   width: 100vw;
-  height: 100vh;
+  height: 100dvh;
+  height: var(--app-height, 100dvh);
   overflow: hidden;
   background: var(--bg);
   display: none;

@@ -124,7 +124,8 @@
     gap: 2px;
     z-index: 5000;
     box-shadow: 0 8px 24px rgba(0,0,0,0.15);
-    max-height: calc(100vh - 64px);
+    max-height: calc(100dvh - 64px);
+    max-height: calc(var(--app-height, 100dvh) - 64px);
     overflow-y: auto;
   }
 
