@@ -32,6 +32,7 @@
   <link rel="stylesheet" href="css/camera-crop.css">
   <link rel="stylesheet" href="css/course-marketplace.css">
   <link rel="stylesheet" href="./css/calibration.css">
+  <link rel="stylesheet" href="./css/guided-calibration.css">
   <link rel="stylesheet" href="./css/coaching-mode.css">
   <link rel="stylesheet" href="./css/error.css">
   <link rel="stylesheet" href="./css/pattern-of-the-week.css">
@@ -1790,6 +1791,21 @@
   </div>
 
   <!-- HANDPAN CALIBRATION OVERLAY -->
+  <!-- Guided Calibration Wizard -->
+  <div id="guidedCalOverlay" class="guided-cal-overlay" style="display:none;" aria-hidden="true">
+    <div class="guided-cal-body">
+      <div class="guided-cal-image-wrap" id="guidedCalImageWrap">
+        <img id="guidedCalImage" alt="Your handpan" draggable="false">
+        <div class="guided-cal-dots-layer" id="guidedCalDotsLayer"></div>
+      </div>
+      <div class="guided-cal-panel">
+        <div class="guided-cal-status" id="guidedCalStatus"></div>
+        <div class="guided-cal-pitch-display" id="guidedCalPitchDisplay"></div>
+        <div class="guided-cal-actions" id="guidedCalActions"></div>
+      </div>
+    </div>
+  </div>
+
   <div id="calibrationOverlay" class="cal-overlay" style="display: none;">
     <div class="cal-header">
       <div class="cal-title-group">

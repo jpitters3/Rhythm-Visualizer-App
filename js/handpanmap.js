@@ -7,6 +7,7 @@ import { SCALES, SCALE_KEY_LOCAL, BASE_PATH } from './config.js';
 import { currentUser, getScale, getSelectedScaleName, setSelectedScaleName, setCurrentScale } from './state.js';
 import { supabase } from './supabase-client.js';
 import { enterCalibrationMode } from './calibration.js';
+import { startGuidedCalibration } from './guided-calibration.js';
 import { activeGrid } from './grid-context.js';
 import { Bus, BUS_EVENT } from './bus.js';
 import { setBeatToGhost, renderAllMeasures, updateGridLabels } from './notegrid.js';
@@ -986,18 +987,22 @@ function attachCreationListeners() {
     const topImageFile = document.getElementById('hpTopImage').files[0];
     const bottomImageFile = document.getElementById('hpBottomImage').files[0];
 
-    // Validation: 
+    // Read file buffers immediately — before any awaits — because some browsers
+    // invalidate File objects after the event loop yields (especially on mobile).
+    const topFileBuffer    = topImageFile    ? await topImageFile.arrayBuffer()    : null;
+    const bottomFileBuffer = bottomImageFile ? await bottomImageFile.arrayBuffer() : null;
+
+    // Validation:
     // If creating new (no ID), need Top Image.
     // If editing (has ID), Top Image is optional (keep existing).
     if (!builder || !scaleName) {
       await alert('Please fill in Builder and Scale Name.');
       return;
     }
-    if (!editingHandpanId && !topImageFile && !capturedTopBlob) {
+    if (!editingHandpanId && !topFileBuffer && !capturedTopBlob) {
       await alert('Please select a Top Image for a new handpan.');
       return;
     }
-
 
     if (!currentUser) {
       await alert('You must be signed in.');
@@ -1011,30 +1016,42 @@ function attachCreationListeners() {
       let topUrl = null;
       let bottomUrl = null;
 
-      // 1. Upload Top Image (prioritize camera capture)
-      if (capturedTopBlob || topImageFile) {
-        const fileToUpload = capturedTopBlob || topImageFile;
-        const isCamera = !!capturedTopBlob;
-        const fileExt = isCamera ? 'png' : fileToUpload.name.split('.').pop();
-        const fileName = `${currentUser.id}_${Date.now()}_top.${fileExt}`;
-
-        const { data: uploadData, error: uploadError } = await supabase.storage.from('handpan-images').upload(fileName, fileToUpload);
+      // Run a file through background removal then upload to storage.
+      // Camera blobs already had background removed at capture time — skip for those.
+      // Accepts a pre-read ArrayBuffer (for file inputs) or a Blob (for camera captures).
+      async function processAndUpload(bufferOrBlob, isCamera, suffix) {
+        let blobToUpload;
+        if (isCamera) {
+          blobToUpload = bufferOrBlob;
+        } else {
+          // Must send as ArrayBuffer — SDK serializes Blob/File as JSON otherwise.
+          const { data: result, error: fnError } = await supabase.functions.invoke('remove-background', {
+            body: bufferOrBlob,
+            headers: { 'Content-Type': 'application/octet-stream' },
+          });
+          if (fnError) throw new Error(fnError.message || 'Background removal failed');
+          if (result?.error) throw new Error(result.error);
+          if (!result?.image) throw new Error('Unexpected response from background removal service');
+          const res = await fetch(result.image);
+          blobToUpload = await res.blob();
+        }
+        const fileName = `${currentUser.id}_${Date.now()}_${suffix}.png`;
+        const { error: uploadError } = await supabase.storage.from('handpan-images').upload(fileName, blobToUpload);
         if (uploadError) throw uploadError;
         const { data: { publicUrl } } = supabase.storage.from('handpan-images').getPublicUrl(fileName);
-        topUrl = publicUrl;
+        return publicUrl;
+      }
+
+      // 1. Upload Top Image (prioritize camera capture)
+      if (capturedTopBlob || topFileBuffer) {
+        saveNewHandpanBtn.textContent = 'Removing background...';
+        topUrl = await processAndUpload(capturedTopBlob || topFileBuffer, !!capturedTopBlob, 'top');
       }
 
       // 2. Upload Bottom Image (prioritize camera capture)
-      if (capturedBottomBlob || bottomImageFile) {
-        const fileToUpload = capturedBottomBlob || bottomImageFile;
-        const isCamera = !!capturedBottomBlob;
-        const bExt = isCamera ? 'png' : fileToUpload.name.split('.').pop();
-        const bName = `${currentUser.id}_${Date.now()}_bottom.${bExt}`;
-
-        const { data: bData, error: bError } = await supabase.storage.from('handpan-images').upload(bName, fileToUpload);
-        if (bError) throw bError;
-        const { data: { publicUrl: bPubUrl } } = supabase.storage.from('handpan-images').getPublicUrl(bName);
-        bottomUrl = bPubUrl;
+      if (capturedBottomBlob || bottomFileBuffer) {
+        saveNewHandpanBtn.textContent = 'Removing background...';
+        bottomUrl = await processAndUpload(capturedBottomBlob || bottomFileBuffer, !!capturedBottomBlob, 'bottom');
       }
 
 
@@ -1086,14 +1103,10 @@ function attachCreationListeners() {
 
         if (insertError) throw insertError;
 
-        await alert('Saved! Entering calibration mode...');
-        if (enterCalibrationMode) {
-          enterCalibrationMode(insertData);
-          // Hide modal completely for calibration
-          closeMyScalesModal();
-        } else {
-          location.reload();
-        }
+        closeMyScalesModal();
+        startGuidedCalibration(insertData, (updatedData) => {
+          enterCalibrationMode(updatedData);
+        });
       }
 
     } catch (err) {
@@ -1697,28 +1710,14 @@ function initCameraUI() {
 
       const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.85));
 
-      const { data: resultBlob, error: fnError } = await supabase.functions.invoke('remove-background', {
-        body: blob,
+      const { data: result, error: fnError } = await supabase.functions.invoke('remove-background', {
+        body: await blob.arrayBuffer(),
+        headers: { 'Content-Type': 'application/octet-stream' },
       });
-
       if (fnError) throw new Error(fnError.message || 'Server AI failed');
-
-      // Handle both Blob, ArrayBuffer, and Base64 (JSON) responses
-      let blobToUse = resultBlob;
-      let dataUrlToUse = null;
-
-      if (blobToUse && typeof blobToUse === 'object' && blobToUse.image) {
-        // It's a base64 data URL from our new Edge Function logic
-        dataUrlToUse = blobToUse.image;
-      } else if (blobToUse instanceof ArrayBuffer) {
-        blobToUse = new Blob([blobToUse], { type: 'image/png' });
-      } else if (!(blobToUse instanceof Blob)) {
-        if (blobToUse && typeof blobToUse === 'object' && blobToUse.error) {
-          throw new Error(blobToUse.error);
-        }
-        console.error('Unexpected response format:', blobToUse);
-        throw new Error('Server returned invalid data format. Please check Cloudinary logs.');
-      }
+      if (result?.error) throw new Error(result.error);
+      if (!result?.image) throw new Error('Server returned invalid data format.');
+      const dataUrlToUse = result.image;
 
       if (statusEl) statusEl.textContent = 'Finishing...';
       if (progressEl) progressEl.style.width = '90%';
@@ -1730,7 +1729,7 @@ function initCameraUI() {
       const fCtx = finalCanvas.getContext('2d');
 
       const resultImg = new Image();
-      resultImg.src = dataUrlToUse || URL.createObjectURL(blobToUse);
+      resultImg.src = dataUrlToUse;
       await new Promise(r => resultImg.onload = r);
 
 
