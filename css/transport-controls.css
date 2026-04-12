@@ -4,13 +4,13 @@
 
 /* --- Glassmorphic container base --- */
 .transport-container {
-  background: rgba(var(--panel-rgb), 0.65);
+  background: rgba(var(--panel-rgb), 0.72);
   display: flex;
-  padding: 12px 20px;
+  padding: 10px 18px;
   margin-bottom: 20px;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.15);
   position: relative;
   z-index: 10;
   justify-content: center;
@@ -22,8 +22,8 @@
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   z-index: -1;
   transform: translateZ(0);
   will-change: transform;
@@ -58,13 +58,13 @@
 @media (max-width: 768px) {
   body {
     padding-bottom: 0 !important;
-    /* No bottom padding needed on mobile with flex layout */
   }
 
   .transport-container {
-    padding: 8px 12px;
+    padding: 8px 14px;
     margin-bottom: 0;
     max-width: 95vw;
+    border-radius: 16px;
   }
 
   .controls-transport {
@@ -76,11 +76,6 @@
     pointer-events: all;
     order: 11;
     flex-shrink: 0;
-    /* position: fixed !important; */
-    /* bottom: 0 !important; */
-    /* left: 0; */
-    /* right: 0; */
-    /* margin-bottom: 0 !important; */
     background: var(--body-bg);
     padding-bottom: env(safe-area-inset-bottom, 10px);
     z-index: 1000;
@@ -116,11 +111,25 @@ body.present #presentationControls {
 
 /* --- Metronome Sound States --- */
 .t-metro-btn.metro-beeps {
-  background-color: #ffd166 !important;
-  color: #000 !important;
+  background: rgba(251, 146, 60, 0.18) !important;
+  color: #fb923c !important;
+  border-color: rgba(251, 146, 60, 0.5) !important;
 }
 
 .t-metro-btn.metro-shaker {
-  background-color: #6366f1 !important;
-  color: #fff !important;
+  background: rgba(99, 102, 241, 0.18) !important;
+  color: #818cf8 !important;
+  border-color: rgba(99, 102, 241, 0.4) !important;
+}
+
+body:not(.dark) .t-metro-btn.metro-beeps {
+  background: rgba(234, 88, 12, 0.10) !important;
+  color: #c2410c !important;
+  border-color: rgba(234, 88, 12, 0.40) !important;
+}
+
+body:not(.dark) .t-metro-btn.metro-shaker {
+  background: rgba(99, 102, 241, 0.1) !important;
+  color: #4f46e5 !important;
+  border-color: rgba(99, 102, 241, 0.3) !important;
 }

@@ -59,13 +59,6 @@
   </script>
   <template id="transport-template">
     <div class="transport-group">
-      <button class="t-play-btn" title="Play/Stop">►</button>
-      <div class="bpm-control">
-        <label>BPM
-          <input class="t-bpm-input" type="range" min="40" max="220" value="120" />
-        </label>
-        <span class="t-bpm-val">120</span>
-      </div>
       <button class="t-metro-btn" title="Metronome">
         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
           stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -80,6 +73,13 @@
         <option value="Click">Click</option>
         <option value="Shaker">Shaker</option>
       </select>
+      <div class="bpm-control">
+        <span class="t-bpm-label">BPM</span>
+        <input class="t-bpm-input" type="range" min="40" max="220" value="120" />
+        <input class="t-bpm-num" type="number" min="40" max="220" value="120" />
+      </div>
+      <button class="t-tap-btn" title="Tap Tempo">Tap</button>
+      <button class="t-play-btn" title="Play/Stop">►</button>
       <button class="t-mute-btn" style="display:none;" title="Toggle Mute">🔊</button>
     </div>
   </template>

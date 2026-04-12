@@ -94,6 +94,7 @@ select {
 
 .bpm-control input[type=range] {
   width: 140px;
+  accent-color: var(--accent-glow, #6366f1);
 }
 
 /* Dropdown Container */
@@ -163,37 +164,144 @@ select {
   display: flex;
   flex-direction: row;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
   justify-content: center;
 }
 
+/* --- Transport buttons: match composer playbar aesthetic --- */
+.transport-group .t-play-btn,
+.transport-group .t-metro-btn {
+  background: none;
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  padding: 6px 14px;
+  height: 36px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text);
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+
+.transport-group .t-play-btn:hover,
+.transport-group .t-metro-btn:hover {
+  border-color: var(--accent-glow, #818cf8);
+  color: var(--accent-glow, #818cf8);
+}
+
+.transport-group .t-play-btn.active {
+  background: rgba(99, 102, 241, 0.12);
+  border-color: var(--accent-glow, #818cf8);
+  color: var(--accent-glow, #818cf8);
+}
+
+/* Light mode overrides */
+body:not(.dark) .transport-group .t-play-btn,
+body:not(.dark) .transport-group .t-metro-btn {
+  border-color: rgba(99, 102, 241, 0.25);
+  color: #4f46e5;
+}
+
+body:not(.dark) .transport-group .t-play-btn:hover,
+body:not(.dark) .transport-group .t-metro-btn:hover {
+  border-color: #6366f1;
+  color: #fff;
+  background: #6366f1;
+}
+
+body:not(.dark) .transport-group .t-play-btn.active {
+  background: rgba(99, 102, 241, 0.12);
+  border-color: #6366f1;
+  color: #4f46e5;
+}
+
+/* --- BPM control: refined card style --- */
 .bpm-control {
   display: flex;
   flex-direction: row;
   align-items: center;
   gap: 8px;
-  background: var(--panel);
+  background: none;
   padding: 4px 12px;
-  border-radius: 999px;
+  border-radius: 8px;
   border: 1px solid var(--panel-border);
-  height: 50px;
+  height: 36px;
   box-sizing: border-box;
 }
 
-.bpm-control label {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text);
+body:not(.dark) .bpm-control {
+  border-color: rgba(99, 102, 241, 0.25);
 }
 
-.t-bpm-val {
-  min-width: 30px;
-  text-align: center;
-  font-weight: 700;
+.bpm-control label,
+.t-bpm-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text);
+  opacity: 0.55;
+  white-space: nowrap;
 }
+
+/* BPM number input — replaces the display span */
+.t-bpm-num {
+  width: 46px;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 700;
+  text-align: center;
+  padding: 0;
+  height: auto;
+  border-radius: 0;
+  /* hide spinner arrows */
+  -moz-appearance: textfield;
+}
+.t-bpm-num::-webkit-inner-spin-button,
+.t-bpm-num::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.t-bpm-num:focus {
+  outline: none;
+  color: var(--accent-glow, #818cf8);
+}
+
+/* Tap button */
+.transport-group .t-tap-btn {
+  background: none;
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  padding: 6px 14px;
+  height: 36px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+
+.transport-group .t-tap-btn:hover {
+  border-color: var(--accent-glow, #818cf8);
+  color: var(--accent-glow, #818cf8);
+}
+
+.transport-group .t-tap-btn.tapping {
+  background: rgba(99, 102, 241, 0.18);
+  border-color: var(--accent-glow, #818cf8);
+  color: var(--accent-glow, #818cf8);
+}
+
+body:not(.dark) .transport-group .t-tap-btn {
+  border-color: rgba(99, 102, 241, 0.25);
+  color: #4f46e5;
+}
+
+body:not(.dark) .transport-group .t-tap-btn:hover,
+body:not(.dark) .transport-group .t-tap-btn.tapping {
+  border-color: #6366f1;
+  color: #fff;
+  background: #6366f1;
+}
+
 
 /* ===== Scollable Controls Wrapper ===== */
 .scrollable-controls-wrapper {
