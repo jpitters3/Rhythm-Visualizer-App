@@ -25,17 +25,17 @@ const REVERSE_NOTE_MAP_FLAT = [
  */
 function parseNote(noteStr) {
   if (!noteStr) return null;
-  const match = noteStr.match(/^([A-G][#bB]?)(-?\d+)$/i); // Allow negative octaves just in case
+  // Accept #, b/B (flat), or s (sharp shorthand e.g. "Cs4", "Fs4")
+  const match = noteStr.match(/^([A-G][#bBs]?)(-?\d+)$/i);
   if (!match) return null;
 
   let noteName = match[1].toUpperCase();
   const octave = parseInt(match[2], 10);
 
-  // Normalize flats to sharps for internal calc if needed, or just map
-  if (noteName.length > 1 && noteName[1] === 'B') noteName = noteName[0] + 'b';
-  // My map uses 'BB' style or 'EB' style, let's fix map keys or fix input.
-  // Let's use standard Upper Case. 'Ab' -> 'AB'. 'Eb' -> 'EB'
-  noteName = noteName.replace('b', 'B');
+  // Normalize 's' (sharp shorthand) → '#'
+  if (noteName.endsWith('S')) noteName = noteName[0] + '#';
+  // Normalize flat 'B' suffix → keep as 'B' for NOTE_MAP lookup (e.g. 'AB', 'BB')
+  // Note: single-letter note 'B' does NOT end with a modifier, so this is safe.
 
   const semitone = NOTE_MAP[noteName];
   if (semitone === undefined) return null;
