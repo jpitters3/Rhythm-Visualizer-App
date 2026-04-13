@@ -187,12 +187,31 @@ function fmtDate(iso) {
 
 // ===== LIST VIEW =====
 
+async function loadAllSessions() {
+  const { data, error } = await supabase
+    .from('student_sessions')
+    .select('id, student_id, count, completed')
+    .eq('teacher_id', currentUser.id)
+    .order('created_at', { ascending: true });
+  if (error) throw error;
+  // Group by student_id
+  const map = new Map();
+  for (const row of (data || [])) {
+    if (!map.has(row.student_id)) map.set(row.student_id, []);
+    map.get(row.student_id).push(row);
+  }
+  return map;
+}
+
 async function loadAndRenderList() {
   const body = sidebarEl.querySelector('#studentMgmtBody');
   body.innerHTML = '<div class="stmgmt-loading">Loading students…</div>';
   try {
-    students = await loadStudents();
-    renderList();
+    [students] = await Promise.all([loadStudents()]);
+    // Load sessions in parallel — fail silently so list still renders
+    let sessionsByStudent = new Map();
+    try { sessionsByStudent = await loadAllSessions(); } catch {}
+    renderList(sessionsByStudent);
   } catch (err) {
     body.innerHTML = `
       <div class="stmgmt-error">Failed to load students: ${escapeHtml(err.message)}</div>
@@ -210,7 +229,22 @@ const SORT_LABELS = {
   assignment_updated: 'Assignment',
 };
 
-function renderList() {
+function sessionsMiniHtml(groups) {
+  if (!groups || groups.length === 0) return '';
+  const rowsHtml = groups.map(group => {
+    const completedCount = group.completed.filter(Boolean).length;
+    const total = group.completed.length;
+    const allDone = completedCount === total;
+    const circles = group.completed.map(done =>
+      `<span class="stmgmt-session-circle stmgmt-session-circle--sm ${done ? 'stmgmt-session-circle--done' : ''}">${done ? '✓' : ''}</span>`
+    ).join('');
+    const badge = allDone ? `<span class="stmgmt-student-session-complete">${total}/${total}</span>` : '';
+    return `<div class="stmgmt-student-session-row">${circles}${badge}</div>`;
+  }).join('');
+  return `<div class="stmgmt-student-sessions">${rowsHtml}</div>`;
+}
+
+function renderList(sessionsByStudent = new Map()) {
   const body = sidebarEl.querySelector('#studentMgmtBody');
   const sorted = sortedStudents(students);
 
@@ -232,6 +266,7 @@ function renderList() {
               <span class="stmgmt-dot">·</span>
               <span>Assignment ${fmtDate(s.lastAssignmentUpdate)}</span>
             </div>
+            ${sessionsMiniHtml(sessionsByStudent.get(s.user_id))}
           </div>
           <div class="stmgmt-chevron">›</div>
         </div>
@@ -340,6 +375,117 @@ async function sendInvite(email) {
   }
 }
 
+// ===== SESSION TRACKING =====
+
+async function fetchSessionGroups(studentId) {
+  const { data, error } = await supabase
+    .from('student_sessions')
+    .select('id, count, completed')
+    .eq('teacher_id', currentUser.id)
+    .eq('student_id', studentId)
+    .order('created_at', { ascending: true });
+  if (error) throw error;
+  return data || [];
+}
+
+async function renderSessions(studentId) {
+  const el = document.getElementById('stmgmtSessionsSection');
+  if (!el) return;
+
+  let groups = [];
+  try {
+    groups = await fetchSessionGroups(studentId);
+  } catch (err) {
+    el.innerHTML = `<div class="stmgmt-error" style="padding:10px 16px;font-size:12px">Failed to load sessions: ${escapeHtml(err.message)}</div>`;
+    return;
+  }
+
+  const groupsHtml = groups.map((group) => {
+    const completedCount = group.completed.filter(Boolean).length;
+    const total = group.completed.length;
+    const allDone = completedCount === total;
+    return `
+    <div class="stmgmt-session-group">
+      ${group.completed.map((done, ci) => `
+        <button class="stmgmt-session-circle ${done ? 'stmgmt-session-circle--done' : ''}"
+                data-id="${group.id}" data-circle="${ci}"
+                title="${done ? 'Mark incomplete' : 'Mark complete'}">
+          ${done ? '✓' : ''}
+        </button>
+      `).join('')}
+      ${allDone ? `<span class="stmgmt-sessions-complete">${total}/${total} sessions complete</span>` : ''}
+    </div>
+  `;
+  }).join('');
+
+  el.innerHTML = `
+    <div class="stmgmt-sessions-section">
+      <div class="stmgmt-sessions-header">
+        <span class="stmgmt-sessions-label">Sessions</span>
+      </div>
+      ${groupsHtml}
+      <div class="stmgmt-session-add">
+        <select class="stmgmt-session-count-select" id="stmgmtSessionCount">
+          ${Array.from({length: 12}, (_, i) => `<option value="${i+1}">${i+1} session${i+1 !== 1 ? 's' : ''}</option>`).join('')}
+        </select>
+        <button class="stmgmt-session-add-btn" id="stmgmtSessionAddBtn">+ Add group</button>
+      </div>
+    </div>
+  `;
+
+  // Circle click handlers
+  el.querySelectorAll('.stmgmt-session-circle').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const rowId = btn.dataset.id;
+      const ci = parseInt(btn.dataset.circle, 10);
+      const group = groups.find(g => g.id === rowId);
+      if (!group) return;
+
+      const updated = [...group.completed];
+      updated[ci] = !updated[ci];
+
+      btn.disabled = true;
+      const { error } = await supabase
+        .from('student_sessions')
+        .update({ completed: updated })
+        .eq('id', rowId);
+
+      if (error) {
+        console.error('[Sessions] Failed to update:', error.message);
+        btn.disabled = false;
+        return;
+      }
+      // Update local cache so re-render is instant
+      group.completed = updated;
+      btn.disabled = false;
+      renderSessions(studentId);
+    });
+  });
+
+  // Add group handler
+  document.getElementById('stmgmtSessionAddBtn')?.addEventListener('click', async () => {
+    const addBtn = document.getElementById('stmgmtSessionAddBtn');
+    const count = parseInt(document.getElementById('stmgmtSessionCount').value, 10);
+    addBtn.disabled = true;
+
+    const { error } = await supabase
+      .from('student_sessions')
+      .insert({
+        teacher_id: currentUser.id,
+        student_id: studentId,
+        count,
+        completed: Array(count).fill(false),
+      });
+
+    addBtn.disabled = false;
+    if (error) {
+      console.error('[Sessions] Failed to add group:', error.message);
+      return;
+    }
+    renderSessions(studentId);
+  });
+}
+
 // ===== DETAIL VIEW =====
 
 async function openDetail(studentId) {
@@ -354,13 +500,15 @@ async function openDetail(studentId) {
         <button class="stmgmt-remove-btn" id="stmgmtRemoveBtn">Remove student</button>
       </div>
     </div>
+    <div id="stmgmtSessionsSection"></div>
     <div id="stmgmtDetailContent" class="stmgmt-detail-content">
       <div class="stmgmt-loading">Loading lesson progress…</div>
     </div>
   `;
 
-  document.getElementById('stmgmtBackBtn')?.addEventListener('click', renderList);
+  document.getElementById('stmgmtBackBtn')?.addEventListener('click', () => loadAndRenderList());
   document.getElementById('stmgmtRemoveBtn')?.addEventListener('click', () => removeStudent(studentId, buildName(student)));
+  renderSessions(studentId);
   await loadAndRenderDetail(studentId);
 }
 

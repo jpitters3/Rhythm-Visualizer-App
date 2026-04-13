@@ -414,6 +414,166 @@ body.dark .stmgmt-remove-btn--confirm {
   flex-shrink: 0;
 }
 
+/* ===== SESSIONS ===== */
+
+.stmgmt-sessions-section {
+  padding: 14px 16px 12px;
+  border-bottom: 1px solid var(--panel-border, rgba(0,0,0,0.08));
+}
+
+.stmgmt-sessions-header {
+  margin-bottom: 10px;
+}
+
+.stmgmt-sessions-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted, #aaa);
+}
+
+.stmgmt-session-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.stmgmt-session-circle {
+  width: 32px;
+  height: 32px;
+  min-width: 0;
+  aspect-ratio: 1 / 1;
+  box-sizing: border-box;
+  flex-shrink: 0;
+  border-radius: 50%;
+  border: 2px solid var(--panel-border, rgba(0,0,0,0.2));
+  background: transparent;
+  color: transparent;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
+  padding: 0;
+}
+
+.stmgmt-session-circle--sm {
+  width: 16px;
+  height: 16px;
+  font-size: 9px;
+  border-width: 1.5px;
+  cursor: default;
+}
+
+.stmgmt-session-circle:hover {
+  border-color: #22c55e;
+  background: rgba(34, 197, 94, 0.1);
+}
+
+.stmgmt-session-circle--done {
+  background: #22c55e;
+  border-color: #22c55e;
+  color: #fff;
+}
+
+.stmgmt-session-circle--done:hover {
+  background: #16a34a;
+  border-color: #16a34a;
+}
+
+body.dark .stmgmt-session-circle {
+  border-color: rgba(255,255,255,0.2);
+}
+
+body.dark .stmgmt-session-circle:hover {
+  border-color: #22c55e;
+  background: rgba(34,197,94,0.12);
+}
+
+.stmgmt-student-sessions {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 5px;
+}
+
+.stmgmt-student-session-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.stmgmt-student-session-complete {
+  font-size: 10px;
+  font-weight: 600;
+  color: #22c55e;
+  margin-left: 2px;
+}
+
+.stmgmt-sessions-complete {
+  align-self: center;
+  font-size: 11px;
+  font-weight: 600;
+  color: #22c55e;
+  margin-left: 4px;
+}
+
+.stmgmt-session-add {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.stmgmt-session-count-select {
+  padding: 5px 8px;
+  border-radius: 7px;
+  border: 1px solid var(--panel-border, rgba(0,0,0,0.14));
+  background: var(--input-bg, #fff);
+  color: var(--text);
+  font-size: 13px;
+  cursor: pointer;
+  outline: none;
+}
+
+body.dark .stmgmt-session-count-select {
+  background: rgba(255,255,255,0.06);
+  border-color: rgba(255,255,255,0.12);
+}
+
+.stmgmt-session-add-btn {
+  padding: 5px 12px;
+  border-radius: 7px;
+  border: 1px solid var(--panel-border, rgba(0,0,0,0.14));
+  background: transparent;
+  color: var(--accent, #6c63ff);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  white-space: nowrap;
+}
+
+.stmgmt-session-add-btn:hover {
+  background: rgba(108,99,255,0.08);
+  border-color: var(--accent, #6c63ff);
+}
+
+body.dark .stmgmt-session-add-btn {
+  color: var(--accent-glow, #a78bfa);
+}
+
+body.dark .stmgmt-session-add-btn:hover {
+  background: rgba(167,139,250,0.1);
+  border-color: var(--accent-glow, #a78bfa);
+}
+
 /* ===== MOBILE ===== */
 
 @media (max-width: 600px) {
