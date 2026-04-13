@@ -1,40 +1,47 @@
 /**
  * Core Rhythm Logic & State
- * 
- * extracted to resolve circular dependencies.
- * This file must be loaded BEFORE grid-context.js or noteplayer.js
+ *
+ * Extracted to resolve circular dependencies.
+ * This file must be loaded BEFORE grid-context.js or noteplayer.js.
+ *
+ * Model: beats (per measure) × subdivision (steps per beat) = stepsPerMeasure
+ * BPM always refers to beats per minute — what the user taps, what the metronome clicks.
  */
 
-// Global State
-let timeSignature = localStorage.getItem('defaultTimeSignature') || '4/4';
-export let STEPS = 32; // Default, will be recalculated
+// Global defaults (used before any grid is instantiated)
+let beats = Number(localStorage.getItem('defaultBeats')) || 4;
+let subdivision = Number(localStorage.getItem('defaultSubdivision')) || 2;
 
-export function calculateSteps(ts, currentMode) {
+export let STEPS = beats * subdivision; // e.g. 4 × 2 = 8
+
+export function getBeats() { return beats; }
+export function getSubdivision() { return subdivision; }
+
+export function setBeatsState(b) {
+  beats = Math.max(1, Math.round(b));
+  localStorage.setItem('defaultBeats', beats);
+  STEPS = beats * subdivision;
+}
+
+export function setSubdivisionState(s) {
+  subdivision = Math.max(1, Math.round(s));
+  localStorage.setItem('defaultSubdivision', subdivision);
+  STEPS = beats * subdivision;
+}
+
+// ---------------------------------------------------------------------------
+// Migration helper — converts old { mode, timeSignature } → { beats, subdivision }
+// ---------------------------------------------------------------------------
+export function migratePatternState(state) {
+  if (!state) return;
+  if (state.subdivision !== undefined) return; // already new format
+
+  const base = state.mode === '16' ? 16 : 8;
+  const ts = state.timeSignature || '4/4';
   const parts = ts.split('/');
-  const num = parseInt(parts[0]);
-  const den = parseInt(parts[1]);
+  const num = parseInt(parts[0]) || 4;
+  const den = parseInt(parts[1]) || 4;
 
-  const base = (currentMode === '16') ? 16 : 8;
-  const mult = base / den;
-  return num * mult;
+  state.beats = num;
+  state.subdivision = Math.max(1, Math.round(base / den));
 }
-
-export function getTimeSignature() {
-  return timeSignature;
-}
-
-export function setTimeSignatureState(ts) {
-  if (!ts) return;
-  if (!ts.includes('/')) return;
-
-  timeSignature = ts;
-  localStorage.setItem('defaultTimeSignature', ts);
-}
-
-// Initialize global STEPS (assuming default mode '8')
-STEPS = calculateSteps(timeSignature, '8');
-
-// Define 'mode' getter for backward compatibility (init.js uses it)
-// But 'mode' depends on activeGrid which is in grid-context.js / state.js
-// We can't easily access activeGrid here without circular dependency if we import it.
-// Instead, let's update init.js to use activeGrid.mode.

@@ -2,7 +2,7 @@
  * GridContext manages the state for an independent rhythm grid.
  * This allows multiple grids to coexist without global variable collisions.
  */
-import { calculateSteps, getTimeSignature } from './rhythm-core.js';
+import { getBeats, getSubdivision } from './rhythm-core.js';
 import { setGridA, setGridB, setActiveGrid } from './state.js';
 
 export class GridContext {
@@ -10,17 +10,20 @@ export class GridContext {
     this.id = id;
     this.containerId = containerId;
 
+    // Rhythm model: beats per measure × subdivision (steps per beat)
+    this.beats = getBeats();           // e.g. 4
+    this.subdivision = getSubdivision(); // e.g. 2 → 8th notes
+
     // State
-    this.innerLabels = Array(8).fill(''); // Start with one measure
-    this.innerHands = Array(8).fill(null);
+    this.innerLabels = Array(this.stepsPerMeasure).fill('');
+    this.innerHands = Array(this.stepsPerMeasure).fill(null);
     this.step = 0;
     this.playing = false;
     this.bpm = 90;
     this.metronomeOn = false;
     this.isMuted = false;
-    this.mode = '8'; // Default mode matching index.html
     this.transcriptionIndex = 0;
-    this.tags = []; // For categorization (e.g. #simon, #lesson)
+    this.tags = [];
 
     // Playback timers
     this.timers = [];
@@ -37,7 +40,7 @@ export class GridContext {
   }
 
   get stepsPerMeasure() {
-    return calculateSteps(getTimeSignature(), this.mode);
+    return this.beats * this.subdivision;
   }
 
   get measures() {
@@ -68,7 +71,8 @@ export class GridContext {
     this.bpm = otherGrid.bpm;
     this.metronomeOn = otherGrid.metronomeOn;
     this.isMuted = otherGrid.isMuted;
-    this.mode = otherGrid.mode;
+    this.beats = otherGrid.beats;
+    this.subdivision = otherGrid.subdivision;
     this.transcriptionIndex = otherGrid.transcriptionIndex;
     this.tags = otherGrid.tags;
     this.timers = otherGrid.timers;
@@ -123,5 +127,4 @@ export { activeGrid } from './state.js';
 // Sync with central state
 setGridA(gridA);
 setGridB(gridB);
-setActiveGrid(gridA); // Initialize activeGrid to gridA
-
+setActiveGrid(gridA);

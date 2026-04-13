@@ -4,7 +4,7 @@ import { currentUser, activeGrid } from './state.js';
 import { cells, renderAllMeasures, initNoteGrid } from './notegrid.js';
 import { ADMIN_EMAILS, COMPOSE_KEY } from './config.js';
 import { TransportRegistry } from './transport-ui.js';
-import { stop, setMode, initNotePlayer, unlockAudio } from './noteplayer.js';
+import { stop, setBeats, setSubdivision, initNotePlayer, unlockAudio } from './noteplayer.js';
 import { loadSharedFromURL } from './share-patterns.js';
 import { loadSharedCompositionFromURL, resumePendingSharedComp } from './song-composer.js';
 import { refreshPatternSelect, updatePatternButtons, snapshotCurrentState } from './pattern-crud.js';
@@ -176,16 +176,17 @@ function runSelfTests() {
   // Added: Hand icons should be defined as mask-images in split mode CSS
   console.assert(getComputedStyle(document.documentElement).getPropertyValue('--hand-icon') !== '', 'Hand icon color var exists');
 
-  // Added: Mode toggle should rebuild correct counts
+  // Subdivision toggle should rebuild correct step count
   const before = STEPS;
-  const currentMode = (activeGrid || gridA).mode;
-  setMode(currentMode === '8' ? '16' : '8');
-  console.assert(newCount !== before, 'Mode toggle changes step count');
-
+  const ctx = activeGrid || gridA;
+  const prevSub = ctx.subdivision;
+  const nextSub = prevSub === 2 ? 4 : 2;
+  setSubdivision(nextSub);
+  const newCount = ctx.stepsPerMeasure;
+  console.assert(newCount !== before, 'Subdivision toggle changes step count');
   console.assert(cells().length === newCount, 'Grid rebuilt to new step count');
-  console.assert(document.getElementById('labels').children.length === newCount, 'Labels rebuilt to new step count');
   // revert
-  setMode(currentMode);
+  setSubdivision(prevSub);
   console.assert(cells().length === before, 'Grid rebuilt back');
 }
 

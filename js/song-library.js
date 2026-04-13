@@ -18,7 +18,8 @@ let librarySongs = [];
 import { alert, confirm } from './alert.js';
 import { Modal } from './modal.js';
 import { renderAllMeasures, checkCellIsMultiMode } from './notegrid.js';
-import { setTimeSignature } from './noteplayer.js';
+import { setBeats, setSubdivision } from './noteplayer.js';
+import { migratePatternState } from './rhythm-core.js';
 import { getScale } from './state.js';
 import { currentUser, isAdminUser } from './state.js';
 import { innerLabels } from './state.js'; // This seems wrong, innerLabels is a getter/state
@@ -187,11 +188,10 @@ async function loadLibrarySong(id) {
       if (activeGrid) activeGrid.innerLabels = p.labels;
     }
 
-    // 2. Reset Mode/Measures if needed (Assuming 16ths for MIDI)
-    if (p.mode && activeGrid) activeGrid.mode = p.mode; // '16'
-    if (p.timeSignature && typeof setTimeSignature === 'function') {
-      setTimeSignature(p.timeSignature);
-    }
+    // 2. Apply beats/subdivision (migrate old format if needed)
+    migratePatternState(p);
+    if (p.beats) setBeats(p.beats, activeGrid);
+    if (p.subdivision) setSubdivision(p.subdivision, activeGrid);
 
     // 3. Render
     if (typeof renderAllMeasures === 'function') renderAllMeasures(activeGrid);

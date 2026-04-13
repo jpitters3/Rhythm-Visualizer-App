@@ -149,7 +149,7 @@ async function toggleListening() {
 // --- 1. Rhythmic Intelligence (Auto-Gate) ---
 function getDynamicGate() {
     const ctx = activeGrid;
-    const subdivisions = (ctx.mode === '16') ? 4 : 2;
+    const subdivisions = ctx.subdivision || 2;
     const currentBPM = ctx.bpm;
     const msPerStep = 60000 / (currentBPM * subdivisions);
     return msPerStep * 0.75; // Gate is 75% of a cell's duration

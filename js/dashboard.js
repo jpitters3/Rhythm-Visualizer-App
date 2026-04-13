@@ -125,7 +125,7 @@ function buildWelcomeHandpan(modal, override = {}) {
     ? sequence
     : Object.keys(PREVIEW_HP_MAP).map((note, stepIndex) => ({ note, rawLabel: note, stepIndex }));
 
-  const msCtx = override.bpm ? { bpm: override.bpm, mode: override.mode ?? '8' } : gridA;
+  const msCtx = override.bpm ? { bpm: override.bpm, subdivision: override.subdivision ?? 2 } : gridA;
   const ms = Math.max(80, intervalMs(msCtx));
   const animDuration = Math.max(200, ms * 3.2);
 
@@ -149,13 +149,13 @@ function buildWelcomeHandpan(modal, override = {}) {
     const isChord = Array.isArray(note);
     const notesToHighlight = isChord ? note : [{ note, originalIdx: 0 }];
     const stepHandData = rawHands[stepIndex];
-    const mode = override.mode ?? '16';
+    const sub = override.subdivision ?? 2;
     for (const { note: n, originalIdx } of notesToHighlight) {
       const dot = hpPreviewDots.get(n);
       const visual = dot?.querySelector('.hp-visual');
       if (!visual) continue;
 
-      const hand = resolveHand(stepIndex, stepHandData, originalIdx, isChord, mode);
+      const hand = resolveHand(stepIndex, stepHandData, originalIdx, isChord, sub);
       const down = hand === 'R';
 
       const shadowColor = down ? 'var(--down-fill)' : 'var(--up-fill)';

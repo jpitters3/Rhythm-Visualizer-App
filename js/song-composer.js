@@ -3,6 +3,7 @@
 // (phrase, recording, note) with drag-and-drop reorder, mic recording,
 // and sequential playback that auto-advances after each phrase loop.
 
+import { migratePatternState } from './rhythm-core.js';
 import { Sidepanel } from './sidepanel.js';
 import { supabase } from './supabase-client.js';
 import { currentUser } from './state.js';
@@ -257,33 +258,36 @@ function _pEsc(s) {
   return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
-function _printBeatLabels(stepsPerMeasure, mode) {
+function _printBeatLabels(stepsPerMeasure, subdivision) {
+  const sub = subdivision || 2;
+  const subLabels = { 2: ['&'], 3: ['²', '³'], 4: ['e', '&', 'a'] };
+  const inner = subLabels[sub] || [];
   const labels = [];
-  if (mode === '16') {
-    const beats = Math.ceil(stepsPerMeasure / 4);
-    for (let b = 1; b <= beats; b++) labels.push(String(b), 'e', '&', 'a');
-  } else {
-    const beats = Math.ceil(stepsPerMeasure / 2);
-    for (let b = 1; b <= beats; b++) labels.push(String(b), '&');
+  const beats = Math.ceil(stepsPerMeasure / sub);
+  for (let b = 1; b <= beats; b++) {
+    labels.push(String(b));
+    inner.forEach(l => labels.push(l));
   }
   return labels.slice(0, stepsPerMeasure);
 }
 
-function _printEffectiveHand(index, hands, mode) {
+function _printEffectiveHand(index, hands, subdivision) {
   const manual = Array.isArray(hands) ? (hands[index] || null) : null;
   if (manual) return manual;
-  if (mode === '8') return index % 2 === 0 ? 'R' : 'L';
-  const pos = index % 4;
-  return (pos === 0 || pos === 2) ? 'R' : 'L';
+  const sub = subdivision || 2;
+  const handStride = sub >= 4 ? 2 : 1;
+  return (Math.floor(index / handStride) % 2 === 0) ? 'R' : 'L';
 }
 
 function _buildPrintHTML(title, sectionData) {
   let sectionsHTML = '';
   sectionData.forEach(({ section, state }, si) => {
-    const mode = state.mode || '8';
-    const spm = state.steps || (mode === '16' ? 16 : 8);
+    // Migrate old format
+    if (state.subdivision === undefined) migratePatternState(state);
+    const sub = state.subdivision || 2;
+    const spm = state.steps || (state.beats || 4) * sub;
     const measureCount = Math.ceil(state.labels.length / spm);
-    const beatLbls = _printBeatLabels(spm, mode);
+    const beatLbls = _printBeatLabels(spm, sub);
 
     let measuresHTML = '';
     for (let m = 0; m < measureCount; m++) {
@@ -295,7 +299,7 @@ function _buildPrintHTML(title, sectionData) {
         let noteHTML;
 
         if (Array.isArray(label)) {
-          const hand = _printEffectiveHand(idx, state.hands, mode);
+          const hand = _printEffectiveHand(idx, state.hands, sub);
           const cls = hand === 'R' ? 'rh' : 'lh';
           const filled = label.filter(v => v && v !== '');
           filled.sort((a, b) => {
@@ -310,7 +314,7 @@ function _buildPrintHTML(title, sectionData) {
         } else if (!label || label === '') {
           noteHTML = `<div class="note note-empty">·</div>`;
         } else {
-          const hand = _printEffectiveHand(idx, state.hands, mode);
+          const hand = _printEffectiveHand(idx, state.hands, sub);
           const cls = hand === 'R' ? 'rh' : 'lh';
           noteHTML = `<div class="note ${cls}">${_pEsc(label)}</div>`;
         }
@@ -725,15 +729,17 @@ async function ensureStitched(compositionId, fromSectionIdx = 0) {
 
   // Save current grid state so we can restore it when toggling off
   const savedState = fromSectionIdx === 0
-    ? { mode: gridA.mode || '16', labels: [...(gridA.innerLabels || [])],
+    ? { beats: gridA.beats, subdivision: gridA.subdivision,
+        labels: [...(gridA.innerLabels || [])],
         hands: [...(gridA.innerHands || [])], bpm: gridA.bpm }
     : stitched?.savedState ?? null;
 
   const allLabels  = [];
   const allHands   = [];
   const boundaries = [];
-  let baseMode = '16';
-  let baseBpm  = null;
+  let baseBeats = 4;
+  let baseSub   = 2;
+  let baseBpm   = null;
 
   isLoadingSection = true;
   stop(gridA);
@@ -744,7 +750,7 @@ async function ensureStitched(compositionId, fromSectionIdx = 0) {
       let state;
       state = await loadSectionPattern(section);
       if (!state?.labels?.length) continue;
-      if (!offset) { baseMode = state.mode || '16'; baseBpm = state.bpm ?? null; }
+      if (!offset) { baseBeats = state.beats || 4; baseSub = state.subdivision || 2; baseBpm = state.bpm ?? null; }
       boundaries.push({
         start:     offset,
         end:       offset + state.labels.length - 1,
@@ -763,7 +769,7 @@ async function ensureStitched(compositionId, fromSectionIdx = 0) {
       return null;
     }
 
-    const pattern = { mode: baseMode, labels: allLabels, hands: allHands,
+    const pattern = { beats: baseBeats, subdivision: baseSub, labels: allLabels, hands: allHands,
                       ...(baseBpm != null ? { bpm: baseBpm } : {}) };
     await applyPattern(pattern, gridA);
   } catch (e) {

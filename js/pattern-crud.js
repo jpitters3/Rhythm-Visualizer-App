@@ -3,8 +3,8 @@ import { alert, confirm } from './alert.js';
 import { supabase } from './supabase-client.js';
 import { isAuthed } from './auth.js';
 import { gridA, gridB } from './grid-context.js';
-import { start, stop, setMode, setTimeSignature } from './noteplayer.js';
-import { getTimeSignature } from './rhythm-core.js';
+import { start, stop, setBeats, setSubdivision } from './noteplayer.js';
+import { migratePatternState } from './rhythm-core.js';
 import { renderAllMeasures, clearSelection, setDualGrid } from './notegrid.js';
 import { TransportRegistry } from './transport-ui.js';
 import { Bus, BUS_EVENT } from './bus.js';
@@ -225,10 +225,10 @@ export async function refreshPatternSelect(selectedName = '') {
 
 export function serializePattern(ctx = gridA) {
   const state = {
-    version: (typeof window.VERSION !== 'undefined' ? window.VERSION : 'v1.0'), // Maybe import VERSION?
-    mode: ctx.mode,
+    version: (typeof window.VERSION !== 'undefined' ? window.VERSION : 'v1.0'),
+    beats: ctx.beats,
+    subdivision: ctx.subdivision,
     bpm: Number(ctx.bpm),
-    timeSignature: (typeof getTimeSignature === 'function' ? getTimeSignature() : '4/4'),
     handSplit: document.body.classList.contains('handSplit'),
     steps: ctx.stepsPerMeasure,
     measures: ctx.measures,
@@ -242,7 +242,8 @@ export function serializePattern(ctx = gridA) {
     const isDual = document.getElementById('dualModeBtn')?.classList.contains('active');
     if (isDual && gridB) {
       state.gridB = {
-        mode: gridB.mode,
+        beats: gridB.beats,
+        subdivision: gridB.subdivision,
         bpm: Number(gridB.bpm),
         measures: gridB.measures,
         labels: gridB.innerLabels ? gridB.innerLabels.slice() : [],
@@ -255,21 +256,20 @@ export function serializePattern(ctx = gridA) {
 }
 
 export async function applyPattern(state, ctx = gridA) {
-  if (!state || !state.mode || !Array.isArray(state.labels)) {
+  if (!state || !Array.isArray(state.labels)) {
     console.error('Invalid pattern state:', state);
     await alert('That pattern JSON does not look valid.');
     return;
   }
 
+  // Migrate old format ({ mode, timeSignature }) to new ({ beats, subdivision })
+  migratePatternState(state);
+
   const wasPlaying = ctx.playing;
   if (wasPlaying) stop(ctx);
 
-  setMode(state.mode === '16' ? '16' : '8', ctx);
-
-  // Only set global time signature if provided and if applying to Grid A
-  if (ctx === gridA && state.timeSignature) {
-    setTimeSignature(state.timeSignature);
-  }
+  if (state.beats) setBeats(state.beats, ctx);
+  if (state.subdivision) setSubdivision(state.subdivision, ctx);
 
   if (typeof state.handSplit === 'boolean') {
     document.body.classList.toggle('handSplit', state.handSplit);

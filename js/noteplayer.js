@@ -1,6 +1,6 @@
 /* ==== Audio and musical functionality including scales ==== */
 import { gridA, gridB } from './grid-context.js';
-import { setTimeSignatureState } from './rhythm-core.js';
+import { setBeatsState, setSubdivisionState } from './rhythm-core.js';
 import { supabase } from './supabase-client.js';
 import { currentUser, activeGrid, setActiveGrid } from './state.js';
 import { HistoryManager } from './history.js';
@@ -112,9 +112,9 @@ export const samples = {};
 
 export function intervalMs(ctx) {
   const c = ctx || activeGrid;
-  const bpm = Math.max(1, c.bpm || 120); // Sanitize BPM
-  const base = (c.mode === '16') ? 16 : 8;
-  return (60000 / bpm) / (base / 4);
+  const bpm = Math.max(1, c.bpm || 120);
+  // ms per step = ms per beat ÷ subdivision
+  return (60000 / bpm) / (c.subdivision || 2);
 }
 
 export async function ensureAudio() {
@@ -379,19 +379,15 @@ function scheduleAudio(c, step, time) {
     playNoteByLabel(currentData, realStep, delay);
   }
 
-  // 3. METRONOME
+  // 3. METRONOME — clicks on beats only (every subdivision steps), not on subdivisions
   if (c.metronomeOn) {
-    const stepsPerMeasure = c.stepsPerMeasure || 8;
-    const isDownbeat = (realStep % stepsPerMeasure === 0);
-    const beatStride = (c.mode === '8') ? 2 : 4;
-    const isQuarter = (realStep % beatStride === 0);
-
-    // On step 0, 8, 16... it's a downbeat
-    const kind = isDownbeat ? 'downbeat' : (isQuarter ? 'beat' : 'sub');
-
-    if (isDownbeat) console.log(`[Audio] Downbeat Detected! Step: ${realStep}, Measures: ${c.measures}, StepsPerMeasure: ${stepsPerMeasure}`);
-
-    metroClick(kind, delay);
+    const sub = c.subdivision || 2;
+    const isBeat = (realStep % sub === 0);
+    if (isBeat) {
+      const stepsPerMeasure = c.stepsPerMeasure || 8;
+      const isDownbeat = (realStep % stepsPerMeasure === 0);
+      metroClick(isDownbeat ? 'downbeat' : 'beat', delay);
+    }
   }
 }
 
@@ -472,7 +468,7 @@ export function tick(ctx, overrideStep = null, audioTime = null, audioStartTime 
   if (Array.isArray(currentData)) {
     currentData.forEach((label, subIdx) => {
       if (label) {
-        const hand = resolveHand(c.step, currentHandsData, subIdx, true, c.mode);
+        const hand = resolveHand(c.step, currentHandsData, subIdx, true, c.subdivision);
         if (shouldHighlight) {
           if (typeof highlighterFn === 'function') {
             highlighterFn(label, c.step, hand, latency);
@@ -483,7 +479,7 @@ export function tick(ctx, overrideStep = null, audioTime = null, audioStartTime 
       }
     });
   } else if (currentData) {
-    const hand = resolveHand(c.step, currentHandsData, 0, false, c.mode);
+    const hand = resolveHand(c.step, currentHandsData, 0, false, c.subdivision);
     if (shouldHighlight) {
       if (typeof highlighterFn === 'function') {
         highlighterFn(currentData, c.step, hand, latency);
@@ -531,10 +527,10 @@ export function tick(ctx, overrideStep = null, audioTime = null, audioStartTime 
 
 function getMetroClickKind(ctx) {
   const c = ctx || activeGrid;
-  const beatStride = (c.mode === '8') ? 2 : 4;
-  const isQuarter = (c.step % beatStride === 0);
+  const sub = c.subdivision || 2;
+  const isBeat = (c.step % sub === 0);
   const isDownbeat = (c.step === 0);
-  return isDownbeat ? 'downbeat' : (isQuarter ? 'beat' : 'sub');
+  return isDownbeat ? 'downbeat' : (isBeat ? 'beat' : 'sub');
 }
 
 export function playNoteByLabel(label, step, delay = 0) {
@@ -554,53 +550,61 @@ export function playNoteByLabel(label, step, delay = 0) {
   if (note) { playNoteSample(note, delay); }
 }
 
-const tsNumInput = document.getElementById('tsNum');
-const tsDenInput = document.getElementById('tsDen');
-
-export function updateTimeSignatureFromInputs() {
-  if (HistoryManager) HistoryManager.pushState();
-  if (!tsNumInput || !tsDenInput) return;
-  const num = Math.max(1, parseInt(tsNumInput.value) || 4);
-  const den = Math.max(1, parseInt(tsDenInput.value) || 4);
-  const ts = `${num}/${den}`;
-  setTimeSignature(ts);
-}
-
-export function setTimeSignature(ts) {
-  if (!ts) return;
-  if (!ts.includes('/')) return;
-
-  // 1. Update Core State
-  setTimeSignatureState(ts);
-
-  // 2. Update UI Inputs
-  const [num, den] = ts.split('/');
-  if (tsNumInput) tsNumInput.value = num;
-  if (tsDenInput) tsDenInput.value = den;
-
-  // 3. Re-render Grids
-  renderAllMeasures(gridA);
-  if (gridB) renderAllMeasures(gridB);
-}
-
-export function setMode(nextMode, ctx) {
+export function setBeats(b, ctx) {
   const c = ctx || activeGrid;
-  if (nextMode === c.mode) return;
+  const val = Math.max(1, Math.round(b));
+  if (val === c.beats) return;
   const wasPlaying = c.playing;
   if (wasPlaying) stop(c);
 
-  c.mode = nextMode;
+  c.beats = val;
 
-  if (c.id === 'A') {
-    const gridBtn = document.getElementById('gridBtn');
-    if (typeof gridBtn !== 'undefined' && gridBtn) {
-      gridBtn.textContent = (nextMode === '8') ? '8ths' : '16ths';
-    }
+  // Keep both grids in sync when editing Grid A's global settings
+  if (c === gridA) {
+    setBeatsState(val);
+    gridB.beats = val;
+    const sel = document.getElementById('tsBeats');
+    if (sel) sel.value = val;
   }
 
   renderAllMeasures(c);
-
   if (wasPlaying) start(c);
+}
+
+export function setSubdivision(s, ctx) {
+  const c = ctx || activeGrid;
+  const val = Math.max(1, Math.round(s));
+  if (val === c.subdivision) return;
+  const wasPlaying = c.playing;
+  if (wasPlaying) stop(c);
+
+  c.subdivision = val;
+
+  if (c === gridA) {
+    setSubdivisionState(val);
+    gridB.subdivision = val;
+    const sel = document.getElementById('tsSub');
+    if (sel) sel.value = val;
+  }
+
+  renderAllMeasures(c);
+  if (wasPlaying) start(c);
+}
+
+// ---------------------------------------------------------------------------
+// Back-compat shims — old callers that still use setMode / setTimeSignature
+// ---------------------------------------------------------------------------
+export function setMode(nextMode, ctx) {
+  // '8' → subdivision 2, '16' → subdivision 4
+  setSubdivision(nextMode === '16' ? 4 : 2, ctx);
+}
+
+export function setTimeSignature(ts, ctx) {
+  if (!ts || !ts.includes('/')) return;
+  const [num, den] = ts.split('/').map(Number);
+  // beats = numerator, subdivision derived from denominator (base 8)
+  setBeats(num || 4, ctx);
+  setSubdivision(Math.max(1, Math.round(8 / (den || 4))), ctx);
 }
 
 // ==== PLAY HANDPAN SOUNDS ====
@@ -851,12 +855,18 @@ export function getAudioCtx() { return audioCtx; }
 
 // ===== INITIALIZATION =====
 export function initNotePlayer() {
-  // Attach time signature input listeners
-  const tsNumInput = document.getElementById('tsNum');
-  const tsDenInput = document.getElementById('tsDen');
+  // Attach beats / subdivision listeners
+  const tsBeatsEl = document.getElementById('tsBeats');
+  const tsSubEl = document.getElementById('tsSub');
 
-  tsNumInput?.addEventListener('change', updateTimeSignatureFromInputs);
-  tsDenInput?.addEventListener('change', updateTimeSignatureFromInputs);
+  tsBeatsEl?.addEventListener('change', () => {
+    if (HistoryManager) HistoryManager.pushState();
+    setBeats(parseInt(tsBeatsEl.value) || 4);
+  });
+  tsSubEl?.addEventListener('change', () => {
+    if (HistoryManager) HistoryManager.pushState();
+    setSubdivision(parseInt(tsSubEl.value) || 2);
+  });
 
   // Attempt to unlock audio on ANY user interaction (Click, Key, Touch)
   const unlockEvents = ['click', 'keydown', 'touchstart'];

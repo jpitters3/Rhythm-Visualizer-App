@@ -273,7 +273,8 @@ function generateGroove(dCount, tCount, sCount, ctx = activeGrid) {
   const downbeats = [];
   const upbeats = [];
   for (let i = 0; i < slots; i++) {
-    const isDown = (ctx.mode === '8') ? (i % 2 === 0) : ((i % 4) === 0);
+    const beatStride = ctx.subdivision || 2;
+    const isDown = (i % beatStride === 0);
     (isDown ? downbeats : upbeats).push(i);
   }
 

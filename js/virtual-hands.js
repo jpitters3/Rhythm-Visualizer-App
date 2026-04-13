@@ -134,7 +134,7 @@ class VirtualHands {
 
       labels.forEach((lbl, sIdx) => {
         if (!lbl) return;
-        const h = resolveHand(futureStep, futureHands, sIdx, isChord, ctx.mode);
+        const h = resolveHand(futureStep, futureHands, sIdx, isChord, ctx.subdivision);
         if (h === 'L' && !nextL) nextL = lbl;
         if (h === 'R' && !nextR) nextR = lbl;
       });

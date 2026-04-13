@@ -1,7 +1,6 @@
 import { gridA, gridB } from './grid-context.js';
 import { activeGrid, currentUser, setActiveGrid } from './state.js';
-import { getTimeSignature, calculateSteps } from './rhythm-core.js';
-import { stop, setTimeSignature } from './noteplayer.js';
+import { stop, setBeats, setSubdivision } from './noteplayer.js';
 import { getScale } from './state.js';
 import { setCaret, setRange, clearRange, getRange, updateDragSelectionOver, startLongPress, cancelLongPress, hasRange } from './range-selection.js';
 import { HistoryManager } from './history.js';
@@ -47,14 +46,10 @@ export function getEffectiveHand(index, ctx) {
   const manual = c.innerHands[index];
   if (manual) return manual;
 
-  // Default Logic
-  if (c.mode === '8') {
-    return (index % 2 === 0) ? 'R' : 'L';
-  } else {
-    // 16th note default (Standard Alternating: R L R L)
-    const pos = index % 4;
-    return (pos === 0 || pos === 2) ? 'R' : 'L';
-  }
+  // Hands alternate at the 8th-note level.
+  // subdivision ≥ 4 (16th notes) → alternate every 2 steps; otherwise every step.
+  const handStride = (c.subdivision || 2) >= 4 ? 2 : 1;
+  return (Math.floor(index / handStride) % 2 === 0) ? 'R' : 'L';
 };
 
 export function invertRange(start, end, ctx = activeGrid) {
@@ -81,35 +76,29 @@ export function setCols(n, ctx = activeGrid) {
 }
 
 export function labelForStep(i, ctx = activeGrid) {
-  const ts = getTimeSignature();
-  let [num, den] = ts.split('/');
-  den = Number(den) || 4;
-
-  const base = (ctx.mode === '16') ? 16 : 8;
-  const stride = base / den;
+  const sub = ctx.subdivision || 2;
 
   if (labelNotation === 'numeric') {
     return String(i + 1);
   }
 
-  const beatNumber = Math.floor(i / stride) + 1;
-  const sub = i % stride;
+  const beatNumber = Math.floor(i / sub) + 1;
+  const pos = i % sub;
 
-  if (sub === 0) return String(beatNumber);
+  if (pos === 0) return String(beatNumber);
 
-  // Subdivision labels
-  if (Math.abs(stride - 4) < 0.1) {
-    if (sub === 1) return 'e';
-    if (sub === 2) return '&';
-    if (sub === 3) return 'a';
-  } else if (Math.abs(stride - 2) < 0.1) {
-    if (sub === 1) return '&';
-  } else if (Math.abs(stride - 1) < 0.1) {
-    // 1 step per beat
-    return '';
+  // Subdivision labels based on steps-per-beat
+  if (sub === 4) {
+    if (pos === 1) return 'e';
+    if (pos === 2) return '&';
+    if (pos === 3) return 'a';
+  } else if (sub === 2) {
+    if (pos === 1) return '&';
+  } else if (sub === 3) {
+    if (pos === 1) return '²';
+    if (pos === 2) return '³';
   }
 
-  // Fallback for odd meters
   return '';
 }
 
@@ -152,7 +141,7 @@ export function resetGridToDefault(ctx = activeGrid) {
   ctx.innerHands = [];
   setDualGrid(false);
   clearGrid(ctx);
-  setTimeSignature('4/4');
+  setBeats(4); setSubdivision(2);
   ctx.setMeasures(2);
   renderAllMeasures(ctx);
 }

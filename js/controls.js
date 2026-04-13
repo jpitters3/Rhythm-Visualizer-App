@@ -2,7 +2,7 @@
 import { gridA, gridB, activeGrid } from './grid-context.js';
 import { isAuthed, openAuthModal } from './auth.js';
 import { openWelcomeDashboard } from './dashboard.js';
-import { start, stop, setMode, addTickObserver } from './noteplayer.js';
+import { start, stop, addTickObserver } from './noteplayer.js';
 import { renderAllMeasures, invertRange, invertFollowing, setDualGrid, clearGrid, resetGridToDefault } from './notegrid.js';
 import { TransportRegistry, TransportUI } from './transport-ui.js';
 import {
@@ -24,7 +24,7 @@ import { Modal } from './modal.js';
 import { escapeHtml } from './utils.js';
 
 // Global references assigned in initControls
-let patternSelect, gridBtn, handBtn, resetBtn, themeBtn, presentBtn, exitPresent, micBtn, saveBtn, renameBtn, deleteBtn, exportBtn, navDashboardBtn, importBtn, loadBtn;
+let patternSelect, handBtn, resetBtn, themeBtn, presentBtn, exitPresent, micBtn, saveBtn, renameBtn, deleteBtn, exportBtn, navDashboardBtn, importBtn, loadBtn;
 
 /**
  * @deprecated Use alert, confirm, prompt from ./alert.js instead
@@ -330,7 +330,7 @@ async function showOpenPhraseModal() {
 export function initControls() {
   // 1. Get Elements
   patternSelect = document.getElementById('patternSelect');
-  gridBtn = document.getElementById('gridBtn');
+
   handBtn = document.getElementById('handBtn');
   resetBtn = document.getElementById('resetBtn');
   themeBtn = document.getElementById('themeBtn');
@@ -706,11 +706,7 @@ export function initControls() {
     }
   });
 
-  // 6. Generic Controls
-  gridBtn?.addEventListener('click', () => {
-    const ctx = activeGrid;
-    setMode(ctx.mode === '8' ? '16' : '8', ctx);
-  });
+  // 6. Generic Controls — tsBeats / tsSub listeners are wired in initNotePlayer
 
   handBtn?.addEventListener('click', () => {
     const on = !document.body.classList.contains('handSplit');
