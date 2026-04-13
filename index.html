@@ -1646,13 +1646,14 @@
           </select>
         </div>
 
-        <div class="setting-row">
-          <label>Hands:</label>
-          <div class="toggle-wrapper" style="display:flex; align-items:center; gap:8px;">
-            <input type="checkbox" id="vHandsToggle" checked style="width:auto;">
-            <label for="vHandsToggle" style="font-size:12px; font-weight:400; cursor:pointer; margin:0;">Show Ghost
-              Hands</label>
-          </div>
+        <div class="setting-row" id="showOctaveRow" style="display:none; flex-direction:row; align-items:center; justify-content:start">
+          <label style="opacity:0.7; font-size:13px; font-weight:500;">Show Octaves:</label>
+          <input type="checkbox" id="showOctaveCheck" style="width:auto;" />
+        </div>
+
+        <div class="setting-row" style="flex-direction: row; align-items: center; justify-content: start;">
+          <label>Show ghost hands:</label>
+          <input type="checkbox" id="vHandsToggle" checked style="width:auto;">
         </div>
       </div>
     </div>

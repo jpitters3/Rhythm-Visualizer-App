@@ -16,7 +16,7 @@ import { canAccess, FEATURE } from './gated-feature.js';
 import { alert, confirm } from './alert.js';
 
 // DOM Elements (previously globals)
-let handpanImg, scaleSelect, scaleStatus, handpanColorSelect, numberPitchSelect, ghostBtn, ghostBackBtn, ghostFwdBtn, composeBtn, handpanSection, handpanOverlay;
+let handpanImg, scaleSelect, scaleStatus, handpanColorSelect, numberPitchSelect, showOctaveCheck, showOctaveRow, ghostBtn, ghostBackBtn, ghostFwdBtn, composeBtn, handpanSection, handpanOverlay;
 let handpanWrapBottom, handpanImgBottom, handpanOverlayBottom;
 
 /* Mapped to nine-note-handpan-numbered.png */
@@ -902,10 +902,15 @@ export function syncStateFromStorage() {
     overlayNumbers = false;
     overlayPitches = true;
   } else {
-    // Reset or handle default behavior
     overlayNumbers = true;
     overlayPitches = false;
   }
+
+  // Show/hide the octave checkbox row — only relevant when Pitches is selected
+  if (showOctaveRow) showOctaveRow.style.display = (val === 'Pitches') ? '' : 'none';
+
+  // Sync checkbox state
+  if (showOctaveCheck) showOctaveCheck.checked = localStorage.getItem('handpanShowOctave') === 'true';
 }
 
 function updateLabelStyles() {
@@ -945,6 +950,9 @@ function overlayNumberPitchNotes() {
         const pitch = noteForLabel(note);
         text = pitch ? pitch.replace('s', '#') : '';
         if (note === 'T' || note === 'S') text = note;
+        if (text && localStorage.getItem('handpanShowOctave') !== 'true') {
+          text = text.replace(/\d+$/, '');
+        }
       } else {
         text = note;
       }
@@ -1127,6 +1135,8 @@ export function initHandpanMap() {
   scaleStatus = document.getElementById('scaleStatus');
   handpanColorSelect = document.getElementById('handpanColorSelect');
   numberPitchSelect = document.getElementById('numberPitchSelect');
+  showOctaveCheck = document.getElementById('showOctaveCheck');
+  showOctaveRow = document.getElementById('showOctaveRow');
   ghostBtn = document.getElementById('ghostBtn');
   ghostBackBtn = document.getElementById('ghostBackBtn');
   ghostFwdBtn = document.getElementById('ghostFwdBtn');
@@ -1447,6 +1457,11 @@ export function initHandpanMap() {
     numberPitchTimer = setTimeout(() => {
       updateGridLabels();
     }, 50);
+  });
+
+  showOctaveCheck?.addEventListener('change', () => {
+    localStorage.setItem('handpanShowOctave', String(showOctaveCheck.checked));
+    overlayNumberPitchNotes();
   });
 
   ghostBtn?.addEventListener('click', () => {

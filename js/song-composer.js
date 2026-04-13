@@ -6,7 +6,7 @@
 import { migratePatternState } from './rhythm-core.js';
 import { Sidepanel } from './sidepanel.js';
 import { supabase } from './supabase-client.js';
-import { currentUser } from './state.js';
+import { currentUser, getScale } from './state.js';
 import {
   dbLoadPatternByName, dbSavePattern, applyPattern, serializePattern,
   dbListPatternNames, hasUnsavedChanges,
@@ -279,6 +279,28 @@ function _printEffectiveHand(index, hands, subdivision) {
   return (Math.floor(index / handStride) % 2 === 0) ? 'R' : 'L';
 }
 
+// Resolve a stored label ("1", "Ding", etc.) to a display string for print.
+// In pitch mode, map numeric/Ding labels to their note names (e.g. "A3" → "A3").
+// Strips the octave number so "A3" prints as "A", "Cs4" prints as "C#".
+function _printLabel(raw) {
+  if (!raw || raw === '') return raw;
+  if (raw === 'Ding' || raw === 'D') return 'Ding';
+  if (localStorage.getItem('handpanLabelPref') !== 'Pitches') return raw;
+
+  const scale = getScale();
+  if (!scale) return raw;
+
+  const pitch = scale.map && scale.map[raw];
+  if (!pitch) return raw;
+
+  // "Cs4" → "C#4" or "C#", "Fs4" → "F#4" or "F#", etc.
+  let display = pitch.replace(/s(\d)/, '#$1'); // normalise 's' sharp notation
+  if (localStorage.getItem('handpanShowOctave') !== 'true') {
+    display = display.replace(/\d+$/, '');     // strip octave unless show is on
+  }
+  return display.replace(/B$/, 'b');           // trailing 'B' → 'b' for readability
+}
+
 function _buildPrintHTML(title, sectionData) {
   let sectionsHTML = '';
   sectionData.forEach(({ section, state }, si) => {
@@ -308,7 +330,7 @@ function _buildPrintHTML(title, sectionData) {
           });
           while (filled.length < 4) filled.push(null);
           const parts = filled.slice(0, 4).map(v =>
-            v ? `<span class="${cls}">${_pEsc(v)}</span>` : `<span class="note-empty">·</span>`
+            v ? `<span class="${cls}">${_pEsc(_printLabel(v))}</span>` : `<span class="note-empty">·</span>`
           ).join(', ');
           noteHTML = `<div class="note-multi">[${parts}]</div>`;
         } else if (!label || label === '') {
@@ -316,7 +338,7 @@ function _buildPrintHTML(title, sectionData) {
         } else {
           const hand = _printEffectiveHand(idx, state.hands, sub);
           const cls = hand === 'R' ? 'rh' : 'lh';
-          noteHTML = `<div class="note ${cls}">${_pEsc(label)}</div>`;
+          noteHTML = `<div class="note ${cls}">${_pEsc(_printLabel(label))}</div>`;
         }
 
         rowHTML += `<div class="beat"><div class="beat-label">${_pEsc(beatLabel)}</div>${noteHTML}</div>`;
