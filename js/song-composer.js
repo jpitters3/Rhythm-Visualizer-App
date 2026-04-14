@@ -9,7 +9,7 @@ import { supabase } from './supabase-client.js';
 import { currentUser, getScale } from './state.js';
 import {
   dbLoadPatternByName, dbSavePattern, applyPattern, serializePattern,
-  dbListPatternNames, hasUnsavedChanges,
+  dbListPatternNames, hasUnsavedChanges, getSelectedPatternName,
 } from './pattern-crud.js';
 import { getRange } from './range-selection.js';
 import { addTickObserver, removeTickObserver, start, stop } from './noteplayer.js';
@@ -532,23 +532,49 @@ async function addPhraseFromGrid(compositionId) {
     return;
   }
 
-  const rangeLabel = range ? ` (beats ${range.start + 1} – ${range.end + 1})` : '';
-  const name = await prompt(`Name this new phrase${rangeLabel}:`, 'New Phrase');
-  if (!name?.trim()) return;
+  // Use the current pattern name if one is loaded, otherwise ask for a name
+  const existingName = getSelectedPatternName();
+  let phraseName;
 
-  const trimmed = name.trim();
+  if (existingName) {
+    // Pattern is loaded — save if dirty, otherwise just use the name
+    if (hasUnsavedChanges()) {
+      const ok = await confirm(`Save changes to "${existingName}" before adding to the composition?`);
+      if (ok === null) return; // cancelled
+      if (ok) {
+        try {
+          const base = serializePattern(gridA);
+          const stateToSave = { ...base, labels, hands, measures: Math.ceil(labels.length / base.steps) };
+          const saved = await dbSavePattern(existingName, stateToSave);
+          if (!saved) return;
+        } catch (e) {
+          await alert('Could not save phrase. Make sure you are signed in.');
+          return;
+        }
+      }
+    }
+    phraseName = existingName;
+  } else {
+    // No pattern loaded — ask for a name
+    const rangeLabel = range ? ` (beats ${range.start + 1} – ${range.end + 1})` : '';
+    const name = await prompt(`Name this phrase${rangeLabel}:`, 'New Phrase');
+    if (!name?.trim()) return;
+    phraseName = name.trim();
 
-  try {
-    const base = serializePattern(gridA);
-    const state = { ...base, labels, hands, measures: Math.ceil(labels.length / base.steps) };
-    const saved = await dbSavePattern(trimmed, state);
-    if (!saved) return; // user cancelled overwrite
-  } catch (e) {
-    await alert('Could not save phrase. Make sure you are signed in.');
-    return;
+    try {
+      const base = serializePattern(gridA);
+      const stateToSave = { ...base, labels, hands, measures: Math.ceil(labels.length / base.steps) };
+      const saved = await dbSavePattern(phraseName, stateToSave);
+      if (!saved) return;
+    } catch (e) {
+      await alert('Could not save phrase. Make sure you are signed in.');
+      return;
+    }
   }
 
-  await addSection(compositionId, 'phrase', { title: trimmed, phrase_name: trimmed, pattern_snapshot: state });
+  const base = serializePattern(gridA);
+  let state = { ...base, labels, hands, measures: Math.ceil(labels.length / base.steps) };
+  await addSection(compositionId, 'phrase', { title: phraseName, phrase_name: phraseName, pattern_snapshot: state });
 }
 
 // ============================================================
@@ -1164,9 +1190,121 @@ function renderCompositionItem(comp, opts = {}) {
     </div>`;
 }
 
+const LABEL_PRESETS = ['Intro', 'Verse A', 'Verse B', 'Verse C', 'Verse 1', 'Verse 2', 'Verse 3', 'Chorus', 'Bridge', 'Outro', 'Part 1', 'Part 2', 'Part 3'];
+
+let labelDropdown = null;
+
+function removeLabelDropdown() {
+  labelDropdown?.remove();
+  labelDropdown = null;
+}
+
+function startLabelEdit(sectionId, spanEl) {
+  const currentLabel = spanEl.textContent.trim();
+
+  const wrapper = document.createElement('div');
+  wrapper.className = 'section-label-wrapper';
+
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.value = currentLabel;
+  input.className = 'section-label-input';
+
+  wrapper.appendChild(input);
+  spanEl.replaceWith(wrapper);
+  input.select();
+
+  // Build preset dropdown
+  const dropdown = document.createElement('div');
+  dropdown.className = 'section-label-dropdown';
+  dropdown.innerHTML = LABEL_PRESETS.map(p =>
+    `<div class="section-label-option">${esc(p)}</div>`
+  ).join('');
+  document.body.appendChild(dropdown);
+  labelDropdown = dropdown;
+
+  function positionDropdown() {
+    const rect = input.getBoundingClientRect();
+    dropdown.style.left  = `${rect.left}px`;
+    dropdown.style.top   = `${rect.bottom + 2}px`;
+    dropdown.style.width = `${rect.width}px`;
+  }
+  positionDropdown();
+
+  let committed = false;
+
+  async function commit() {
+    if (committed) return;
+    committed = true;
+    removeLabelDropdown();
+    const newLabel = input.value.trim();
+    const display = newLabel || currentLabel;
+    const newSpan = document.createElement('span');
+    newSpan.className = 'section-title';
+    newSpan.dataset.sectionId = sectionId;
+    newSpan.title = 'Click to rename';
+    newSpan.textContent = display;
+    wrapper.replaceWith(newSpan);
+    if (newLabel && newLabel !== currentLabel) {
+      await saveSectionLabel(sectionId, newLabel);
+    }
+  }
+
+  // Preset option click
+  dropdown.addEventListener('mousedown', e => {
+    const opt = e.target.closest('.section-label-option');
+    if (!opt) return;
+    e.preventDefault(); // prevent input blur
+    input.value = opt.textContent;
+    input.focus();
+    removeLabelDropdown();
+  });
+
+  // Filter presets as user types
+  input.addEventListener('input', () => {
+    const q = input.value.toLowerCase();
+    dropdown.querySelectorAll('.section-label-option').forEach(opt => {
+      opt.style.display = opt.textContent.toLowerCase().includes(q) ? '' : 'none';
+    });
+    if (!labelDropdown) {
+      document.body.appendChild(dropdown);
+      labelDropdown = dropdown;
+      positionDropdown();
+    }
+  });
+
+  input.addEventListener('blur', () => setTimeout(commit, 150));
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter')  { e.preventDefault(); commit(); }
+    if (e.key === 'Escape') {
+      committed = true;
+      removeLabelDropdown();
+      const cancelSpan = document.createElement('span');
+      cancelSpan.className = 'section-title';
+      cancelSpan.dataset.sectionId = sectionId;
+      cancelSpan.title = 'Click to rename';
+      cancelSpan.textContent = currentLabel;
+      wrapper.replaceWith(cancelSpan);
+    }
+  });
+
+  input.focus();
+}
+
+async function saveSectionLabel(sectionId, label) {
+  for (const comp of compositions) {
+    const section = comp.sections.find(s => s.id === sectionId);
+    if (!section) continue;
+    section.title = label;
+    await supabase.from('composition_sections').update({ title: label }).eq('id', sectionId);
+    return;
+  }
+}
+
 function renderSectionItem(s, _index = 0, phraseIndex = 0) {
   const icon  = { phrase: '🎵', recording: '🎙', note: '✏️' }[s.type] ?? '•';
   const label = s.title || s.phrase_name || (s.type === 'note' ? 'Note' : s.type);
+  // phrase_name always shows as subtitle for phrases; label and phrase_name are independent
   const sub   = s.type === 'phrase' && s.phrase_name ? s.phrase_name
               : s.type === 'recording' ? (s.audio_url ? 'Recorded' : 'No recording yet')
               : s.type === 'note' ? (s.note_text || '') : '';
@@ -1208,7 +1346,7 @@ function renderSectionItem(s, _index = 0, phraseIndex = 0) {
       <span class="section-icon">${icon}</span>
       <div class="section-info${s.type === 'phrase' ? ' clickable' : ''}"
         ${s.type === 'phrase' ? `data-action="edit-section" data-id="${s.id}"` : ''}>
-        <span class="section-title">${esc(label)}</span>
+        <span class="section-title" data-section-id="${s.id}" title="Click to rename">${esc(label)}</span>
         ${sub ? `<span class="section-subtitle">${esc(sub)}</span>` : ''}
       </div>
       ${s.type === 'phrase' ? `
@@ -1328,9 +1466,15 @@ let contextMenuTrigger = null;
 
 // Prefer the stored snapshot; fall back to a live name lookup for older sections.
 async function loadSectionPattern(section) {
-  if (section.pattern_snapshot?.labels?.length) return section.pattern_snapshot;
+  // Validate that a state object is usable before returning it
+  function isValidState(s) { return s && Array.isArray(s.labels) && s.labels.length > 0; }
+
+  if (isValidState(section.pattern_snapshot)) return section.pattern_snapshot;
   if (section.phrase_name) {
-    try { return await dbLoadPatternByName(section.phrase_name); } catch (_) {}
+    try {
+      const state = await dbLoadPatternByName(section.phrase_name);
+      if (isValidState(state)) return state;
+    } catch (_) {}
   }
   return null;
 }
@@ -1352,6 +1496,8 @@ async function editSection(sectionId) {
     await applyPattern(state, gridA);
     isLoadingSection = false;
     updateCurrentPhraseName(section.phrase_name);
+  } else {
+    await alert('Could not load this phrase — the pattern data may be missing or corrupted.');
   }
   renderCompositions();
 }
@@ -1558,6 +1704,15 @@ function audioPrevSection() {
 // Top-level click delegation
 // ============================================================
 composerEl?.addEventListener('click', async (e) => {
+  // If a label rename input is active, swallow all clicks inside the composer
+  // except those on the input itself or the preset dropdown
+  if (document.querySelector('.section-label-input')) {
+    if (!e.target.closest('.section-label-input') && !e.target.closest('.section-label-dropdown')) {
+      e.stopPropagation();
+    }
+    return;
+  }
+
   // Section item click (not on a button) → scroll grid to that section's cells
   const sectionItem = e.target.closest('.section-item');
   if (sectionItem && !e.target.closest('[data-action]')) {
@@ -1732,6 +1887,14 @@ composerEl?.addEventListener('click', async (e) => {
     }
   }
 });
+
+// Section label inline editing — click on title only
+composerEl?.addEventListener('click', (e) => {
+  const span = e.target.closest('.section-title[data-section-id]');
+  if (!span) return;
+  e.stopPropagation(); // prevent edit-section from firing
+  startLabelEdit(span.dataset.sectionId, span);
+}, true); // capture phase so it runs before the delegated click handler
 
 // Playbar buttons — audio-mode aware
 document.getElementById('composerPlayBtn')?.addEventListener('click', () => {
