@@ -577,6 +577,97 @@ body.dark .asgn-quiz-question {
   opacity: 0.7;
 }
 
+/* ===== COMPOSITION REFERENCE — teacher editor ===== */
+
+.asgn-comp-sections-preview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 8px;
+}
+
+.asgn-comp-section-chip {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 12px;
+  background: rgba(99,102,241,0.12);
+  color: var(--text);
+  border: 1px solid rgba(99,102,241,0.25);
+}
+
+/* ===== COMPOSITION REFERENCE — student inbox ===== */
+
+.si-composition-ref {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.si-comp-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.si-comp-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border: 1px solid var(--panel-border, rgba(0,0,0,0.1));
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.si-comp-section {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  font-size: 13px;
+  border-bottom: 1px solid var(--panel-border, rgba(0,0,0,0.06));
+}
+
+.si-comp-section:last-child {
+  border-bottom: none;
+}
+
+.si-comp-section-num {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted, #999);
+  min-width: 16px;
+}
+
+.si-comp-section-label {
+  font-weight: 500;
+  color: var(--text);
+  flex: 1;
+}
+
+.si-comp-section-phrase {
+  font-size: 11px;
+  color: var(--text-muted, #aaa);
+}
+
+.si-comp-load-btn {
+  align-self: flex-start;
+  padding: 6px 14px;
+  border-radius: 7px;
+  border: 1px solid rgba(99,102,241,0.4);
+  background: rgba(99,102,241,0.08);
+  color: #818cf8;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.si-comp-load-btn:hover {
+  background: rgba(99,102,241,0.18);
+  border-color: #6366f1;
+  color: #a5b4fc;
+}
+
 .asgn-quiz-actions {
   display: flex;
   gap: 8px;
@@ -1326,6 +1417,10 @@ body.dark .notif-bell-btn:hover {
   pointer-events: none;
 }
 
+#mobileNotifBadge {
+  display: none;
+}
+
 /* ===== NOTIFICATION PANEL (dropdown) ===== */
 
 .notif-panel {
@@ -1507,5 +1602,9 @@ body.dark .notif-item:hover {
   .asgn-field-row {
     flex-direction: column;
     gap: 0;
+  }
+
+  #mobileNotifBadge {
+    display: block;
   }
 }

@@ -20,6 +20,7 @@ const ITEM_TYPE_ICONS = {
   audio: '🎙️',
   video: '🎥',
   link: '🔗',
+  composition_reference: '🎵',
 };
 
 // ===== STATE =====
@@ -213,6 +214,7 @@ async function openDetail(sa) {
   if (descEl) {
     descEl.textContent = sa.description || '';
     descEl.style.display = sa.description ? '' : 'none';
+    descEl.style.whiteSpace = 'pre-wrap';
   }
 
   const videoEl = document.getElementById('studentInboxDetailVideo');
@@ -232,12 +234,9 @@ async function openDetail(sa) {
   const itemsEl = document.getElementById('studentInboxItemsList');
   if (itemsEl) itemsEl.innerHTML = '<div class="student-inbox-loading">Loading…</div>';
 
-  // Load items
+  // Load items via security-definer RPC to avoid nested-RLS issue
   const { data: items, error: itemsErr } = await supabase
-    .from('assignment_items')
-    .select('*')
-    .eq('assignment_id', sa.assignment_id)
-    .order('sort_order');
+    .rpc('get_assignment_items_for_student', { p_assignment_id: sa.assignment_id });
 
   if (itemsErr) {
     if (itemsEl) itemsEl.innerHTML = '<div class="student-inbox-empty">Failed to load items.</div>';
@@ -267,9 +266,19 @@ function renderDetail() {
 
   const isLocked = currentSA?.status === 'submitted' || currentSA?.status === 'reviewed';
 
+  const ITEM_TYPE_DEFAULT_TITLES = {
+    mark_complete: 'Mark Complete',
+    quiz: 'Quiz',
+    audio: 'Audio Recording',
+    video: 'Video Upload',
+    link: 'URL / Link',
+    composition_reference: 'Study Composition',
+  };
+
   itemsEl.innerHTML = '';
   currentItems.forEach(item => {
     const icon = ITEM_TYPE_ICONS[item.item_type] ?? '📄';
+    const title = item.title || item.config?.composition_title || ITEM_TYPE_DEFAULT_TITLES[item.item_type] || item.item_type;
     const responseData = currentResponses.get(item.id) ?? {};
 
     const block = document.createElement('div');
@@ -280,11 +289,11 @@ function renderDetail() {
     block.innerHTML = `
       <div class="student-inbox-item-block-header">
         <span class="student-inbox-item-type-icon">${icon}</span>
-        <span class="student-inbox-item-block-title">${escapeHtml(item.title)}</span>
+        <span class="student-inbox-item-block-title">${escapeHtml(title)}</span>
         ${item.required ? '<span class="student-inbox-required">Required</span>' : ''}
       </div>
       ${item.instructions
-        ? `<div class="student-inbox-item-instructions">${escapeHtml(item.instructions)}</div>`
+        ? `<div class="student-inbox-item-instructions" style="white-space:pre-wrap">${escapeHtml(item.instructions)}</div>`
         : ''}
       <div class="student-inbox-item-response-area" data-item-id="${item.id}">
         ${renderItemResponse(item, responseData, isLocked)}
@@ -374,6 +383,40 @@ function renderItemResponse(item, responseData, isLocked) {
       `;
     }
 
+    case 'composition_reference': {
+      const config = item.config ?? {};
+      const compTitle = config.composition_title || 'Composition';
+      const sections = (config.sections ?? []).filter(s => s.type === 'phrase');
+      const checked = responseData.completed ? 'checked' : '';
+
+      const sectionList = sections.length
+        ? `<div class="si-comp-sections">
+            ${sections.map((s, i) => `
+              <div class="si-comp-section">
+                <span class="si-comp-section-num">${i + 1}</span>
+                <span class="si-comp-section-label">${escapeHtml(s.title || s.phrase_name || `Section ${i + 1}`)}</span>
+                ${s.phrase_name && s.phrase_name !== s.title ? `<span class="si-comp-section-phrase">${escapeHtml(s.phrase_name)}</span>` : ''}
+              </div>`).join('')}
+           </div>`
+        : '';
+
+      const loadBtn = !isLocked && config.composition_id
+        ? `<button class="si-comp-load-btn" data-action="load-composition" data-item-id="${item.id}">▶ Open in Composer</button>`
+        : '';
+
+      return `
+        <div class="si-composition-ref">
+          <div class="si-comp-title">${escapeHtml(compTitle)}</div>
+          ${sectionList}
+          ${loadBtn}
+          <label class="student-inbox-mark-complete-label" style="margin-top:10px">
+            <input type="checkbox" data-field="mark_complete" ${checked} ${disabled} />
+            <span>${responseData.completed ? '✅ Marked as studied' : 'Mark as studied'}</span>
+          </label>
+        </div>
+      `;
+    }
+
     default:
       return '';
   }
@@ -382,6 +425,15 @@ function renderItemResponse(item, responseData, isLocked) {
 // ===== ITEM RESPONSE EVENTS =====
 
 function handleItemsClick(e) {
+  // Load composition into studio
+  if (e.target.closest('[data-action="load-composition"]')) {
+    const btn = e.target.closest('[data-action="load-composition"]');
+    const itemId = btn.dataset.itemId;
+    const item = currentItems.find(i => i.id === itemId);
+    if (item) loadCompositionInStudio(item);
+    return;
+  }
+
   if (!e.target.matches('[data-field="mark_complete"]')) return;
   const area = e.target.closest('[data-item-id]');
   if (!area) return;
@@ -390,7 +442,22 @@ function handleItemsClick(e) {
   const checked = e.target.checked;
   currentResponses.set(itemId, { ...existing, completed: checked });
   const span = e.target.nextElementSibling;
-  if (span) span.textContent = checked ? '✅ Marked as done' : 'Mark as completed';
+  if (span) {
+    const item = currentItems.find(i => i.id === itemId);
+    const isComp = item?.item_type === 'composition_reference';
+    span.textContent = checked
+      ? (isComp ? '✅ Marked as studied' : '✅ Marked as done')
+      : (isComp ? 'Mark as studied' : 'Mark as completed');
+  }
+}
+
+async function loadCompositionInStudio(item) {
+  const compositionId = item.config?.composition_id;
+  if (!compositionId) return;
+
+  const { openCompositionById } = await import('./song-composer.js');
+  inboxPanel?.close();
+  await openCompositionById(compositionId);
 }
 
 function handleItemsChange(e) {

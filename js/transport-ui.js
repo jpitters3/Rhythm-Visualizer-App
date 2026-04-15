@@ -1,5 +1,5 @@
 // TransportUI manages a set of transport controls
-import { start, stop, getMetronomeSound, setMetronomeSound } from './noteplayer.js';
+import { start, stop, getMetronomeSound, setMetronomeSound, getAudioCtx } from './noteplayer.js';
 import { Bus, BUS_EVENT } from './bus.js';
 
 export class TransportUI {
@@ -29,6 +29,10 @@ export class TransportUI {
         if (this.ctx.playing) {
           stop(this.ctx);
         } else {
+          // Safari requires AudioContext.resume() to be called synchronously
+          // within a user gesture. Any await before resume() loses the activation
+          // context, leaving the AudioContext suspended and producing no sound.
+          getAudioCtx()?.resume().catch(() => {});
           start(this.ctx);
         }
         TransportRegistry.updateAll(this.ctx);

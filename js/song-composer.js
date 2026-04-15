@@ -49,6 +49,7 @@ const composerPanel = new Sidepanel(composerEl, { onClose: () => {
   stopPlayback();
   closeTrimUI();
   removeContextMenu();
+  stopSparkle();
 }});
 
 // Register with TransportRegistry so the composer play button stays in sync
@@ -56,9 +57,15 @@ const composerPanel = new Sidepanel(composerEl, { onClose: () => {
 TransportRegistry.register({
   ctx: gridA,
   update() {
-    if (playback && !gridA.playing && !isLoadingSection) {
-      cleanupPlayback();
-      renderCompositions();
+    const btn = document.getElementById('composerPlayBtn');
+    if (gridA.playing) {
+      if (btn) btn.innerText = '■';
+    } else {
+      if (playback && !isLoadingSection) {
+        cleanupPlayback();
+        renderCompositions();
+      }
+      if (btn && !audioSectionId) btn.innerText = '▶';
     }
   },
 });
@@ -95,6 +102,7 @@ async function fetchCompositions() {
     .from('compositions')
     .select('id, title, created_at, composition_sections(id, position, type, title, phrase_name, audio_url, note_text, color, pattern_snapshot)')
     .eq('user_id', currentUser.id)
+    .eq('is_snapshot', false)
     .order('created_at', { ascending: false });
 
   if (error) { console.error('[Composer] fetch error', error); return; }
@@ -161,17 +169,20 @@ async function shareComposition(id) {
   const comp = compositions.find(c => c.id === id);
   if (!comp) return;
 
-  // Generate token if not already set
-  let token = comp.share_token;
-  if (!token) {
-    token = genCompShareToken();
-    const { error } = await supabase
-      .from('compositions')
-      .update({ share_token: token })
-      .eq('id', id);
-    if (error) { await alert('Could not generate share link.'); return; }
-    comp.share_token = token;
-  }
+  // Each share creates a frozen snapshot copy. The original is never modified,
+  // so the teacher can keep editing without affecting the shared link.
+  const snapshotId = await copyCompositionAsSnapshot(id);
+  if (!snapshotId) { await alert('Could not generate share link.'); return; }
+
+  // Read back the token that copyCompositionAsSnapshot wrote onto the snapshot.
+  const { data } = await supabase
+    .from('compositions')
+    .select('share_token')
+    .eq('id', snapshotId)
+    .single();
+
+  const token = data?.share_token;
+  if (!token) { await alert('Could not generate share link.'); return; }
 
   const url = `${location.origin}${location.pathname}?comp=${encodeURIComponent(token)}`;
 
@@ -875,6 +886,7 @@ async function playSingleSection(comp, section) {
   updatePlaybarSection();
   highlightCurrentSection();
   applyGridSectionColors(playback.boundaries);
+  updateCurrentPhraseName(section.phrase_name ?? null);
 
   await start(gridA);
   renderCompositions();
@@ -897,6 +909,12 @@ async function startPlayback(compositionId, fromSectionIdx = 0) {
   updatePlaybarSection();
   highlightCurrentSection();
 
+  const sectionById = Object.fromEntries((comp.sections || []).map(s => [s.id, s]));
+  const phraseNameForBoundary = (idx) =>
+    sectionById[boundaries[idx]?.sectionId]?.phrase_name ?? null;
+
+  updateCurrentPhraseName(phraseNameForBoundary(0));
+
   // ── Tick observer: track section + stop at end ───────────────
   const lastStep = boundaries[boundaries.length - 1].end;
   playback.loopObserver = (ctx) => {
@@ -908,6 +926,7 @@ async function startPlayback(compositionId, fromSectionIdx = 0) {
       playback.currentSectionIdx = idx;
       highlightCurrentSection();
       updatePlaybarSection();
+      updateCurrentPhraseName(phraseNameForBoundary(idx));
     }
 
     if (step === lastStep) stopPlayback();
@@ -1942,11 +1961,17 @@ function updateSharedCompBanner(comp, creatorName) {
   const by = creatorName && creatorName !== 'Unknown' ? ` by ${creatorName}` : '';
   sub.textContent = `"${comp.title}"${by} — you can view and add this to your Composer.`;
   banner.style.display = 'flex';
+  document.getElementById('sharedCompAddBtn')?.classList.add('sparkle');
+}
+
+function stopSparkle() {
+  document.getElementById('sharedCompAddBtn')?.classList.remove('sparkle');
 }
 
 function hideSharedCompBanner() {
   const banner = document.getElementById('sharedCompBanner');
   if (banner) banner.style.display = 'none';
+  stopSparkle();
   sharedCompToken = null;
 }
 
@@ -2011,7 +2036,7 @@ async function _openSharedComposition(token) {
   clearSharedCompURL();
 
   // Wire Add + Exit buttons
-  document.getElementById('sharedCompAddBtn')?.addEventListener('click', () => addSharedCompToMyComposer(comp), { once: true });
+  document.getElementById('sharedCompAddBtn')?.addEventListener('click', () => { stopSparkle(); addSharedCompToMyComposer(comp); }, { once: true });
   document.getElementById('sharedCompExitBtn')?.addEventListener('click', () => {
     hideSharedCompBanner();
     fetchCompositions(); // restore user's own compositions
@@ -2080,6 +2105,108 @@ async function addSharedCompToMyComposer(sourceComp) {
   expandedId = newComp.id;
   renderCompositions();
   await alert(`"${title.trim()}" added to your Composer!`);
+}
+
+// Creates a frozen snapshot copy of a composition (used for sharing and assignments).
+// The copy is owned by the current user, marked is_snapshot=true, and gets a
+// share_token so any authenticated user can read it via the existing RLS policy.
+// Returns the new composition ID, or null on failure.
+export async function copyCompositionAsSnapshot(sourceId) {
+  // Fetch source with sections
+  const { data: source, error: fetchErr } = await supabase
+    .from('compositions')
+    .select('id, title, user_id, composition_sections(*)')
+    .eq('id', sourceId)
+    .maybeSingle();
+
+  if (fetchErr || !source) return null;
+
+  const token = genCompShareToken();
+
+  const { data: newComp, error: insertErr } = await supabase
+    .from('compositions')
+    .insert({
+      user_id:     source.user_id,
+      title:       source.title,
+      is_snapshot: true,
+      share_token: token,
+    })
+    .select('id')
+    .single();
+
+  if (insertErr || !newComp) return null;
+
+  const sections = (source.composition_sections || [])
+    .sort((a, b) => a.position - b.position)
+    .map(s => ({
+      composition_id:   newComp.id,
+      position:         s.position,
+      type:             s.type,
+      title:            s.title,
+      phrase_name:      s.phrase_name,
+      note_text:        s.note_text,
+      color:            s.color,
+      pattern_snapshot: s.pattern_snapshot,
+      // audio_url intentionally omitted — recordings are user-specific storage paths
+    }));
+
+  if (sections.length) {
+    const { error: sectErr } = await supabase
+      .from('composition_sections')
+      .insert(sections);
+    if (sectErr) return null;
+  }
+
+  return newComp.id;
+}
+
+// Open a composition by ID in the composer panel (read-only preview, same as shared link flow).
+// Used by student assignments to let a student view an assigned composition.
+// Assignment snapshots always have share_token set, so the existing
+// compositions_shared_read RLS policy grants students access without any fallback.
+export async function openCompositionById(compositionId) {
+  const { data, error } = await supabase
+    .from('compositions')
+    .select('id, title, user_id, share_token, composition_sections(*)')
+    .eq('id', compositionId)
+    .maybeSingle();
+
+  if (error || !data) {
+    await alert('Could not load this composition.');
+    return false;
+  }
+
+  const comp = {
+    ...data,
+    sections: (data.composition_sections || []).sort((a, b) => a.position - b.position),
+  };
+
+  let creatorName = 'Unknown';
+  const { getProfileById } = await import('./profile.js');
+  if (data.user_id) {
+    const profile = await getProfileById(data.user_id);
+    if (profile?.username) creatorName = profile.username;
+  }
+
+  openComposer();
+  const list = document.getElementById('compositionList');
+  if (list) {
+    list.innerHTML = '';
+    const placeholder = document.createElement('div');
+    placeholder.className = 'shared-comp-preview';
+    placeholder.innerHTML = renderSharedCompPreview(comp);
+    list.appendChild(placeholder);
+  }
+
+  updateSharedCompBanner(comp, creatorName);
+
+  document.getElementById('sharedCompAddBtn')?.addEventListener('click', () => { stopSparkle(); addSharedCompToMyComposer(comp); }, { once: true });
+  document.getElementById('sharedCompExitBtn')?.addEventListener('click', () => {
+    hideSharedCompBanner();
+    fetchCompositions();
+  }, { once: true });
+
+  return true;
 }
 
 // After login, check if there's a pending shared composition to open

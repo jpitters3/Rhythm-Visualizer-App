@@ -11,6 +11,7 @@ import { supabase } from './supabase-client.js';
 import { alert, confirm } from './alert.js';
 import { escapeHtml } from './utils.js';
 import { Bus, BUS_EVENT } from './bus.js';
+import { copyCompositionAsSnapshot } from './song-composer.js';
 
 // ===== DOM REFS =====
 let modal = null;
@@ -23,6 +24,7 @@ let submissionsLoaded = false;
 let assignmentsList = [];
 let coursesList = [];
 let studentsList = [];
+let compositionsList = [];
 let cachedAssigneeMap = null; // Map<student_id, status> — cleared when editor opens
 
 let currentAssignment = null;   // null = new; object with .id = editing existing
@@ -40,6 +42,7 @@ const ITEM_TYPE_ICONS = {
   audio: '🎙️',
   video: '🎥',
   link: '🔗',
+  composition_reference: '🎵',
 };
 
 const ITEM_TYPE_LABELS = {
@@ -48,6 +51,7 @@ const ITEM_TYPE_LABELS = {
   audio: 'Audio Recording',
   video: 'Video Upload',
   link: 'URL / Link',
+  composition_reference: 'Study Composition',
 };
 
 // ===== INIT =====
@@ -165,6 +169,7 @@ async function loadInitialData() {
   const tasks = [loadAssignmentsList()];
   if (coursesList.length === 0) tasks.push(loadCourses());
   if (studentsList.length === 0) tasks.push(loadStudents());
+  if (compositionsList.length === 0) tasks.push(loadCompositions());
   await Promise.all(tasks);
   // Ensure course select is populated even when courses weren't re-fetched
   if (tasks.length === 1) populateCourseSelect();
@@ -200,6 +205,16 @@ async function loadCourses() {
     .order('title');
   coursesList = data || [];
   populateCourseSelect();
+}
+
+async function loadCompositions() {
+  const { data } = await supabase
+    .from('compositions')
+    .select('id, title')
+    .eq('user_id', currentUser.id)
+    .eq('is_snapshot', false)
+    .order('created_at', { ascending: false });
+  compositionsList = data || [];
 }
 
 async function loadStudents() {
@@ -390,6 +405,7 @@ function renderItemsList() {
           Required
         </label>
         ${item.item_type === 'quiz' ? renderQuizBuilderHTML(idx) : ''}
+        ${item.item_type === 'composition_reference' ? renderCompositionPickerHTML(idx) : ''}
       </div>
     `;
     el.appendChild(card);
@@ -441,6 +457,38 @@ function renderQuizBuilderHTML(idx) {
         <button class="asgn-quiz-add-btn" data-action="quiz-add-question">+ Add Question</button>
       </div>
     </div>
+  `;
+}
+
+function renderCompositionPickerHTML(idx) {
+  const item = currentItems[idx];
+  // original_composition_id is the source the teacher picked from the dropdown.
+  // composition_id is the snapshot copy — it's not in compositionsList, so we
+  // use the original for display purposes.
+  const selectedId = item.config?.original_composition_id ?? item.config?.composition_id ?? '';
+  const sections = item.config?.sections ?? [];
+
+  const options = compositionsList.map(c =>
+    `<option value="${escapeHtml(c.id)}" ${c.id === selectedId ? 'selected' : ''}>${escapeHtml(c.title)}</option>`
+  ).join('');
+
+  const sectionsPreview = sections.length
+    ? `<div class="asgn-comp-sections-preview">
+        ${sections.filter(s => s.type === 'phrase').map((s, i) =>
+          `<span class="asgn-comp-section-chip">${escapeHtml(s.title || s.phrase_name || `Section ${i + 1}`)}</span>`
+        ).join('')}
+       </div>`
+    : '';
+
+  return `
+    <div>
+      <label class="asgn-label">Composition</label>
+      <select data-field="composition-select">
+        <option value="">— Choose a composition —</option>
+        ${options}
+      </select>
+    </div>
+    ${sectionsPreview}
   `;
 }
 
@@ -612,6 +660,22 @@ function renderReviewPanel() {
         responseHTML = url
           ? `<a href="${escapeHtml(url)}" target="_blank" rel="noopener">${escapeHtml(label)}</a>`
           : '<em style="opacity:0.5">No link provided.</em>';
+        break;
+      }
+      case 'composition_reference': {
+        const config = resp.assignment_items?.config ?? {};
+        const sections = (config.sections ?? []).filter(s => s.type === 'phrase');
+        const completed = resp.response_data?.completed;
+        const statusHTML = completed
+          ? '<span class="asgn-mark-complete-check">✅ Student marked as studied</span>'
+          : '<span style="opacity:0.5">Not yet marked as studied</span>';
+        const sectionList = sections.length
+          ? `<div class="asgn-comp-sections-preview" style="margin-top:8px">${
+              sections.map((s, i) =>
+                `<span class="asgn-comp-section-chip">${escapeHtml(s.title || s.phrase_name || `Section ${i + 1}`)}</span>`
+              ).join('')}</div>`
+          : '';
+        responseHTML = `${statusHTML}${sectionList}`;
         break;
       }
       case 'quiz': {
@@ -812,7 +876,7 @@ function handleItemsListClick(e) {
   }
 }
 
-function handleItemsListChange(e) {
+async function handleItemsListChange(e) {
   const field = e.target.dataset.field;
   if (!field) return;
 
@@ -835,6 +899,35 @@ function handleItemsListChange(e) {
     case 'item-required':
       item.required = e.target.checked;
       break;
+    case 'composition-select': {
+      const compId = e.target.value;
+      const comp = compositionsList.find(c => c.id === compId);
+      item.config = { composition_id: null, original_composition_id: compId, composition_title: comp?.title ?? '' };
+
+      if (compId) {
+        // Create a frozen snapshot so students always see the composition as it
+        // was at assignment time, and the teacher can edit the original freely.
+        const snapshotId = await copyCompositionAsSnapshot(compId);
+        if (!snapshotId) { await alert('Could not snapshot composition. Please try again.'); break; }
+        item.config.composition_id = snapshotId;
+
+        const { data: sections } = await supabase
+          .from('composition_sections')
+          .select('id, type, title, phrase_name, color, position')
+          .eq('composition_id', snapshotId)
+          .order('position');
+        item.config.sections = sections || [];
+      }
+
+      if (!item.title) {
+        item.title = comp?.title ?? '';
+        const headerTitle = card.querySelector('.asgn-item-header-title');
+        if (headerTitle) headerTitle.textContent = item.title || ITEM_TYPE_LABELS[item.item_type];
+      }
+      renderItemsList();
+      expandItem(idx);
+      break;
+    }
     case 'quiz-question-text': {
       const qIdx = parseInt(e.target.dataset.qidx, 10);
       item.config.questions[qIdx].text = e.target.value;

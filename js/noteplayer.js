@@ -73,6 +73,10 @@ function noteToFile(note) {
 let audioCtx = null;
 let audioUnlocked = false;
 let samplesPreloaded = false;
+// Safari requires a silent buffer playback to force audio hardware initialization.
+// Without it, the hardware starts up 500–800ms after the first scheduled note,
+// causing visuals to appear before any sound is heard.
+let audioHardwareReady = false;
 
 // Volume State (persisted with sanitization)
 const getStoredVol = (key) => {
@@ -135,6 +139,8 @@ export async function ensureAudio() {
       audioCtx.addEventListener('statechange', () => {
         if (audioCtx.state === 'suspended' && audioUnlocked) {
           audioCtx.resume().catch(() => {});
+          // Hardware will need to re-initialize on next play after a suspend.
+          audioHardwareReady = false;
         }
       });
     }
@@ -149,6 +155,23 @@ export async function ensureAudio() {
   }
 
   return Promise.resolve();
+}
+
+// Safari's audio hardware can take 500–800ms to initialize after AudioContext.resume()
+// resolves. Playing a silent single-sample buffer forces the hardware to start up
+// immediately, so by the time the scheduler runs, audio output is already live.
+async function warmUpAudioHardware() {
+  if (audioHardwareReady || !audioCtx || audioCtx.state !== 'running') return;
+  try {
+    const buf = audioCtx.createBuffer(1, 1, audioCtx.sampleRate);
+    const src = audioCtx.createBufferSource();
+    src.buffer = buf;
+    src.connect(audioCtx.destination);
+    src.start(0);
+  } catch (_) {}
+  // Give the hardware time to come up before the real scheduler starts.
+  await new Promise(r => setTimeout(r, 100));
+  audioHardwareReady = true;
 }
 
 // Preload note samples once audio is unlocked
@@ -741,6 +764,7 @@ export async function start(ctx, isSync = true, skipCountdown = false) {
   if (c.playing) return;
 
   await unlockAudio();
+  await warmUpAudioHardware();
 
   c.playing = true;
   c.loopCount = 0; // Reset visual loop counter
