@@ -8,6 +8,13 @@
 //   Sidepanel.closeTopmost() // closes the most recently opened sidepanel (called by ESC handler)
 //   Sidepanel.closeAll()     // closes all open sidepanels (mutual exclusivity enforcement)
 //   Sidepanel.syncNavState() // syncs nav button active states to current open panel state
+//
+// Panel registry:
+//   registerPanelOpener(type, fn) — each panel module registers its own open function
+//   setLastSidebarType(type)      — called by each panel's open function to track the last opened
+//   toggleLastSidebar()           — opens/closes whichever panel was opened most recently
+
+import { Bus, BUS_EVENT } from './bus.js';
 
 // Map of panel element IDs to their nav button IDs.
 // Add entries here when new panels should highlight a nav button.
@@ -88,5 +95,38 @@ export class Sidepanel {
     const studioActive = onFreeplay || [...openIds].some(id => STUDIO_PANEL_IDS.has(id));
     document.querySelector('.nav-link[data-route="freeplay"]')
       ?.classList.toggle('active', studioActive);
+  }
+}
+
+// ============================================================
+// Panel registry — last-opened sidebar tracking
+// ============================================================
+
+let lastSidebarType = 'course';
+const panelOpeners = {};
+
+export function updateBodySidebarClass() {
+  const anyOpen = !!document.querySelector('.sidebar.open');
+  document.body.classList.toggle('sidebar-open', anyOpen);
+}
+
+export function setLastSidebarType(type) {
+  lastSidebarType = type;
+}
+
+// Each panel module calls this once at init to register its open function.
+export function registerPanelOpener(type, fn) {
+  panelOpeners[type] = fn;
+}
+
+// Opens whichever panel was most recently opened, or closes all if any is open.
+export function toggleLastSidebar() {
+  const isAnyOpen = !!document.querySelector('.sidebar.open');
+  if (isAnyOpen) {
+    Sidepanel.closeAll();
+    Bus.emit(BUS_EVENT.SIDEBAR_CLOSE_ALL, { reason: 'toggle-last', source: 'sidepanel' });
+    updateBodySidebarClass();
+  } else {
+    (panelOpeners[lastSidebarType] ?? panelOpeners['course'])?.();
   }
 }

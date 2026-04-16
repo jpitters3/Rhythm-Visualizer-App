@@ -17,6 +17,7 @@ import { TransportRegistry } from './transport-ui.js';
 import { gridA } from './grid-context.js';
 import { alert, confirm, prompt } from './alert.js';
 import { closeSidebar } from './courses.js';
+import { setLastSidebarType, registerPanelOpener } from './sidepanel.js';
 import { openTrimUI, closeTrimUI } from './recording-trim.js';
 import { updateCurrentPhraseName } from './controls.js';
 import { canAccess, FEATURE } from './gated-feature.js';
@@ -70,6 +71,7 @@ TransportRegistry.register({
 });
 
 export function openComposer() {
+  setLastSidebarType('composer');
   closeSidebar({ reason: 'composer', source: 'composer' });
   composerPanel.open();
   updateBodySidebarClass();
@@ -2241,6 +2243,8 @@ document.getElementById('newCompositionBtn')?.addEventListener('click', createCo
 
 // Close button
 document.getElementById('closeComposerSidebar')?.addEventListener('click', closeComposer);
+
+registerPanelOpener('composer', openComposer);
 
 // ============================================================
 // Utilities

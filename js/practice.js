@@ -2,8 +2,8 @@ import { Bus, BUS_EVENT } from './bus.js';
 import { currentUser } from './state.js';
 import { supabase } from './supabase-client.js';
 import { applyPattern } from './pattern-crud.js';
-import { openLessonSidebar, updateBodySidebarClass, closeSidebar } from './courses.js';
-import { Sidepanel } from './sidepanel.js';
+import { openLessonSidebar, closeSidebar } from './courses.js';
+import { Sidepanel, updateBodySidebarClass, setLastSidebarType, registerPanelOpener } from './sidepanel.js';
 
 // State
 let practiceItems = [];
@@ -13,18 +13,23 @@ const sidebar = document.getElementById('practiceSidebar');
 const practiceSidePanel = new Sidepanel(sidebar, { onClose: updateBodySidebarClass });
 const container = document.getElementById('practiceList');
 
+function openPracticeSidebar() {
+  setLastSidebarType('practice');
+  closeSidebar({ reason: 'practice-open', source: 'practice' });
+  practiceSidePanel.open();
+  fetchPracticeItems();
+  updateBodySidebarClass();
+}
+
 export async function togglePracticeSidebar() {
   if (practiceSidePanel.isOpen) {
     closeSidebar({ reason: 'practice-close', source: 'practice' });
   } else {
-    // Close other sidebars first
-    closeSidebar({ reason: 'practice-open', source: 'practice' });
-
-    practiceSidePanel.open();
-    fetchPracticeItems();
-    updateBodySidebarClass();
+    openPracticeSidebar();
   }
 }
+
+registerPanelOpener('practice', openPracticeSidebar);
 
 export function closePracticeSidebar() {
   practiceSidePanel.close();

@@ -1,5 +1,5 @@
 import { alert, confirm, prompt } from './alert.js';
-import { Sidepanel } from './sidepanel.js';
+import { Sidepanel, updateBodySidebarClass, setLastSidebarType, registerPanelOpener, toggleLastSidebar } from './sidepanel.js';
 import { Bus, BUS_EVENT } from './bus.js';
 import { currentUser, isAdminUser } from './state.js';
 import { applyPattern, serializePattern, dbSavePattern, refreshPatternSelect, hasUnsavedChanges, snapshotCurrentState } from './pattern-crud.js';
@@ -23,7 +23,6 @@ export let allSections = [];
 export let allLessons = [];
 export let currentLesson = null;
 export let completedLessonIds = new Set();
-let lastSidebarType = 'course'; // 'course' or 'lesson'
 
 export async function fetchCourses() {
   if (!currentUser) renderCourseSidebar(null);
@@ -563,7 +562,7 @@ export function closeSidebar(options = {}) {
 }
 
 export function openLessonSidebar() {
-  lastSidebarType = 'lesson';
+  setLastSidebarType('lesson');
   closeSidebar({ reason: 'lesson-player', source: 'courses' }); // mutually exclusive
   lessonSidePanel.open();
   updateBodySidebarClass();
@@ -574,7 +573,7 @@ export function closeLessonSidebar() {
 }
 
 export function openSidebar() {
-  lastSidebarType = 'course';
+  setLastSidebarType('course');
   closeSidebar({ reason: 'course-list', source: 'courses' }); // mutually exclusive
   if (!courseSidePanel.isOpen) {
     courseSidePanel.open();
@@ -590,25 +589,6 @@ export function toggleSidebar() {
     // Note: openSidebar already calls closeSidebar
     openSidebar();
   }
-}
-
-export function toggleLastSidebar() {
-  const isAnyOpen = courseSidePanel.isOpen || lessonSidePanel.isOpen;
-
-  if (isAnyOpen) {
-    closeSidebar();
-  } else {
-    if (lastSidebarType === 'lesson' && currentLesson) {
-      openLessonSidebar();
-    } else {
-      openSidebar();
-    }
-  }
-}
-
-export function updateBodySidebarClass() {
-  const anyOpen = !!document.querySelector('.sidebar.open');
-  document.body.classList.toggle('sidebar-open', anyOpen);
 }
 
 export async function toggleLessonCompletion(lessonId) {
@@ -861,6 +841,11 @@ document.body.addEventListener('click', async (e) => {
 // Sidepanel instances — onClose calls updateBodySidebarClass for ESC/auto-close
 const courseSidePanel = new Sidepanel(document.getElementById('courseSidebar'), { onClose: updateBodySidebarClass });
 const lessonSidePanel = new Sidepanel(document.getElementById('lessonPlayer'), { onClose: updateBodySidebarClass });
+
+// Register openers so toggleLastSidebar can reopen the correct panel.
+// The lesson opener falls back to the course list if no lesson is loaded.
+registerPanelOpener('course', openSidebar);
+registerPanelOpener('lesson', () => currentLesson ? openLessonSidebar() : openSidebar());
 
 // Sidebar Toggles (Existing ID-based, can stay or move to delegation)
 

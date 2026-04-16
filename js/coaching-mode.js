@@ -14,9 +14,9 @@ import { setInnerLabel, renderAllMeasures, cells } from './notegrid.js';
 import { CoachingSession } from './coaching-session.js';
 import { getSelectedPatternName } from './pattern-crud.js';
 import { loadCalibrationProfile, hasCalibrationForCurrentScale, turnOnMic, micStream, turnOffMic } from './transcription.js';
-import { updateBodySidebarClass, closeSidebar } from './courses.js';
+import { closeSidebar } from './courses.js';
 import { alert } from './alert.js';
-import { Sidepanel } from './sidepanel.js';
+import { Sidepanel, updateBodySidebarClass, setLastSidebarType, registerPanelOpener } from './sidepanel.js';
 
 // Session state
 let coachingSession = null;
@@ -58,6 +58,8 @@ let sidebarSaveSessionBtn = null;
 
 const TIMING_SCORE_GREAT = 70;
 const TIMING_SCORE_GOOD = 50;
+
+registerPanelOpener('coaching', openCoachingSidebar);
 
 export { coachingSession, isCoachingActive, isReviewActive, gridLabels };
 
@@ -121,7 +123,7 @@ export async function enterCoachingMode(ctx = activeGrid) {
 }
 
 export function openCoachingSidebar() {
-  // Mutual exclusivity: Close other sidebars
+  setLastSidebarType('coaching');
   closeSidebar({ reason: 'coaching', source: 'coaching' });
 
   if (!coachingSidebar) {
