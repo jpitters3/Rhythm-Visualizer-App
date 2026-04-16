@@ -367,13 +367,21 @@ function nextNote(c) {
 }
 
 function scheduleAudio(c, step, time) {
+  // Capture output latency on the first scheduled note of each playback session.
+  // audioCtx is guaranteed non-null here since the scheduler is already running.
+  if (c.outputLatency === undefined) {
+    c.outputLatency = audioCtx.outputLatency ?? audioCtx.baseLatency ?? 0;
+  }
+
   // Store the time and step of the note being scheduled for visual sync
   c.lastScheduledTime = time;
   c.lastScheduledStep = step;
 
-  // Push to visual queue
+  // Fire the visual when the sound is actually heard: scheduled audio time
+  // (time + AUDIO_DELAY) plus the hardware output buffer delay (outputLatency).
+  // VISUAL_HEADSTART shifts this earlier if you want visuals to lead the sound.
   visualQueue.push({
-    time: time - (VISUAL_HEADSTART || 0),
+    time: time + AUDIO_DELAY + (c.outputLatency || 0) - (VISUAL_HEADSTART || 0),
     step: step,
     ctx: c,
     audioStartTime: c.audioStartTime
@@ -844,6 +852,7 @@ export function stop(ctx, isSync = true) {
   const c = ctx || activeGrid;
 
   c.playing = false;
+  c.outputLatency = undefined;
   if (c.timerID) cancelAnimationFrame(c.timerID);
   c.timerID = null;
   visualQueue.length = 0;
