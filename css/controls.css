@@ -392,6 +392,7 @@ body:not(.dark) .transport-group .t-tap-btn.tapping {
   }
 }
 
+@media (max-width: 768px) {
   /* Primary controls bar hidden on mobile until toggled */
   .mobile-controls-btn {
     display: flex !important;
