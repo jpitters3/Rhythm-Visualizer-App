@@ -1555,7 +1555,7 @@ function showSectionMenu(triggerBtn, sectionId, sectionType) {
   }, 0);
 }
 
-function showContextMenu(x, y, compId) {
+function showContextMenu(triggerBtn, compId) {
   removeContextMenu();
   const menu = document.createElement('div');
   menu.className = 'composer-context-menu';
@@ -1565,10 +1565,13 @@ function showContextMenu(x, y, compId) {
     <button data-action="save-as" data-id="${compId}">💾 Save As...</button>
     <button data-action="rename" data-id="${compId}">✏️ Rename</button>
     <button data-action="delete" data-id="${compId}" class="danger">🗑 Delete</button>`;
-  menu.style.left = `${x}px`;
-  menu.style.top  = `${y}px`;
+  const rect = triggerBtn.getBoundingClientRect();
+  menu.style.right = `${window.innerWidth - rect.right}px`;
+  menu.style.top   = `${rect.bottom + 4}px`;
+  menu.style.left  = 'auto';
   document.body.appendChild(menu);
   contextMenu = menu;
+  contextMenuTrigger = triggerBtn;
 
   menu.addEventListener('click', e => {
     const btn = e.target.closest('button');
@@ -1770,11 +1773,13 @@ composerEl?.addEventListener('click', async (e) => {
       togglePlaybackFromStart(id);
       break;
 
-    case 'menu-comp': {
-      const rect = btn.getBoundingClientRect();
-      showContextMenu(rect.left, rect.bottom + 4, id);
+    case 'menu-comp':
+      if (contextMenuTrigger === btn) {
+        removeContextMenu();
+      } else {
+        showContextMenu(btn, id);
+      }
       break;
-    }
 
     case 'add-phrase':
       await showPhrasePicker(comp);
