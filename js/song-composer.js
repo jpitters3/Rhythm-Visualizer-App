@@ -46,7 +46,6 @@ const PALETTE = ['#4a90e2','#e2714a','#4ae291','#c44ae2','#e2c14a','#4ac9e2','#e
 // ============================================================
 const composerEl = document.getElementById('composerSidebar');
 const composerPanel = new Sidepanel(composerEl, { onClose: () => {
-  stopPlayback();
   closeTrimUI();
   removeContextMenu();
   stopSparkle();
@@ -75,6 +74,8 @@ export function openComposer() {
   composerPanel.open();
   updateBodySidebarClass();
   if (currentUser) fetchCompositions();
+  const btn = document.getElementById('composerPlayBtn');
+  if (btn) btn.innerText = gridA.playing ? '■' : '▶';
 }
 
 export function closeComposer() {
