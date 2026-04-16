@@ -61,9 +61,11 @@
   }
 
   .transport-container {
-    padding: 8px 14px;
+    padding: 8px 12px;
     margin-bottom: 0;
-    max-width: 95vw;
+    max-width: calc(100vw - 24px);
+    box-sizing: border-box;
+    overflow: hidden;
     border-radius: 16px;
   }
 

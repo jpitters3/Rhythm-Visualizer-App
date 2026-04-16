@@ -362,6 +362,36 @@ body:not(.dark) .transport-group .t-tap-btn.tapping {
     width: 100px;
   }
 
+  /* Prevent transport from overflowing the panel on mid-size phones */
+  .transport-group {
+    flex-wrap: nowrap;
+    gap: 6px;
+  }
+
+  .transport-group .t-play-btn,
+  .transport-group .t-metro-btn,
+  .transport-group .t-tap-btn {
+    padding: 6px 10px;
+  }
+}
+
+/* On small phones hide the BPM slider — the number input + tap covers it */
+@media (max-width: 430px) {
+  .bpm-control input[type=range] {
+    display: none;
+  }
+
+  .transport-group {
+    gap: 5px;
+  }
+
+  .transport-group .t-play-btn,
+  .transport-group .t-metro-btn,
+  .transport-group .t-tap-btn {
+    padding: 6px 8px;
+  }
+}
+
   /* Primary controls bar hidden on mobile until toggled */
   .mobile-controls-btn {
     display: flex !important;
