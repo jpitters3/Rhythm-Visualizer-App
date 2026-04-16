@@ -74,7 +74,6 @@ export function openComposer() {
   setLastSidebarType('composer');
   closeSidebar({ reason: 'composer', source: 'composer' });
   composerPanel.open();
-  updateBodySidebarClass();
   if (currentUser) fetchCompositions();
   const btn = document.getElementById('composerPlayBtn');
   if (btn) btn.innerText = gridA.playing ? '■' : '▶';
@@ -82,7 +81,6 @@ export function openComposer() {
 
 export function closeComposer() {
   composerPanel.close();
-  updateBodySidebarClass();
 }
 
 export function toggleComposer() {

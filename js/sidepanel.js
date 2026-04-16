@@ -77,6 +77,8 @@ export class Sidepanel {
   // Syncs nav button active states to the current open panel state.
   // Reads directly from #stack — no module needs to pass state in.
   static syncNavState() {
+    updateBodySidebarClass();
+
     const openIds = new Set(Sidepanel.#stack.map(s => s.el.id));
 
     // Collect which button IDs should be active (a button is active if ANY
