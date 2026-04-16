@@ -70,7 +70,7 @@ export class TransportUI {
       const applyNum = () => {
         const raw = parseInt(this.bpmNum.value);
         if (isNaN(raw)) { this.bpmNum.value = this.ctx.bpm; return; }
-        const val = Math.min(220, Math.max(40, raw));
+        const val = Math.min(400, Math.max(40, raw));
         this.applyBpm(val, this.bpmNum);
         Bus.emit(BUS_EVENT.GRID_CHANGED);
       };
@@ -135,7 +135,7 @@ export class TransportUI {
     }
     const avg = intervals.reduce((a, b) => a + b, 0) / intervals.length;
     const bpm = Math.round(60000 / avg);
-    const clamped = Math.min(220, Math.max(40, bpm));
+    const clamped = Math.min(400, Math.max(40, bpm));
 
     this.applyBpm(clamped, null);
     Bus.emit(BUS_EVENT.GRID_CHANGED);

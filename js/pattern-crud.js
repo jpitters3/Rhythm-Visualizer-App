@@ -224,11 +224,21 @@ export async function refreshPatternSelect(selectedName = '') {
 }
 
 export function serializePattern(ctx = gridA) {
+  // On mobile, the grid runs at subdivision=1 with a scaled-up BPM.
+  // Reverse that normalization before persisting so saved data matches the
+  // original phrase (subdivision restored, BPM divided back down).
+  let subdivision = ctx.subdivision;
+  let bpm = Number(ctx.bpm);
+  if (window.innerWidth <= 768 && ctx.mobileOriginalSubdivision) {
+    subdivision = ctx.mobileOriginalSubdivision;
+    bpm = Math.round(bpm / ctx.mobileOriginalSubdivision);
+  }
+
   const state = {
     version: (typeof window.VERSION !== 'undefined' ? window.VERSION : 'v1.0'),
     beats: ctx.beats,
-    subdivision: ctx.subdivision,
-    bpm: Number(ctx.bpm),
+    subdivision,
+    bpm,
     handSplit: document.body.classList.contains('handSplit'),
     steps: ctx.stepsPerMeasure,
     measures: ctx.measures,
@@ -255,6 +265,18 @@ export function serializePattern(ctx = gridA) {
   return state;
 }
 
+// On mobile, force subdivision to 1 (quarter notes) regardless of what the
+// pattern was saved with. The BPM is scaled up proportionally so every step
+// plays at exactly the same duration as the original.
+// e.g. subdivision=2, bpm=120 → subdivision=1, bpm=240
+function normalizeMobileSubdivision(state) {
+  if (window.innerWidth > 768) return;
+  const sub = state.subdivision ?? 2;
+  if (sub <= 1) return;
+  state.bpm = Math.round((state.bpm ?? 120) * sub);
+  state.subdivision = 1;
+}
+
 export async function applyPattern(state, ctx = gridA) {
   if (!state || !Array.isArray(state.labels)) {
     console.error('Invalid pattern state:', state);
@@ -264,6 +286,15 @@ export async function applyPattern(state, ctx = gridA) {
 
   // Migrate old format ({ mode, timeSignature }) to new ({ beats, subdivision })
   migratePatternState(state);
+  // Mobile: collapse to quarter-note grid, scale BPM to compensate.
+  // Store original subdivision from the phrase before normalization so we can
+  // reverse it on save.
+  if (window.innerWidth <= 768 && (state.subdivision ?? 2) > 1) {
+    ctx.mobileOriginalSubdivision = state.subdivision ?? 2;
+  } else {
+    ctx.mobileOriginalSubdivision = null;
+  }
+  normalizeMobileSubdivision(state);
 
   const wasPlaying = ctx.playing;
   if (wasPlaying) stop(ctx);
@@ -282,7 +313,7 @@ export async function applyPattern(state, ctx = gridA) {
   }
 
   if (typeof state.bpm === 'number' && !Number.isNaN(state.bpm)) {
-    ctx.bpm = Math.max(40, Math.min(220, Math.round(state.bpm)));
+    ctx.bpm = Math.max(40, Math.min(400, Math.round(state.bpm)));
     if (TransportRegistry) {
       TransportRegistry.updateAll(ctx);
     }
