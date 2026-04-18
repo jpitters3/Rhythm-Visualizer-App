@@ -7,6 +7,8 @@ body.present {
   /* Prevent body scroll */
   /* Horizon Variable: The anchor point for the "Current Measure" */
   --horizon: 20%;
+  /* Measure stack anchor — change this one value to shift the whole stack */
+  --measure-top: 144px;
 }
 
 body.present {
@@ -113,59 +115,31 @@ body.present #measures {
   min-width: 900px;
 }
 
-/* Base Measure Row Style (Hidden/Off-screen) */
+/* Base Measure Row Style — hidden by default */
 body.present .measure-row {
-  position: absolute;
+  position: fixed;
   left: 50%;
-  top: 100dvh;
-  top: var(--app-height, 100dvh);
-  /* Start below screen */
-  transform: translateX(-50%) scale(0.8);
+  top: var(--measure-top);
+  /* Old fade-only animation: */
+  /* transition: opacity 0.15s ease; */
+  /* Slide + fade: exits upward (it passed), enters from below */
+  transform: translateX(-50%) translateY(-60px);
   opacity: 0;
   pointer-events: none;
-  transition: all 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+  transition: opacity 0.3s ease, transform 0.3s ease;
   display: block !important;
-  /* Always valid DOM, just visual hidden */
-  min-width: 400px;
+  width: 600px;
 }
 
-/* ==== PRESENTATION MODE LAYOUT (Standardized) ==== */
-/* ==== PRESENTATION MODE LAYOUT (Standardized) ==== */
-/* ==== PRESENTATION MODE LAYOUT (Standardized) ==== */
+/* ==== PRESENTATION MODE MEASURE STACK ==== */
 
-/* SLOT 3: Next+1 Measure */
-body.present .measure-row.next-measure-2 {
-  bottom: auto;
-  top: calc(var(--horizon) - 180px);
-  /* Wider spacing */
-  opacity: 0.2;
-  transform: translateX(-50%) scale(0.8);
-  z-index: 1;
-  width: 400px;
-}
-
-/* SLOT 2: Next Measure */
-body.present .measure-row.next-measure {
-  bottom: auto;
-  top: calc(var(--horizon) - 120px);
-  /* Wider spacing */
-  opacity: 0.6;
-  transform: translateX(-50%) scale(0.9);
-  z-index: 5;
-  width: 450px;
-}
-
-/* Static Header Styles */
+/* Static labels — below current measure, above next */
 body.present .static-labels {
   position: fixed;
-  bottom: auto;
-  top: calc(var(--horizon) + 50px);
-  /* 100px below current */
+  top: calc(var(--measure-top) + 70px);
   left: 50%;
-  transform: translateX(-50%) scale(1.1);
-  /* Match current measure scale */
+  transform: translateX(-50%);
   width: 600px;
-  /* Match current measure width */
   display: grid !important;
   grid-template-columns: repeat(var(--cols, 16), 1fr);
   gap: 12px;
@@ -181,16 +155,29 @@ body.present .static-labels div {
   text-align: center;
 }
 
-/* SLOT 1: Current Measure (Raised to proper hover position) */
+/* Current measure — slides up from next position, brightens */
 body.present .measure-row.current-measure {
-  bottom: auto;
-  top: var(--horizon);
-  /* ANCHOR */
+  transform: translateX(-50%) translateY(0);
   opacity: 1;
-  transform: translateX(-50%) scale(1.1);
+  pointer-events: auto;
   z-index: 10;
-  /* filter: drop-shadow(0 10px 30px rgba(0, 0, 0, 0.3)); */
   width: 600px;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+/* Next measure — snaps to resting position (no transform transition on entry), fades in faded */
+body.present .measure-row.next-measure {
+  transform: translateX(-50%) translateY(116px);
+  opacity: 0.4;
+  pointer-events: none;
+  z-index: 5;
+  width: 520px;
+  transition: opacity 0.3s ease;
+}
+
+/* n+2 — hidden */
+body.present .measure-row.next-measure-2 {
+  opacity: 0;
 }
 
 /* Position Handpan at Bottom Center */
@@ -250,18 +237,6 @@ body.present .current-measure .sub-dot {
   width: 30px;
   height: 30px;
   font-size: 24px;
-}
-
-body.present .next-measure .sub-dot {
-  width: 20px;
-  height: 20px;
-  font-size: 14px;
-}
-
-body.present .next-measure-2 .sub-dot {
-  width: 10px;
-  height: 10px;
-  font-size: 8px;
 }
 
 body.present .handpan-header,
@@ -380,48 +355,29 @@ body.present div.present-controls {
     max-width: 90vw !important;
   }
 
-  /* Switch measure rows and static-labels to fixed so % is viewport-relative */
-  body.present .measure-row.current-measure,
-  body.present .measure-row.next-measure,
-  body.present .measure-row.next-measure-2 {
-    position: fixed !important;
-    width: 80vw !important;
-    max-width: 80vw !important;
-    left: 50% !important;
-    transform: translateX(-50%) !important;
-  }
-
   body.stream .static-labels {
     display: none !important;
   }
 
-  body.present .measure-row.next-measure-2 {
-    transform: translateX(-50%) scale(0.65) !important;
-    top: calc(30vh - 160px) !important;
-  }
-
-  body.present .measure-row.next-measure {
-    transform: translateX(-50%) scale(0.75) !important;
-    top: calc(30vh - 100px) !important;
+  /* Mobile: shift the stack anchor down slightly */
+  body.present {
+    --measure-top: 108px;
   }
 
   body.present .static-labels {
-    transform: translateX(-50%) scale(1) !important;
-    top: 30vh !important;
-    /* Horizon: labels anchor */
     font-size: 18px;
-    width: 80vw !important;
-    max-width: 80vw !important;
-    left: 50% !important;
+    width: 90vw !important;
+    max-width: 90vw !important;
   }
 
-  /* Current measure sits just below the labels row */
   body.present .measure-row.current-measure {
-    transform: translateX(-50%) scale(0.85) !important;
-    top: calc(30vh + 36px) !important;
-    width: 70vw !important;
-    max-width: 70vw !important;
-    gap: 15px !important;
+    width: 90vw !important;
+    max-width: 90vw !important;
+  }
+
+  body.present .measure-row.next-measure {
+    width: 78vw !important;
+    max-width: 78vw !important;
   }
 
   /* Tighter Grid Gaps */

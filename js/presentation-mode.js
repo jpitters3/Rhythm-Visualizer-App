@@ -1,7 +1,7 @@
 /* ===== PRESENTATION MODE ===== */
 import { gridA, activeGrid } from './grid-context.js';
 import { labelForStep } from './notegrid.js';
-import { addTickObserver, getPlaybackPosition } from './noteplayer.js';
+import { addTickObserver, getPlaybackPosition, intervalMs } from './noteplayer.js';
 import { TransportRegistry } from './transport-ui.js';
 import { Bus, BUS_EVENT } from './bus.js';
 import { HANDPAN_MAP } from './handpanmap.js';
@@ -84,6 +84,7 @@ async function exitFullscreenIfPossible() {
 }
 
 let animationFrameId;
+let measureTransitionTimeout = null;
 
 function animatePresentation() {
   if (!document.body.classList.contains('present')) return;
@@ -153,6 +154,7 @@ export async function setPresentation(on) {
     const pControls = document.getElementById('presentationControls');
     if (pControls) pControls.style.display = 'none';
     cancelAnimationFrame(animationFrameId);
+    if (measureTransitionTimeout) { clearTimeout(measureTransitionTimeout); measureTransitionTimeout = null; }
 
     // cleanup view
     const streamContainer = document.getElementById('stream-view');
@@ -239,13 +241,26 @@ export function initPresentation() {
 
   // Subscribe to Tick to sync View (ONLY for Measure Mode)
   addTickObserver((ctx, notes, hands) => {
-    if (ctx && ctx.id === 'A') {
-      // Highway (Stream Mode) runs on its own high-frequency rAF loop.
-      // We only use the rhythmic tick for the static Measure Mode.
-      if (presentationViewMode === 'measure') {
-        const step = ctx.step;
-        updatePresentationView(step, ctx);
-      }
+    if (!ctx || ctx.id !== 'A') return;
+    // Highway (Stream Mode) runs on its own high-frequency rAF loop.
+    // We only use the rhythmic tick for the static Measure Mode.
+    if (presentationViewMode !== 'measure') return;
+
+    const step = ctx.step;
+    const stepsPerMeasure = ctx.stepsPerMeasure;
+    const totalSteps = (ctx.measures || 1) * stepsPerMeasure;
+
+    // Fire the class swap halfway between the last beat of this measure
+    // and the first beat of the next measure.
+    const isLastBeatOfMeasure = (step + 1) % stepsPerMeasure === 0;
+    if (isLastBeatOfMeasure) {
+      if (measureTransitionTimeout) clearTimeout(measureTransitionTimeout);
+      const halfBeat = intervalMs(ctx) / 2;
+      const nextStep = (step + 1) % totalSteps;
+      measureTransitionTimeout = setTimeout(() => {
+        measureTransitionTimeout = null;
+        updatePresentationView(nextStep, ctx);
+      }, halfBeat);
     }
   });
 
@@ -596,14 +611,12 @@ function syncDashboardSelectors() {
 
 // === MEASURE VIEW (Classic Page Turn) === //
 function updateMeasureView(currentStep, ctx) {
-  // Calculate current measure index
+  // Calculate current measure index — timing is handled by the tick observer
   const stepsPerMeasure = ctx.stepsPerMeasure;
-  const lookahead = Math.floor(stepsPerMeasure / 8); // Small lookahead for page turn
   const totalMeasureCount = ctx ? ctx.measures : 1;
   const totalSteps = totalMeasureCount * stepsPerMeasure;
 
-  const visualStep = (currentStep + lookahead) % totalSteps;
-  const currentMeasureIndex = Math.floor(visualStep / stepsPerMeasure);
+  const currentMeasureIndex = Math.floor((currentStep % totalSteps) / stepsPerMeasure);
 
   // OPTIMIZATION: Only update DOM if measure changed
   if (currentMeasureIndex === lastMeasureIndex) {
