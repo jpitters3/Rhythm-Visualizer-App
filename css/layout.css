@@ -272,11 +272,11 @@ div.container {
   height: 98vh;
   min-height: 600px;
   padding: 0;
-  max-width: 1200px;
-  background: rgba(var(--panel-rgb), 0.7);
+  /* max-width: 1400px; */
+  /* background: rgba(var(--panel-rgb), 0.7);
   border: 1px solid rgba(255, 255, 255, 0.4);
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25),
-    0 0 0 1px rgba(255, 255, 255, 0.2) inset;
+    0 0 0 1px rgba(255, 255, 255, 0.2) inset; */
   z-index: 1000;
   display: flex;
   flex-direction: column;
@@ -548,13 +548,6 @@ select#patternSelect {
 
 /* ===== ROUTE-SPECIFIC GLOBAL STYLING ===== */
 
-/* ===== SIDEBAR DOCKING (Large Screens Only) ===== */
-@media (min-width: 1201px) {
-  body.sidebar-open {
-    padding-left: 360px;
-    /* Width of the sidebar */
-  }
-}
 
 /* ===== PHRASE MENU IN ACCOUNT DROPDOWN ===== */
 .phrase-current-name {

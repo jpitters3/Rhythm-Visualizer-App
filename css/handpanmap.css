@@ -1,10 +1,15 @@
 /* Handpan Image Section */
 .main {
   display: flex;
-  gap: 24px;
+  gap: 4px;
   align-items: stretch;
   flex: 1;
   min-height: 0;
+  min-width: 0;
+  max-width: 1500px;
+  width: 100%;
+  margin: 0 auto;
+  box-sizing: border-box;
 }
 
 .left {
@@ -12,6 +17,7 @@
   flex-direction: column;
   flex: 1;
   min-height: 0;
+  min-width: 0;
 }
 
 /* Mobile */
@@ -22,10 +28,42 @@
   }
 }
 
+/* Sidebar-aware layout — desktop only, not in presentation mode */
+@media (min-width: 901px) {
+  body.sidebar-open:not(.present) .sidebar.open {
+    width: 25vw;
+  }
+
+  body.sidebar-open:not(.present) {
+    padding-left: 25vw;
+  }
+
+  body.sidebar-open:not(.present) div.container {
+    width: 100%;
+    margin: 0;
+  }
+
+  body.sidebar-open:not(.present) .main {
+    max-width: none;
+  }
+
+  body.sidebar-open:not(.present) .handpan-panel {
+    flex: 1 1 0;
+    max-width: none;
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  body.sidebar-open:not(.present) .left {
+    flex: 2 1 0;
+    min-width: 0;
+  }
+}
+
 .handpan-panel {
-  flex: 0 0 400px;
-  /* Fixed width for the sidebar */
-  max-width: 400px;
+  flex: 0 1 450px;
+  max-width: 450px;
+  min-width: 0;
   position: sticky;
   top: 16px;
   align-self: flex-start;
