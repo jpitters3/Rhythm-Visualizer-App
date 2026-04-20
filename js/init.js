@@ -29,6 +29,7 @@ import { initTranscription } from './transcription.js';
 import { initAiAssistant } from './ai-assistant.js';
 import { initCalibration } from './calibration.js';
 import { initFeed } from './feed.js';
+import { initLibrary } from './library.js';
 import { initCourseMarketplace } from './course-marketplace.js';
 import { Bus, BUS_EVENT } from './bus.js';
 import { initCoachingMode } from './coaching-mode.js';
@@ -77,6 +78,7 @@ async function init() {
     initAiAssistant();
     initCalibration();
     initFeed();
+    initLibrary();
     initGames();
     initCourseMarketplace();
     initCourseCreator();

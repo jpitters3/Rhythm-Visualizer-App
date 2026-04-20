@@ -87,6 +87,11 @@ export function toggleComposer() {
   composerPanel.isOpen ? closeComposer() : openComposer();
 }
 
+export function openComposerToComposition(id) {
+  openComposer();
+  renderCompositions(id);
+}
+
 function updateBodySidebarClass() {
   const anyOpen = !!document.querySelector('.sidebar.open');
   document.body.classList.toggle('sidebar-open', anyOpen);

@@ -29,6 +29,7 @@
   <link rel="stylesheet" href="./css/ai-assistant.css">
   <link rel="stylesheet" href="css/profile.css">
   <link rel="stylesheet" href="css/feed.css">
+  <link rel="stylesheet" href="css/library.css">
   <link rel="stylesheet" href="css/camera-crop.css">
   <link rel="stylesheet" href="css/course-marketplace.css">
   <link rel="stylesheet" href="./css/calibration.css">
@@ -95,6 +96,7 @@
         <button class="nav-link" id="toggleComposerBtn">Composer</button>
         <button class="nav-link" id="toggleSidebarBtn" data-action="toggle-sidebar">Courses</button>
         <a class="nav-link" data-route="community" href="#community">Community</a>
+        <a class="nav-link" data-route="library" href="#library">Library</a>
         <button class="nav-link" id="navDashboardBtn">Dashboard</button>
         <button class="nav-link" id="authBtn" style="display:none;">Sign In</button>
       </nav>
@@ -581,6 +583,24 @@
         </div>
       </div>
     </div> <!-- END view-community -->
+
+    <!-- LIBRARY VIEW -->
+    <div id="view-library" class="route-view library-view">
+      <div class="library-header">
+        <h1>Library</h1>
+        <div class="library-controls">
+          <button id="librarySortOrder" class="library-sort-order-btn">Newest first</button>
+        </div>
+      </div>
+
+      <div class="library-tabs">
+        <button class="library-tab active" data-tab="phrases">Phrases</button>
+        <button class="library-tab" data-tab="compositions">Compositions</button>
+        <button class="library-tab" data-tab="archive">Archive</button>
+      </div>
+
+      <div id="libraryGrid" class="library-grid"></div>
+    </div> <!-- END view-library -->
 
   </div> <!-- End Container -->
 

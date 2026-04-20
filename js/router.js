@@ -5,7 +5,7 @@ import { stop } from './noteplayer.js';
 import { gridA } from './grid-context.js';
 import { Sidepanel } from './sidepanel.js';
 
-const validRoutes = ['freeplay', 'dashboard', 'compose', 'community'];
+const validRoutes = ['freeplay', 'dashboard', 'compose', 'community', 'library'];
 let currentRoute = '';
 
 export function initRouter() {
