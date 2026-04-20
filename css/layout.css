@@ -6,8 +6,14 @@
   padding: 0 24px;
   height: 64px;
   border-bottom: 1px solid var(--panel-border);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
   position: relative;
   flex-shrink: 0;
+  z-index: 10;
+}
+
+body.dark .app-header {
+  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.3);
 }
 
 .app-logo {
@@ -325,6 +331,32 @@ div.container {
   flex: 1;
   min-height: 0;
   gap: 20px;
+}
+
+.grid-bottom-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 16px;
+  min-height: 72px;
+  margin-top: 4px;
+  border-top: 1px solid var(--panel-border);
+  border-radius: 0 0 12px 12px;
+  background: linear-gradient(to bottom, transparent, rgba(0, 0, 0, 0.02));
+  flex-shrink: 0;
+  position: relative;
+}
+
+.grid-bottom-row .measure-tools,
+.grid-bottom-row .controls-transport {
+  display: flex;
+  align-items: center;
+}
+
+body.dark .grid-bottom-row {
+  background: linear-gradient(to bottom, transparent, rgba(0, 0, 0, 0.12));
+  border-top-color: var(--panel-border);
 }
 
 .left {

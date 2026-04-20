@@ -7,8 +7,7 @@ body {
   margin: 0;
   padding: 5px;
   font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-  /* background: var(--bg); */
-  background: white;
+  background: linear-gradient(160deg, #faf9f6 0%, #f0eef8 100%);
   color: var(--text);
   min-height: 100dvh;
   min-height: var(--app-height, 100dvh);
@@ -67,6 +66,7 @@ h2 {
 }
 
 body.dark {
+  background: linear-gradient(160deg, #0f0f14 0%, #12101a 100%);
   /* DARK MODE */
   --bg: #0f0f14;
   --panel: #16161f;

@@ -317,6 +317,7 @@
   min-height: 120px;
   padding: 0 15px;
   overflow-y: auto;
+  position: relative;
 
   /* Base setup for smooth transitions */
   scroll-behavior: smooth;
@@ -324,6 +325,20 @@
   /* Custom subtle scrollbar variables */
   --sb-thumb-opacity: 0;
   --sb-thumb-color: rgba(128, 128, 128, 0.4);
+}
+
+/* Handpan watermark — light mode only */
+body:not(.dark) .measures::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: url('../public/assets/images/handpan-for-groovepan.png');
+  background-repeat: no-repeat;
+  background-position: center center;
+  background-size: 55%;
+  opacity: 0.06;
+  pointer-events: none;
+  z-index: 0;
 }
 
 body.dark .measures {
@@ -471,6 +486,15 @@ body.dark {
 
 .cell.has-label {
   --mix: 68%;
+  box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.22),
+              inset 0 -2px 5px rgba(0, 0, 0, 0.18),
+              0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+body.dark .cell.has-label {
+  box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.1),
+              inset 0 -2px 5px rgba(0, 0, 0, 0.35),
+              0 2px 8px rgba(0, 0, 0, 0.35);
 }
 
 .cell.label-q .inner {
