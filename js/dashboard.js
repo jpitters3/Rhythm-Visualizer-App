@@ -6,6 +6,7 @@ import { dbLoadPatternByName } from './pattern-crud.js';
 import { fetchCourses, openSidebar, setActiveCourse } from './courses.js';
 import { updateDashboardMute } from './profile.js';
 import { openAuthModal } from './auth.js';
+import { navigate } from './router.js';
 
 // Note positions — matches HANDPAN_MAP_BRONZE in handpanmap.js (calibrated for handpan-for-groovepan.png)
 const PREVIEW_HP_MAP = {
@@ -299,6 +300,7 @@ async function loadWelcomeDashboard(modal) {
       const sel = document.getElementById('patternSelect');
       const loadBtn = document.getElementById('loadBtn');
       if (sel && loadBtn) { sel.value = p.name; loadBtn.click(); }
+      navigate('freeplay');
       closeWelcomeModal();
     },
     'No saved phrases yet',

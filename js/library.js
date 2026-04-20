@@ -3,6 +3,8 @@ import { currentUser } from './state.js';
 import { openAuthModal } from './auth.js';
 import { getEffectiveHand } from './notegrid.js';
 import { openComposerToComposition } from './song-composer.js';
+import { loadPatternByName } from './controls.js';
+import { Bus, BUS_EVENT } from './bus.js';
 
 let currentTab = 'phrases';
 let sortAscending = false;
@@ -30,6 +32,11 @@ export function initLibrary() {
       renderLibrary();
     });
   }
+
+  Bus.on(BUS_EVENT.AUTH_LOGIN, () => {
+    const isLibraryActive = document.getElementById('view-library')?.classList.contains('active');
+    if (isLibraryActive) renderLibrary();
+  });
 }
 
 async function renderLibrary() {
@@ -75,9 +82,7 @@ async function loadPhrases(grid) {
     patternData: row.data,
     onClick: () => {
       window.location.hash = '#freeplay';
-      setTimeout(() =>
-        window.dispatchEvent(new CustomEvent('loadPattern', { detail: { name: row.name } }))
-      , 120);
+      setTimeout(() => loadPatternByName(row.name), 120);
     }
   })));
 }
