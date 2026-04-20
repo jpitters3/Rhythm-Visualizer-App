@@ -9,7 +9,7 @@
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
   position: relative;
   flex-shrink: 0;
-  z-index: 10;
+  z-index: 2000;
 }
 
 body.dark .app-header {
@@ -194,6 +194,7 @@ body {
 #accountDropdownMenu {
   max-height: 700px;
   overflow-y: scroll;
+  z-index: 5000;
 }
 
 /* Mobile controls toggle button (hidden on desktop) */

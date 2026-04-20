@@ -280,7 +280,16 @@
 .cell.play {
   animation: rhythmicPulse 1s cubic-bezier(0.22, 1, 0.36, 1) forwards;
   z-index: 5;
-  /* Pop above neighbors (1) while active */
+  outline: 2.5px solid #4f1a6e;
+  outline-offset: 3px;
+}
+
+body.dark .cell.play {
+  outline-color: #a855f7;
+}
+
+body.present .cell.play {
+  outline: none;
 }
 
 .cell .inner {
@@ -326,6 +335,7 @@
   --sb-thumb-opacity: 0;
   --sb-thumb-color: rgba(128, 128, 128, 0.4);
 }
+
 
 /* Handpan watermark — light mode only */
 body:not(.dark) .measures::before {
