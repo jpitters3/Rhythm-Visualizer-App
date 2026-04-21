@@ -1792,12 +1792,29 @@ composerEl?.addEventListener('click', async (e) => {
     return;
   }
 
-  // Section item click (not on a button) → scroll grid to that section's cells
+  // Section item click (not on a button) → load phrase into studio
   const sectionItem = e.target.closest('.section-item');
   if (sectionItem && !e.target.closest('[data-action]')) {
     const sectionId = sectionItem.dataset.id;
-    const b = playback?.boundaries?.find(b => b.sectionId === sectionId);
-    if (b != null) gridA.cells[b.start]?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    if (sectionItem.dataset.type === 'phrase') {
+      let section = null;
+      for (const c of compositions) {
+        section = c.sections.find(s => s.id === sectionId);
+        if (section) break;
+      }
+      if (section) {
+        if (stitched) doUnstitch();
+        const state = await loadSectionPattern(section);
+        if (state) {
+          isLoadingSection = true;
+          await applyPattern(state, gridA);
+          isLoadingSection = false;
+          updateCurrentPhraseName(section.phrase_name);
+          const onFreeplay = document.getElementById('view-freeplay')?.classList.contains('active');
+          if (!onFreeplay) window.location.hash = '#freeplay';
+        }
+      }
+    }
     return;
   }
 
