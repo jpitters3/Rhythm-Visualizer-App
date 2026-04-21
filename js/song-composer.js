@@ -26,8 +26,11 @@ import { Bus, BUS_EVENT } from './bus.js';
 // ============================================================
 // State
 // ============================================================
-let compositions = [];   // [{ id, title, sections: [...] }]
+let compositions = [];   // [{ id, title, folder_id, sections: [...] }]
 let expandedId   = null; // currently expanded composition id
+let composerFolderId   = null; // null = root
+let composerFolderName = null;
+let composerFolders    = []; // [{ id, name }]
 // playback: { compositionId, boundaries, currentSectionIdx, loopObserver }
 // boundaries: [{ start, end, sectionId, color, title }]  (step indices into stitched phrase)
 let playback         = null;
@@ -104,16 +107,26 @@ async function fetchCompositions() {
   if (!currentUser) return;
   setListHTML('<p class="loading">Loading...</p>');
 
-  const { data, error } = await supabase
-    .from('compositions')
-    .select('id, title, created_at, composition_sections(id, position, type, title, phrase_name, audio_url, note_text, color, pattern_snapshot)')
-    .eq('user_id', currentUser.id)
-    .eq('is_snapshot', false)
-    .order('created_at', { ascending: false });
+  const [foldersRes, compsRes] = await Promise.all([
+    supabase
+      .from('library_folders')
+      .select('id, name')
+      .eq('tab', 'compositions')
+      .is('parent_id', null)
+      .order('name'),
+    supabase
+      .from('compositions')
+      .select('id, title, created_at, folder_id, composition_sections(id, position, type, title, phrase_name, audio_url, note_text, color, pattern_snapshot)')
+      .eq('user_id', currentUser.id)
+      .eq('is_snapshot', false)
+      .order('created_at', { ascending: false }),
+  ]);
 
-  if (error) { console.error('[Composer] fetch error', error); return; }
+  composerFolders = foldersRes.data || [];
 
-  compositions = (data || []).map(c => ({
+  if (compsRes.error) { console.error('[Composer] fetch error', compsRes.error); return; }
+
+  compositions = (compsRes.data || []).map(c => ({
     ...c,
     sections: (c.composition_sections || []).sort((a, b) => a.position - b.position),
   }));
@@ -152,8 +165,8 @@ async function createComposition() {
 
   const { data, error } = await supabase
     .from('compositions')
-    .insert({ user_id: currentUser.id, title: title.trim() })
-    .select('id, title, created_at')
+    .insert({ user_id: currentUser.id, title: title.trim(), folder_id: composerFolderId || null })
+    .select('id, title, created_at, folder_id')
     .single();
 
   if (error) { await alert('Could not create composition.'); return; }
@@ -1152,20 +1165,53 @@ function setListHTML(html) {
 }
 
 function renderCompositions(forceExpandId = null, opts = {}) {
-  if (forceExpandId) expandedId = forceExpandId;
+  if (forceExpandId) {
+    expandedId = forceExpandId;
+    // Auto-navigate to the folder containing this composition
+    const target = compositions.find(c => c.id === forceExpandId);
+    if (target?.folder_id && target.folder_id !== composerFolderId) {
+      composerFolderId = target.folder_id;
+      composerFolderName = composerFolders.find(f => f.id === target.folder_id)?.name || '';
+    }
+  }
 
   if (!currentUser) {
     setListHTML('<div class="composer-empty"><p>Sign in to use Song Composer.</p></div>');
     return;
   }
 
-  if (!compositions.length) {
-    setListHTML('<div class="composer-empty"><p>No compositions yet.</p><p>Tap "+ New Composition" to start.</p></div>');
+  const breadcrumbHTML = composerFolderId ? `
+    <div class="comp-breadcrumb">
+      <button class="comp-crumb-root" data-action="exit-folder">Library</button>
+      <span class="comp-crumb-sep">›</span>
+      <span class="comp-crumb-current">${esc(composerFolderName || '')}</span>
+    </div>` : '';
+
+  const foldersHTML = !composerFolderId ? composerFolders.map(f => {
+    const count = compositions.filter(c => c.folder_id === f.id).length;
+    return `
+      <div class="comp-folder-item" data-action="enter-folder"
+           data-folder-id="${f.id}" data-folder-name="${esc(f.name)}">
+        <span class="comp-folder-icon">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M2 8a2 2 0 012-2h4.17a2 2 0 011.42.59l1.41 1.41H20a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V8z" fill="currentColor"/></svg>
+        </span>
+        <span class="comp-folder-name">${esc(f.name)}</span>
+        <span class="comp-folder-count">${count}</span>
+        <span class="comp-folder-chevron">›</span>
+      </div>`;
+  }).join('') : '';
+
+  const visible = composerFolderId
+    ? compositions.filter(c => c.folder_id === composerFolderId)
+    : compositions.filter(c => !c.folder_id);
+
+  if (!visible.length && !composerFolders.length) {
+    setListHTML(breadcrumbHTML + '<div class="composer-empty"><p>No compositions yet.</p><p>Tap "+ New Composition" to start.</p></div>');
     return;
   }
 
-  const html = compositions.map(comp => renderCompositionItem(comp, opts)).join('');
-  setListHTML(html);
+  const compsHTML = visible.map(comp => renderCompositionItem(comp, opts)).join('');
+  setListHTML(breadcrumbHTML + foldersHTML + compsHTML);
   bindSectionListeners();
 }
 
@@ -1764,6 +1810,18 @@ composerEl?.addEventListener('click', async (e) => {
   const comp   = btn.dataset.comp;
 
   switch (action) {
+    case 'enter-folder':
+      composerFolderId   = btn.dataset.folderId;
+      composerFolderName = btn.dataset.folderName;
+      renderCompositions();
+      break;
+
+    case 'exit-folder':
+      composerFolderId   = null;
+      composerFolderName = null;
+      renderCompositions();
+      break;
+
     case 'toggle-comp':
       expandedId = (expandedId === id) ? null : id;
       renderCompositions();
