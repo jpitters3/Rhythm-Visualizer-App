@@ -360,17 +360,29 @@ export function toggleHandpanSide() {
   // Dual Mode: Show Bottom Wrap, Set Bottom Image
   if (currentHandpanSide === 'dual') {
     if (handpanWrapBottom) handpanWrapBottom.style.display = 'block';
-    if (handpanImgBottom) handpanImgBottom.src = mountedHandpanData.bottom_image_url;
+    if (handpanImgBottom) {
+      handpanImgBottom.src = mountedHandpanData.bottom_image_url;
+      const botRot = mountedHandpanData.bottom_image_rotation || 0;
+      handpanImgBottom.style.transform = botRot ? `rotate(${botRot}deg)` : '';
+    }
     // Top image stays as top
-    changeHandpanImage(mountedHandpanData.top_image_url);
+    changeHandpanImage(mountedHandpanData.top_image_url, () => {
+      const topRot = mountedHandpanData.image_rotation || 0;
+      if (handpanImg) handpanImg.style.transform = topRot ? `rotate(${topRot}deg)` : '';
+    });
   } else {
     if (handpanWrapBottom) handpanWrapBottom.style.display = 'none';
-    if (handpanImgBottom) handpanImgBottom.src = ""; // Clear to save memory?
+    if (handpanImgBottom) handpanImgBottom.src = "";
 
     // Update Single Image (Both uses Top by default)
     const imgSide = (currentHandpanSide === 'bottom') ? 'bottom' : 'top';
     const targetSrc = (imgSide === 'top') ? mountedHandpanData.top_image_url : mountedHandpanData.bottom_image_url;
-    changeHandpanImage(targetSrc);
+    const rot = imgSide === 'bottom'
+      ? (mountedHandpanData.bottom_image_rotation || 0)
+      : (mountedHandpanData.image_rotation || 0);
+    changeHandpanImage(targetSrc, () => {
+      if (handpanImg) handpanImg.style.transform = rot ? `rotate(${rot}deg)` : '';
+    });
   }
 
   // Re-run the visual map logic

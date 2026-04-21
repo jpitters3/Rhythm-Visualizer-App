@@ -1865,7 +1865,12 @@
 
         <!-- Global Props -->
         <div id="calGlobalProps">
-          <p style="font-size: 11px; opacity: 0.7; margin-top: 10px; text-align: center;">Click "Auto-Detect" to map
+          <div class="prop-row">
+            <label>Image Rotation</label>
+            <input type="range" id="calImgRotInput" min="-180" max="180" value="0">
+            <span id="valImgRot" style="font-size:11px; float:right;">0°</span>
+          </div>
+          <p style="font-size: 11px; opacity: 0.7; margin-top: 14px; text-align: center;">Click "Auto-Detect" to map
             notes automatically, or "Add" to do it manually.</p>
         </div>
 

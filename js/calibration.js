@@ -113,8 +113,10 @@ function loadCalibrationImage(src) {
 
     calHandpanImage.src = src;
 
-    // Apply Image Rotation
-    const imgRot = currentHandpanData.image_rotation || 0;
+    // Apply Image Rotation (separate per side)
+    const imgRot = currentCalibrationSide === 'bottom'
+      ? (currentHandpanData.bottom_image_rotation || 0)
+      : (currentHandpanData.image_rotation || 0);
     calHandpanImage.style.transform = `rotate(${imgRot}deg)`;
     if (calImgRotInput) calImgRotInput.value = imgRot;
     if (valImgRot) valImgRot.textContent = imgRot + '°';
@@ -554,7 +556,11 @@ export function initCalibration() {
     if (calHandpanImage) calHandpanImage.style.transform = `rotate(${rot}deg)`;
 
     if (currentHandpanData) {
-      currentHandpanData.image_rotation = rot;
+      if (currentCalibrationSide === 'bottom') {
+        currentHandpanData.bottom_image_rotation = rot;
+      } else {
+        currentHandpanData.image_rotation = rot;
+      }
       triggerAutoSave(true); // Save Handpan record
     }
   });
@@ -705,10 +711,13 @@ function triggerAutoSave(saveHandpanRecord = false) {
     let error = null;
 
     if (saveHandpanRecord) {
-      // Save Image Rotation to main record
+      // Save Image Rotation to main record (both sides)
       const { error: hpErr } = await supabase
         .from('user_handpans')
-        .update({ image_rotation: currentHandpanData.image_rotation })
+        .update({
+          image_rotation: currentHandpanData.image_rotation || 0,
+          bottom_image_rotation: currentHandpanData.bottom_image_rotation || 0,
+        })
         .eq('id', currentHandpanId);
       error = hpErr;
     } else {
