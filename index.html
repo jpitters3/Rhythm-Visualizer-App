@@ -589,6 +589,7 @@
       <div class="library-header">
         <h1>Library</h1>
         <div class="library-controls">
+          <button id="libraryNewFolder" class="library-new-folder-btn">+ New Folder</button>
           <button id="librarySortOrder" class="library-sort-order-btn">Newest first</button>
         </div>
       </div>
@@ -596,9 +597,12 @@
       <div class="library-tabs">
         <button class="library-tab active" data-tab="phrases">Phrases</button>
         <button class="library-tab" data-tab="compositions">Compositions</button>
+        <button class="library-tab" data-tab="shared">Shared with Me</button>
         <button class="library-tab" data-tab="archive">Archive</button>
       </div>
 
+      <div id="libraryBreadcrumb" class="library-breadcrumb" hidden></div>
+      <div id="libraryFolders" class="library-folders-section"></div>
       <div id="libraryGrid" class="library-grid"></div>
     </div> <!-- END view-library -->
 

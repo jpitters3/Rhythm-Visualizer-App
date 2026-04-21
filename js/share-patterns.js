@@ -189,7 +189,7 @@ sharedSaveCopyBtn?.addEventListener('click', async () => {
 
   // We need to await saveCurrentPatternAs if we want to confirm, IF it returns a value.
   // controls.js export is async.
-  await saveCurrentPatternAs(name);
+  await saveCurrentPatternAs(name, 'shared');
   // It alerts on failure.
 });
 

@@ -35,6 +35,7 @@
   gap: 10px;
 }
 
+.library-new-folder-btn,
 .library-sort-order-btn {
   height: 36px;
   padding: 0 14px;
@@ -49,8 +50,8 @@
   transition: background 0.15s ease, border-color 0.15s ease;
 }
 
+.library-new-folder-btn:hover,
 .library-sort-order-btn:hover {
-  background: var(--btn-hover);
   border-color: var(--text);
 }
 
@@ -89,17 +90,310 @@
   transition: opacity 0.15s ease;
 }
 
-.library-tab:hover {
-  opacity: 0.8;
-}
+.library-tab:hover { opacity: 0.8; }
 
 .library-tab.active {
   opacity: 1;
   background: none;
 }
 
-.library-tab.active::after {
+.library-tab.active::after { opacity: 1; }
+
+/* Breadcrumb */
+.library-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 14px 32px 0;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.library-breadcrumb[hidden] { display: none; }
+
+.lib-crumb-root {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  opacity: 0.5;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+
+.lib-crumb-root:hover { opacity: 1; }
+
+.lib-crumb-sep {
+  opacity: 0.35;
+  font-size: 16px;
+}
+
+.lib-crumb-current {
+  font-weight: 600;
+}
+
+/* Folders section */
+.library-folders-section {
+  padding: 20px 32px 0;
+  flex-shrink: 0;
+}
+
+.lib-folders-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+/* Folder card */
+.lib-folder-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--panel-border);
+  background: var(--panel);
+  cursor: pointer;
+  min-width: 160px;
+  max-width: 240px;
+  position: relative;
+  transition: box-shadow 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+  user-select: none;
+}
+
+.lib-folder-card:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  border-color: rgba(0, 0, 0, 0.15);
+}
+
+body.dark .lib-folder-card:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.lib-folder-card.drag-over {
+  border-color: var(--btn-active);
+  background: color-mix(in srgb, var(--btn-active) 10%, var(--panel));
+  box-shadow: 0 0 0 2px var(--btn-active);
+}
+
+.lib-folder-icon-wrap {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--btn-active) 20%, transparent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--btn-active);
+}
+
+body.dark .lib-folder-icon-wrap {
+  background: rgba(91, 140, 255, 0.15);
+  color: var(--btn-active);
+}
+
+.lib-folder-svg {
+  width: 20px;
+  height: 20px;
+}
+
+.lib-folder-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.lib-folder-name {
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lib-folder-count {
+  font-size: 11px;
+  opacity: 0.5;
+  margin-top: 2px;
+}
+
+/* ⋯ menu button (shared: folder + item cards) */
+.lib-menu-btn {
+  background: none;
+  border: none;
+  padding: 4px 6px;
+  border-radius: 6px;
+  cursor: pointer;
+  color: var(--text);
+  opacity: 0;
+  font-size: 15px;
+  line-height: 1;
+  transition: opacity 0.15s ease, background 0.15s ease;
+  flex-shrink: 0;
+}
+
+.lib-folder-card:hover .lib-menu-btn,
+.library-card:hover .lib-menu-btn {
+  opacity: 0.5;
+}
+
+.lib-menu-btn:hover {
+  opacity: 1 !important;
+  background: var(--btn-bg);
+}
+
+/* On item cards, the ⋯ btn is absolutely positioned top-right */
+.library-thumb-wrap .lib-menu-btn {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  background: rgba(0, 0, 0, 0.45);
+  color: #fff;
+  backdrop-filter: blur(4px);
+  opacity: 0;
+  border-radius: 6px;
+  padding: 3px 7px;
+}
+
+.library-card:hover .library-thumb-wrap .lib-menu-btn {
   opacity: 1;
+}
+
+/* Context menu */
+.lib-context-menu {
+  display: none;
+  position: fixed;
+  z-index: 9000;
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  border-radius: 10px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+  padding: 6px;
+  min-width: 160px;
+}
+
+body.dark .lib-context-menu {
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+.lib-context-item {
+  display: block;
+  width: 100%;
+  padding: 8px 12px;
+  background: none;
+  border: none;
+  border-radius: 7px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.1s ease;
+}
+
+.lib-context-item:hover {
+  background: var(--btn-bg);
+}
+
+.lib-context-item.danger {
+  color: #e53e3e;
+  margin-top: 4px;
+  border-top: 1px solid var(--panel-border);
+  border-radius: 0 0 7px 7px;
+  padding-top: 10px;
+}
+
+body.dark .lib-context-item.danger {
+  color: #fc8181;
+}
+
+/* Folder picker modal */
+.lib-picker-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 8000;
+  background: rgba(0, 0, 0, 0.45);
+  align-items: center;
+  justify-content: center;
+}
+
+.lib-picker {
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  border-radius: 14px;
+  width: 320px;
+  max-height: 480px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+}
+
+body.dark .lib-picker {
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+}
+
+.lib-picker-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  font-size: 15px;
+  font-weight: 700;
+  border-bottom: 1px solid var(--panel-border);
+  flex-shrink: 0;
+}
+
+.lib-picker-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  opacity: 0.5;
+  color: var(--text);
+  padding: 2px 6px;
+  border-radius: 6px;
+  transition: opacity 0.15s ease;
+}
+
+.lib-picker-close:hover { opacity: 1; }
+
+.lib-picker-list {
+  overflow-y: auto;
+  padding: 8px;
+}
+
+.lib-picker-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  background: none;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.1s ease;
+}
+
+.lib-picker-item:hover { background: var(--btn-bg); }
+
+.lib-picker-item-icon { font-size: 16px; }
+
+.lib-picker-empty {
+  text-align: center;
+  padding: 20px;
+  opacity: 0.5;
+  font-size: 13px;
+  margin: 0;
 }
 
 /* Grid */
@@ -107,7 +401,7 @@
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   gap: 20px;
-  padding: 28px 32px 40px;
+  padding: 20px 32px 40px;
   align-content: start;
 }
 
@@ -146,12 +440,18 @@ body.dark .library-card:hover {
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
 }
 
+.library-card.dragging {
+  opacity: 0.5;
+  transform: scale(0.97);
+}
+
 /* Thumbnail */
 .library-thumb-wrap {
   width: 100%;
   aspect-ratio: 16 / 9;
   background: var(--btn-bg);
   overflow: hidden;
+  position: relative;
 }
 
 .library-thumbnail {
@@ -191,9 +491,20 @@ body.dark .library-card:hover {
     padding: 16px 16px 0;
   }
 
+  .library-breadcrumb {
+    padding: 12px 16px 0;
+  }
+
+  .library-folders-section {
+    padding: 14px 16px 0;
+  }
+
   .library-grid {
     grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
     gap: 14px;
-    padding: 20px 16px 32px;
+    padding: 16px 16px 32px;
   }
+
+  /* Always show ⋯ on mobile (no hover) */
+  .lib-menu-btn { opacity: 0.5; }
 }

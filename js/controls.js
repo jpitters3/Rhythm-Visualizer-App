@@ -107,10 +107,22 @@ function updateNotationUI() {
   btn.title = (labelNotation === 'musical') ? 'Switch to Numeric Notation' : 'Switch to Musical Notation';
 }
 
+export async function createNewPhrase() {
+  if (hasUnsavedChanges()) {
+    const ok = await confirm('You have unsaved changes. Discard and start a new phrase?');
+    if (!ok) return false;
+  }
+  const name = await prompt('Name your new phrase:', 'Untitled');
+  if (!name?.trim()) return false;
+  resetGridToDefault(gridA);
+  await saveCurrentPatternAs(name.trim());
+  return true;
+}
+
 /**
  * Main Save Logic with Gating
  */
-export async function saveCurrentPatternAs(name) {
+export async function saveCurrentPatternAs(name, source = 'manual') {
   if (!name) return false;
 
   const trimmed = String(name || '').trim();
@@ -140,7 +152,7 @@ export async function saveCurrentPatternAs(name) {
       return false;
     }
 
-    await dbSavePattern(trimmed, serializePattern());
+    await dbSavePattern(trimmed, serializePattern(), source);
     localStorage.setItem(LAST_USED_KEY, trimmed);
     await refreshPatternSelect(trimmed);
     updateCurrentPhraseName(trimmed);
@@ -485,18 +497,9 @@ export function initControls() {
   document.getElementById('newPhraseBtn')?.addEventListener('click', async (e) => {
     e.stopPropagation();
     closeAccountDropdown();
-
-    if (hasUnsavedChanges()) {
-      const ok = await confirm('You have unsaved changes. Discard and start a new phrase?');
-      if (!ok) return;
-    }
-
-    const name = await prompt('Name your new phrase:', 'Untitled');
-    if (!name?.trim()) return;
-
-    resetGridToDefault(gridA);
-    await saveCurrentPatternAs(name.trim());
+    await createNewPhrase();
   });
+
 
   // Open Phrase
   document.getElementById('openPhraseBtn')?.addEventListener('click', async (e) => {
