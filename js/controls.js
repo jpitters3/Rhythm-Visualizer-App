@@ -112,11 +112,15 @@ export async function createNewPhrase() {
     const ok = await confirm('You have unsaved changes. Discard and start a new phrase?');
     if (!ok) return false;
   }
-  const name = await prompt('Name your new phrase:', 'Untitled');
-  if (!name?.trim()) return false;
+  const existing = new Set(await dbListPatternNames());
+  let defaultName = 'New Phrase';
+  let n = 2;
+  while (existing.has(defaultName)) defaultName = `New Phrase ${n++}`;
+  const name = await prompt('Name your new phrase:', defaultName);
+  if (!name?.trim()) return null;
   resetGridToDefault(gridA);
   await saveCurrentPatternAs(name.trim());
-  return true;
+  return name.trim();
 }
 
 /**

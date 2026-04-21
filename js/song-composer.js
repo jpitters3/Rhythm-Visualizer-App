@@ -19,7 +19,7 @@ import { alert, confirm, prompt } from './alert.js';
 import { closeSidebar } from './courses.js';
 import { setLastSidebarType, registerPanelOpener } from './sidepanel.js';
 import { openTrimUI, closeTrimUI } from './recording-trim.js';
-import { updateCurrentPhraseName } from './controls.js';
+import { updateCurrentPhraseName, createNewPhrase } from './controls.js';
 import { canAccess, FEATURE } from './gated-feature.js';
 import { Bus, BUS_EVENT } from './bus.js';
 
@@ -1185,12 +1185,17 @@ function renderCompositionItem(comp, opts = {}) {
       <div class="composition-sections">
         ${(() => { let pi = 0; return comp.sections.map((s, i) => renderSectionItem(s, i, s.type === 'phrase' ? pi++ : -1)).join(''); })()}
         ${showPicker ? renderPhrasePicker(comp.id, phraseNames) : ''}
-        <div class="add-section-row">
-          <button class="add-section-btn" data-action="add-phrase" data-comp="${comp.id}">➕ Phrase</button>
-          <button class="add-section-btn" data-action="add-from-grid" data-comp="${comp.id}">➕ From Grid</button>
-          <button class="add-section-btn" data-action="add-recording" data-comp="${comp.id}">🎙 Record</button>
-          <button class="add-section-btn" data-action="add-upload" data-comp="${comp.id}">⬆ Upload</button>
-          <button class="add-section-btn" data-action="add-note" data-comp="${comp.id}">✏️ Note</button>
+        <div class="add-section-rows">
+          <div class="add-section-row">
+            <button class="add-section-btn" data-action="add-new-phrase" data-comp="${comp.id}">+ New Phrase</button>
+            <button class="add-section-btn" data-action="add-phrase" data-comp="${comp.id}">+ Phrase</button>
+            <button class="add-section-btn" data-action="add-from-grid" data-comp="${comp.id}">+ From Grid</button>
+          </div>
+          <div class="add-section-row">
+            <button class="add-section-btn" data-action="add-recording" data-comp="${comp.id}">🎙 Record</button>
+            <button class="add-section-btn" data-action="add-upload" data-comp="${comp.id}">⬆ Upload</button>
+            <button class="add-section-btn" data-action="add-note" data-comp="${comp.id}">✏️ Note</button>
+          </div>
         </div>
       </div>`
     : '';
@@ -1785,6 +1790,24 @@ composerEl?.addEventListener('click', async (e) => {
         showContextMenu(btn, id);
       }
       break;
+
+    case 'add-new-phrase': {
+      const phraseName = await createNewPhrase();
+      if (phraseName) {
+        await addSection(comp, 'phrase', {
+          title: phraseName,
+          phrase_name: phraseName,
+          pattern_snapshot: serializePattern(gridA),
+        });
+        const libraryOpen = document.getElementById('view-library')?.classList.contains('active');
+        if (libraryOpen) {
+          window.location.hash = '#freeplay';
+        } else {
+          renderCompositions(expandedId);
+        }
+      }
+      break;
+    }
 
     case 'add-phrase':
       await showPhrasePicker(comp);

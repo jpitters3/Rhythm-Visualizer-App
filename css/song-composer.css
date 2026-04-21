@@ -328,12 +328,18 @@
 }
 
 /* Add section row */
+.add-section-rows {
+  margin-top: 10px;
+  border-top: 4px solid rgba(99, 102, 241, 0.22);
+  padding: 8px 16px 4px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
 .add-section-row {
   display: flex;
   gap: 6px;
-  padding: 8px 16px 4px 20px;
-  margin-top: 10px;
-  border-top: 4px solid rgba(99, 102, 241, 0.22);
 }
 
 .add-section-btn {
