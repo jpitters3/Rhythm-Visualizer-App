@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite';
 import fs from 'fs';
+import path from 'path';
 
 export default defineConfig({
   plugins: [],
@@ -19,6 +20,13 @@ export default defineConfig({
     outDir: 'dist',
     assetsDir: 'assets',
     sourcemap: false,
+    rollupOptions: {
+      input: {
+        main:    path.resolve(__dirname, 'index.html'),
+        tos:     path.resolve(__dirname, 'tos.html'),
+        privacy: path.resolve(__dirname, 'privacy.html'),
+      },
+    },
     minify: 'terser',
     terserOptions: {
       compress: {
