@@ -12,6 +12,8 @@ let currentTab = 'phrases';
 let sortAscending = false;
 let currentFolderId = null;
 let currentFolderName = null;
+let searchQuery = '';
+let searchDebounce = null;
 
 // Shared floating context menu
 let contextMenuEl = null;
@@ -30,11 +32,22 @@ export function initLibrary() {
       currentTab = btn.dataset.tab;
       currentFolderId = null;
       currentFolderName = null;
+      searchQuery = '';
+      const searchEl = document.getElementById('librarySearch');
+      if (searchEl) searchEl.value = '';
       document.querySelectorAll('.library-tab').forEach(b =>
         b.classList.toggle('active', b === btn)
       );
       renderLibrary();
     });
+  });
+
+  document.getElementById('librarySearch')?.addEventListener('input', (e) => {
+    clearTimeout(searchDebounce);
+    searchDebounce = setTimeout(() => {
+      searchQuery = e.target.value.trim();
+      renderLibrary();
+    }, 250);
   });
 
   document.getElementById('librarySortOrder')?.addEventListener('click', (e) => {
@@ -200,6 +213,9 @@ async function renderLibrary() {
   const hideFolderBtn = currentTab === 'archive' || currentTab === 'shared';
   if (newFolderBtn) newFolderBtn.style.display = hideFolderBtn ? 'none' : '';
 
+  const searchRow = document.querySelector('.library-search-row');
+  if (searchRow) searchRow.style.visibility = currentTab === 'archive' ? 'hidden' : '';
+
   // Breadcrumb
   if (breadcrumb) {
     if (currentFolderId && currentFolderName) {
@@ -236,9 +252,10 @@ async function renderLibrary() {
 async function loadAndRender(tab, grid, foldersSection) {
   const isCompositions = tab === 'compositions';
 
+  const showFolders = !currentFolderId && !searchQuery;
   const [folders, countsByFolder, itemsResult] = await Promise.all([
-    currentFolderId ? Promise.resolve([]) : loadFoldersList(tab),
-    currentFolderId ? Promise.resolve({}) : getItemCountsPerFolder(tab),
+    showFolders ? loadFoldersList(tab) : Promise.resolve([]),
+    showFolders ? getItemCountsPerFolder(tab) : Promise.resolve({}),
     fetchItems(tab),
   ]);
 
@@ -316,6 +333,7 @@ async function fetchItems(tab) {
       .eq('is_snapshot', false)
       .not('archived', 'is', true)
       .order('created_at', { ascending: sortAscending });
+    if (searchQuery) q = q.ilike('title', `%${searchQuery}%`);
   } else {
     q = supabase
       .from('patterns')
@@ -323,8 +341,11 @@ async function fetchItems(tab) {
       .eq('user_id', currentUser.id)
       .not('archived', 'is', true)
       .order('updated_at', { ascending: sortAscending });
+    if (searchQuery) q = q.ilike('name', `%${searchQuery}%`);
   }
-  if (currentFolderId) {
+  if (searchQuery) {
+    // Skip folder filter when searching so results aren't constrained to current folder
+  } else if (currentFolderId) {
     q = q.eq('folder_id', currentFolderId);
   } else {
     q = q.is('folder_id', null);
@@ -335,13 +356,15 @@ async function fetchItems(tab) {
 // ===== SHARED WITH ME =====
 
 async function loadSharedWithMe(grid) {
-  const { data, error } = await supabase
+  let q = supabase
     .from('patterns')
     .select('name, data, updated_at')
     .eq('user_id', currentUser.id)
     .eq('source', 'shared')
     .not('archived', 'is', true)
     .order('updated_at', { ascending: sortAscending });
+  if (searchQuery) q = q.ilike('name', `%${searchQuery}%`);
+  const { data, error } = await q;
 
   if (error || !data?.length) {
     grid.innerHTML = '<div class="library-empty"><p>No shared phrases saved yet.</p><span style="opacity:0.5;font-size:13px">When someone shares a pattern with you, use "Save a copy" to store it here.</span></div>';

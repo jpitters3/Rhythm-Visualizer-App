@@ -9,6 +9,40 @@
   overflow: hidden;
 }
 
+.composer-save-status {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 9px;
+  border-radius: 20px;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.composer-save-status.saving {
+  background: rgba(241, 196, 15, 0.2);
+  color: #b7860b;
+  opacity: 1;
+}
+
+body.dark .composer-save-status.saving {
+  background: rgba(241, 196, 15, 0.15);
+  color: #f1c40f;
+}
+
+.composer-save-status.saved {
+  background: rgba(0, 200, 83, 0.15);
+  color: #00873a;
+  opacity: 1;
+}
+
+body.dark .composer-save-status.saved {
+  background: rgba(0, 200, 83, 0.12);
+  color: #2ecc71;
+}
+
 .composer-toolbar {
   padding: 12px 16px;
   border-bottom: 1px solid var(--panel-border);

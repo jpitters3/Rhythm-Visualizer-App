@@ -20,6 +20,7 @@ import { closeSidebar } from './courses.js';
 import { setLastSidebarType, registerPanelOpener } from './sidepanel.js';
 import { openTrimUI, closeTrimUI } from './recording-trim.js';
 import { updateCurrentPhraseName, createNewPhrase } from './controls.js';
+import { resetGridToDefault } from './notegrid.js';
 import { canAccess, FEATURE } from './gated-feature.js';
 import { Bus, BUS_EVENT } from './bus.js';
 
@@ -41,6 +42,7 @@ let lastPlayback      = null;
 // savedState holds the pre-stitch grid state so it can be restored on toggle-off
 let stitched          = null;
 let isLoadingSection = false; // true while stitching/loading to block premature cleanup
+let activeSectionId  = null;  // section receiving auto-save from GRID_CHANGED
 
 // Default colours auto-assigned to new sections
 const PALETTE = ['#4a90e2','#e2714a','#4ae291','#c44ae2','#e2c14a','#4ac9e2','#e24a7a','#8fe24a'];
@@ -71,6 +73,41 @@ TransportRegistry.register({
       if (btn && !audioSectionId) btn.innerText = '▶';
     }
   },
+});
+
+// When a named pattern is loaded from the library, stop auto-saving to any active section
+Bus.on(BUS_EVENT.PATTERN_SAVED, () => { activeSectionId = null; setSaveStatus(null); });
+
+function setSaveStatus(state) {
+  const el = document.getElementById('composerSaveStatus');
+  if (!el) return;
+  el.className = `composer-save-status${state ? ' ' + state : ''}`;
+  if (state === 'saving') { el.textContent = 'Saving…'; }
+  else if (state === 'saved') {
+    el.textContent = 'Saved';
+    setTimeout(() => { if (el.className.includes('saved')) el.classList.remove('saved'); }, 2000);
+  } else { el.textContent = ''; }
+}
+
+// Auto-save active section snapshot 2s after the last grid change
+let sectionAutoSaveTimer = null;
+Bus.on(BUS_EVENT.GRID_CHANGED, () => {
+  if (!activeSectionId) return;
+  clearTimeout(sectionAutoSaveTimer);
+  setSaveStatus('saving');
+  sectionAutoSaveTimer = setTimeout(async () => {
+    if (!activeSectionId) return;
+    const snapshot = serializePattern(gridA);
+    const { error } = await supabase
+      .from('composition_sections')
+      .update({ pattern_snapshot: snapshot })
+      .eq('id', activeSectionId);
+    for (const c of compositions) {
+      const s = c.sections.find(s => s.id === activeSectionId);
+      if (s) { s.pattern_snapshot = snapshot; break; }
+    }
+    setSaveStatus(error ? null : 'saved');
+  }, 2000);
 });
 
 export function openComposer() {
@@ -495,6 +532,10 @@ async function copySection(sectionId) {
 
   comp.sections.splice(insertAt, 0, data);
   await reorderSections(comp.id, comp.sections.map(s => s.id));
+  if (stitched?.compositionId === comp.id) {
+    stitched = null;
+    await ensureStitched(comp.id);
+  }
   renderCompositions();
 }
 
@@ -512,6 +553,14 @@ async function deleteSection(sectionId) {
 
     comp.sections.splice(idx, 1);
     await reorderSections(comp.id, comp.sections.map(s => s.id));
+    if (stitched?.compositionId === comp.id) {
+      stitched = null;
+      if (comp.sections.some(s => s.type === 'phrase')) {
+        await ensureStitched(comp.id);
+      } else {
+        doUnstitch();
+      }
+    }
     renderCompositions();
     return;
   }
@@ -796,7 +845,7 @@ async function ensureStitched(compositionId, fromSectionIdx = 0) {
   const comp = compositions.find(c => c.id === compositionId);
   if (!comp) return null;
 
-  const phraseSections = comp.sections.filter(s => s.type === 'phrase' && s.phrase_name);
+  const phraseSections = comp.sections.filter(s => s.type === 'phrase');
   if (!phraseSections.length) {
     await alert('No phrase sections to play. Add at least one phrase section first.');
     return null;
@@ -834,7 +883,7 @@ async function ensureStitched(compositionId, fromSectionIdx = 0) {
         end:       offset + state.labels.length - 1,
         sectionId: section.id,
         color:     section.color ?? null,
-        title:     section.phrase_name,
+        title:     section.phrase_name ?? section.title ?? null,
       });
       allLabels.push(...state.labels);
       allHands.push(...(Array.isArray(state.hands) ? state.hands : Array(state.labels.length).fill(null)));
@@ -1233,7 +1282,7 @@ function renderCompositionItem(comp, opts = {}) {
         ${showPicker ? renderPhrasePicker(comp.id, phraseNames) : ''}
         <div class="add-section-rows">
           <div class="add-section-row">
-            <button class="add-section-btn" data-action="add-new-phrase" data-comp="${comp.id}">+ New Phrase</button>
+            <button class="add-section-btn" data-action="add-section" data-comp="${comp.id}">+ Section</button>
             <button class="add-section-btn" data-action="add-phrase" data-comp="${comp.id}">+ Phrase</button>
             <button class="add-section-btn" data-action="add-from-grid" data-comp="${comp.id}">+ From Grid</button>
           </div>
@@ -1566,16 +1615,49 @@ async function editSection(sectionId) {
     if (!await confirm('You have unsaved changes. Discard them?')) return;
   }
   if (stitched) doUnstitch();
+  activeSectionId = null;
   const state = await loadSectionPattern(section);
   if (state) {
     isLoadingSection = true;
     await applyPattern(state, gridA);
     isLoadingSection = false;
     updateCurrentPhraseName(section.phrase_name);
+    activeSectionId = sectionId;
   } else {
     await alert('Could not load this phrase — the pattern data may be missing or corrupted.');
   }
   renderCompositions();
+}
+
+async function saveActiveSectionAsPhrase(sectionId) {
+  let section = null;
+  for (const c of compositions) {
+    section = c.sections.find(s => s.id === sectionId);
+    if (section) break;
+  }
+  if (!section) return;
+
+  const existing = new Set(await dbListPatternNames());
+  let defaultName = section.title || 'New Phrase';
+  let n = 2;
+  while (existing.has(defaultName)) defaultName = `${section.title || 'New Phrase'} ${n++}`;
+  const name = await prompt('Save phrase as:', defaultName);
+  if (!name?.trim()) return;
+
+  const snapshot = section.pattern_snapshot ?? serializePattern(gridA);
+  await dbSavePattern(name.trim(), snapshot);
+
+  const { error } = await supabase
+    .from('composition_sections')
+    .update({ phrase_name: name.trim(), title: name.trim() })
+    .eq('id', sectionId);
+
+  if (!error) {
+    section.phrase_name = name.trim();
+    section.title = name.trim();
+    if (activeSectionId === sectionId) updateCurrentPhraseName(name.trim());
+    renderCompositions();
+  }
 }
 
 function showSectionMenu(triggerBtn, sectionId, sectionType) {
@@ -1584,6 +1666,16 @@ function showSectionMenu(triggerBtn, sectionId, sectionType) {
   menu.className = 'composer-context-menu';
 
   const items = [];
+  if (sectionType === 'phrase') {
+    let section = null;
+    for (const c of compositions) {
+      section = c.sections.find(s => s.id === sectionId);
+      if (section) break;
+    }
+    if (!section?.phrase_name) {
+      items.push(`<button data-action="save-as-phrase">💾 Save as Phrase</button>`);
+    }
+  }
   items.push(`<button data-action="copy">⧉ Duplicate</button>`);
   items.push(`<button data-action="delete" class="danger">✕ Delete</button>`);
   menu.innerHTML = items.join('');
@@ -1601,6 +1693,7 @@ function showSectionMenu(triggerBtn, sectionId, sectionType) {
     const btn = e.target.closest('button');
     if (!btn) return;
     removeContextMenu();
+    if (btn.dataset.action === 'save-as-phrase') await saveActiveSectionAsPhrase(sectionId);
     if (btn.dataset.action === 'edit')   await editSection(sectionId);
     if (btn.dataset.action === 'copy')   await copySection(sectionId);
     if (btn.dataset.action === 'delete') await deleteSection(sectionId);
@@ -1804,12 +1897,14 @@ composerEl?.addEventListener('click', async (e) => {
       }
       if (section) {
         if (stitched) doUnstitch();
+        activeSectionId = null;
         const state = await loadSectionPattern(section);
         if (state) {
           isLoadingSection = true;
           await applyPattern(state, gridA);
           isLoadingSection = false;
           updateCurrentPhraseName(section.phrase_name);
+          activeSectionId = sectionId;
           const onFreeplay = document.getElementById('view-freeplay')?.classList.contains('active');
           if (!onFreeplay) window.location.hash = '#freeplay';
         }
@@ -1866,20 +1961,20 @@ composerEl?.addEventListener('click', async (e) => {
       }
       break;
 
-    case 'add-new-phrase': {
-      const phraseName = await createNewPhrase();
-      if (phraseName) {
-        await addSection(comp, 'phrase', {
-          title: phraseName,
-          phrase_name: phraseName,
-          pattern_snapshot: serializePattern(gridA),
-        });
-        const libraryOpen = document.getElementById('view-library')?.classList.contains('active');
-        if (libraryOpen) {
-          window.location.hash = '#freeplay';
-        } else {
-          renderCompositions(expandedId);
-        }
+    case 'add-section': {
+      activeSectionId = null;
+      resetGridToDefault(gridA);
+      updateCurrentPhraseName(null);
+      const sectionCount = compositions.find(c => c.id === comp)?.sections.filter(s => s.type === 'phrase').length ?? 0;
+      const section = await addSection(comp, 'phrase', {
+        title: `Section ${sectionCount + 1}`,
+        phrase_name: null,
+        pattern_snapshot: serializePattern(gridA),
+      });
+      if (section?.id) {
+        activeSectionId = section.id;
+        const onFreeplay = document.getElementById('view-freeplay')?.classList.contains('active');
+        if (!onFreeplay) window.location.hash = '#freeplay';
       }
       break;
     }

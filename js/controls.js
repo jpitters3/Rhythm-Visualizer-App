@@ -193,6 +193,7 @@ export async function loadPatternByName(pattern) {
       await applyPattern(state);
       localStorage.setItem(LAST_USED_KEY, pattern);
       updateCurrentPhraseName(pattern);
+      Bus.emit(BUS_EVENT.PATTERN_SAVED, { name: pattern });
       return;
     }
 

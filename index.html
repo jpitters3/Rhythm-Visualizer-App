@@ -374,6 +374,7 @@
           <div class="grid-phrase-name-row">
             <div id="gridPhraseName" class="grid-phrase-name">Untitled</div>
             <button id="quickSaveBtn" class="quick-save-btn" title="Save phrase" aria-label="Quick save">Save</button>
+            <span id="composerSaveStatus" class="composer-save-status"></span>
           </div>
           <div id="measures" class="measures player" aria-label="Rhythm grid"></div>
 
@@ -599,6 +600,9 @@
         <button class="library-tab" data-tab="compositions">Compositions</button>
         <button class="library-tab" data-tab="shared">Shared with Me</button>
         <button class="library-tab" data-tab="archive">Archive</button>
+        <div class="library-search-row">
+          <input type="search" id="librarySearch" class="library-search-input" placeholder="Search…" name="search-nofill" autocomplete="username">
+        </div>
       </div>
 
       <div id="libraryBreadcrumb" class="library-breadcrumb" hidden></div>
