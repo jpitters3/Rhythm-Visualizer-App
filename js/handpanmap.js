@@ -30,7 +30,8 @@ const HANDPAN_MAP_SKETCH = {
   "6": { x: 23.5, y: 32.3, r: 10 },
   "7": { x: 60.5, y: 18.5, r: 9 },
   "8": { x: 39.3, y: 18.2, r: 9 },
-  "T": { x: 60.3, y: 56.9, r: 5 },
+  "T_R": { x: 60.3, y: 56.9, r: 5 },
+  "T_L": { x: 40.7, y: 56.9, r: 5 },
   "S": { x: 94.1, y: 45.7, r: 7 },
 };
 
@@ -44,7 +45,8 @@ const HANDPAN_MAP_BRONZE = {
   "6": { x: 21.1, y: 32.6, r: 9 },
   "7": { x: 60, y: 18.8, r: 8 },
   "8": { x: 38.3, y: 18.6, r: 8 },
-  "T": { x: 61.1, y: 56.3, r: 7 },
+  "T_R": { x: 61.1, y: 56.3, r: 7 },
+  "T_L": { x: 38.9, y: 56.3, r: 7 },
   "S": { x: 93.3, y: 47.9, r: 6 },
 };
 
@@ -436,7 +438,11 @@ export function toggleHandpanSide() {
     }
   });
 
-  // Update Visual Map ONLY. 
+  // Always inject both tak dots at default positions if not defined by the custom map
+  if (!newMap['T_R']) newMap['T_R'] = { x: 61.1, y: 56.3, r: 7, width: 14, height: 14, rotation: 0 };
+  if (!newMap['T_L']) newMap['T_L'] = { x: 38.9, y: 56.3, r: 7, width: 14, height: 14, rotation: 0 };
+
+  // Update Visual Map ONLY.
   // We must NOT nuke the Musical Map in `currentScale` because notes on the other side should still make sound if triggered by MIDI/Keyboard.
   // However, HANDPAN_MAP determines what is drawn.
   HANDPAN_MAP = newMap;
@@ -740,6 +746,13 @@ export function buildHandpanOverlay() {
 let hpPulseTimers = new Map();
 
 export function highlightHandpan(note, stepIndex, forceHand = null, latency = 0) {
+  const sticking = forceHand || (activeGrid.innerHands && activeGrid.innerHands[stepIndex]);
+
+  // Resolve "T" to the side-appropriate tak dot based on sticking
+  if (note === 'T') {
+    note = (sticking === 'L') ? 'T_L' : 'T_R';
+  }
+
   let key = String(note || '').toUpperCase();
   let el = handpanDots.get(key);
   if (!el) el = handpanDots.get(note);
@@ -748,7 +761,6 @@ export function highlightHandpan(note, stepIndex, forceHand = null, latency = 0)
 
   // Sticking Override
   let down;
-  const sticking = forceHand || (activeGrid.innerHands && activeGrid.innerHands[stepIndex]);
 
   if (sticking === 'R') {
     down = true;
@@ -956,12 +968,13 @@ function overlayNumberPitchNotes() {
 
     let text = '';
     if (overlayNumbers) {
-      text = note;
+      text = (note === 'T_R' || note === 'T_L') ? 'T' : note;
     } else if (overlayPitches) {
       if (typeof noteForLabel === 'function') {
         const pitch = noteForLabel(note);
         text = pitch ? pitch.replace('s', '#') : '';
-        if (note === 'T' || note === 'S') text = note;
+        if (note === 'T_R' || note === 'T_L') text = 'T';
+        else if (note === 'S') text = note;
         if (text && localStorage.getItem('handpanShowOctave') !== 'true') {
           text = text.replace(/\d+$/, '');
         }
@@ -1201,11 +1214,12 @@ export function initHandpanMap() {
 
     const dot = e.target.closest('.hp-dot');
     if (!dot) return;
-    const note = dot.dataset.note;
-    if (!note) return;
+    const rawNote = dot.dataset.note;
+    if (!rawNote) return;
+    const note = (rawNote === 'T_R' || rawNote === 'T_L') ? 'T' : rawNote;
 
     playNoteByLabel(note, null);
-    highlightHandpan(note, null);
+    highlightHandpan(rawNote, null);
 
     const selIdx = activeGrid.caretIndex;
     if (selIdx === null) return;
