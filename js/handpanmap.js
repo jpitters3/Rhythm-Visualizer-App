@@ -32,7 +32,8 @@ const HANDPAN_MAP_SKETCH = {
   "8": { x: 39.3, y: 18.2, r: 9 },
   "T_R": { x: 60.3, y: 56.9, r: 5 },
   "T_L": { x: 40.7, y: 56.9, r: 5 },
-  "S": { x: 94.1, y: 45.7, r: 7 },
+  "S_R": { x: 94.1, y: 45.7, r: 7 },
+  "S_L": { x: 5.9,  y: 45.7, r: 7 },
 };
 
 const HANDPAN_MAP_BRONZE = {
@@ -47,7 +48,8 @@ const HANDPAN_MAP_BRONZE = {
   "8": { x: 38.3, y: 18.6, r: 8 },
   "T_R": { x: 61.1, y: 56.3, r: 7 },
   "T_L": { x: 38.9, y: 56.3, r: 7 },
-  "S": { x: 93.3, y: 47.9, r: 6 },
+  "S_R": { x: 93.3, y: 47.9, r: 6 },
+  "S_L": { x: 6.7,  y: 47.9, r: 6 },
 };
 
 export let HANDPAN_MAP = HANDPAN_MAP_BRONZE;
@@ -293,6 +295,14 @@ function applyCustomHandpan(handpanData) {
     }
   });
 
+  const overlayDefaults = {
+    'T_R': { x: 61.1, y: 56.3, r: 7 }, 'T_L': { x: 38.9, y: 56.3, r: 7 },
+    'S_R': { x: 93.3, y: 47.9, r: 6 }, 'S_L': { x: 6.7,  y: 47.9, r: 6 },
+  };
+  for (const [key, def] of Object.entries(overlayDefaults)) {
+    const saved = handpanData.note_map.find(t => t.assignedNumber === key);
+    newMap[key] = { x: saved?.x ?? def.x, y: saved?.y ?? def.y, r: saved?.r ?? def.r, width: (saved?.r ?? def.r) * 2, height: (saved?.r ?? def.r) * 2, rotation: 0 };
+  }
   HANDPAN_MAP = newMap;
 
   // Update Global Current Scale
@@ -438,9 +448,17 @@ export function toggleHandpanSide() {
     }
   });
 
-  // Always inject both tak dots at default positions if not defined by the custom map
-  if (!newMap['T_R']) newMap['T_R'] = { x: 61.1, y: 56.3, r: 7, width: 14, height: 14, rotation: 0 };
-  if (!newMap['T_L']) newMap['T_L'] = { x: 38.9, y: 56.3, r: 7, width: 14, height: 14, rotation: 0 };
+  // Inject tak/slap overlay dots, preferring saved positions from note_map
+  const overlayDefaults2 = {
+    'T_R': { x: 61.1, y: 56.3, r: 7 }, 'T_L': { x: 38.9, y: 56.3, r: 7 },
+    'S_R': { x: 93.3, y: 47.9, r: 6 }, 'S_L': { x: 6.7,  y: 47.9, r: 6 },
+  };
+  for (const [key, def] of Object.entries(overlayDefaults2)) {
+    if (!newMap[key]) {
+      const saved = mountedHandpanData.note_map.find(t => t.assignedNumber === key);
+      newMap[key] = { x: saved?.x ?? def.x, y: saved?.y ?? def.y, r: saved?.r ?? def.r, width: (saved?.r ?? def.r) * 2, height: (saved?.r ?? def.r) * 2, rotation: 0 };
+    }
+  }
 
   // Update Visual Map ONLY.
   // We must NOT nuke the Musical Map in `currentScale` because notes on the other side should still make sound if triggered by MIDI/Keyboard.
@@ -748,10 +766,9 @@ let hpPulseTimers = new Map();
 export function highlightHandpan(note, stepIndex, forceHand = null, latency = 0) {
   const sticking = forceHand || (activeGrid.innerHands && activeGrid.innerHands[stepIndex]);
 
-  // Resolve "T" to the side-appropriate tak dot based on sticking
-  if (note === 'T') {
-    note = (sticking === 'L') ? 'T_L' : 'T_R';
-  }
+  // Resolve "T"/"S" to the side-appropriate dot based on sticking
+  if (note === 'T') note = (sticking === 'L') ? 'T_L' : 'T_R';
+  if (note === 'S') note = (sticking === 'L') ? 'S_L' : 'S_R';
 
   let key = String(note || '').toUpperCase();
   let el = handpanDots.get(key);
@@ -817,10 +834,16 @@ function setCalibrating(on) {
   if (calBtn) calBtn.classList.toggle('active', on);
   if (calBtn) calBtn.textContent = on ? 'Calibrating…' : 'Calibrate Map';
 
-  // Clear selection when exiting
   if (!on) {
+    // Clear selection
     selectedHpNote = null;
     for (const el of handpanDots.values()) el.classList.remove('selected');
+    // Flush any pending debounced save immediately
+    if (hpMapSaveTimeout) {
+      clearTimeout(hpMapSaveTimeout);
+      hpMapSaveTimeout = null;
+    }
+    saveHandpanPositions();
   }
 }
 
@@ -861,12 +884,25 @@ async function saveHandpanPositions() {
 
   // Update the data model from the Visual Map
   for (const [note, p] of Object.entries(HANDPAN_MAP)) {
-    if (!p.id) continue; // Not a custom note with ID
-    const tf = customHp.note_map.find(t => t.id === p.id);
-    if (tf) {
-      if (tf.x !== p.x || tf.y !== p.y) {
+    if (p.id) {
+      // Standard custom tonefield — find by id and update position
+      const tf = customHp.note_map.find(t => t.id === p.id);
+      if (tf && (tf.x !== p.x || tf.y !== p.y)) {
         tf.x = p.x;
         tf.y = p.y;
+        changed = true;
+      }
+    } else if (note === 'T_R' || note === 'T_L' || note === 'S_R' || note === 'S_L') {
+      // Injected overlay dot — persist position as a special entry in note_map
+      const existing = customHp.note_map.find(t => t.assignedNumber === note);
+      if (existing) {
+        if (existing.x !== p.x || existing.y !== p.y) {
+          existing.x = p.x;
+          existing.y = p.y;
+          changed = true;
+        }
+      } else {
+        customHp.note_map.push({ assignedNumber: note, note: note, octave: '', x: p.x, y: p.y, r: p.r || 7, side: 'top' });
         changed = true;
       }
     }
@@ -968,13 +1004,15 @@ function overlayNumberPitchNotes() {
 
     let text = '';
     if (overlayNumbers) {
-      text = (note === 'T_R' || note === 'T_L') ? 'T' : note;
+      if (note === 'T_R' || note === 'T_L') text = 'T';
+      else if (note === 'S_R' || note === 'S_L') text = 'S';
+      else text = note;
     } else if (overlayPitches) {
       if (typeof noteForLabel === 'function') {
         const pitch = noteForLabel(note);
         text = pitch ? pitch.replace('s', '#') : '';
         if (note === 'T_R' || note === 'T_L') text = 'T';
-        else if (note === 'S') text = note;
+        else if (note === 'S_R' || note === 'S_L') text = 'S';
         if (text && localStorage.getItem('handpanShowOctave') !== 'true') {
           text = text.replace(/\d+$/, '');
         }
@@ -1216,7 +1254,9 @@ export function initHandpanMap() {
     if (!dot) return;
     const rawNote = dot.dataset.note;
     if (!rawNote) return;
-    const note = (rawNote === 'T_R' || rawNote === 'T_L') ? 'T' : rawNote;
+    const note = (rawNote === 'T_R' || rawNote === 'T_L') ? 'T'
+               : (rawNote === 'S_R' || rawNote === 'S_L') ? 'S'
+               : rawNote;
 
     playNoteByLabel(note, null);
     highlightHandpan(rawNote, null);
