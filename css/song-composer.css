@@ -799,7 +799,7 @@ body.dark .composer-save-status.saved {
    ============================================================ */
 
 .cell.composer-section-tinted {
-  background-color: var(--section-bg, transparent) !important;
+  border-bottom: 3px solid var(--section-border, transparent) !important;
 }
 
 .cell.composer-section-start {
