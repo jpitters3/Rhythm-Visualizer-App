@@ -75,40 +75,92 @@ TransportRegistry.register({
   },
 });
 
-// When a named pattern is loaded from the library, stop auto-saving to any active section
-Bus.on(BUS_EVENT.PATTERN_SAVED, () => { activeSectionId = null; setSaveStatus(null); });
+Bus.on(BUS_EVENT.PATTERN_SAVED, (e) => {
+  const { fromSave, name } = e?.detail || {};
+  if (fromSave && activeSectionId && name) {
+    // A phrase was quick-saved while a section was active — link the section to the new name
+    linkActiveSectionToPhrase(name);
+  } else {
+    // A pattern was loaded from the library — disengage section auto-save
+    activeSectionId = null;
+    pendingSaveToSectionId = null;
+    clearTimeout(sectionAutoSaveTimer);
+    setSaveStatus(null);
+  }
+});
 
 function setSaveStatus(state) {
   const el = document.getElementById('composerSaveStatus');
   if (!el) return;
   el.className = `composer-save-status${state ? ' ' + state : ''}`;
-  if (state === 'saving') { el.textContent = 'Saving…'; }
+  if (state === 'saving') { el.textContent = 'Saving section…'; }
   else if (state === 'saved') {
-    el.textContent = 'Saved';
+    el.textContent = 'Section saved';
     setTimeout(() => { if (el.className.includes('saved')) el.classList.remove('saved'); }, 2000);
   } else { el.textContent = ''; }
 }
 
-// Auto-save active section snapshot 2s after the last grid change
+// Auto-save active section snapshot 2s after the last grid change.
+// pendingSaveToSectionId is captured at event time to avoid the closure reading
+// a stale activeSectionId if the user switches sections mid-debounce.
 let sectionAutoSaveTimer = null;
+let pendingSaveToSectionId = null;
+
+async function flushPendingSectionSave() {
+  if (!pendingSaveToSectionId) return;
+  clearTimeout(sectionAutoSaveTimer);
+  sectionAutoSaveTimer = null;
+  const sectionId = pendingSaveToSectionId;
+  pendingSaveToSectionId = null;
+  const snapshot = serializePattern(gridA);
+  const { error } = await supabase
+    .from('composition_sections')
+    .update({ pattern_snapshot: snapshot })
+    .eq('id', sectionId);
+  for (const c of compositions) {
+    const s = c.sections.find(s => s.id === sectionId);
+    if (s) { s.pattern_snapshot = snapshot; break; }
+  }
+  setSaveStatus(error ? null : 'saved');
+}
+
 Bus.on(BUS_EVENT.GRID_CHANGED, () => {
   if (!activeSectionId) return;
+  pendingSaveToSectionId = activeSectionId; // capture now, not when timer fires
   clearTimeout(sectionAutoSaveTimer);
   setSaveStatus('saving');
   sectionAutoSaveTimer = setTimeout(async () => {
-    if (!activeSectionId) return;
+    const sectionId = pendingSaveToSectionId;
+    if (!sectionId) return;
+    pendingSaveToSectionId = null;
     const snapshot = serializePattern(gridA);
     const { error } = await supabase
       .from('composition_sections')
       .update({ pattern_snapshot: snapshot })
-      .eq('id', activeSectionId);
+      .eq('id', sectionId);
     for (const c of compositions) {
-      const s = c.sections.find(s => s.id === activeSectionId);
+      const s = c.sections.find(s => s.id === sectionId);
       if (s) { s.pattern_snapshot = snapshot; break; }
     }
     setSaveStatus(error ? null : 'saved');
   }, 2000);
 });
+
+async function linkActiveSectionToPhrase(name) {
+  if (!activeSectionId) return;
+  const sectionId = activeSectionId;
+  const { error } = await supabase
+    .from('composition_sections')
+    .update({ phrase_name: name, title: name })
+    .eq('id', sectionId);
+  if (!error) {
+    for (const c of compositions) {
+      const s = c.sections.find(s => s.id === sectionId);
+      if (s) { s.phrase_name = name; s.title = name; break; }
+    }
+    renderCompositions();
+  }
+}
 
 export function openComposer() {
   setLastSidebarType('composer');
@@ -1611,10 +1663,14 @@ async function editSection(sectionId) {
     if (section) break;
   }
   if (!section) return;
-  if (hasUnsavedChanges()) {
-    if (!await confirm('You have unsaved changes. Discard them?')) return;
-  }
   if (stitched) doUnstitch();
+  // Flush any pending auto-save for the current section before switching
+  if (pendingSaveToSectionId && pendingSaveToSectionId !== sectionId) {
+    await flushPendingSectionSave();
+  } else {
+    clearTimeout(sectionAutoSaveTimer);
+    pendingSaveToSectionId = null;
+  }
   activeSectionId = null;
   const state = await loadSectionPattern(section);
   if (state) {
@@ -1962,6 +2018,7 @@ composerEl?.addEventListener('click', async (e) => {
       break;
 
     case 'add-section': {
+      await flushPendingSectionSave();
       activeSectionId = null;
       resetGridToDefault(gridA);
       updateCurrentPhraseName(null);

@@ -160,6 +160,7 @@ export async function saveCurrentPatternAs(name, source = 'manual') {
     localStorage.setItem(LAST_USED_KEY, trimmed);
     await refreshPatternSelect(trimmed);
     updateCurrentPhraseName(trimmed);
+    Bus.emit(BUS_EVENT.PATTERN_SAVED, { name: trimmed, fromSave: true });
     Bus.emit(BUS_EVENT.GRID_CHANGED);
     return true;
   } catch (err) {
