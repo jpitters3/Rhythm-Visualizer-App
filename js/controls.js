@@ -513,6 +513,10 @@ export function initControls() {
     await showOpenPhraseModal();
   });
 
+  document.getElementById('gridPhraseName')?.addEventListener('click', async () => {
+    await showOpenPhraseModal();
+  });
+
   // Close submenus when account dropdown is closed (outside click)
   document.addEventListener('click', (e) => {
     const dropdown = document.getElementById('accountDropdownMenu');
