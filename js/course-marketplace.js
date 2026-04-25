@@ -213,9 +213,7 @@ export async function archiveCourse(courseId) {
   try {
     const { error } = await supabase
       .from('user_courses')
-      .update({ is_archived: true })
-      .eq('user_id', currentUser.id)
-      .eq('course_id', courseId);
+      .upsert({ user_id: currentUser.id, course_id: courseId, is_archived: true }, { onConflict: 'user_id,course_id' });
     if (error) throw error;
     Bus.emit(BUS_EVENT.COURSE_DATA_CHANGED);
     openMarketplace(); // Refresh to show Activate button
@@ -230,9 +228,7 @@ export async function activateCourse(courseId) {
   try {
     const { error } = await supabase
       .from('user_courses')
-      .update({ is_archived: false })
-      .eq('user_id', currentUser.id)
-      .eq('course_id', courseId);
+      .upsert({ user_id: currentUser.id, course_id: courseId, is_archived: false }, { onConflict: 'user_id,course_id' });
     if (error) throw error;
     await alert("Course activated! Let's start learning.");
     closeMarketplace();
