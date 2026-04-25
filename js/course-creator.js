@@ -623,6 +623,9 @@ export async function loadCourseToEdit(course) {
   await loadPatternOptions(); // Fetch patterns first
 
   currentCourseData = JSON.parse(JSON.stringify(course)); // Deep copy to avoid mutating original
+  currentCourseData.sections = (currentCourseData.sections || [])
+    .sort((a, b) => a.order_index - b.order_index)
+    .map(s => ({ ...s, lessons: (s.lessons || []).sort((a, b) => a.order_index - b.order_index) }));
   document.getElementById('courseTitle').value = course.title;
   document.getElementById('courseDesc').value = course.description;
 
@@ -649,6 +652,11 @@ closeCourseBtn?.addEventListener('click', closeCourseCreator);
 
 const addSectionBtn = document.getElementById('addSectionBtn');
 addSectionBtn?.addEventListener('click', addSection);
+
+document.getElementById('collapseAllSectionsBtn')?.addEventListener('click', () => {
+  [...expandedSections].forEach(sIdx => toggleSection(sIdx));
+});
+
 
 // ===== SAVE ===== //
 
