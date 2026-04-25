@@ -74,6 +74,7 @@ export class TransportUI {
         this.applyBpm(val, this.bpmNum);
         Bus.emit(BUS_EVENT.GRID_CHANGED);
       };
+      this.bpmNum.addEventListener('focus', () => this.bpmNum.select());
       this.bpmNum.addEventListener('blur', applyNum);
       this.bpmNum.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') { e.preventDefault(); applyNum(); this.bpmNum.blur(); }
