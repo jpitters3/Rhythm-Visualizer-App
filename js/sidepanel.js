@@ -92,11 +92,11 @@ export class Sidepanel {
       document.getElementById(btnId)?.classList.toggle('active', activeButtons.has(btnId));
     }
 
-    // Studio link is active when on the freeplay route OR when a studio panel is open
+    // Studio link is active only when on the freeplay route.
+    // Opening a studio panel (e.g. courses) from another route must not activate it.
     const onFreeplay = window.location.hash === '#freeplay' || window.location.hash === '';
-    const studioActive = onFreeplay || [...openIds].some(id => STUDIO_PANEL_IDS.has(id));
     document.querySelector('.nav-link[data-route="freeplay"]')
-      ?.classList.toggle('active', studioActive);
+      ?.classList.toggle('active', onFreeplay);
   }
 }
 
