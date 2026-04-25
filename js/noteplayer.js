@@ -410,7 +410,7 @@ function scheduleAudio(c, step, time) {
     playNoteByLabel(currentData, realStep, delay);
   }
 
-  // 3. METRONOME — clicks on beats only (every subdivision steps), not on subdivisions
+  // 3. METRONOME
   if (c.metronomeOn) {
     const sub = c.subdivision || 2;
     const isBeat = (realStep % sub === 0);
@@ -418,6 +418,8 @@ function scheduleAudio(c, step, time) {
       const stepsPerMeasure = c.stepsPerMeasure || 8;
       const isDownbeat = (realStep % stepsPerMeasure === 0);
       metroClick(isDownbeat ? 'downbeat' : 'beat', delay);
+    } else if (c.metronomeSubdiv) {
+      metroClick('subdiv', delay);
     }
   }
 }

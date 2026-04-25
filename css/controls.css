@@ -170,7 +170,8 @@ select {
 
 /* --- Transport buttons: match composer playbar aesthetic --- */
 .transport-group .t-play-btn,
-.transport-group .t-metro-btn {
+.transport-group .t-metro-btn,
+.transport-group .t-subdiv-btn {
   background: none;
   border: 1px solid var(--panel-border);
   border-radius: 8px;
@@ -182,8 +183,16 @@ select {
   transition: border-color 0.15s, color 0.15s, background 0.15s;
 }
 
+.transport-group .t-subdiv-btn {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  padding: 6px 10px;
+}
+
 .transport-group .t-play-btn:hover,
-.transport-group .t-metro-btn:hover {
+.transport-group .t-metro-btn:hover,
+.transport-group .t-subdiv-btn:hover {
   border-color: var(--accent-glow, #818cf8);
   color: var(--accent-glow, #818cf8);
 }
@@ -194,21 +203,35 @@ select {
   color: var(--accent-glow, #818cf8);
 }
 
+.transport-group .t-subdiv-btn.active {
+  background: rgba(99, 102, 241, 0.12);
+  border-color: var(--accent-glow, #818cf8);
+  color: var(--accent-glow, #818cf8);
+}
+
 /* Light mode overrides */
 body:not(.dark) .transport-group .t-play-btn,
-body:not(.dark) .transport-group .t-metro-btn {
+body:not(.dark) .transport-group .t-metro-btn,
+body:not(.dark) .transport-group .t-subdiv-btn {
   border-color: rgba(99, 102, 241, 0.25);
   color: #4f46e5;
 }
 
 body:not(.dark) .transport-group .t-play-btn:hover,
-body:not(.dark) .transport-group .t-metro-btn:hover {
+body:not(.dark) .transport-group .t-metro-btn:hover,
+body:not(.dark) .transport-group .t-subdiv-btn:hover {
   border-color: #6366f1;
   color: #fff;
   background: #6366f1;
 }
 
 body:not(.dark) .transport-group .t-play-btn.active {
+  background: rgba(99, 102, 241, 0.12);
+  border-color: #6366f1;
+  color: #4f46e5;
+}
+
+body:not(.dark) .transport-group .t-subdiv-btn.active {
   background: rgba(99, 102, 241, 0.12);
   border-color: #6366f1;
   color: #4f46e5;
@@ -370,6 +393,7 @@ body:not(.dark) .transport-group .t-tap-btn.tapping {
 
   .transport-group .t-play-btn,
   .transport-group .t-metro-btn,
+  .transport-group .t-subdiv-btn,
   .transport-group .t-tap-btn {
     padding: 6px 10px;
   }
@@ -387,6 +411,7 @@ body:not(.dark) .transport-group .t-tap-btn.tapping {
 
   .transport-group .t-play-btn,
   .transport-group .t-metro-btn,
+  .transport-group .t-subdiv-btn,
   .transport-group .t-tap-btn {
     padding: 6px 8px;
   }

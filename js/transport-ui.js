@@ -10,6 +10,7 @@ export class TransportUI {
     // Elements
     this.playBtn = container.querySelector('.t-play-btn');
     this.metroBtn = container.querySelector('.t-metro-btn');
+    this.subdivBtn = container.querySelector('.t-subdiv-btn');
     this.bpmInput = container.querySelector('.t-bpm-input');
     this.bpmNum = container.querySelector('.t-bpm-num');
     this.tapBtn = container.querySelector('.t-tap-btn');
@@ -83,6 +84,15 @@ export class TransportUI {
 
     if (this.tapBtn) {
       this.tapBtn.addEventListener('click', () => this.handleTap());
+    }
+
+    if (this.subdivBtn) {
+      this.subdivBtn.onclick = (e) => {
+        e.stopPropagation();
+        this.ctx.metronomeSubdiv = !this.ctx.metronomeSubdiv;
+        localStorage.setItem('groovepan_metro_subdiv-' + this.ctx.id, this.ctx.metronomeSubdiv ? 'on' : 'off');
+        TransportRegistry.updateAll(this.ctx);
+      };
     }
 
     if (this.metroSoundSelect) {
@@ -165,6 +175,13 @@ export class TransportUI {
       
       this.metroBtn.style.opacity = isOn ? '1' : '0.5';
       this.metroBtn.title = isOn ? `Metronome: ${sound}` : 'Metronome: Off';
+    }
+
+    if (this.subdivBtn) {
+      const isOn = this.ctx.metronomeSubdiv;
+      this.subdivBtn.classList.toggle('active', isOn);
+      this.subdivBtn.style.opacity = isOn ? '1' : '0.5';
+      this.subdivBtn.title = isOn ? 'Subdivision clicks: On' : 'Subdivision clicks: Off';
     }
 
     if (this.bpmInput) {

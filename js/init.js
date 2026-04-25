@@ -137,6 +137,7 @@ export function restorePrefs() {
     isMetroOn = (localStorage.getItem('groovepan_metro') === 'on');
   }
   if (gridA) gridA.metronomeOn = isMetroOn;
+  if (gridA) gridA.metronomeSubdiv = localStorage.getItem('groovepan_metro_subdiv-A') === 'on';
 
   updateMetroUI();
 }
