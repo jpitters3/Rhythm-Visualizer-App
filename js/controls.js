@@ -270,6 +270,17 @@ async function showOpenPhraseModal() {
   const searchInput = document.getElementById('phraseSearchInput');
   if (searchInput) searchInput.value = '';
 
+  const createBtn = document.getElementById('openPhraseCreateBtn');
+  if (createBtn) {
+    const newCreateBtn = createBtn.cloneNode(true);
+    createBtn.replaceWith(newCreateBtn);
+    newCreateBtn.addEventListener('click', async () => {
+      modal.close();
+      const name = await createNewPhrase();
+      if (name) updatePatternButtons();
+    });
+  }
+
   listEl.innerHTML = '<div class="phrase-list-loading">Loading…</div>';
   modal.open();
   if (searchInput) searchInput.focus();
@@ -292,13 +303,13 @@ async function showOpenPhraseModal() {
 
       listEl.innerHTML = '';
 
-      if (names.length === 0) {
-        listEl.innerHTML = '<div class="phrase-list-empty"><span>No saved phrases yet.</span></div>';
-        return;
-      }
+      if (names.length === 0) return;
 
       if (filtered.length === 0) {
-        listEl.innerHTML = '<div class="phrase-list-empty"><span>No matches.</span></div>';
+        const empty = document.createElement('div');
+        empty.className = 'phrase-list-empty';
+        empty.innerHTML = '<span>No matches.</span>';
+        listEl.appendChild(empty);
         return;
       }
 
