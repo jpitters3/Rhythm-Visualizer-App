@@ -2298,12 +2298,23 @@
       <div class="asgn-tab-bar">
         <button class="asgn-tab-btn active" data-tab="assignments">Assignments</button>
         <button class="asgn-tab-btn" data-tab="submissions">Submissions</button>
+        <button class="asgn-tab-btn" data-tab="archive">Archive</button>
       </div>
 
       <!-- Tab 1: Assignments -->
       <div id="asgnTab-assignments" class="asgn-tab-panel">
         <div class="asgn-panel-toolbar">
+          <button id="asgnNewFolderBtn" class="asgn-new-folder-btn">+ New Folder</button>
           <button id="asgnNewBtn" class="primary-btn">+ New Assignment</button>
+        </div>
+        <div id="asgnBulkBar" class="asgn-bulk-bar" style="display:none;">
+          <span id="asgnBulkCount" class="asgn-bulk-count"></span>
+          <select id="asgnBulkFolderSelect" class="asgn-select asgn-bulk-folder-select">
+            <option value="">Move to folder…</option>
+            <option value="__none__">— Remove from folder —</option>
+          </select>
+          <button id="asgnBulkArchiveBtn" class="asgn-bulk-action-btn">Archive</button>
+          <button id="asgnBulkClearBtn" class="asgn-bulk-clear-btn">✕ Clear</button>
         </div>
         <div id="asgnList" class="asgn-list"></div>
 
@@ -2327,6 +2338,12 @@
             <input type="url" id="asgnVideoUrl" placeholder="https://youtube.com/watch?v=…" />
           </div>
           <div class="asgn-field-row">
+            <div class="asgn-field-group">
+              <label class="asgn-label" for="asgnFolderSelect">Folder (optional)</label>
+              <select id="asgnFolderSelect" class="asgn-select">
+                <option value="">— None —</option>
+              </select>
+            </div>
             <div class="asgn-field-group">
               <label class="asgn-label" for="asgnCourseSelect">Link to Course (optional)</label>
               <select id="asgnCourseSelect" class="asgn-select">
@@ -2374,6 +2391,11 @@
             </div>
           </div>
         </div>
+      </div>
+
+      <!-- Tab 3: Archive -->
+      <div id="asgnTab-archive" class="asgn-tab-panel" style="display:none;">
+        <div id="asgnArchiveList" class="asgn-list"></div>
       </div>
 
       <!-- Tab 2: Submissions -->

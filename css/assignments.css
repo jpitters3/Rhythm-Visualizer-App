@@ -3,7 +3,7 @@
    Reuses: .modal-overlay, .modal-header, .close-btn, .primary-btn, .secondary-btn */
 
 .assignments-modal {
-  width: min(860px, 95vw);
+  width: min(900px, 95vw);
   max-height: 90vh;
   overflow: hidden;
   border-radius: 20px;
@@ -66,8 +66,120 @@ body.dark .assignments-modal {
 
 .asgn-panel-toolbar {
   display: flex;
+  align-items: center;
+  gap: 8px;
   justify-content: flex-end;
   margin-bottom: 16px;
+}
+
+.asgn-new-folder-btn {
+  background: none;
+  border: 1px dashed var(--panel-border);
+  border-radius: 8px;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+  opacity: 0.65;
+  cursor: pointer;
+  transition: opacity 0.15s, border-color 0.15s;
+}
+
+.asgn-new-folder-btn:hover {
+  opacity: 1;
+  border-style: solid;
+}
+
+/* Folder group */
+.asgn-folder-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.asgn-folder-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px 6px 4px;
+  cursor: pointer;
+  border-radius: 8px;
+  user-select: none;
+  transition: background 0.12s;
+}
+
+.asgn-folder-header:hover {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+body.dark .asgn-folder-header:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.asgn-folder-toggle {
+  font-size: 11px;
+  opacity: 0.5;
+  width: 14px;
+  flex-shrink: 0;
+}
+
+.asgn-folder-name {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  opacity: 0.6;
+  flex: 1;
+}
+
+.asgn-folder-count {
+  font-size: 11px;
+  opacity: 0.4;
+  background: var(--panel-border);
+  border-radius: 99px;
+  padding: 1px 7px;
+}
+
+.asgn-folder-action {
+  background: none;
+  border: none;
+  font-size: 12px;
+  opacity: 0;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 4px;
+  transition: opacity 0.12s, background 0.12s;
+}
+
+.asgn-folder-header:hover .asgn-folder-action {
+  opacity: 0.5;
+}
+
+.asgn-folder-action:hover {
+  opacity: 1 !important;
+  background: rgba(0, 0, 0, 0.06);
+}
+
+.asgn-folder-uncategorized .asgn-folder-name {
+  font-style: italic;
+}
+
+.asgn-folder-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 4px 0 8px 18px;
+}
+
+.asgn-folder-body.collapsed {
+  display: none;
+}
+
+.asgn-folder-empty {
+  font-size: 12px;
+  opacity: 0.4;
+  padding: 6px 4px;
+  font-style: italic;
 }
 
 .asgn-list {
@@ -926,6 +1038,198 @@ body.dark .asgn-review-item {
   font-size: 14px;
 }
 
+
+/* ===== MULTI-SELECT CHECKBOXES ===== */
+
+.asgn-item-checkbox {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--primary-color, #f1c40f);
+  cursor: pointer;
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.asgn-list-item:hover .asgn-item-checkbox,
+.asgn-list-item.selected .asgn-item-checkbox {
+  opacity: 1;
+}
+
+.asgn-list-item.selected {
+  background: rgba(241, 196, 15, 0.1) !important;
+  border-color: rgba(241, 196, 15, 0.45) !important;
+}
+
+body.dark .asgn-list-item.selected {
+  background: rgba(241, 196, 15, 0.12) !important;
+  border-color: rgba(241, 196, 15, 0.35) !important;
+}
+
+/* ===== DRAG AND DROP ===== */
+
+.asgn-drop-indicator {
+  height: 2px;
+  background: var(--primary-color, #f1c40f);
+  border-radius: 99px;
+  margin: 2px 0;
+  pointer-events: none;
+}
+
+.asgn-list-item.dragging {
+  opacity: 0.45;
+  transform: scale(0.98);
+}
+
+.asgn-folder-body.drag-over,
+.asgn-folder-uncategorized.drag-over {
+  background: rgba(241, 196, 15, 0.08);
+  border-radius: 10px;
+  outline: 2px dashed rgba(241, 196, 15, 0.5);
+  outline-offset: 2px;
+}
+
+/* ===== BULK ACTION BAR ===== */
+
+.asgn-bulk-bar {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: rgba(241, 196, 15, 0.1);
+  border: 1px solid rgba(241, 196, 15, 0.3);
+  border-radius: 10px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+
+.asgn-bulk-bar.visible {
+  display: flex;
+}
+
+.asgn-bulk-count {
+  font-size: 12px;
+  font-weight: 700;
+  opacity: 0.7;
+  white-space: nowrap;
+  margin-right: 4px;
+}
+
+.asgn-bulk-folder-select {
+  flex: 1;
+  min-width: 120px;
+  max-width: 180px;
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 999px;
+  padding: 5px 28px 5px 12px;
+  font-size: 12px;
+  font-family: inherit;
+  color: var(--text);
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23888' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+}
+
+body.dark .asgn-bulk-folder-select {
+  background-color: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.asgn-bulk-action-btn {
+  background: var(--primary-color, #f1c40f);
+  border: none;
+  border-radius: 999px;
+  padding: 5px 14px;
+  font-size: 12px;
+  font-weight: 700;
+  font-family: inherit;
+  color: #000;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: opacity 0.15s;
+}
+
+.asgn-bulk-action-btn:hover {
+  opacity: 0.85;
+}
+
+.asgn-bulk-archive-btn {
+  background: transparent;
+  border: 1px solid rgba(0, 0, 0, 0.18);
+  border-radius: 999px;
+  padding: 5px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: inherit;
+  color: var(--text);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s;
+}
+
+.asgn-bulk-archive-btn:hover {
+  background: rgba(0, 0, 0, 0.06);
+}
+
+body.dark .asgn-bulk-archive-btn {
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+.asgn-bulk-clear-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  opacity: 0.4;
+  padding: 2px 4px;
+  border-radius: 4px;
+  transition: opacity 0.15s;
+  font-family: inherit;
+  margin-left: auto;
+}
+
+.asgn-bulk-clear-btn:hover {
+  opacity: 0.8;
+}
+
+/* ===== ARCHIVE TAB ===== */
+
+.asgn-list-item-archived {
+  opacity: 0.65;
+}
+
+.asgn-unarchive-btn {
+  background: transparent;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  font-family: inherit;
+  color: var(--text);
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.asgn-unarchive-btn:hover {
+  background: rgba(0, 0, 0, 0.06);
+  border-color: rgba(0, 0, 0, 0.3);
+}
+
+body.dark .asgn-unarchive-btn {
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+body.dark .asgn-unarchive-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.35);
+}
 
 /* =============================================================================
    STUDENT INBOX MODAL

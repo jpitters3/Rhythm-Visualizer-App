@@ -21,7 +21,7 @@ export class GridContext {
     this.playing = false;
     this.bpm = 90;
     this.metronomeOn = false;
-    this.metronomeSubdiv = false;
+    this.metronomeSubdiv = true;
     this.isMuted = false;
     this.transcriptionIndex = 0;
     this.tags = [];

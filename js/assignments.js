@@ -8,7 +8,7 @@ import { currentUser } from './state.js';
 import { currentProfile } from './profile.js';
 import { Modal } from './modal.js';
 import { supabase } from './supabase-client.js';
-import { alert, confirm } from './alert.js';
+import { alert, confirm, prompt } from './alert.js';
 import { escapeHtml } from './utils.js';
 import { Bus, BUS_EVENT } from './bus.js';
 import { copyCompositionAsSnapshot } from './song-composer.js';
@@ -21,11 +21,18 @@ let asgnPanel = null;
 let activeTab = 'assignments';
 let submissionsLoaded = false;
 
-let assignmentsList = [];
+let assignmentsList = [];   // active (non-archived)
+let archivedList = [];      // archived assignments
+let foldersList = [];
 let coursesList = [];
 let studentsList = [];
 let compositionsList = [];
 let cachedAssigneeMap = null; // Map<student_id, status> — cleared when editor opens
+
+let selectedIds = new Set(); // currently checked assignment IDs
+let archivedLoaded = false;  // lazy-load archive tab
+
+let dropIndicator = null; // shared insertion-line element for reorder drag-drop
 
 let currentAssignment = null;   // null = new; object with .id = editing existing
 let currentItems = [];          // ItemDraft[] — working copy before save
@@ -78,9 +85,19 @@ export function initAssignments() {
     btn.addEventListener('click', () => switchTab(btn.dataset.tab));
   });
 
-  // New assignment
+  // New folder / new assignment
+  document.getElementById('asgnNewFolderBtn')
+    ?.addEventListener('click', createFolder);
   document.getElementById('asgnNewBtn')
     ?.addEventListener('click', openNewEditor);
+
+  // Bulk bar
+  document.getElementById('asgnBulkFolderSelect')
+    ?.addEventListener('change', handleBulkMove);
+  document.getElementById('asgnBulkArchiveBtn')
+    ?.addEventListener('click', handleBulkArchive);
+  document.getElementById('asgnBulkClearBtn')
+    ?.addEventListener('click', () => { selectedIds.clear(); renderAssignmentsList(); updateBulkBar(); });
 
   // Editor close
   document.getElementById('asgnEditorCloseBtn')
@@ -159,23 +176,79 @@ function switchTab(tabName) {
     submissionsLoaded = true;
     loadSubmissionsList();
   }
+  if (tabName === 'archive' && !archivedLoaded) {
+    archivedLoaded = true;
+    loadArchivedList();
+  }
 }
 
 // ===== DATA LOADING =====
 
 async function loadInitialData() {
-  // Courses and students are stable — only fetch them once per session.
-  // Assignments always refresh (teacher may have changes from another tab).
-  const tasks = [loadAssignmentsList()];
+  // Fetch folders and assignments in parallel, then render once both are ready.
+  // Rendering inside loadAssignmentsList would race against loadFolders completing.
+  const tasks = [];
+  tasks.push(loadAssignmentsList({ renderWhenDone: false }));
+  if (foldersList.length === 0) tasks.push(loadFolders({ renderWhenDone: false }));
   if (coursesList.length === 0) tasks.push(loadCourses());
   if (studentsList.length === 0) tasks.push(loadStudents());
   if (compositionsList.length === 0) tasks.push(loadCompositions());
   await Promise.all(tasks);
-  // Ensure course select is populated even when courses weren't re-fetched
-  if (tasks.length === 1) populateCourseSelect();
+  populateFolderSelect();
+  populateCourseSelect();
+  renderAssignmentsList();
 }
 
-async function loadAssignmentsList() {
+async function loadFolders({ renderWhenDone = true } = {}) {
+  const { data } = await supabase
+    .from('assignment_folders')
+    .select('id, name')
+    .eq('created_by', currentUser.id)
+    .order('name');
+  foldersList = data || [];
+  if (renderWhenDone) { populateFolderSelect(); renderAssignmentsList(); }
+}
+
+async function loadArchivedList() {
+  const el = document.getElementById('asgnArchiveList');
+  if (el) el.innerHTML = '<div class="asgn-loading">Loading…</div>';
+  const { data, error } = await supabase
+    .from('assignments')
+    .select('*, assignment_items(count)')
+    .eq('created_by', currentUser.id)
+    .eq('is_archived', true)
+    .order('created_at', { ascending: false });
+  if (error) {
+    if (el) el.innerHTML = '<div class="asgn-list-empty">Failed to load archive.</div>';
+    return;
+  }
+  archivedList = (data || []).map(a => ({ ...a, item_count: a.assignment_items?.[0]?.count ?? 0 }));
+  renderArchivedList();
+}
+
+function renderArchivedList() {
+  const el = document.getElementById('asgnArchiveList');
+  if (!el) return;
+  if (archivedList.length === 0) {
+    el.innerHTML = '<div class="asgn-list-empty">No archived assignments.</div>';
+    return;
+  }
+  el.innerHTML = '';
+  archivedList.forEach(a => {
+    const item = document.createElement('div');
+    item.className = 'asgn-list-item asgn-list-item-archived';
+    item.dataset.id = a.id;
+    const itemWord = a.item_count === 1 ? 'item' : 'items';
+    item.innerHTML = `
+      <span class="asgn-item-title">${escapeHtml(a.title)}</span>
+      <span class="asgn-item-meta">${a.item_count} ${itemWord}</span>
+      <button class="asgn-unarchive-btn" data-id="${a.id}">Unarchive</button>
+    `;
+    el.appendChild(item);
+  });
+}
+
+async function loadAssignmentsList({ renderWhenDone = true } = {}) {
   const el = document.getElementById('asgnList');
   if (el) el.innerHTML = '<div class="asgn-loading">Loading…</div>';
 
@@ -183,6 +256,8 @@ async function loadAssignmentsList() {
     .from('assignments')
     .select('*, assignment_items(count)')
     .eq('created_by', currentUser.id)
+    .neq('is_archived', true)
+    .order('sort_order', { ascending: true, nullsFirst: false })
     .order('created_at', { ascending: false });
 
   if (error) {
@@ -195,6 +270,144 @@ async function loadAssignmentsList() {
     ...a,
     item_count: a.assignment_items?.[0]?.count ?? 0,
   }));
+  if (renderWhenDone) renderAssignmentsList();
+}
+
+function populateFolderSelect() {
+  const sel = document.getElementById('asgnFolderSelect');
+  if (!sel) return;
+  const current = sel.value;
+  sel.innerHTML = '<option value="">— None —</option>';
+  foldersList.forEach(f => {
+    const opt = document.createElement('option');
+    opt.value = f.id;
+    opt.textContent = f.name;
+    sel.appendChild(opt);
+  });
+  if (current) sel.value = current;
+}
+
+function updateBulkBar() {
+  const bar = document.getElementById('asgnBulkBar');
+  const count = document.getElementById('asgnBulkCount');
+  if (!bar) return;
+  const n = selectedIds.size;
+  bar.style.display = n > 0 ? '' : 'none';
+  if (count) count.textContent = `${n} selected`;
+
+  // Repopulate folder select with current folders
+  const sel = document.getElementById('asgnBulkFolderSelect');
+  if (sel) {
+    const prev = sel.value;
+    sel.innerHTML = '<option value="">Move to folder…</option><option value="__none__">— Remove from folder —</option>';
+    foldersList.forEach(f => {
+      const opt = document.createElement('option');
+      opt.value = f.id;
+      opt.textContent = f.name;
+      sel.appendChild(opt);
+    });
+    sel.value = prev || '';
+  }
+}
+
+async function handleBulkMove(e) {
+  const folderId = e.target.value;
+  if (!folderId) return;
+  e.target.value = ''; // reset select
+
+  const ids = [...selectedIds];
+  const newFolderId = folderId === '__none__' ? null : folderId;
+
+  const { error } = await supabase
+    .from('assignments')
+    .update({ folder_id: newFolderId })
+    .in('id', ids);
+  if (error) { await alert('Failed to move assignments: ' + error.message); return; }
+
+  ids.forEach(id => {
+    const a = assignmentsList.find(x => x.id === id);
+    if (a) a.folder_id = newFolderId;
+  });
+  selectedIds.clear();
+  updateBulkBar();
+  renderAssignmentsList();
+}
+
+async function handleBulkArchive() {
+  const ids = [...selectedIds];
+  if (!ids.length) return;
+  if (!await confirm(`Archive ${ids.length} assignment${ids.length > 1 ? 's' : ''}?`)) return;
+
+  const { error } = await supabase
+    .from('assignments')
+    .update({ is_archived: true })
+    .in('id', ids);
+  if (error) { await alert('Failed to archive: ' + error.message); return; }
+
+  assignmentsList = assignmentsList.filter(a => !ids.includes(a.id));
+  selectedIds.clear();
+  archivedLoaded = false; // force reload next time archive tab opens
+  updateBulkBar();
+  renderAssignmentsList();
+}
+
+async function unarchiveAssignment(id) {
+  const { error } = await supabase
+    .from('assignments')
+    .update({ is_archived: false })
+    .eq('id', id);
+  if (error) { await alert('Failed to unarchive: ' + error.message); return; }
+  archivedList = archivedList.filter(a => a.id !== id);
+  renderArchivedList();
+  // Reload active list to pick up the restored assignment
+  await loadAssignmentsList();
+}
+
+async function createFolder() {
+  const name = await prompt('Folder name:', '');
+  if (!name?.trim()) return;
+  const { data, error } = await supabase
+    .from('assignment_folders')
+    .insert({ name: name.trim(), created_by: currentUser.id })
+    .select('id, name')
+    .single();
+  if (error) { await alert('Could not create folder: ' + error.message); return; }
+  foldersList.push(data);
+  foldersList.sort((a, b) => a.name.localeCompare(b.name));
+  populateFolderSelect();
+  renderAssignmentsList();
+}
+
+async function renameFolder(id) {
+  const folder = foldersList.find(f => f.id === id);
+  if (!folder) return;
+  const name = await prompt('Rename folder:', folder.name);
+  if (!name?.trim() || name.trim() === folder.name) return;
+  const { error } = await supabase
+    .from('assignment_folders')
+    .update({ name: name.trim() })
+    .eq('id', id);
+  if (error) { await alert('Could not rename folder: ' + error.message); return; }
+  folder.name = name.trim();
+  foldersList.sort((a, b) => a.name.localeCompare(b.name));
+  populateFolderSelect();
+  renderAssignmentsList();
+}
+
+async function deleteFolder(id) {
+  const folder = foldersList.find(f => f.id === id);
+  if (!folder) return;
+  const inFolder = assignmentsList.filter(a => a.folder_id === id).length;
+  const msg = inFolder
+    ? `Delete "${folder.name}"? The ${inFolder} assignment${inFolder > 1 ? 's' : ''} inside will become uncategorized.`
+    : `Delete folder "${folder.name}"?`;
+  if (!await confirm(msg)) return;
+  const { error } = await supabase.from('assignment_folders').delete().eq('id', id);
+  if (error) { await alert('Could not delete folder: ' + error.message); return; }
+  // folder_id set null by DB cascade (on delete set null)
+  assignmentsList.forEach(a => { if (a.folder_id === id) a.folder_id = null; });
+  foldersList = foldersList.filter(f => f.id !== id);
+  populateFolderSelect();
   renderAssignmentsList();
 }
 
@@ -284,39 +497,309 @@ async function loadExistingAssignees(assignmentId) {
   return map;
 }
 
+// ===== DRAG-AND-DROP HELPERS =====
+
+function getDropIndicator() {
+  if (!dropIndicator) {
+    dropIndicator = document.createElement('div');
+    dropIndicator.className = 'asgn-drop-indicator';
+  }
+  return dropIndicator;
+}
+
+function removeDropIndicator() {
+  if (dropIndicator && dropIndicator.parentNode) dropIndicator.remove();
+}
+
+function sortAssignmentsList() {
+  assignmentsList.sort((a, b) => (a.sort_order ?? Infinity) - (b.sort_order ?? Infinity));
+}
+
+// Reorder by inserting dragged before/after the target card (handles cross-folder too).
+async function reorderAssignment(draggedId, targetId, insertBefore) {
+  const dragged = assignmentsList.find(x => x.id === draggedId);
+  const target = assignmentsList.find(x => x.id === targetId);
+  if (!dragged || !target) return;
+
+  const prevFolderId = dragged.folder_id ?? null;
+  const destFolderId = target.folder_id ?? null;
+  dragged.folder_id = destFolderId;
+
+  const destItems = assignmentsList
+    .filter(a => (a.folder_id ?? null) === destFolderId && a.id !== draggedId)
+    .sort((a, b) => (a.sort_order ?? Infinity) - (b.sort_order ?? Infinity));
+
+  const idx = destItems.findIndex(a => a.id === targetId);
+  destItems.splice(insertBefore ? idx : idx + 1, 0, dragged);
+  destItems.forEach((a, i) => { a.sort_order = i; });
+
+  const updates = destItems.map(a => ({ id: a.id, sort_order: a.sort_order, folder_id: a.folder_id ?? null }));
+
+  if (prevFolderId !== destFolderId) {
+    const srcItems = assignmentsList
+      .filter(a => (a.folder_id ?? null) === prevFolderId)
+      .sort((a, b) => (a.sort_order ?? Infinity) - (b.sort_order ?? Infinity));
+    srcItems.forEach((a, i) => { a.sort_order = i; });
+    updates.push(...srcItems.map(a => ({ id: a.id, sort_order: a.sort_order, folder_id: a.folder_id ?? null })));
+  }
+
+  // Render immediately with the new in-memory order (optimistic)
+  sortAssignmentsList();
+  renderAssignmentsList();
+
+  // Persist in background
+  Promise.all(updates.map(u =>
+    supabase.from('assignments').update({ sort_order: u.sort_order, folder_id: u.folder_id }).eq('id', u.id)
+  )).catch(err => console.error('[Assignments] reorder persist failed:', err));
+}
+
+// Move to the end of a different folder (body-area drop on empty space).
+async function moveToFolderEnd(draggedId, targetFolderId) {
+  const dragged = assignmentsList.find(x => x.id === draggedId);
+  if (!dragged) return;
+  const prevFolderId = dragged.folder_id ?? null;
+  if (prevFolderId === targetFolderId) return;
+  dragged.folder_id = targetFolderId;
+
+  const updates = [];
+  const srcItems = assignmentsList
+    .filter(a => (a.folder_id ?? null) === prevFolderId)
+    .sort((a, b) => (a.sort_order ?? Infinity) - (b.sort_order ?? Infinity));
+  srcItems.forEach((a, i) => { a.sort_order = i; });
+  updates.push(...srcItems.map(a => ({ id: a.id, sort_order: a.sort_order, folder_id: a.folder_id ?? null })));
+
+  const destItems = assignmentsList
+    .filter(a => (a.folder_id ?? null) === targetFolderId)
+    .sort((a, b) => (a.sort_order ?? Infinity) - (b.sort_order ?? Infinity));
+  destItems.forEach((a, i) => { a.sort_order = i; });
+  updates.push(...destItems.map(a => ({ id: a.id, sort_order: a.sort_order, folder_id: a.folder_id ?? null })));
+
+  // Render immediately (optimistic)
+  sortAssignmentsList();
+  renderAssignmentsList();
+
+  // Persist in background
+  Promise.all(updates.map(u =>
+    supabase.from('assignments').update({ sort_order: u.sort_order, folder_id: u.folder_id }).eq('id', u.id)
+  )).catch(err => console.error('[Assignments] move persist failed:', err));
+}
+
 // ===== RENDERING — ASSIGNMENTS TAB =====
+
+function renderAssignmentCard(a) {
+  const item = document.createElement('div');
+  item.className = 'asgn-list-item' + (selectedIds.has(a.id) ? ' selected' : '');
+  item.dataset.id = a.id;
+  item.draggable = true;
+  const pillClass = a.is_published ? 'published' : 'draft';
+  const pillLabel = a.is_published ? 'Published' : 'Draft';
+  const itemWord = a.item_count === 1 ? 'item' : 'items';
+  const checked = selectedIds.has(a.id) ? 'checked' : '';
+  item.innerHTML = `
+    <input type="checkbox" class="asgn-item-checkbox" data-id="${a.id}" ${checked} />
+    <span class="asgn-item-title">${escapeHtml(a.title)}</span>
+    <span class="asgn-item-meta">${a.item_count} ${itemWord}</span>
+    <span class="asgn-status-pill ${pillClass}">${pillLabel}</span>
+  `;
+
+  item.addEventListener('dragstart', e => {
+    e.dataTransfer.setData('assignment-id', a.id);
+    e.dataTransfer.effectAllowed = 'move';
+    item.classList.add('dragging');
+  });
+  item.addEventListener('dragend', () => {
+    item.classList.remove('dragging');
+    removeDropIndicator();
+  });
+
+  item.addEventListener('dragover', e => {
+    e.preventDefault();
+    e.stopPropagation(); // prevent folder body from also reacting
+    e.dataTransfer.dropEffect = 'move';
+    const rect = item.getBoundingClientRect();
+    const ind = getDropIndicator();
+    if (e.clientY < rect.top + rect.height / 2) {
+      item.parentNode.insertBefore(ind, item);
+    } else {
+      item.parentNode.insertBefore(ind, item.nextSibling);
+    }
+  });
+
+  item.addEventListener('drop', async e => {
+    e.preventDefault();
+    e.stopPropagation();
+    removeDropIndicator();
+    const draggedId = e.dataTransfer.getData('assignment-id');
+    if (!draggedId || draggedId === a.id) return;
+    const rect = item.getBoundingClientRect();
+    const insertBefore = e.clientY < rect.top + rect.height / 2;
+    await reorderAssignment(draggedId, a.id, insertBefore);
+  });
+
+  return item;
+}
 
 function renderAssignmentsList() {
   const el = document.getElementById('asgnList');
   if (!el) return;
 
-  if (assignmentsList.length === 0) {
+  el.innerHTML = '';
+
+  const hasFolders = foldersList.length > 0;
+
+  // Group assignments by folder_id
+  const byFolder = new Map(); // folder_id → [assignment]
+  assignmentsList.forEach(a => {
+    const key = a.folder_id || null;
+    if (!byFolder.has(key)) byFolder.set(key, []);
+    byFolder.get(key).push(a);
+  });
+
+  if (!hasFolders && assignmentsList.length === 0) {
     el.innerHTML = '<div class="asgn-list-empty">No assignments yet. Click "+ New Assignment" to create one.</div>';
     return;
   }
 
-  el.innerHTML = '';
-  assignmentsList.forEach(a => {
-    const item = document.createElement('div');
-    item.className = 'asgn-list-item';
-    item.dataset.id = a.id;
+  // Helper: attach drop target to a folder body (handles empty-folder drops and
+  // drops on the body padding below the last card).
+  // Card-level drops (reorder) are handled by each card's own listener.
+  function attachDropTarget(bodyEl, targetFolderId) {
+    bodyEl.addEventListener('dragover', e => {
+      if (e.target.closest('.asgn-list-item')) return; // card handles it
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      bodyEl.classList.add('drag-over');
+      removeDropIndicator();
+    });
+    bodyEl.addEventListener('dragleave', e => {
+      if (!bodyEl.contains(e.relatedTarget)) {
+        bodyEl.classList.remove('drag-over');
+      }
+    });
+    bodyEl.addEventListener('drop', async e => {
+      if (e.target.closest('.asgn-list-item')) return; // card already handled it
+      e.preventDefault();
+      bodyEl.classList.remove('drag-over');
+      removeDropIndicator();
+      const draggedId = e.dataTransfer.getData('assignment-id');
+      if (!draggedId) return;
+      const dragged = assignmentsList.find(x => x.id === draggedId);
+      if (!dragged || (dragged.folder_id ?? null) === targetFolderId) return;
+      await moveToFolderEnd(draggedId, targetFolderId);
+    });
+  }
 
-    const pillClass = a.is_published ? 'published' : 'draft';
-    const pillLabel = a.is_published ? 'Published' : 'Draft';
-    const itemWord = a.item_count === 1 ? 'item' : 'items';
+  // Render all folders (including empty ones)
+  foldersList.forEach(folder => {
+    const assignments = byFolder.get(folder.id) || [];
+    const group = document.createElement('div');
+    group.className = 'asgn-folder-group';
+    group.dataset.folderId = folder.id;
 
-    item.innerHTML = `
-      <span class="asgn-item-title">${escapeHtml(a.title)}</span>
-      <span class="asgn-item-meta">${a.item_count} ${itemWord}</span>
-      <span class="asgn-status-pill ${pillClass}">${pillLabel}</span>
+    const header = document.createElement('div');
+    header.className = 'asgn-folder-header';
+    header.innerHTML = `
+      <span class="asgn-folder-toggle">▾</span>
+      <span class="asgn-folder-name">${escapeHtml(folder.name)}</span>
+      <span class="asgn-folder-count">${assignments.length}</span>
+      <button class="asgn-folder-action" data-action="rename-folder" data-id="${folder.id}" title="Rename">✏️</button>
+      <button class="asgn-folder-action" data-action="delete-folder" data-id="${folder.id}" title="Delete">✕</button>
     `;
-    el.appendChild(item);
+    group.appendChild(header);
+
+    const body = document.createElement('div');
+    body.className = 'asgn-folder-body';
+    if (assignments.length === 0) {
+      const empty = document.createElement('div');
+      empty.className = 'asgn-folder-empty';
+      empty.textContent = 'Drop assignments here.';
+      body.appendChild(empty);
+    } else {
+      assignments.forEach(a => body.appendChild(renderAssignmentCard(a)));
+    }
+    attachDropTarget(body, folder.id);
+    group.appendChild(body);
+    el.appendChild(group);
   });
+
+  // Uncategorized assignments
+  const uncategorized = byFolder.get(null) || [];
+  if (uncategorized.length > 0 || hasFolders) {
+    if (hasFolders) {
+      const header = document.createElement('div');
+      header.className = 'asgn-folder-header asgn-folder-uncategorized';
+      header.innerHTML = `
+        <span class="asgn-folder-toggle">▾</span>
+        <span class="asgn-folder-name">Uncategorized</span>
+        <span class="asgn-folder-count">${uncategorized.length}</span>
+      `;
+      el.appendChild(header);
+
+      const body = document.createElement('div');
+      body.className = 'asgn-folder-body';
+      if (uncategorized.length === 0) {
+        const empty = document.createElement('div');
+        empty.className = 'asgn-folder-empty';
+        empty.textContent = 'Drop assignments here.';
+        body.appendChild(empty);
+      } else {
+        uncategorized.forEach(a => body.appendChild(renderAssignmentCard(a)));
+      }
+      attachDropTarget(body, null);
+      el.appendChild(body);
+    } else {
+      // No folders exist — flat list, no drop targets needed
+      uncategorized.forEach(a => el.appendChild(renderAssignmentCard(a)));
+    }
+  }
 }
 
 function handleAssignmentListClick(e) {
+  // Folder action buttons
+  const actionBtn = e.target.closest('.asgn-folder-action');
+  if (actionBtn) {
+    e.stopPropagation();
+    const { action, id } = actionBtn.dataset;
+    if (action === 'rename-folder') renameFolder(id);
+    else if (action === 'delete-folder') deleteFolder(id);
+    return;
+  }
+
+  // Folder header — toggle collapse
+  const header = e.target.closest('.asgn-folder-header');
+  if (header) {
+    const group = header.closest('.asgn-folder-group');
+    const body = group
+      ? group.querySelector('.asgn-folder-body')
+      : header.nextElementSibling;
+    if (body) {
+      const collapsed = body.classList.toggle('collapsed');
+      const toggle = header.querySelector('.asgn-folder-toggle');
+      if (toggle) toggle.textContent = collapsed ? '▸' : '▾';
+    }
+    return;
+  }
+
+  // Unarchive button
+  const unarchiveBtn = e.target.closest('.asgn-unarchive-btn');
+  if (unarchiveBtn) { unarchiveAssignment(unarchiveBtn.dataset.id); return; }
+
+  // Checkbox — toggle selection without opening editor
+  const checkbox = e.target.closest('.asgn-item-checkbox');
+  if (checkbox) {
+    const id = checkbox.dataset.id;
+    if (selectedIds.has(id)) selectedIds.delete(id);
+    else selectedIds.add(id);
+    checkbox.closest('.asgn-list-item')?.classList.toggle('selected', selectedIds.has(id));
+    updateBulkBar();
+    return;
+  }
+
+  // Assignment card — open editor only if clicking outside the checkbox
   const row = e.target.closest('.asgn-list-item');
-  if (row?.dataset.id) openEditEditor(row.dataset.id);
+  if (row?.dataset.id && !e.target.closest('.asgn-item-checkbox')) {
+    openEditEditor(row.dataset.id);
+  }
 }
 
 function renderEditor() {
@@ -329,6 +812,11 @@ function renderEditor() {
   document.getElementById('asgnDueDate').value = a?.default_due_date
     ? a.default_due_date.slice(0, 10) : '';
   document.getElementById('asgnPublished').checked = a?.is_published ?? false;
+
+  // Folder select
+  populateFolderSelect();
+  const folderSelect = document.getElementById('asgnFolderSelect');
+  if (folderSelect) folderSelect.value = a?.folder_id ?? '';
 
   // Course select
   const courseSelect = document.getElementById('asgnCourseSelect');
@@ -728,6 +1216,8 @@ function closeReviewPanel() {
 // ===== EDITOR ACTIONS =====
 
 function openNewEditor() {
+  selectedIds.clear();
+  updateBulkBar();
   currentAssignment = null;
   currentItems = [];
   savedItemIds = [];
@@ -989,6 +1479,7 @@ async function handleSave() {
     title,
     description: document.getElementById('asgnDesc')?.value.trim() ?? '',
     video_url: document.getElementById('asgnVideoUrl')?.value.trim() || null,
+    folder_id: document.getElementById('asgnFolderSelect')?.value || null,
     course_id: document.getElementById('asgnCourseSelect')?.value || null,
     default_due_date: document.getElementById('asgnDueDate')?.value || null,
     is_published: document.getElementById('asgnPublished')?.checked ?? false,
