@@ -525,14 +525,25 @@ body.dark .library-card:hover {
 
   .library-tabs {
     padding: 16px 16px 0;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .library-search-row {
+    position: static;
+    transform: none;
+    width: 100%;
+    padding: 10px 0 8px;
+    pointer-events: auto;
   }
 
   .library-search-input {
-    width: 180px;
+    width: 100%;
+    box-sizing: border-box;
   }
 
   .library-search-input:focus {
-    width: 220px;
+    width: 100%;
   }
 
   .library-breadcrumb {
