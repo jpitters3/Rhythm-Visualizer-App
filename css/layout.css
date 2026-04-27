@@ -463,6 +463,11 @@ body.dark div.container {
     flex-direction: column;
   }
 
+  #view-freeplay > *:not(#primaryControlsWrapper) {
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+
   div.container {
     margin: 0 auto;
     width: 100%;
