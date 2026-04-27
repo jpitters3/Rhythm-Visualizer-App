@@ -34,6 +34,7 @@
   overflow: hidden;
   pointer-events: auto;
   /* keeps half-fills clean */
+  container-type: inline-size;
 }
 
 /* The container for the 4 smaller circles */
@@ -58,20 +59,18 @@
   top: 0;
   left: 0;
   right: 0;
-  /* Use right/bottom instead of width/height */
   bottom: 0;
-  width: auto;
-  height: auto;
   z-index: 10 !important;
   pointer-events: none !important;
-  display: flex;
-  flex-direction: row;
+  display: grid;
+  grid-template-columns: 44cqw 44cqw;
+  column-gap: 0;
   justify-content: center;
-  align-items: flex-end;
-  padding: 2px;
+  align-content: center;
+  padding: 0;
   box-sizing: border-box;
   opacity: 0;
-  transition: all 0.3s ease;
+  transition: opacity 0.3s ease;
 }
 
 .cell.multi-selected {
@@ -98,26 +97,25 @@
 /* Vertical columns for fingers */
 .hand-column {
   display: flex;
-  /* Stack from bottom up */
   flex-direction: column;
+  align-items: center;
+  gap: 0;
   pointer-events: none;
 }
 
 /* Individual finger circles */
 .sub-dot {
-  width: 34px;
-  height: 34px;
+  width: 44cqw;
+  height: 44cqw;
   pointer-events: auto !important;
-  /* Ensure this is explicit */
   z-index: 11 !important;
   position: relative;
-  /* Give it its own stacking context */
   border-radius: 50%;
   background: transparent;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 22px;
+  font-size: 22cqw;
   font-weight: bold;
   color: #fff;
   transition: all 0.2s ease;
@@ -125,38 +123,8 @@
 }
 
 
-/* Larger sub-dots for 4 beats per measure */
-.four-beats .sub-dot {
-  width: 80px;
-  height: 80px;
-  font-size: 50px;
-}
-
-
-/* Larger sub-dots for 6/8 or fewer beats per measure */
-.fewer-beats .sub-dot {
-  width: 50px;
-  height: 50px;
-  font-size: 28px;
-}
-
-/* Smaller sub-dots for 12 beats (triplets) */
-.twelve-beats .sub-dot {
-  width: 22px;
-  height: 22px;
-  font-size: 14px;
-}
-
-
 .sixteen-beats .cell.has-label .inner {
   font-size: 24px;
-}
-
-/* Even smaller sub-dots for 16 beats */
-.sixteen-beats .sub-dot {
-  width: 18px;
-  height: 18px;
-  font-size: 14px;
 }
 
 /* Define the mobile-only layout to maximize density */
@@ -179,13 +147,7 @@
 
   .quad-container {
     opacity: 0;
-    /* Hidden by default, like desktop */
-    width: auto;
-    justify-self: center;
-    align-items: center;
-    padding: 0;
     pointer-events: none;
-    /* Prevent clicks when hidden */
   }
 
   /* Only show when in multi-mode */
@@ -194,12 +156,6 @@
     pointer-events: auto;
   }
 
-  /* Scale down sub-dots to fit the 8-column layout */
-  .sub-dot {
-    width: 20px;
-    height: 20px;
-    font-size: 10px;
-  }
 }
 
 

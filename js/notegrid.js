@@ -69,10 +69,13 @@ export function invertFollowing(startIndex, ctx = activeGrid) {
   invertRange(startIndex, Infinity, ctx);
 };
 
+const MOBILE_MAX_COLS = 8;
+const capCols = n => window.matchMedia('(max-width: 768px)').matches ? Math.min(n, MOBILE_MAX_COLS) : n;
+
 export function setCols(n, ctx = activeGrid) {
   // Apply to the measures wrapper (it cascades to measure children)
   const measuresEl = ctx.container;
-  if (measuresEl) measuresEl.style.setProperty('--cols', String(n));
+  if (measuresEl) measuresEl.style.setProperty('--cols', String(capCols(n)));
 }
 
 export function labelForStep(i, ctx = activeGrid) {
