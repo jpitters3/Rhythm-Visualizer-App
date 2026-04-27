@@ -5,7 +5,8 @@ import { getEffectiveHand } from './notegrid.js';
 import { openComposerToComposition } from './song-composer.js';
 import { loadPatternByName, createNewPhrase } from './controls.js';
 import { dbDeletePattern, dbRenamePattern, dbSavePattern, dbListPatternNames } from './pattern-crud.js';
-import { alert } from './alert.js';
+import { alert, confirm, prompt } from './alert.js';
+import { startRawAudioRecording, stopRawAudioRecording } from './audio-recorder.js';
 import { Bus, BUS_EVENT } from './bus.js';
 
 let currentTab = 'phrases';
@@ -19,6 +20,13 @@ let searchDebounce = null;
 let contextMenuEl = null;
 // Shared folder picker modal
 let folderPickerEl = null;
+
+// Clips recording state
+let clipIsRecording = false;
+let clipRecordTimer = null;
+let clipRecordStart = 0;
+let clipAudio = null;
+let clipPlayingId = null;
 
 // ===== INIT =====
 
@@ -210,11 +218,11 @@ async function renderLibrary() {
     return;
   }
 
-  const hideFolderBtn = currentTab === 'archive' || currentTab === 'shared';
+  const hideFolderBtn = currentTab === 'archive' || currentTab === 'shared' || currentTab === 'clips';
   if (newFolderBtn) newFolderBtn.style.display = hideFolderBtn ? 'none' : '';
 
   const searchRow = document.querySelector('.library-search-row');
-  if (searchRow) searchRow.style.visibility = currentTab === 'archive' ? 'hidden' : '';
+  if (searchRow) searchRow.style.visibility = (currentTab === 'archive' || currentTab === 'clips') ? 'hidden' : '';
 
   // Breadcrumb
   if (breadcrumb) {
@@ -235,6 +243,7 @@ async function renderLibrary() {
     }
   }
 
+  grid.classList.remove('clips-view');
   if (foldersSection) foldersSection.innerHTML = '';
   grid.innerHTML = '<div class="library-empty">Loading…</div>';
 
@@ -242,6 +251,10 @@ async function renderLibrary() {
     await loadSharedWithMe(grid);
   } else if (currentTab === 'archive') {
     await loadArchive(grid);
+  } else if (currentTab === 'clips') {
+    if (foldersSection) foldersSection.innerHTML = '';
+    if (breadcrumb) { breadcrumb.innerHTML = ''; breadcrumb.hidden = true; }
+    await loadClips(grid);
   } else {
     await loadAndRender(currentTab, grid, foldersSection);
   }
@@ -927,6 +940,256 @@ function renderThumbnail(canvas, patternData) {
       ctx.globalAlpha = 1;
     }
   }
+}
+
+// ===== CLIPS =====
+
+async function loadClips(grid) {
+  const { data: clips, error } = await supabase
+    .from('clips')
+    .select('id, title, audio_url, duration_secs, created_at')
+    .eq('user_id', currentUser.id)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    grid.innerHTML = `<div class="library-empty">Could not load clips: ${error.message}</div>`;
+    return;
+  }
+
+  renderClips(grid, clips || []);
+}
+
+function renderClips(grid, clips) {
+  grid.innerHTML = '';
+  grid.classList.add('clips-view');
+
+  const toolbar = document.createElement('div');
+  toolbar.className = 'clips-toolbar';
+  toolbar.innerHTML = `
+    <button class="clips-record-btn" id="clipsRecordBtn">&#9679; Record</button>
+    <span class="clips-record-timer" id="clipsRecordTimer"></span>
+  `;
+  grid.appendChild(toolbar);
+
+  toolbar.querySelector('#clipsRecordBtn').addEventListener('click', () => {
+    if (clipIsRecording) {
+      stopClipRecording();
+    } else {
+      startClipRecording();
+    }
+  });
+
+  if (clips.length === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'library-empty clips-empty';
+    empty.innerHTML = '<p>No clips yet.</p><span>Hit Record to capture your playing.</span>';
+    grid.appendChild(empty);
+    return;
+  }
+
+  const list = document.createElement('div');
+  list.className = 'clips-list';
+  clips.forEach(clip => list.appendChild(buildClipRow(clip)));
+  grid.appendChild(list);
+}
+
+function buildClipRow(clip) {
+  const row = document.createElement('div');
+  row.className = 'clip-row';
+  row.dataset.id = clip.id;
+
+  const dateStr = new Date(clip.created_at).toLocaleDateString('en-US', {
+    month: 'short', day: 'numeric', year: 'numeric'
+  });
+  const durStr = clip.duration_secs ? formatDuration(clip.duration_secs) : '—';
+
+  row.innerHTML = `
+    <button class="clip-play-btn" title="Play" aria-label="Play ${escapeHtml(clip.title)}">&#9654;</button>
+    <div class="clip-info">
+      <div class="clip-title">${escapeHtml(clip.title)}</div>
+      <div class="clip-meta">${durStr} &nbsp;·&nbsp; ${dateStr}</div>
+    </div>
+    <button class="lib-menu-btn clip-menu-btn" title="More options">&#8943;</button>
+  `;
+
+  row.querySelector('.clip-play-btn').addEventListener('click', () => playClip(clip, row));
+
+  row.querySelector('.clip-menu-btn').addEventListener('click', (e) => {
+    e.stopPropagation();
+    showContextMenu(e.currentTarget, [
+      { label: 'Rename', action: () => renameClip(clip.id, clip.title) },
+      { label: 'Share (7-day link)', action: () => shareClip(clip) },
+      { label: 'Delete', danger: true, action: () => deleteClip(clip) },
+    ]);
+  });
+
+  return row;
+}
+
+async function startClipRecording() {
+  const btn = document.getElementById('clipsRecordBtn');
+  const timerEl = document.getElementById('clipsRecordTimer');
+  if (!btn) return;
+
+  clipRecordStart = Date.now();
+  clipIsRecording = true;
+  btn.textContent = '⏹ Stop';
+  btn.classList.add('recording');
+
+  clipRecordTimer = setInterval(() => {
+    const secs = Math.floor((Date.now() - clipRecordStart) / 1000);
+    const mm = String(Math.floor(secs / 60)).padStart(2, '0');
+    const ss = String(secs % 60).padStart(2, '0');
+    if (timerEl) {
+      timerEl.textContent = secs >= 600 ? `⚠ ${mm}:${ss}` : `${mm}:${ss}`;
+      timerEl.classList.toggle('warn', secs >= 600);
+    }
+  }, 1000);
+
+  const success = await startRawAudioRecording(async (blob) => {
+    await saveClip(blob);
+  });
+
+  if (!success) {
+    clearInterval(clipRecordTimer);
+    clipIsRecording = false;
+    if (btn) { btn.innerHTML = '&#9679; Record'; btn.classList.remove('recording'); }
+    if (timerEl) { timerEl.textContent = ''; timerEl.classList.remove('warn'); }
+  }
+}
+
+function stopClipRecording() {
+  clearInterval(clipRecordTimer);
+  clipRecordTimer = null;
+  clipIsRecording = false;
+  stopRawAudioRecording();
+
+  const btn = document.getElementById('clipsRecordBtn');
+  const timerEl = document.getElementById('clipsRecordTimer');
+  if (btn) { btn.innerHTML = '&#9679; Record'; btn.classList.remove('recording'); }
+  if (timerEl) { timerEl.textContent = ''; timerEl.classList.remove('warn'); }
+}
+
+async function saveClip(blob) {
+  const durationSecs = Math.round((Date.now() - clipRecordStart) / 1000);
+  const clipId = crypto.randomUUID();
+  const path = `${currentUser.id}/${clipId}.webm`;
+
+  const now = new Date();
+  const defaultTitle = `Recording – ${now.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} ${now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`;
+
+  const { error: uploadError } = await supabase.storage
+    .from('user-clips')
+    .upload(path, blob, { contentType: 'audio/webm' });
+
+  if (uploadError) {
+    await alert(uploadErrMsg(uploadError, blob.size));
+    return;
+  }
+
+  const { error: dbError } = await supabase
+    .from('clips')
+    .insert({ id: clipId, user_id: currentUser.id, title: defaultTitle, audio_url: path, duration_secs: durationSecs });
+
+  if (dbError) { await alert(`Could not save clip: ${dbError.message}`); return; }
+
+  renderLibrary();
+}
+
+async function playClip(clip, row) {
+  const playBtn = row.querySelector('.clip-play-btn');
+
+  // Stop currently playing clip if it's a different one
+  if (clipAudio && !clipAudio.paused) {
+    clipAudio.pause();
+    document.querySelectorAll('.clip-play-btn.playing').forEach(b => {
+      b.innerHTML = '&#9654;';
+      b.classList.remove('playing');
+    });
+    if (clipPlayingId === clip.id) { clipPlayingId = null; return; }
+  }
+
+  clipPlayingId = clip.id;
+  playBtn.innerHTML = '&#9203;'; // hourglass while fetching URL
+
+  const { data, error } = await supabase.storage
+    .from('user-clips')
+    .createSignedUrl(clip.audio_url, 3600);
+
+  if (error || !data?.signedUrl) {
+    playBtn.innerHTML = '&#9654;';
+    await alert('Could not load audio.');
+    return;
+  }
+
+  if (!clipAudio) clipAudio = new Audio();
+  clipAudio.src = data.signedUrl;
+  clipAudio.onended = () => {
+    playBtn.innerHTML = '&#9654;';
+    playBtn.classList.remove('playing');
+    clipPlayingId = null;
+  };
+  clipAudio.play();
+  playBtn.innerHTML = '&#9646;&#9646;'; // pause
+  playBtn.classList.add('playing');
+}
+
+async function renameClip(id, currentTitle) {
+  const newTitle = await prompt('Rename clip:', currentTitle);
+  if (!newTitle?.trim() || newTitle.trim() === currentTitle) return;
+  const { error } = await supabase.from('clips').update({ title: newTitle.trim() }).eq('id', id);
+  if (error) { await alert(`Could not rename: ${error.message}`); return; }
+  renderLibrary();
+}
+
+async function shareClip(clip) {
+  const { data, error } = await supabase.storage
+    .from('user-clips')
+    .createSignedUrl(clip.audio_url, 604800); // 7 days
+
+  if (error || !data?.signedUrl) { await alert('Could not create share link.'); return; }
+
+  try {
+    await navigator.clipboard.writeText(data.signedUrl);
+    await alert('Share link copied!\n\nThis link is valid for 7 days.');
+  } catch {
+    await alert(`Share link (valid 7 days):\n${data.signedUrl}`);
+  }
+}
+
+async function deleteClip(clip) {
+  const ok = await confirm(`Delete "${clip.title}"?\n\nThis cannot be undone.`);
+  if (!ok) return;
+
+  if (clip.audio_url) {
+    await supabase.storage.from('user-clips').remove([clip.audio_url]);
+  }
+  const { error } = await supabase.from('clips').delete().eq('id', clip.id);
+  if (error) { await alert(`Could not delete: ${error.message}`); return; }
+
+  if (clipPlayingId === clip.id && clipAudio) {
+    clipAudio.pause();
+    clipPlayingId = null;
+  }
+  renderLibrary();
+}
+
+function formatDuration(secs) {
+  const s = Math.round(secs);
+  const mm = String(Math.floor(s / 60)).padStart(2, '0');
+  const ss = String(s % 60).padStart(2, '0');
+  return `${mm}:${ss}`;
+}
+
+function uploadErrMsg(err, bytes) {
+  const status = String(err?.statusCode ?? err?.status ?? '');
+  const msg = (err?.message ?? '').toLowerCase();
+  const isTooLarge = status === '413' || msg.includes('too large') || msg.includes('payload') || msg.includes('exceeded');
+  if (isTooLarge) {
+    const mb = (bytes / 1024 / 1024).toFixed(1);
+    return `Recording is too large to upload (${mb} MB). The limit is 50 MB — try a shorter clip.`;
+  }
+  return 'Upload failed — check your connection and try again.';
 }
 
 // ===== UTILS =====

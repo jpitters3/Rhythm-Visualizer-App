@@ -71,7 +71,7 @@ export async function startRawAudioRecording(onStop) {
       }
     }
 
-    rawAudioRecorder = new MediaRecorder(stream);
+    rawAudioRecorder = new MediaRecorder(stream, { audioBitsPerSecond: 256000 });
     rawAudioChunks = [];
 
     rawAudioRecorder.ondataavailable = e => {

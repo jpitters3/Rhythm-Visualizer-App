@@ -752,7 +752,13 @@ async function startRecording(sectionId) {
   if (mediaRecorder) return;
   let stream;
   try {
-    stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    stream = await navigator.mediaDevices.getUserMedia({
+      audio: {
+        echoCancellation: false,
+        autoGainControl: false,
+        noiseSuppression: false
+      }
+    });
   } catch (e) {
     await alert('Microphone access denied.');
     return;
@@ -762,7 +768,7 @@ async function startRecording(sectionId) {
   recordingSection = sectionId;
   recordingStart = Date.now();
 
-  mediaRecorder = new MediaRecorder(stream);
+  mediaRecorder = new MediaRecorder(stream, { audioBitsPerSecond: 256000 });
   mediaRecorder.ondataavailable = e => { if (e.data.size) recordingChunks.push(e.data); };
   mediaRecorder.onstop = () => {
     stream.getTracks().forEach(t => t.stop());
@@ -775,7 +781,10 @@ async function startRecording(sectionId) {
     const secs = Math.floor((Date.now() - recordingStart) / 1000);
     const mm = String(Math.floor(secs / 60)).padStart(2, '0');
     const ss = String(secs % 60).padStart(2, '0');
-    if (timerEl) timerEl.textContent = `${mm}:${ss}`;
+    if (timerEl) {
+      timerEl.textContent = secs >= 600 ? `⚠ ${mm}:${ss}` : `${mm}:${ss}`;
+      timerEl.classList.toggle('warn', secs >= 600);
+    }
   }, 1000);
 
   const btn = document.querySelector(`[data-record-btn="${sectionId}"]`);
@@ -788,6 +797,17 @@ function stopRecording() {
   mediaRecorder.stop();
   clearInterval(recordingTimer);
   recordingTimer = null;
+}
+
+function uploadErrMsg(err, bytes) {
+  const status = String(err?.statusCode ?? err?.status ?? '');
+  const msg = (err?.message ?? '').toLowerCase();
+  const isTooLarge = status === '413' || msg.includes('too large') || msg.includes('payload') || msg.includes('exceeded');
+  if (isTooLarge) {
+    const mb = (bytes / 1024 / 1024).toFixed(1);
+    return `Recording is too large to upload (${mb} MB). The limit is 50 MB — try a shorter clip.`;
+  }
+  return 'Upload failed — check your connection and try again.';
 }
 
 async function onRecordingComplete() {
@@ -804,7 +824,7 @@ async function onRecordingComplete() {
     .from('composition-audio')
     .upload(path, blob, { upsert: true, contentType: 'audio/webm' });
 
-  if (uploadError) { await alert('Failed to upload recording.'); return; }
+  if (uploadError) { await alert(uploadErrMsg(uploadError, blob.size)); return; }
 
   const { error } = await supabase
     .from('composition_sections')
@@ -842,7 +862,7 @@ function uploadAudioForComp(compId) {
       .from('composition-audio')
       .upload(path, file, { upsert: true, contentType: file.type });
 
-    if (uploadError) { await alert('Failed to upload audio.'); return; }
+    if (uploadError) { await alert(uploadErrMsg(uploadError, file.size)); return; }
 
     const { error } = await supabase
       .from('composition_sections')
