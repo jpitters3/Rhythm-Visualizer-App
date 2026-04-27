@@ -72,10 +72,18 @@
   z-index: 1001;
 }
 
+@keyframes handpanBreathe {
+  from { transform: scale(1);    filter: drop-shadow(0 8px 24px rgba(0,0,0,0.12)); }
+  to   { transform: scale(1.02); filter: drop-shadow(0 14px 36px rgba(0,0,0,0.20)); }
+}
+
 .handpan-wrap {
   position: relative;
   width: 100%;
   padding: 14px;
+  animation: handpanBreathe 5s ease-in-out infinite alternate;
+  will-change: transform;
+  transform-origin: center center;
 }
 
 .handpan-img {

@@ -7,7 +7,7 @@ body {
   margin: 0;
   padding: 5px;
   font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-  background: linear-gradient(160deg, #faf9f6 0%, #f0eef8 100%);
+  background: linear-gradient(160deg, #fdf8ee 0%, #ece7f5 60%, #f5eef8 100%);
   color: var(--text);
   min-height: 100dvh;
   min-height: var(--app-height, 100dvh);
@@ -50,16 +50,18 @@ h2 {
 /* ===== THEME VARS ===== */
 :root {
   /* LIGHT MODE */
-  --bg: #f7f6f2;
-  --panel: #f0f0f0;
-  --panel-rgb: 240, 240, 240;
-  --panel-border: #e2ded3;
-  --offwhite: #f8f8f8;
+  --bg: #f9f6ef;
+  --panel: #f4f1e8;
+  --panel-rgb: 244, 241, 232;
+  --panel-border: #dbd5c8;
+  --offwhite: #faf8f2;
   --text: #2f2f2f;
-  --cell-bg: #ffffff;
-  --cell-border: #ddd8cc;
+  --cell-bg: #fffef8;
+  --cell-border: #dbd5c8;
   --cell-on: #eaeaea;
-  --play-glow: rgb(231, 231, 231);
+  --play-glow: rgba(97, 10, 66, 0.35);
+  --down-glow: rgba(97, 10, 66, 0.22);
+  --up-glow: rgba(2, 68, 150, 0.22);
   --btn-bg: #e8e5dc;
   --btn-active: #ffd166;
   --primary-color: #ffd166;
@@ -77,7 +79,9 @@ body.dark {
   --cell-bg: #222233;
   --cell-border: #2f2f45;
   --cell-on: #5b8cff;
-  --play-glow: rgba(91, 140, 255, 0.45);
+  --play-glow: rgba(253, 3, 128, 0.45);
+  --down-glow: rgba(253, 3, 128, 0.28);
+  --up-glow: rgba(30, 121, 232, 0.28);
   --btn-bg: #2a2a38;
   --btn-active: #5b8cff;
 }

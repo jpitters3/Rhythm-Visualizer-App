@@ -277,6 +277,41 @@
   }
 }
 
+/* ===== TAP RIPPLE ===== */
+@keyframes cellTapRipple {
+  from {
+    opacity: 0.55;
+    transform: translate(-50%, -50%) scale(0);
+  }
+  to {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(2.6);
+  }
+}
+
+.cell::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: var(--beat-glow, rgba(255, 255, 255, 0.3));
+  pointer-events: none;
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0);
+}
+
+.cell:active {
+  transform: translateZ(0) scale(0.92);
+  transition: transform 0.07s ease-out;
+}
+
+.cell:active::before {
+  animation: cellTapRipple 0.45s ease-out forwards;
+}
+
 .cell.play {
   animation: rhythmicPulse 1s cubic-bezier(0.22, 1, 0.36, 1) forwards;
   z-index: 5;
@@ -489,22 +524,24 @@ body.dark {
   /* slightly softer green for dark */
 }
 
-/* Mixing strength (keeps your nice subtle fill) */
+/* Mixing strength */
 .cell.off.has-label {
-  --mix: 42%;
+  --mix: 46%;
 }
 
 .cell.has-label {
-  --mix: 68%;
+  --mix: 78%;
   box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.22),
               inset 0 -2px 5px rgba(0, 0, 0, 0.18),
-              0 2px 6px rgba(0, 0, 0, 0.1);
+              0 2px 6px rgba(0, 0, 0, 0.1),
+              0 0 18px var(--beat-glow, transparent);
 }
 
 body.dark .cell.has-label {
   box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.1),
               inset 0 -2px 5px rgba(0, 0, 0, 0.35),
-              0 2px 8px rgba(0, 0, 0, 0.35);
+              0 2px 8px rgba(0, 0, 0, 0.35),
+              0 0 20px var(--beat-glow, transparent);
 }
 
 .cell.label-q .inner {
@@ -516,13 +553,17 @@ body.dark .cell.has-label {
 
 
 
-/* Choose fill based on beat position */
+/* Choose fill and glow based on beat position */
 .cell.downbeat {
   --beat-fill: var(--down-fill);
+  --beat-glow: var(--down-glow);
+  --play-glow: var(--down-glow);
 }
 
 .cell.upbeat {
   --beat-fill: var(--up-fill);
+  --beat-glow: var(--up-glow);
+  --play-glow: var(--up-glow);
 }
 
 /* Inner label color by beat type */
