@@ -1068,19 +1068,6 @@ body.dark .asgn-list-item.selected {
 
 /* ===== DRAG AND DROP ===== */
 
-.asgn-drop-indicator {
-  height: 2px;
-  background: var(--primary-color, #f1c40f);
-  border-radius: 99px;
-  margin: 2px 0;
-  pointer-events: none;
-}
-
-.asgn-list-item.dragging {
-  opacity: 0.45;
-  transform: scale(0.98);
-}
-
 .asgn-folder-body.drag-over,
 .asgn-folder-uncategorized.drag-over {
   background: rgba(241, 196, 15, 0.08);

@@ -12,6 +12,7 @@ import { alert, confirm, prompt } from './alert.js';
 import { escapeHtml } from './utils.js';
 import { Bus, BUS_EVENT } from './bus.js';
 import { copyCompositionAsSnapshot } from './song-composer.js';
+import { makeSortableGroup } from './sortable.js';
 
 // ===== DOM REFS =====
 let modal = null;
@@ -32,7 +33,7 @@ let cachedAssigneeMap = null; // Map<student_id, status> — cleared when editor
 let selectedIds = new Set(); // currently checked assignment IDs
 let archivedLoaded = false;  // lazy-load archive tab
 
-let dropIndicator = null; // shared insertion-line element for reorder drag-drop
+let sortableGroup = null; // makeSortableGroup instance, recreated on each render
 
 let currentAssignment = null;   // null = new; object with .id = editing existing
 let currentItems = [];          // ItemDraft[] — working copy before save
@@ -497,45 +498,32 @@ async function loadExistingAssignees(assignmentId) {
   return map;
 }
 
-// ===== DRAG-AND-DROP HELPERS =====
-
-function getDropIndicator() {
-  if (!dropIndicator) {
-    dropIndicator = document.createElement('div');
-    dropIndicator.className = 'asgn-drop-indicator';
-  }
-  return dropIndicator;
-}
-
-function removeDropIndicator() {
-  if (dropIndicator && dropIndicator.parentNode) dropIndicator.remove();
-}
+// ===== DRAG-AND-DROP =====
 
 function sortAssignmentsList() {
   assignmentsList.sort((a, b) => (a.sort_order ?? Infinity) - (b.sort_order ?? Infinity));
 }
 
-// Reorder by inserting dragged before/after the target card (handles cross-folder too).
-async function reorderAssignment(draggedId, targetId, insertBefore) {
+// Insert draggedId into toFolderId before beforeId (null = append to end).
+// Handles both same-folder reorder and cross-folder moves.
+function reorderAssignment(draggedId, toFolderId, beforeId) {
   const dragged = assignmentsList.find(x => x.id === draggedId);
-  const target = assignmentsList.find(x => x.id === targetId);
-  if (!dragged || !target) return;
+  if (!dragged) return;
 
   const prevFolderId = dragged.folder_id ?? null;
-  const destFolderId = target.folder_id ?? null;
-  dragged.folder_id = destFolderId;
+  dragged.folder_id = toFolderId;
 
   const destItems = assignmentsList
-    .filter(a => (a.folder_id ?? null) === destFolderId && a.id !== draggedId)
+    .filter(a => (a.folder_id ?? null) === toFolderId && a.id !== draggedId)
     .sort((a, b) => (a.sort_order ?? Infinity) - (b.sort_order ?? Infinity));
 
-  const idx = destItems.findIndex(a => a.id === targetId);
-  destItems.splice(insertBefore ? idx : idx + 1, 0, dragged);
+  const insertIdx = beforeId ? destItems.findIndex(a => a.id === beforeId) : -1;
+  destItems.splice(insertIdx === -1 ? destItems.length : insertIdx, 0, dragged);
   destItems.forEach((a, i) => { a.sort_order = i; });
 
   const updates = destItems.map(a => ({ id: a.id, sort_order: a.sort_order, folder_id: a.folder_id ?? null }));
 
-  if (prevFolderId !== destFolderId) {
+  if (prevFolderId !== toFolderId) {
     const srcItems = assignmentsList
       .filter(a => (a.folder_id ?? null) === prevFolderId)
       .sort((a, b) => (a.sort_order ?? Infinity) - (b.sort_order ?? Infinity));
@@ -543,45 +531,16 @@ async function reorderAssignment(draggedId, targetId, insertBefore) {
     updates.push(...srcItems.map(a => ({ id: a.id, sort_order: a.sort_order, folder_id: a.folder_id ?? null })));
   }
 
-  // Render immediately with the new in-memory order (optimistic)
   sortAssignmentsList();
   renderAssignmentsList();
 
-  // Persist in background
   Promise.all(updates.map(u =>
     supabase.from('assignments').update({ sort_order: u.sort_order, folder_id: u.folder_id }).eq('id', u.id)
   )).catch(err => console.error('[Assignments] reorder persist failed:', err));
 }
 
-// Move to the end of a different folder (body-area drop on empty space).
-async function moveToFolderEnd(draggedId, targetFolderId) {
-  const dragged = assignmentsList.find(x => x.id === draggedId);
-  if (!dragged) return;
-  const prevFolderId = dragged.folder_id ?? null;
-  if (prevFolderId === targetFolderId) return;
-  dragged.folder_id = targetFolderId;
-
-  const updates = [];
-  const srcItems = assignmentsList
-    .filter(a => (a.folder_id ?? null) === prevFolderId)
-    .sort((a, b) => (a.sort_order ?? Infinity) - (b.sort_order ?? Infinity));
-  srcItems.forEach((a, i) => { a.sort_order = i; });
-  updates.push(...srcItems.map(a => ({ id: a.id, sort_order: a.sort_order, folder_id: a.folder_id ?? null })));
-
-  const destItems = assignmentsList
-    .filter(a => (a.folder_id ?? null) === targetFolderId)
-    .sort((a, b) => (a.sort_order ?? Infinity) - (b.sort_order ?? Infinity));
-  destItems.forEach((a, i) => { a.sort_order = i; });
-  updates.push(...destItems.map(a => ({ id: a.id, sort_order: a.sort_order, folder_id: a.folder_id ?? null })));
-
-  // Render immediately (optimistic)
-  sortAssignmentsList();
-  renderAssignmentsList();
-
-  // Persist in background
-  Promise.all(updates.map(u =>
-    supabase.from('assignments').update({ sort_order: u.sort_order, folder_id: u.folder_id }).eq('id', u.id)
-  )).catch(err => console.error('[Assignments] move persist failed:', err));
+function handleAssignmentSort({ draggedId, toEl, beforeId }) {
+  reorderAssignment(draggedId, toEl.dataset.folderId || null, beforeId);
 }
 
 // ===== RENDERING — ASSIGNMENTS TAB =====
@@ -601,40 +560,6 @@ function renderAssignmentCard(a) {
     <span class="asgn-item-meta">${a.item_count} ${itemWord}</span>
     <span class="asgn-status-pill ${pillClass}">${pillLabel}</span>
   `;
-
-  item.addEventListener('dragstart', e => {
-    e.dataTransfer.setData('assignment-id', a.id);
-    e.dataTransfer.effectAllowed = 'move';
-    item.classList.add('dragging');
-  });
-  item.addEventListener('dragend', () => {
-    item.classList.remove('dragging');
-    removeDropIndicator();
-  });
-
-  item.addEventListener('dragover', e => {
-    e.preventDefault();
-    e.stopPropagation(); // prevent folder body from also reacting
-    e.dataTransfer.dropEffect = 'move';
-    const rect = item.getBoundingClientRect();
-    const ind = getDropIndicator();
-    if (e.clientY < rect.top + rect.height / 2) {
-      item.parentNode.insertBefore(ind, item);
-    } else {
-      item.parentNode.insertBefore(ind, item.nextSibling);
-    }
-  });
-
-  item.addEventListener('drop', async e => {
-    e.preventDefault();
-    e.stopPropagation();
-    removeDropIndicator();
-    const draggedId = e.dataTransfer.getData('assignment-id');
-    if (!draggedId || draggedId === a.id) return;
-    const rect = item.getBoundingClientRect();
-    const insertBefore = e.clientY < rect.top + rect.height / 2;
-    await reorderAssignment(draggedId, a.id, insertBefore);
-  });
 
   return item;
 }
@@ -660,33 +585,16 @@ function renderAssignmentsList() {
     return;
   }
 
-  // Helper: attach drop target to a folder body (handles empty-folder drops and
-  // drops on the body padding below the last card).
-  // Card-level drops (reorder) are handled by each card's own listener.
-  function attachDropTarget(bodyEl, targetFolderId) {
-    bodyEl.addEventListener('dragover', e => {
-      if (e.target.closest('.asgn-list-item')) return; // card handles it
-      e.preventDefault();
-      e.dataTransfer.dropEffect = 'move';
-      bodyEl.classList.add('drag-over');
-      removeDropIndicator();
-    });
-    bodyEl.addEventListener('dragleave', e => {
-      if (!bodyEl.contains(e.relatedTarget)) {
-        bodyEl.classList.remove('drag-over');
-      }
-    });
-    bodyEl.addEventListener('drop', async e => {
-      if (e.target.closest('.asgn-list-item')) return; // card already handled it
-      e.preventDefault();
-      bodyEl.classList.remove('drag-over');
-      removeDropIndicator();
-      const draggedId = e.dataTransfer.getData('assignment-id');
-      if (!draggedId) return;
-      const dragged = assignmentsList.find(x => x.id === draggedId);
-      if (!dragged || (dragged.folder_id ?? null) === targetFolderId) return;
-      await moveToFolderEnd(draggedId, targetFolderId);
-    });
+  // Rebuild sortable group — destroy old containers first
+  if (sortableGroup) sortableGroup.destroy();
+  sortableGroup = makeSortableGroup({
+    itemSelector: '.asgn-list-item',
+    onReorder: handleAssignmentSort,
+  });
+
+  function addSortableBody(bodyEl, folderId) {
+    bodyEl.dataset.folderId = folderId ?? '';
+    sortableGroup.add(bodyEl);
   }
 
   // Render all folders (including empty ones)
@@ -717,7 +625,7 @@ function renderAssignmentsList() {
     } else {
       assignments.forEach(a => body.appendChild(renderAssignmentCard(a)));
     }
-    attachDropTarget(body, folder.id);
+    addSortableBody(body, folder.id);
     group.appendChild(body);
     el.appendChild(group);
   });
@@ -745,11 +653,15 @@ function renderAssignmentsList() {
       } else {
         uncategorized.forEach(a => body.appendChild(renderAssignmentCard(a)));
       }
-      attachDropTarget(body, null);
+      addSortableBody(body, null);
       el.appendChild(body);
     } else {
-      // No folders exist — flat list, no drop targets needed
-      uncategorized.forEach(a => el.appendChild(renderAssignmentCard(a)));
+      // No folders — flat reorderable list
+      const flatBody = document.createElement('div');
+      flatBody.className = 'asgn-folder-body';
+      uncategorized.forEach(a => flatBody.appendChild(renderAssignmentCard(a)));
+      addSortableBody(flatBody, null);
+      el.appendChild(flatBody);
     }
   }
 }

@@ -196,10 +196,6 @@ body.dark .composer-save-status.saved {
   background: var(--cell-hover);
 }
 
-.section-item.drag-over {
-  border-top: 2px solid var(--accent-glow);
-}
-
 .section-item.dragging {
   opacity: 0.4;
 }
@@ -862,9 +858,7 @@ body:not(.dark) .section-item:hover {
   background: rgba(99, 102, 241, 0.07);
 }
 
-body:not(.dark) .section-item.drag-over {
-  border-top-color: #6366f1;
-}
+
 
 body:not(.dark) .add-section-btn {
   border-color: rgba(99, 102, 241, 0.30);

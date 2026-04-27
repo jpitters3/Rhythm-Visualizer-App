@@ -910,3 +910,17 @@ body.dark .phrase-list-item:hover {
 body.dark .phrase-list-item.current {
   background: rgba(255, 255, 255, 0.04);
 }
+
+/* ===== SORTABLE UTILITY (js/sortable.js) ===== */
+.sortable-indicator {
+  height: 2px;
+  background: var(--primary-color, #f1c40f);
+  border-radius: 99px;
+  margin: 2px 0;
+  pointer-events: none;
+}
+
+.sortable-dragging {
+  opacity: 0.4;
+  transform: scale(0.98);
+}

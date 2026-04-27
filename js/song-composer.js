@@ -23,6 +23,7 @@ import { updateCurrentPhraseName, createNewPhrase } from './controls.js';
 import { resetGridToDefault } from './notegrid.js';
 import { canAccess, FEATURE } from './gated-feature.js';
 import { Bus, BUS_EVENT } from './bus.js';
+import { makeSortable } from './sortable.js';
 
 // ============================================================
 // State
@@ -1329,7 +1330,7 @@ function renderCompositionItem(comp, opts = {}) {
 
   const sectionsHTML = isExpanded
     ? `
-      <div class="composition-sections">
+      <div class="composition-sections" data-comp="${comp.id}">
         ${(() => { let pi = 0; return comp.sections.map((s, i) => renderSectionItem(s, i, s.type === 'phrase' ? pi++ : -1)).join(''); })()}
         ${showPicker ? renderPhrasePicker(comp.id, phraseNames) : ''}
         <div class="add-section-rows">
@@ -1565,12 +1566,25 @@ function esc(str) {
 // Event delegation (all clicks inside #composerSidebar)
 // ============================================================
 function bindSectionListeners() {
-  document.querySelectorAll('.section-item[draggable]').forEach(el => {
-    el.addEventListener('dragstart', onDragStart);
-    el.addEventListener('dragover',  onDragOver);
-    el.addEventListener('dragleave', onDragLeave);
-    el.addEventListener('drop',      onDrop);
-    el.addEventListener('dragend',   onDragEnd);
+  // Wire up sortable for each expanded composition's section list
+  document.querySelectorAll('.composition-sections[data-comp]').forEach(containerEl => {
+    makeSortable(containerEl, {
+      itemSelector: '.section-item[draggable]',
+      onReorder({ draggedId, toEl, beforeId }) {
+        const compId = toEl.dataset.comp;
+        const comp = compositions.find(c => c.id === compId);
+        if (!comp) return;
+        const srcIdx = comp.sections.findIndex(s => s.id === draggedId);
+        if (srcIdx === -1) return;
+        const [moved] = comp.sections.splice(srcIdx, 1);
+        const insertIdx = beforeId ? comp.sections.findIndex(s => s.id === beforeId) : comp.sections.length;
+        comp.sections.splice(insertIdx === -1 ? comp.sections.length : insertIdx, 0, moved);
+        reorderSections(compId, comp.sections.map(s => s.id)).then(() => {
+          if (playback?.compositionId === compId) startPlayback(compId);
+          else renderCompositions();
+        });
+      },
+    });
   });
 
   document.querySelectorAll('[data-note-section]').forEach(ta => {
@@ -1578,61 +1592,6 @@ function bindSectionListeners() {
       updateNoteText(ta.dataset.noteSection, ta.value);
     }, 600));
   });
-}
-
-// ============================================================
-// Drag-and-drop
-// ============================================================
-let dragSrcId = null;
-
-function onDragStart(e) {
-  dragSrcId = this.dataset.id;
-  this.classList.add('dragging');
-  e.dataTransfer.effectAllowed = 'move';
-}
-
-function onDragOver(e) {
-  e.preventDefault();
-  e.dataTransfer.dropEffect = 'move';
-  document.querySelectorAll('.section-item.drag-over').forEach(el => el.classList.remove('drag-over'));
-  if (this.dataset.id !== dragSrcId) this.classList.add('drag-over');
-}
-
-function onDragLeave() {
-  this.classList.remove('drag-over');
-}
-
-async function onDrop(e) {
-  e.preventDefault();
-  this.classList.remove('drag-over');
-  const targetId = this.dataset.id;
-  if (!dragSrcId || dragSrcId === targetId) return;
-
-  const compId = this.dataset.comp;
-  const comp = compositions.find(c => c.id === compId);
-  if (!comp) return;
-
-  const srcIdx = comp.sections.findIndex(s => s.id === dragSrcId);
-  const tgtIdx = comp.sections.findIndex(s => s.id === targetId);
-  if (srcIdx === -1 || tgtIdx === -1) return;
-
-  const [moved] = comp.sections.splice(srcIdx, 1);
-  comp.sections.splice(tgtIdx, 0, moved);
-
-  await reorderSections(compId, comp.sections.map(s => s.id));
-
-  // If this composition is currently playing, re-stitch so the grid reflects the new order
-  if (playback?.compositionId === compId) {
-    startPlayback(compId);
-  } else {
-    renderCompositions();
-  }
-}
-
-function onDragEnd() {
-  dragSrcId = null;
-  document.querySelectorAll('.section-item.dragging, .section-item.drag-over')
-    .forEach(el => el.classList.remove('dragging', 'drag-over'));
 }
 
 // ============================================================
