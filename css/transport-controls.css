@@ -59,18 +59,25 @@
     border-radius: 16px;
   }
 
+  /* Fixed to the physical bottom of the screen — immune to flex/overflow layout
+     issues that plagued the previous position:absolute approach, including PWA
+     homescreen launches where --app-height isn't set yet. */
   .controls-transport {
-    position: absolute;
-    left: 50%;
-    transform: translateX(-50%);
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    display: flex;
     align-items: center;
     justify-content: center;
+    padding: 6px 12px env(safe-area-inset-bottom, 10px);
+    background: rgba(var(--panel-rgb), 0.92);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-top: 1px solid var(--panel-border);
+    z-index: 1200;
     pointer-events: all;
-    order: 11;
-    flex-shrink: 0;
-    background: var(--body-bg);
-    padding-bottom: env(safe-area-inset-bottom, 10px);
-    z-index: 1000;
+    transform: none;
   }
 }
 

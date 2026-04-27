@@ -572,13 +572,30 @@ body.dark div.container {
   .handpan-panel {
     order: 10;
     flex-shrink: 0;
+    /* Ensure content doesn't hide behind the fixed transport bar */
+    padding-bottom: calc(72px + env(safe-area-inset-bottom, 10px));
+  }
+
+  /* Collapse the in-flow row — transport is now fixed, measure-tools hidden */
+  .grid-bottom-row {
+    min-height: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    background: none !important;
+    height: 0;
+    overflow: visible;
+  }
+
+  /* Also pad the grid itself for phones where handpan is hidden/small */
+  #measures {
+    padding-bottom: calc(72px + env(safe-area-inset-bottom, 10px));
   }
 
   .grid-phrase-name-row {
     justify-content: center;
     padding-bottom: 5px;
     padding-top: 10px;
-}
+  }
 }
 
 select#patternSelect {
