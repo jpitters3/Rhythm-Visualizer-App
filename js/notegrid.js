@@ -70,7 +70,15 @@ export function invertFollowing(startIndex, ctx = activeGrid) {
 };
 
 const MOBILE_MAX_COLS = 8;
-const capCols = n => window.matchMedia('(max-width: 768px)').matches ? Math.min(n, MOBILE_MAX_COLS) : n;
+function smartMobileCols(s) {
+  if (!window.matchMedia('(max-width: 768px)').matches) return s;
+  if (s <= MOBILE_MAX_COLS) return s;
+  for (let d = MOBILE_MAX_COLS; d >= 2; d--) {
+    if (s % d === 0) return d;
+  }
+  return MOBILE_MAX_COLS;
+}
+const capCols = n => smartMobileCols(n);
 
 export function setCols(n, ctx = activeGrid) {
   // Apply to the measures wrapper (it cascades to measure children)
@@ -248,16 +256,18 @@ export function renderAllMeasures(ctx = activeGrid) {
 
     const labels = document.createElement('div');
     labels.className = 'labels';
-    labels.style.setProperty('--cols', String(s));
+    labels.style.setProperty('--cols', String(capCols(s)));
 
     const grid = document.createElement('div');
     grid.className = 'grid';
-    grid.style.setProperty('--cols', String(s));
+    grid.style.setProperty('--cols', String(capCols(s)));
+
+    const labelCols = capCols(s);
 
     // Build labels + cells
     for (let i = 0; i < s; i++) {
-      // label
-      if (m % 4 == 0) {
+      // label — on mobile, only render labels for the first row
+      if (m % 4 == 0 && i < labelCols) {
         const lab = document.createElement('div');
         lab.textContent = labelForStep(i, ctx);
         labels.appendChild(lab);
