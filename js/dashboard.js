@@ -35,8 +35,8 @@ let previewMuted = false;
 // ── Public API ────────────────────────────────────────────────────────────────
 
 export function initDashboard() {
-  // Dashboard is no longer shown automatically on load.
-  // It remains accessible via its trigger button.
+  if (localStorage.getItem('noWelcome') === '1') return;
+  openWelcomeDashboard();
 }
 
 export function openWelcomeDashboard() {
