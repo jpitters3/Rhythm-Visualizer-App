@@ -663,6 +663,18 @@ body.dark .lesson-controls {
   transition: opacity 0.2s, transform 0.2s;
 }
 
+.lesson-pattern-hint {
+  margin: 6px 0 0;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  opacity: 0.4;
+  color: var(--text);
+  cursor: pointer;
+}
+
 .lesson-pattern-preview:hover {
   opacity: 0.85;
   transform: translateY(-2px);

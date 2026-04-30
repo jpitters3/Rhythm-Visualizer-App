@@ -465,13 +465,23 @@ export async function loadLesson(lessonId) {
         previewCanvas.width = 320;
         previewCanvas.height = 180;
         previewCanvas.className = 'lesson-pattern-preview';
-        previewCanvas.title = 'Click to load pattern in studio';
         previewCanvas.addEventListener('click', closeLessonSidebar);
+
+        const previewHint = document.createElement('p');
+        previewHint.id = 'lessonPatternHint';
+        previewHint.className = 'lesson-pattern-hint';
+        previewHint.addEventListener('click', closeLessonSidebar);
+        previewHint.textContent = window.innerWidth < 768
+          ? 'Tap to open in studio'
+          : 'Click to open in studio';
+
+        videoContainer?.after(previewHint);
         videoContainer?.after(previewCanvas);
       }
       requestAnimationFrame(() => renderThumbnail(previewCanvas, lesson.pattern_json));
     } else {
       previewCanvas?.remove();
+      document.getElementById('lessonPatternHint')?.remove();
     }
 
     // Completion Button
