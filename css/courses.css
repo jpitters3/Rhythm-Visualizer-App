@@ -471,6 +471,7 @@ body.dark .lesson-link.active-lesson::after {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  padding: 16px 24px 0;
   margin-bottom: 20px;
   cursor: pointer;
   gap: 8px;
@@ -479,6 +480,14 @@ body.dark .lesson-link.active-lesson::after {
 .lesson-header h2 {
   margin: 0;
   margin-right: auto;
+}
+
+.lesson-btn-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: stretch;
+  padding: 5px 5px;
 }
 
 .practice-btn {
@@ -496,6 +505,7 @@ body.dark .lesson-link.active-lesson::after {
   transition: all 0.2s;
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
 }
 
@@ -519,9 +529,16 @@ body.dark .lesson-link.active-lesson::after {
 
 .lesson-sidebar-body {
   flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 0;
+}
+
+.lesson-content {
+  flex: 1;
   overflow-y: auto;
-  padding: 0 24px 100px;
-  /* bottom padding for pinned transport */
+  padding: 16px 24px 16px;
   overscroll-behavior: contain;
 }
 
@@ -593,7 +610,8 @@ body.dark .lesson-sidebar-header {
 .lesson-controls {
   position: relative;
   z-index: 1;
-  margin-top: 16px;
+  flex-shrink: 0;
+  margin: 0 16px 16px;
   padding: 16px 20px;
   border-radius: 16px;
   border: 1px solid rgba(0, 0, 0, 0.07);
@@ -633,6 +651,21 @@ body.dark .lesson-controls {
   overflow: hidden;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
   background: #000;
+}
+
+.lesson-pattern-preview {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 12px;
+  margin-top: 16px;
+  cursor: pointer;
+  transition: opacity 0.2s, transform 0.2s;
+}
+
+.lesson-pattern-preview:hover {
+  opacity: 0.85;
+  transform: translateY(-2px);
 }
 
 .video-wrapper iframe {

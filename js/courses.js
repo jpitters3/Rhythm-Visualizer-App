@@ -13,6 +13,7 @@ import { openMarketplace } from './course-marketplace.js';
 import { autoLinkText } from './glossary.js';
 import { openAuthModal } from './auth.js';
 import { extractYouTubeId } from './utils.js';
+import { renderThumbnail } from './pattern-thumbnail.js';
 
 // ===== SIDEBAR LOGIC (OWNED COURSES) =====
 
@@ -357,12 +358,20 @@ export async function loadLesson(lessonId) {
     if (header) {
       if (!header.classList.contains('lesson-header')) header.classList.add('lesson-header');
 
+      let btnGroup = document.getElementById('lessonBtnGroup');
+      if (!btnGroup) {
+        btnGroup = document.createElement('div');
+        btnGroup.id = 'lessonBtnGroup';
+        btnGroup.className = 'lesson-btn-group';
+        header.appendChild(btnGroup);
+      }
+
       let pBtn = document.getElementById('addPracticeBtn');
       if (!pBtn) {
         pBtn = document.createElement('button');
         pBtn.id = 'addPracticeBtn';
         pBtn.className = 'practice-btn';
-        header.appendChild(pBtn);
+        btnGroup.appendChild(pBtn);
       }
 
       // Set Initial State
@@ -389,11 +398,10 @@ export async function loadLesson(lessonId) {
         if (!uBtn) {
           uBtn = document.createElement('button');
           uBtn.id = 'updateLessonBtn';
-          uBtn.className = 'practice-btn'; // Use same styling
-          uBtn.style.marginLeft = "8px";
-          uBtn.style.color = "#8b5cf6"; // Purplish tint
+          uBtn.className = 'practice-btn';
+          uBtn.style.color = "#8b5cf6";
           uBtn.style.borderColor = "rgba(139, 92, 246, 0.3)";
-          header.appendChild(uBtn);
+          btnGroup.appendChild(uBtn);
         }
         uBtn.innerHTML = '✏️ Update Lesson';
         uBtn.dataset.action = "update-lesson-grid";
@@ -446,6 +454,25 @@ export async function loadLesson(lessonId) {
 
     const lessonContentEl = document.getElementsByClassName('lesson-content')[0];
     if (lessonContentEl) lessonContentEl.style.display = 'block';
+
+    // Pattern preview
+    const videoContainer = document.getElementById('videoContainer');
+    let previewCanvas = document.getElementById('lessonPatternPreview');
+    if (lesson.pattern_json) {
+      if (!previewCanvas) {
+        previewCanvas = document.createElement('canvas');
+        previewCanvas.id = 'lessonPatternPreview';
+        previewCanvas.width = 320;
+        previewCanvas.height = 180;
+        previewCanvas.className = 'lesson-pattern-preview';
+        previewCanvas.title = 'Click to load pattern in studio';
+        previewCanvas.addEventListener('click', closeLessonSidebar);
+        videoContainer?.after(previewCanvas);
+      }
+      requestAnimationFrame(() => renderThumbnail(previewCanvas, lesson.pattern_json));
+    } else {
+      previewCanvas?.remove();
+    }
 
     // Completion Button
     const btn = document.getElementById('lessonCompleteBtn');
