@@ -40,8 +40,15 @@ export class Modal {
 
   static closeTopmost() {
     const top = Modal.#stack.at(-1);
-    if (!top) return false;
-    top.close();
-    return true;
+    if (top) { top.close(); return true; }
+
+    // Fallback: close any open modal-overlay not managed by Modal class
+    const open = document.querySelector('.modal-overlay.open, .modal-overlay[aria-hidden="false"]');
+    if (open) {
+      open.classList.remove('open');
+      open.setAttribute('aria-hidden', 'true');
+      return true;
+    }
+    return false;
   }
 }
