@@ -659,7 +659,6 @@ body.dark .lesson-controls {
   height: auto;
   border-radius: 12px;
   margin-top: 16px;
-  cursor: pointer;
   transition: opacity 0.2s, transform 0.2s;
 }
 
@@ -885,6 +884,11 @@ body.dark .chord-fav-btn {
   transition: background 0.5s;
 }
 
+@media (max-width: 768px) {
+  .lesson-pattern-preview {
+    cursor: pointer;
+}
+}
 
 @media (max-width: 600px) {
   #nextLessonBtn .desktop-text {

@@ -1,10 +1,20 @@
-// Standalone canvas rendering for pattern thumbnails.
-// No imports from modules that could create circular dependencies.
+import { getScale } from './state.js';
 
 function effectiveHand(index, hands, subdivision) {
   if (hands[index]) return hands[index];
   const stride = (subdivision || 2) >= 4 ? 2 : 1;
   return (Math.floor(index / stride) % 2 === 0) ? 'R' : 'L';
+}
+
+function resolveLabel(lbl, pref, scale) {
+  if (!lbl || lbl === '') return '';
+  const isDing = lbl === '0' || lbl === 'Ding';
+  if (isDing) return pref === 'Pitches' ? '0' : 'D';
+  if (pref === 'Pitches' && scale?.map) {
+    const pitch = scale.map[lbl];
+    if (pitch) return pitch.replace('s', '#').replace(/[0-9]/g, '');
+  }
+  return String(lbl);
 }
 
 function renderPlayIconThumbnail(canvas) {
@@ -43,6 +53,9 @@ export function renderThumbnail(canvas, patternData) {
   const stepsPerMeasure = steps || (beats * subdivision);
   const totalSteps = labels.length;
   if (totalSteps === 0) return;
+
+  const pref = localStorage.getItem('handpanLabelPref') || 'Numbers';
+  const scale = pref === 'Pitches' ? getScale() : null;
 
   const totalMeasures = Math.ceil(totalSteps / stepsPerMeasure);
   const measures = Math.min(4, totalMeasures);
@@ -100,13 +113,14 @@ export function renderThumbnail(canvas, patternData) {
         const sx = x + dx, sy = y + dy;
         ctx.beginPath();
         ctx.arc(sx, sy, subR, 0, Math.PI * 2);
-        if (sl && sl !== '') {
+        const displayLabel = resolveLabel(sl, pref, scale);
+        if (displayLabel !== '') {
           ctx.fillStyle = subColors[si];
           ctx.globalAlpha = 0.85;
           ctx.fill();
           ctx.globalAlpha = 1;
           ctx.fillStyle = '#ffffff';
-          ctx.fillText((sl === 'Ding' || sl === '0') ? 'D' : String(sl), sx, sy + 1);
+          ctx.fillText(displayLabel, sx, sy + 1);
         } else {
           ctx.fillStyle = subColors[si];
           ctx.globalAlpha = 0.2;
@@ -117,6 +131,7 @@ export function renderThumbnail(canvas, patternData) {
       ctx.font = `bold ${Math.max(8, Math.floor(radius * 0.95))}px Inter, system-ui`;
 
     } else if (!isChord && hasNote) {
+      const displayLabel = resolveLabel(label, pref, scale);
       ctx.beginPath();
       ctx.arc(x, y, radius, 0, Math.PI * 2);
       ctx.fillStyle = fillColor;
@@ -125,7 +140,7 @@ export function renderThumbnail(canvas, patternData) {
       ctx.globalAlpha = 1;
       ctx.font = `bold ${Math.max(8, Math.floor(radius * 0.95))}px Inter, system-ui`;
       ctx.fillStyle = '#ffffff';
-      ctx.fillText((label === 'Ding' || label === '0') ? 'D' : String(label), x, y + 1);
+      ctx.fillText(displayLabel, x, y + 1);
 
     } else {
       ctx.beginPath();
