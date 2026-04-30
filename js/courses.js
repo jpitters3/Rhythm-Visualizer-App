@@ -458,7 +458,7 @@ export async function loadLesson(lessonId) {
     // Pattern preview
     const videoContainer = document.getElementById('videoContainer');
     let previewCanvas = document.getElementById('lessonPatternPreview');
-    if (lesson.pattern_json) {
+    if (lesson.pattern_name && lesson.pattern_json?.labels?.length > 0) {
       if (!previewCanvas) {
         previewCanvas = document.createElement('canvas');
         previewCanvas.id = 'lessonPatternPreview';
