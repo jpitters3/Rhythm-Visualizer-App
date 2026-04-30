@@ -108,6 +108,11 @@
   transform: translateX(-50%);
   bottom: 6px;
   pointer-events: none;
+  transition: left 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+body.sidebar-open .library-search-row {
+  left: calc(50% + 180px);
 }
 
 .library-search-row input {
