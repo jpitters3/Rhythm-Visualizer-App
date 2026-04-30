@@ -465,12 +465,19 @@ export async function loadLesson(lessonId) {
         previewCanvas.width = 320;
         previewCanvas.height = 180;
         previewCanvas.className = 'lesson-pattern-preview';
-        previewCanvas.addEventListener('click', closeLessonSidebar);
+        const openInStudio = () => {
+          closeSidebar();
+          if (window.location.hash !== '#studio' && window.location.hash !== '') {
+            window.location.hash = '#studio';
+          }
+        };
+
+        previewCanvas.addEventListener('click', openInStudio);
 
         const previewHint = document.createElement('p');
         previewHint.id = 'lessonPatternHint';
         previewHint.className = 'lesson-pattern-hint';
-        previewHint.addEventListener('click', closeLessonSidebar);
+        previewHint.addEventListener('click', openInStudio);
         previewHint.textContent = window.innerWidth < 768
           ? 'Tap to open in studio'
           : 'Click to open in studio';

@@ -306,20 +306,20 @@ div.container {
   display: flex;
 }
 
-#view-freeplay {
+#view-studio {
   padding: 0;
 }
 
-#view-freeplay > *:not(#primaryControlsWrapper) {
+#view-studio > *:not(#primaryControlsWrapper) {
   padding-left: 32px;
   padding-right: 32px;
 }
 
-#view-freeplay > #sharedBanner {
+#view-studio > #sharedBanner {
   padding-top: 16px;
 }
 
-#view-freeplay > #main {
+#view-studio > #main {
   padding-top: 24px;
 }
 
@@ -463,7 +463,7 @@ body.dark div.container {
     flex-direction: column;
   }
 
-  #view-freeplay > *:not(#primaryControlsWrapper) {
+  #view-studio > *:not(#primaryControlsWrapper) {
     padding-left: 10px;
     padding-right: 10px;
   }
@@ -490,7 +490,7 @@ body.dark div.container {
   /* Route-scoped mobile view layout.
      Each active route enables its own view's layout via body.route-{name}.
      This avoids !important overrides fighting each other when adding new routes. */
-  body.route-freeplay #view-freeplay {
+  body.route-studio #view-studio {
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -498,7 +498,7 @@ body.dark div.container {
     flex: 1 1 0;
   }
 
-  body.route-freeplay #main {
+  body.route-studio #main {
     display: flex;
     flex-direction: column;
     flex: 1 1 0;
@@ -506,7 +506,7 @@ body.dark div.container {
     gap: 0;
   }
 
-  body.route-freeplay .left {
+  body.route-studio .left {
     display: flex;
     flex-direction: column;
     flex: 1 1 0;

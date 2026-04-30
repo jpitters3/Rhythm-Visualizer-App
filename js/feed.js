@@ -14,7 +14,7 @@ export async function loadPatternFromFeed(json, name) {
     await applyPattern(json);
     document.title = `Panafide — ${name}`;
     updateCurrentPhraseName(name);
-    navigate('freeplay');
+    navigate('studio');
   }
 }
 

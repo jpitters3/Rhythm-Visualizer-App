@@ -1940,8 +1940,8 @@ composerEl?.addEventListener('click', async (e) => {
           isLoadingSection = false;
           updateCurrentPhraseName(section.phrase_name);
           activeSectionId = sectionId;
-          const onFreeplay = document.getElementById('view-freeplay')?.classList.contains('active');
-          if (!onFreeplay) window.location.hash = '#freeplay';
+          const onFreeplay = document.getElementById('view-studio')?.classList.contains('active');
+          if (!onFreeplay) window.location.hash = '#studio';
         }
       }
     }
@@ -2009,8 +2009,8 @@ composerEl?.addEventListener('click', async (e) => {
       });
       if (section?.id) {
         activeSectionId = section.id;
-        const onFreeplay = document.getElementById('view-freeplay')?.classList.contains('active');
-        if (!onFreeplay) window.location.hash = '#freeplay';
+        const onFreeplay = document.getElementById('view-studio')?.classList.contains('active');
+        if (!onFreeplay) window.location.hash = '#studio';
       }
       break;
     }

@@ -5,7 +5,7 @@ import { stop } from './noteplayer.js';
 import { gridA } from './grid-context.js';
 import { Sidepanel } from './sidepanel.js';
 
-const validRoutes = ['freeplay', 'dashboard', 'compose', 'community', 'library'];
+const validRoutes = ['studio', 'dashboard', 'compose', 'community', 'library'];
 let currentRoute = '';
 
 export function initRouter() {
@@ -17,7 +17,7 @@ function handleHashChange() {
   let hash = window.location.hash.replace('#', '');
 
   if (!hash || !validRoutes.includes(hash)) {
-    hash = 'freeplay';
+    hash = 'studio';
     history.replaceState(null, null, `#${hash}`);
   }
 
@@ -25,7 +25,7 @@ function handleHashChange() {
   currentRoute = hash;
 
   // Leaving freeplay: stop playback and close all panels (clears panel nav highlights)
-  if (prev === 'freeplay' && hash !== 'freeplay') {
+  if (prev === 'studio' && hash !== 'studio') {
     if (gridA.playing) stop(gridA);
     Sidepanel.closeAll();
   }

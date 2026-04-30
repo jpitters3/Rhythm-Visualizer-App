@@ -45,7 +45,7 @@ test.describe.skip('Guided Composition Wizard (Creation Current)', () => {
     await expect(nextBtn).toBeEnabled();
   });
 
-  test('progressing to Step 2 opens the freeplay overlay', async ({ page }) => {
+  test('progressing to Step 2 opens the studio overlay', async ({ page }) => {
     // 1. Choose Rhythm Flow
     await page.locator('#flow-rhythm-btn').click();
 
@@ -55,17 +55,17 @@ test.describe.skip('Guided Composition Wizard (Creation Current)', () => {
     // 3. Click Next Step
     await page.locator('#cw-next-btn').click();
 
-    // We expect the router to have navigated to #freeplay
-    await page.waitForURL('**/#freeplay');
+    // We expect the router to have navigated to #studio
+    await page.waitForURL('**/#studio');
 
     // We expect the compose view to be hidden
     await expect(page.locator('#view-compose')).toBeHidden();
 
-    // We expect the freeplay view to be visible
-    await expect(page.locator('#view-freeplay')).toBeVisible();
+    // We expect the studio view to be visible
+    await expect(page.locator('#view-studio')).toBeVisible();
 
     // We expect the overlay header to be visible
-    const overlay = page.locator('#cw-freeplay-overlay');
+    const overlay = page.locator('#cw-studio-overlay');
     await expect(overlay).toBeVisible();
 
     // Check finish button

@@ -294,7 +294,7 @@ async function loadAndRender(tab, grid, foldersSection) {
           </div>`;
         document.getElementById('libraryCreatePhraseBtn')?.addEventListener('click', async () => {
           const created = await createNewPhrase();
-          if (created) window.location.hash = '#freeplay';
+          if (created) window.location.hash = '#studio';
         });
       } else {
         grid.innerHTML = `<div class="library-empty">No ${tab} ${currentFolderId ? 'in this folder' : 'saved yet'}.</div>`;
@@ -312,7 +312,7 @@ async function loadAndRender(tab, grid, foldersSection) {
         date: row.created_at,
         patternData: firstPhrase?.pattern_snapshot ?? null,
         onClick: () => {
-          window.location.hash = '#freeplay';
+          window.location.hash = '#studio';
           setTimeout(() => openComposerToComposition(row.id), 120);
         },
         dragPayload: { tab, compositionId: row.id },
@@ -326,7 +326,7 @@ async function loadAndRender(tab, grid, foldersSection) {
         date: row.updated_at,
         patternData: row.data,
         onClick: () => {
-          window.location.hash = '#freeplay';
+          window.location.hash = '#studio';
           setTimeout(() => loadPatternByName(row.name), 120);
         },
         dragPayload: { tab, patternName: row.name },
@@ -391,7 +391,7 @@ async function loadSharedWithMe(grid) {
       date: row.updated_at,
       patternData: row.data,
       onClick: () => {
-        window.location.hash = '#freeplay';
+        window.location.hash = '#studio';
         setTimeout(() => loadPatternByName(row.name), 120);
       },
       dragPayload: null,
@@ -434,7 +434,7 @@ async function loadArchive(grid) {
       date: row.updated_at,
       patternData: row.data,
       onClick: () => {
-        window.location.hash = '#freeplay';
+        window.location.hash = '#studio';
         setTimeout(() => loadPatternByName(row.name), 120);
       },
       dragPayload: null,
@@ -453,7 +453,7 @@ async function loadArchive(grid) {
       date: row.created_at,
       patternData: firstPhrase?.pattern_snapshot ?? null,
       onClick: () => {
-        window.location.hash = '#freeplay';
+        window.location.hash = '#studio';
         setTimeout(() => openComposerToComposition(row.id), 120);
       },
       dragPayload: null,

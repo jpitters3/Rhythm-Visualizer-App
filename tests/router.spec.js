@@ -2,17 +2,17 @@ import { test, expect } from '@playwright/test';
 
 test.describe('SPA Routing', () => {
   test.beforeEach(async ({ page }) => {
-    // Start at the root (should default to freeplay)
+    // Start at the root (should default to studio)
     await page.goto('/');
     await page.waitForTimeout(500); // Give init scripts a moment to run
   });
 
-  test('should default to freeplay view if no hash is provided', async ({ page }) => {
+  test('should default to studio view if no hash is provided', async ({ page }) => {
     // Verify hash was updated
-    await expect(page).toHaveURL(/.*#freeplay/);
+    await expect(page).toHaveURL(/.*#studio/);
 
     // Check view visibility
-    await expect(page.locator('#view-freeplay')).toBeVisible();
+    await expect(page.locator('#view-studio')).toBeVisible();
     await expect(page.locator('#view-dashboard')).not.toBeVisible();
   });
 
@@ -34,11 +34,11 @@ test.describe('SPA Routing', () => {
     await expect(page).toHaveURL(/.*#dashboard/);
 
     // Verify views updated
-    await expect(page.locator('#view-freeplay')).not.toBeVisible();
+    await expect(page.locator('#view-studio')).not.toBeVisible();
     await expect(page.locator('#view-dashboard')).toBeVisible();
   });
 
-  test('should switch back to freeplay from dashboard', async ({ page }) => {
+  test('should switch back to studio from dashboard', async ({ page }) => {
     // Go directly to dashboard first
     await page.goto('/#dashboard');
     await page.waitForTimeout(500);
@@ -49,11 +49,11 @@ test.describe('SPA Routing', () => {
     // Click the Free Play Card on the dashboard
     await page.locator('text=Free Play Engine').click();
 
-    // Verify hash changed to #freeplay
-    await expect(page).toHaveURL(/.*#freeplay/);
+    // Verify hash changed to #studio
+    await expect(page).toHaveURL(/.*#studio/);
 
-    // Verify freeplay is visible again
-    await expect(page.locator('#view-freeplay')).toBeVisible();
+    // Verify studio is visible again
+    await expect(page.locator('#view-studio')).toBeVisible();
     await expect(page.locator('#view-dashboard')).not.toBeVisible();
   });
 });

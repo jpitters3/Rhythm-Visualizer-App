@@ -300,7 +300,7 @@ async function loadWelcomeDashboard(modal) {
       const sel = document.getElementById('patternSelect');
       const loadBtn = document.getElementById('loadBtn');
       if (sel && loadBtn) { sel.value = p.name; loadBtn.click(); }
-      navigate('freeplay');
+      navigate('studio');
       closeWelcomeModal();
     },
     'No saved phrases yet',

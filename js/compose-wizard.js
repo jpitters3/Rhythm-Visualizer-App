@@ -85,7 +85,7 @@ function renderStep(stepIndex) {
   // contentArea.innerHTML = '';
 
   // Transition to freeplay view visually but keep wizard state active
-  window.location.hash = '#freeplay';
+  window.location.hash = '#studio';
 
   // Ensure the compose container looks inactive while in freeplay
   viewCompose.style.display = 'none';
@@ -134,7 +134,7 @@ function renderStep1() {
   subtitle.textContent = "Step 1: Motif";
 
   // Transition to freeplay view visually but keep wizard state active
-  window.location.hash = '#freeplay';
+  window.location.hash = '#studio';
 
   // Ensure the compose container looks inactive while in freeplay
   viewCompose.style.display = 'none';
@@ -308,10 +308,10 @@ function updateOverlay() {
   if (!overlay) {
     overlay = document.createElement('div');
     overlay.id = 'cwFreeplayOverlay';
-    overlay.classList.add('cw-freeplay-overlay');
+    overlay.classList.add('cw-studio-overlay');
 
     // Append to the view-freeplay container so it hides when navigating away
-    const viewFreeplay = document.getElementById('view-freeplay');
+    const viewFreeplay = document.getElementById('view-studio');
     if (viewFreeplay) {
       viewFreeplay.appendChild(overlay);
       // Add relative positioning to container just in case
@@ -472,7 +472,7 @@ async function loadCompositionToWizard(compId) {
 }
 
 async function renderArrangeView() {
-  // We want the grid visible, so we don't go to #freeplay. We stay where we are.
+  // We want the grid visible, so we don't go to #studio. We stay where we are.
   // Hide standard wizard overlay content to show just arrangement and grid.
   if (overlay) {
     const top = overlay.querySelector('.cw-overlay-top');
