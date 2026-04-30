@@ -285,7 +285,14 @@ export async function initAuthSession() {
 export async function initAuth() {
   // Elements
   authModal = document.getElementById('authModal');
-  authPanel = new Modal(authModal);
+  authPanel = new Modal(authModal, {
+    onClose: () => {
+      ['authPass', 'authPassConfirm', 'authCurrentPass'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+      });
+    }
+  });
   authEmail = document.getElementById('authEmail');
   authPass = document.getElementById('authPass');
   authHint = document.getElementById('authHint');
