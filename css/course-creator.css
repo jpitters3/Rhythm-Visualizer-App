@@ -179,6 +179,10 @@ button {
   border-radius: 999px;
   font-size: 14px;
   opacity: 0.7;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
 }
 
 .secondary-btn:hover {
@@ -201,8 +205,10 @@ button {
   box-shadow: 0 4px 15px rgba(241, 196, 15, 0.4);
   /* width: auto; removed full width to sit next to add section */
   margin-top: 0;
-  text-align: center;
-  vertical-align: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
 }
 
 .primary-btn:hover {

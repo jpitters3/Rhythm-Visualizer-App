@@ -1634,9 +1634,8 @@ body.dark .student-inbox-url-input {
 @media (max-width: 600px) {
   .student-inbox-modal {
     width: 100vw;
-    max-height: 100dvh;
-    border-radius: 20px 20px 0 0;
-    align-self: flex-end;
+    max-height: 95dvh;
+    border-radius: 20px;
   }
 
   .student-inbox-list-view,

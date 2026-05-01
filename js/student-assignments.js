@@ -317,7 +317,7 @@ function renderDetail() {
   if (saveBtn) saveBtn.style.display = isLocked ? 'none' : '';
   if (submitBtn) {
     submitBtn.style.display = isLocked ? 'none' : '';
-    if (!isLocked) { submitBtn.disabled = false; submitBtn.textContent = 'Submit Assignment'; }
+    if (!isLocked) { submitBtn.disabled = false; submitBtn.textContent = 'Submit'; }
   }
   const statusEl = document.getElementById('studentInboxSaveStatus');
   if (statusEl) { statusEl.textContent = ''; statusEl.style.opacity = '0'; }

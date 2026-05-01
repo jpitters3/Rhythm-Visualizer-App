@@ -623,6 +623,14 @@
 
 
 @media (max-width: 768px) {
+  .modal,
+  .modal-content,
+  .course-modal {
+    max-height: 90dvh;
+    overflow-y: auto;
+  }
+
+
   .welcome-options {
     flex-direction: column;
     padding: 14px 16px 38px;
