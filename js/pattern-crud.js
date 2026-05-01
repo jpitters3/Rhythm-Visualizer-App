@@ -2,6 +2,7 @@
 import { alert, confirm } from './alert.js';
 import { supabase } from './supabase-client.js';
 import { isAuthed } from './auth.js';
+import { currentUser } from './state.js';
 import { gridA, gridB } from './grid-context.js';
 import { start, stop, setBeats, setSubdivision } from './noteplayer.js';
 import { migratePatternState } from './rhythm-core.js';
@@ -42,6 +43,7 @@ export async function dbListPatternNames() {
   const { data, error } = await supabase
     .from('patterns')
     .select('name')
+    .eq('user_id', currentUser?.id)
     .order('updated_at', { ascending: false });
 
   if (error) throw error;
@@ -52,6 +54,7 @@ export async function dbListPatternsWithData() {
   const { data, error } = await supabase
     .from('patterns')
     .select('name, data')
+    .eq('user_id', currentUser?.id)
     .order('updated_at', { ascending: false });
 
   if (error) throw error;
