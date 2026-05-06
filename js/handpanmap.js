@@ -1883,6 +1883,7 @@ export async function initScale() {
   if (!name) name = Object.keys(SCALES)[0];
 
   setSelectedScaleName(name);
+  if (SCALES[name]) setCurrentScale(SCALES[name]);
 
   await preloadScaleSamples();
 
@@ -1892,6 +1893,7 @@ export async function initScale() {
     const remoteScaleName = await loadScaleRemote();
     if (remoteScaleName) {
       setSelectedScaleName(remoteScaleName);
+      if (SCALES[remoteScaleName]) setCurrentScale(SCALES[remoteScaleName]);
       await preloadScaleSamples();
       // For custom handpans, loadAllUserCustomHandpans handles fetching the
       // layout data and calling applyCustomHandpan() to render it visually.
