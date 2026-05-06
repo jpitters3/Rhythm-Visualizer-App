@@ -1270,6 +1270,27 @@ export function initHandpanMap() {
   handpanOverlay?.addEventListener('click', handleHandpanTap);
   handpanOverlayBottom?.addEventListener('click', handleHandpanTap);
 
+  function handleHandpanTouch(e) {
+    if (calibrating) return;
+    e.preventDefault(); // suppress follow-up click so single taps don't double-fire
+    for (const touch of e.changedTouches) {
+      const el = document.elementFromPoint(touch.clientX, touch.clientY);
+      const dot = el?.closest('.hp-dot');
+      if (!dot) continue;
+      const rawNote = dot.dataset.note;
+      if (!rawNote) continue;
+      const note = (rawNote === 'T_R' || rawNote === 'T_L') ? 'T'
+                 : (rawNote === 'S_R' || rawNote === 'S_L') ? 'S'
+                 : rawNote;
+      playNoteByLabel(note, null);
+      highlightHandpan(rawNote, null);
+      if (activeGrid.caretIndex !== null) writeToSession(note, { advance: true });
+    }
+  }
+
+  handpanOverlay?.addEventListener('touchstart', handleHandpanTouch, { passive: false });
+  handpanOverlayBottom?.addEventListener('touchstart', handleHandpanTouch, { passive: false });
+
   handpanOverlayBottom?.addEventListener('mousedown', (e) => {
     if (!calibrating) return;
     const dot = e.target.closest('.hp-dot');
