@@ -396,9 +396,9 @@ function getRowPos(timeMs) {
 
 function updatePlayhead(timeMs) {
   const { x, row } = getRowPos(timeMs);
-  playhead.style.left = x + 'px';
-  playhead.style.top = (row * ROW_HEIGHT + 4) + 'px';
-  playhead.style.height = (ROW_HEIGHT - 8) + 'px';
+  playhead.style.transform = `translate(${x}px, ${row * ROW_HEIGHT + 4}px)`;
+  const h = ROW_HEIGHT - 8;
+  if (playhead.style.height !== h + 'px') playhead.style.height = h + 'px';
 
   const currentRows = Math.round((parseInt(timeline.style.minHeight) || ROW_HEIGHT * MIN_ROWS) / ROW_HEIGHT);
   // During recording: pre-expand when playhead enters the second-to-last row.
@@ -476,8 +476,7 @@ function renderLabels() {
 function resetTimeline() {
   timeline.innerHTML = '';
   timeline.appendChild(playhead);
-  playhead.style.left = '0px';
-  playhead.style.top = '4px';
+  playhead.style.transform = 'translate(0px, 4px)';
   playhead.style.height = (ROW_HEIGHT - 8) + 'px';
   timeline.style.minHeight = (MIN_ROWS * ROW_HEIGHT) + 'px';
   timelineOuter.scrollTop = 0;
