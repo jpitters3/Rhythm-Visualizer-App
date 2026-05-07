@@ -56,6 +56,16 @@ let noteMultipliers = JSON.parse(localStorage.getItem('gp_multipliers')) || {
     'Ding': 0.85, '1': 0.5, '2': 0.5, '3': 0.5, '4': 0.5, '5': 0.5, '6': 0.5, '7': 0.5, '8': 0.5
 };
 
+// When a calibration profile is activated, reload all in-memory calibration variables from localStorage
+// so detection immediately reflects the new profile without requiring a page reload.
+window.addEventListener('cal-profile-activated', () => {
+    noteSensitivities   = JSON.parse(localStorage.getItem('gp_cal')               || '{}');
+    noteClarityAverages = JSON.parse(localStorage.getItem('gp_clarity_profiles')  || '{}');
+    noteBlossomTimes    = JSON.parse(localStorage.getItem('gp_blossom_times')     || '{}');
+    noteMultipliers     = JSON.parse(localStorage.getItem('gp_multipliers')       || '{}');
+    userClarityThreshold = parseFloat(localStorage.getItem('gp_clarity_threshold') || '0.5');
+});
+
 // Note frequencies (Octaves 2-6)
 const NOTE_FREQS = {
     "C2": 65.41, "Cs2": 69.30, "D2": 73.42, "Eb2": 77.78, "E2": 82.41, "F2": 87.31, "Fs2": 92.50, "G2": 98.00, "Gs2": 103.83, "A2": 110.00, "Bb2": 116.54, "B2": 123.47,
@@ -1290,7 +1300,7 @@ function resetGuideUI() {
     }
 }
 
-function startCountdown(callback) {
+export function startCountdown(callback) {
     const overlay = document.getElementById('countdownOverlay');
     const number = document.getElementById('countdownNumber');
     if (!overlay || !number) return callback();
@@ -1491,7 +1501,7 @@ const DEFAULT_MULTIPLIERS = { 'Ding': 0.85, '1': 0.5, '2': 0.5, '3': 0.5, '4': 0
 const DEFAULT_CLARITY_V2 = { 'Ding': 0.5, '1': 0.5, '2': 0.5, '3': 0.5, '4': 0.5, '5': 0.5, '6': 0.5, '7': 0.5, '8': 0.5, 'Tak': 0.5, 'Slap': 0.5 };
 const DEFAULT_VOLUMES = { 'Ding': 0.05, '1': 0.05, '2': 0.05, '3': 0.05, '4': 0.05, '5': 0.05, '6': 0.05, '7': 0.05, '8': 0.05, 'Tak': 0.05, 'Slap': 0.05 };
 
-function openAdvancedCalibrationModal() {
+export function openAdvancedCalibrationModal() {
     const modal = document.getElementById('advancedCalModal');
     const listContainer = document.getElementById('advancedCalList');
     if (!modal || !listContainer) return;
@@ -1618,6 +1628,9 @@ async function saveAdvancedCalibration() {
     localStorage.setItem('gp_cal', JSON.stringify(noteSensitivities));
     localStorage.setItem('gp_clarity_profiles', JSON.stringify(noteClarityAverages));
     localStorage.setItem('gp_blossom_times', JSON.stringify(noteBlossomTimes));
+
+    // Notify cal-profiles.js to sync the active profile snapshot
+    window.dispatchEvent(new CustomEvent('cal-data-changed'));
 
     await alert('Advanced Calibration Settings Saved!');
     closeAdvancedCalibrationModal();

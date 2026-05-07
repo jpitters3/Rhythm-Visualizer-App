@@ -722,6 +722,11 @@ body.dark .admin-menu-btn:hover {
 }
 
 /* Dropdown Content (Hidden by Default) */
+
+.dropdown {
+  position: relative;
+}
+
 .dropdown-content {
   display: none;
   min-width: 200px !important;

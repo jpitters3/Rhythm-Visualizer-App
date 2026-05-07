@@ -1,0 +1,155 @@
+/* ===== Calibration Profiles — list styles only ===== */
+/* Structural layout (modal-overlay, modal-content, modal-header, modal-actions)
+   is handled by modal.css. Only profile-list-specific styles live here. */
+
+.cp-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 46vh;
+  overflow-y: auto;
+}
+
+.cp-empty {
+  font-size: 13px;
+  color: var(--text-secondary, #888);
+  text-align: center;
+  padding: 24px 0 8px;
+  line-height: 1.5;
+}
+
+/* Profile row */
+.cp-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 14px;
+  border-radius: 10px;
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  transition: border-color 0.15s;
+}
+
+.cp-row-active {
+  border-color: var(--accent, #818cf8);
+  background: color-mix(in srgb, var(--accent, #818cf8) 6%, var(--panel));
+}
+
+.cp-row-main {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  flex: 1;
+}
+
+.cp-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--panel-border);
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
+
+.cp-row-active .cp-dot {
+  background: var(--accent, #818cf8);
+}
+
+.cp-row-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.cp-mic {
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cp-loc {
+  font-size: 12px;
+  opacity: 0.55;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cp-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+}
+
+.cp-btn {
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--panel-border);
+  background: var(--bg);
+  color: var(--text);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+}
+
+.cp-btn:hover {
+  background: var(--offwhite);
+}
+
+.cp-use-btn {
+  border-color: var(--accent, #818cf8);
+  color: var(--accent, #818cf8);
+}
+
+.cp-use-btn:hover {
+  background: var(--accent, #818cf8);
+  color: #fff;
+}
+
+.cp-del-btn:hover {
+  border-color: #ef4444;
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.08);
+}
+
+.cp-active-badge {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent, #818cf8);
+  background: color-mix(in srgb, var(--accent, #818cf8) 14%, transparent);
+  padding: 4px 9px;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+
+/* Text inputs in the name sub-modal */
+.cp-text-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--panel-border);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+}
+
+.cp-text-input:focus {
+  outline: 2px solid var(--accent, #818cf8);
+  outline-offset: 0;
+  border-color: transparent;
+}
+
+/* FR header calibration button */
+.fr-cal-btn {
+  border-radius: 8px;
+  padding: 6px 14px;
+  font-size: 13px;
+}

@@ -182,6 +182,8 @@
               </div>
               <div class="dropdown-divider"></div>
             </div>
+            <button id="freeRecordBtn">🎙 Free Record</button>
+            <div class="dropdown-divider"></div>
             <button id="openProfileBtn">👤 Edit Profile</button>
             <button id="openAccountAuthBtn">⚙️ Account Settings</button>
             <button id="authLogoutDropdown">🚪 Sign out</button>
@@ -280,7 +282,7 @@
             <button id="undoBtn" title="Undo (Cmd+Z)" disabled>↩️</button>
             <button id="redoBtn" title="Redo (Cmd+Shift+Z)" style="display:none;" disabled>↪️</button>
             <!-- Microphone -->
-            <div class="dropdown mic-dropdown" style="display: none;">
+            <div class="dropdown">
               <button id="micBtn" class="secondary-btn" title="Toggle mic (Click) / Settings (Auto-open)">🎤</button>
               <div id="micDropdownMenu" class="dropdown-content">
                 <div style="padding: 8px 12px;">
@@ -2480,6 +2482,63 @@
     <div id="studentMgmtBody" class="stmgmt-body"></div>
   </div>
 
+  <!-- Free Record View -->
+  <div id="freeRecordView" style="display:none;">
+    <div class="fr-header">
+      <button id="frBackBtn" class="fr-back-btn">← Back</button>
+      <span class="fr-title">Free Record</span>
+      <button id="frCalBtn" class="fr-cal-btn">🎙 Calibration</button>
+      <button id="frRecordBtn" class="fr-record-btn">● Record</button>
+      <div id="frTransport" class="transport-container fr-transport" data-grid="A"></div>
+      <div class="fr-ts-group">
+        <select id="frTsBeats" class="ts-select fr-ts-select" title="Beats per measure">
+          <option value="2">2</option>
+          <option value="3">3</option>
+          <option value="4" selected>4</option>
+          <option value="5">5</option>
+          <option value="6">6</option>
+          <option value="7">7</option>
+          <option value="8">8</option>
+          <option value="9">9</option>
+          <option value="10">10</option>
+          <option value="11">11</option>
+          <option value="12">12</option>
+        </select>
+        <span class="ts-sep">×</span>
+        <select id="frTsSub" class="ts-select fr-ts-select" title="Subdivision (snap resolution)">
+          <option value="1">♩</option>
+          <option value="2" selected>♪</option>
+          <option value="3">♩³</option>
+          <option value="4">♬</option>
+          <option value="8">1/32</option>
+          <option value="16">1/64</option>
+        </select>
+      </div>
+    </div>
+    <div class="fr-body">
+      <div id="frTimelineOuter" class="fr-timeline-outer">
+        <div id="frTimeline" class="fr-timeline">
+          <div id="frPlayhead" class="fr-playhead"></div>
+        </div>
+      </div>
+      <div class="fr-action-bar">
+        <button id="frPlayBtn" class="fr-action-btn" disabled>▶ Play</button>
+        <button id="frSaveBtn" class="fr-action-btn" disabled>Save</button>
+        <button id="frDiscardBtn" class="fr-action-btn" disabled>Discard</button>
+        <button id="frSnapBtn" class="fr-action-btn fr-snap-btn">🧲 Snap</button>
+        <div class="fr-nudge-group">
+          <button id="frNudgeLeft" class="fr-action-btn fr-nudge-btn" disabled>◀ Nudge</button>
+          <button id="frNudgeRight" class="fr-action-btn fr-nudge-btn" disabled>Nudge ▶</button>
+        </div>
+      </div>
+      <div id="frHandpanSlot" class="fr-handpan-slot"></div>
+      <div class="fr-saved-section">
+        <div class="fr-saved-title">Saved Recordings</div>
+        <div id="frSavedList" class="fr-saved-list"></div>
+      </div>
+    </div>
+  </div>
+
   <!-- Account Settings Sidebar -->
   <div id="accountSettingsBackdrop" class="acct-settings-backdrop"></div>
   <div id="accountSettingsSidebar" class="acct-settings-sidebar" aria-hidden="true">
@@ -2500,6 +2559,50 @@
       });
     }
   </script>
+
+  <!-- Calibration Profiles Modal -->
+  <div id="calProfilesModal" class="modal-overlay" aria-hidden="true">
+    <div class="modal-content" style="max-width: 520px;">
+      <div class="modal-header">
+        <h2>Calibration Profiles</h2>
+        <button id="closeCalProfilesBtn" class="close-btn">&times;</button>
+      </div>
+      <div style="padding: 20px 24px;">
+        <p style="color: var(--text-secondary); font-size: 13px; line-height: 1.5; margin: 0 0 16px;">
+          Profiles store per-note sensitivities for a specific mic and room. Activate a profile to load its settings,
+          then use <strong>Advanced Calibration</strong> from the 🎤 mic menu to fine-tune it.
+        </p>
+        <div id="calProfilesList" class="cp-list"></div>
+      </div>
+      <div class="modal-actions" style="padding: 12px 24px; border-top: 1px solid var(--panel-border);">
+        <button id="calProfileCreateBtn" class="primary-btn">+ Save Current Settings as Profile</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Profile Name / Rename Sub-Modal -->
+  <div id="cpNameModal" class="modal-overlay" aria-hidden="true">
+    <div class="modal-content" style="max-width: 380px;">
+      <div class="modal-header">
+        <h2 id="cpNameModalTitle">New Profile</h2>
+      </div>
+      <div style="padding: 20px 24px;">
+        <div style="margin-bottom: 14px;">
+          <label for="cpMicInput" style="display: block; font-size: 13px; font-weight: 500; margin-bottom: 5px;">Mic / Device Name</label>
+          <input type="text" id="cpMicInput" class="cp-text-input" placeholder="e.g. Yeti, Built-in, AirPods" autocomplete="off" />
+        </div>
+        <div>
+          <label for="cpLocInput" style="display: block; font-size: 13px; font-weight: 500; margin-bottom: 5px;">Location</label>
+          <input type="text" id="cpLocInput" class="cp-text-input" placeholder="e.g. Living Room, Studio, Bedroom" autocomplete="off" />
+        </div>
+      </div>
+      <div class="modal-actions" style="padding: 12px 24px; border-top: 1px solid var(--panel-border);">
+        <button id="cpNameCancelBtn" class="secondary-btn">Cancel</button>
+        <button id="cpNameSaveBtn" class="primary-btn">Save Profile</button>
+      </div>
+    </div>
+  </div>
+
 </body>
 
 </html>
