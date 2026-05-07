@@ -10,8 +10,8 @@ const CELL_SIZE = 52;
 const MIN_ROWS = 4;
 const DEBOUNCE_MS = 80;
 const CLARITY_THRESHOLD = 0.85;
-const FLUX_NEW_STRIKE = 1.35;
 const RMS_FLOOR = 0.015;
+const FLUX_NEW_STRIKE = 1.35;
 
 // Per-note sustain gate: same note can't re-trigger within this window
 // unless RMS rises sharply relative to the original strike (genuine restrike).
@@ -31,7 +31,6 @@ const NOTE_FREQS = {
 let frStream = null;
 let frAnalyser = null;
 let isRecording = false;
-let recordStart = 0;
 let recordStartAudioTime = 0; // AudioContext.currentTime at recording start
 let frInputLatencyMs = 0;     // computed once per recording: analyser buffer + device input latency
 let recordDuration = 0;
@@ -47,6 +46,7 @@ let playheadRAF = null;
 let playbackTimers = [];
 let nextEventId = 0;
 let selectedIds = new Set();
+let lastSelectedId = null;
 
 // Drag state
 let dragEventIds = null;
@@ -245,16 +245,16 @@ function detectionLoop() {
   if (result && result.clarity >= CLARITY_THRESHOLD) {
     const label = findClosestNote(result.freq);
     if (label && (audioElapsedMs - lastNoteTime >= DEBOUNCE_MS)) {
-      // Global same-note flux check (last detected label)
+      // Rolling flux check: blocks frame-to-frame sustain for as long as the note rings.
+      // flux ≈ 1.0 during sustain (RMS barely changing), well below the 1.35 threshold.
       const isGlobalSustain = label === lastDetectedLabel && flux < FLUX_NEW_STRIKE;
 
-      // Per-note gate: block same note within NOTE_GATE_MS unless RMS is meaningfully
-      // higher than the original strike — catches sustained ring that outlasts other notes.
+      // Per-note gate: blocks re-triggers when other notes played in between.
+      // Expires after NOTE_GATE_MS so genuine re-strikes are eventually allowed.
       let isGatedSustain = false;
       const gate = noteGate.get(label);
       if (gate && (audioElapsedMs - gate.time) < NOTE_GATE_MS) {
-        const rmsRatio = frameRms / gate.rms;
-        if (rmsRatio < NOTE_RESTRIKE_FLUX) isGatedSustain = true;
+        if (frameRms / gate.rms < NOTE_RESTRIKE_FLUX) isGatedSustain = true;
       }
 
       if (!isGlobalSustain && !isGatedSustain) {
@@ -308,7 +308,6 @@ async function startRecording() {
 
     startCountdown(() => {
       const audioCtx = getAudioCtx();
-      recordStart = Date.now();
       recordStartAudioTime = audioCtx.currentTime;
 
       // Latency comp = half the analyser buffer (average note position in buffer) + device input latency.
@@ -339,9 +338,7 @@ async function startRecording() {
 function stopRecording() {
   isRecording = false;
   const audioCtx = getAudioCtx();
-  recordDuration = audioCtx
-    ? (audioCtx.currentTime - recordStartAudioTime) * 1000
-    : Date.now() - recordStart;
+  recordDuration = (audioCtx.currentTime - recordStartAudioTime) * 1000;
 
   if (frStream) { frStream.getTracks().forEach(t => t.stop()); frStream = null; }
   frAnalyser = null;
@@ -805,8 +802,6 @@ export function closeFreeRecordView() {
 }
 
 // --- Selection ---
-
-let lastSelectedId = null;
 
 timeline.addEventListener('click', e => {
   if (wasDragging) { wasDragging = false; return; }
