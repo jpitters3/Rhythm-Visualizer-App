@@ -5,8 +5,9 @@ import { Bus, BUS_EVENT } from './bus.js';
 
 const BUFSIZE = 2048;
 const buf = new Float32Array(BUFSIZE);
-const ROW_HEIGHT = 72;
+const ROW_HEIGHT = 82;
 const CELL_SIZE = 52;
+const BEAT_MARGIN = 40; // px from edge to first/last beat center; keeps pulse animation unclipped
 const MIN_ROWS = 4;
 const DEBOUNCE_MS = 80;
 const CLARITY_THRESHOLD = 0.85;
@@ -389,7 +390,7 @@ function getRowPos(timeMs) {
   const measureMs = beatMs * beats;
   const row = Math.floor(timeMs / measureMs);
   const beatInMeasure = (timeMs - row * measureMs) / beatMs; // 0..beats
-  const x = CELL_SIZE / 2 + (beatInMeasure / beats) * (w - CELL_SIZE);
+  const x = BEAT_MARGIN + (beatInMeasure / beats) * (w - 2 * BEAT_MARGIN);
   return { x, row };
 }
 
@@ -427,7 +428,7 @@ function updateBeatLines() {
   if (!w) return;
   const beats = activeGrid?.beats || 4;
   const sub = activeGrid?.subdivision || 2;
-  const beatPx = (w - CELL_SIZE) / beats;
+  const beatPx = (w - 2 * BEAT_MARGIN) / beats;
   const subPx = beatPx / sub;
   const layers = [
     `repeating-linear-gradient(180deg, transparent 0px, transparent ${ROW_HEIGHT - 1}px, var(--panel-border) ${ROW_HEIGHT - 1}px, var(--panel-border) ${ROW_HEIGHT}px)`,
@@ -437,7 +438,7 @@ function updateBeatLines() {
     layers.push(`repeating-linear-gradient(90deg, var(--fr-subdiv-line) 0px, var(--fr-subdiv-line) 1px, transparent 1px, transparent ${subPx}px)`);
   }
   timeline.style.backgroundImage = layers.join(', ');
-  timeline.style.backgroundPosition = `${CELL_SIZE / 2}px 0`;
+  timeline.style.backgroundPosition = `${BEAT_MARGIN}px 0`;
   renderLabels();
 }
 
@@ -447,7 +448,7 @@ function renderLabels() {
   if (!w) return;
   const beats = activeGrid?.beats || 4;
   const sub = activeGrid?.subdivision || 2;
-  const beatPx = (w - CELL_SIZE) / beats;
+  const beatPx = (w - 2 * BEAT_MARGIN) / beats;
   const numRows = Math.max(MIN_ROWS, Math.round((parseInt(timeline.style.minHeight) || ROW_HEIGHT * MIN_ROWS) / ROW_HEIGHT));
   const showAnd = sub >= 2;
 
@@ -456,7 +457,7 @@ function renderLabels() {
       const el = document.createElement('div');
       el.className = 'fr-beat-label';
       el.textContent = String(b + 1);
-      el.style.left = (CELL_SIZE / 2 + b * beatPx + 3) + 'px';
+      el.style.left = (BEAT_MARGIN + b * beatPx + 3) + 'px';
       el.style.top = (r * ROW_HEIGHT + 4) + 'px';
       timeline.appendChild(el);
 
@@ -464,7 +465,7 @@ function renderLabels() {
         const half = document.createElement('div');
         half.className = 'fr-beat-label fr-beat-label-sub';
         half.textContent = '&';
-        half.style.left = (CELL_SIZE / 2 + b * beatPx + beatPx / 2 + 3) + 'px';
+        half.style.left = (BEAT_MARGIN + b * beatPx + beatPx / 2 + 3) + 'px';
         half.style.top = (r * ROW_HEIGHT + 4) + 'px';
         timeline.appendChild(half);
       }
@@ -519,7 +520,7 @@ function clientPosToTime(clientX, clientY) {
   const localX = Math.max(0, Math.min(w - 1, clientX - rect.left));
   const localY = Math.max(0, clientY - rect.top);
   const row = Math.floor(localY / ROW_HEIGHT);
-  const beatFraction = Math.max(0, Math.min(1, (localX - CELL_SIZE / 2) / (w - CELL_SIZE)));
+  const beatFraction = Math.max(0, Math.min(1, (localX - BEAT_MARGIN) / (w - 2 * BEAT_MARGIN)));
   return Math.max(0, row * measureMs + beatFraction * measureMs);
 }
 

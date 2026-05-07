@@ -188,6 +188,7 @@ body.dark .fr-cell {
   user-select: none;
   line-height: 1;
   color: var(--text);
+  z-index: 2;
 }
 
 .fr-beat-label-sub {
