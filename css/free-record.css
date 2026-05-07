@@ -259,6 +259,16 @@ body.dark .fr-cell {
   font-weight: 500;
 }
 
+.fr-send-studio-btn:not(:disabled) {
+  border-color: var(--accent, #818cf8);
+  color: var(--accent, #818cf8);
+}
+
+.fr-send-studio-btn:not(:disabled):hover {
+  background: var(--accent, #818cf8);
+  color: #fff;
+}
+
 /* Saved list */
 .fr-saved-section {
   display: flex;

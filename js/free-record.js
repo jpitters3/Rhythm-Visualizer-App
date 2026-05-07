@@ -2,6 +2,7 @@ import { getAudioCtx, unlockAudio, playNoteByLabel, getVolume, setBeats, setSubd
 import { getScale, isListening, activeGrid } from './state.js';
 import { turnOffMic, startCountdown } from './transcription.js';
 import { Bus, BUS_EVENT } from './bus.js';
+import { applyPattern } from './pattern-crud.js';
 
 const BUFSIZE = 2048;
 const buf = new Float32Array(BUFSIZE);
@@ -84,6 +85,7 @@ const playBtn       = document.getElementById('frPlayBtn');
 const saveBtn       = document.getElementById('frSaveBtn');
 const discardBtn    = document.getElementById('frDiscardBtn');
 const snapBtn           = document.getElementById('frSnapBtn');
+const sendToStudioBtn   = document.getElementById('frSendToStudioBtn');
 const nudgeLeftBtn      = document.getElementById('frNudgeLeft');
 const nudgeRightBtn     = document.getElementById('frNudgeRight');
 const savedList         = document.getElementById('frSavedList');
@@ -306,6 +308,7 @@ async function startRecording() {
     playBtn.disabled = true;
     saveBtn.disabled = true;
     discardBtn.disabled = true;
+    if (sendToStudioBtn) sendToStudioBtn.disabled = true;
 
     startCountdown(() => {
       const audioCtx = getAudioCtx();
@@ -372,6 +375,7 @@ function stopRecording() {
   playBtn.disabled = !hasEvents;
   saveBtn.disabled = !hasEvents;
   discardBtn.disabled = !hasEvents;
+  if (sendToStudioBtn) sendToStudioBtn.disabled = !hasEvents;
 }
 
 // --- Timeline ---
@@ -580,6 +584,7 @@ function fillPlaceholder(noteLabel) {
   playBtn.disabled = false;
   saveBtn.disabled = false;
   discardBtn.disabled = false;
+  if (sendToStudioBtn) sendToStudioBtn.disabled = false;
 }
 
 // --- Playback ---
@@ -652,6 +657,7 @@ function discardRecording() {
   playBtn.disabled = true;
   saveBtn.disabled = true;
   discardBtn.disabled = true;
+  if (sendToStudioBtn) sendToStudioBtn.disabled = true;
   updateNudgeBtns();
 }
 
@@ -740,6 +746,7 @@ function loadRecording(rec) {
   playBtn.disabled = false;
   saveBtn.disabled = true;
   discardBtn.disabled = false;
+  if (sendToStudioBtn) sendToStudioBtn.disabled = false;
 }
 
 savedList?.addEventListener('click', e => {
@@ -957,6 +964,52 @@ document.addEventListener('pointercancel', e => {
   rerenderCells();
 });
 
+// --- Send to Studio ---
+
+function sendToStudio() {
+  if (!events.length) return;
+
+  const bpm        = activeGrid?.bpm        || 120;
+  const beats      = activeGrid?.beats      || 4;
+  const subdivision = activeGrid?.subdivision || 2;
+
+  const beatMs        = 60000 / bpm;
+  const measureMs     = beatMs * beats;
+  const stepMs        = beatMs / subdivision;
+  const stepsPerMeasure = beats * subdivision;
+
+  const maxTimeMs   = recordDuration > 0
+    ? recordDuration
+    : Math.max(...events.map(e => e.time)) + measureMs;
+  const numMeasures = Math.max(1, Math.ceil(maxTimeMs / measureMs));
+  const totalSteps  = numMeasures * stepsPerMeasure;
+
+  // Snap each event to nearest subdivision step; earliest note wins on collision
+  const labels = Array(totalSteps).fill('');
+  const sorted = events.slice().sort((a, b) => a.time - b.time);
+  for (const ev of sorted) {
+    const idx = Math.max(0, Math.min(totalSteps - 1, Math.round(ev.time / stepMs)));
+    if (!labels[idx]) labels[idx] = ev.label;
+  }
+
+  const state = {
+    version: (typeof window.VERSION !== 'undefined' ? window.VERSION : 'v1.0'),
+    beats,
+    subdivision,
+    bpm,
+    handSplit: false,
+    steps: stepsPerMeasure,
+    measures: numMeasures,
+    labels,
+    hands: Array(totalSteps).fill(null),
+    tags: [],
+  };
+
+  closeFreeRecordView();
+  window.location.hash = '#studio';
+  applyPattern(state);
+}
+
 // --- Button Wiring ---
 
 backBtn?.addEventListener('click', closeFreeRecordView);
@@ -974,6 +1027,7 @@ playBtn?.addEventListener('click', () => {
 
 saveBtn?.addEventListener('click', saveRecording);
 discardBtn?.addEventListener('click', discardRecording);
+sendToStudioBtn?.addEventListener('click', sendToStudio);
 
 // Time signature / subdivision controls in FR header
 frTsBeatsEl?.addEventListener('change', () => {
