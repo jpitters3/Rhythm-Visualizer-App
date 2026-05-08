@@ -280,7 +280,8 @@ body.dark .cell.play {
 }
 
 body.present .cell.play {
-  outline: none;
+  outline: 3px solid #a855f7;
+  outline-offset: 4px;
 }
 
 .cell .inner {

@@ -1,7 +1,7 @@
 /* ===== PRESENTATION MODE ===== */
 import { gridA, activeGrid } from './grid-context.js';
 import { labelForStep } from './notegrid.js';
-import { addTickObserver, getPlaybackPosition, intervalMs } from './noteplayer.js';
+import { addTickObserver, getPlaybackPosition } from './noteplayer.js';
 import { TransportRegistry } from './transport-ui.js';
 import { Bus, BUS_EVENT } from './bus.js';
 import { HANDPAN_MAP } from './handpanmap.js';
@@ -84,7 +84,6 @@ async function exitFullscreenIfPossible() {
 }
 
 let animationFrameId;
-let measureTransitionTimeout = null;
 
 function animatePresentation() {
   if (!document.body.classList.contains('present')) return;
@@ -154,8 +153,6 @@ export async function setPresentation(on) {
     const pControls = document.getElementById('presentationControls');
     if (pControls) pControls.style.display = 'none';
     cancelAnimationFrame(animationFrameId);
-    if (measureTransitionTimeout) { clearTimeout(measureTransitionTimeout); measureTransitionTimeout = null; }
-
     // cleanup view
     const streamContainer = document.getElementById('stream-view');
     if (streamContainer) streamContainer.style.display = 'none';
@@ -250,18 +247,29 @@ export function initPresentation() {
     const stepsPerMeasure = ctx.stepsPerMeasure;
     const totalSteps = (ctx.measures || 1) * stepsPerMeasure;
 
-    // Fire the class swap halfway between the last beat of this measure
-    // and the first beat of the next measure.
+    // Switch to the next measure immediately on the last beat of the current measure.
     const isLastBeatOfMeasure = (step + 1) % stepsPerMeasure === 0;
     if (isLastBeatOfMeasure) {
-      if (measureTransitionTimeout) clearTimeout(measureTransitionTimeout);
-      const halfBeat = intervalMs(ctx) / 2;
       const nextStep = (step + 1) % totalSteps;
-      measureTransitionTimeout = setTimeout(() => {
-        measureTransitionTimeout = null;
-        updatePresentationView(nextStep, ctx);
-      }, halfBeat);
+      updatePresentationView(nextStep, ctx);
     }
+  });
+
+  // When playback starts, force-reset the measure view so the first measure always
+  // slides in fresh — even if lastMeasureIndex already equals 0 from a previous session.
+  window.addEventListener('playbackStateChange', (e) => {
+    if (!e.detail?.grid || e.detail.grid.id !== 'A') return;
+    if (!e.detail.grid.playing) return;
+    if (!document.body.classList.contains('present')) return;
+    const measuresEl = document.getElementById('measures');
+    if (measuresEl) {
+      Array.from(measuresEl.getElementsByClassName('measure-row')).forEach(row => {
+        row.classList.remove('current-measure', 'next-measure', 'next-measure-2');
+      });
+      void measuresEl.offsetHeight; // force reflow so CSS registers the removal
+    }
+    lastMeasureIndex = -1;
+    updatePresentationView(0, gridA);
   });
 
   // Detect externally triggered Fullscreen exit (e.g. Esc key by user)
@@ -635,9 +643,7 @@ function updateMeasureView(currentStep, ctx) {
   const measureRows = Array.from(measuresEl.getElementsByClassName('measure-row'));
 
   measureRows.forEach((row, index) => {
-    // Reset classes
     row.classList.remove('current-measure', 'next-measure', 'next-measure-2');
-
     if (index === currentMeasureIndex) {
       row.classList.add('current-measure');
     } else if (index === currentMeasureIndex + 1) {
