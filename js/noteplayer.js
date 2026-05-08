@@ -810,6 +810,10 @@ export async function start(ctx, isSync = true, skipCountdown = false) {
 
   scheduler(c);
 
+  if (c.id === 'A') {
+    window.dispatchEvent(new CustomEvent('playbackStateChange', { detail: { grid: c } }));
+  }
+
   // A -> B Sync
   if (isSync && c === gridA && gridB) {
     const isDual = document.getElementById('dualModeBtn')?.classList.contains('active');

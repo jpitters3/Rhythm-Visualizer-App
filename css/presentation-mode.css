@@ -120,13 +120,9 @@ body.present .measure-row {
   position: fixed;
   left: 50%;
   top: var(--measure-top);
-  /* Old fade-only animation: */
-  /* transition: opacity 0.15s ease; */
-  /* Slide + fade: exits upward (it passed), enters from below */
-  transform: translateX(-50%) translateY(-60px);
+  transform: translateX(-50%);
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.3s ease, transform 0.3s ease;
   display: block !important;
   width: 600px;
 }
@@ -155,24 +151,22 @@ body.present .static-labels div {
   text-align: center;
 }
 
-/* Current measure — slides up from next position, brightens */
+/* Current measure */
 body.present .measure-row.current-measure {
   transform: translateX(-50%) translateY(0);
   opacity: 1;
   pointer-events: auto;
   z-index: 10;
   width: 600px;
-  transition: opacity 0.3s ease, transform 0.3s ease;
 }
 
-/* Next measure — snaps to resting position (no transform transition on entry), fades in faded */
+/* Next measure — on-deck, no animation into current position */
 body.present .measure-row.next-measure {
   transform: translateX(-50%) translateY(116px);
   opacity: 0.4;
   pointer-events: none;
   z-index: 5;
   width: 520px;
-  transition: opacity 0.3s ease;
 }
 
 /* n+2 — hidden */
