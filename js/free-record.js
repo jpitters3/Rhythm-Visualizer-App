@@ -3,6 +3,7 @@ import { getScale, isListening, activeGrid } from './state.js';
 import { turnOffMic, startCountdown } from './transcription.js';
 import { Bus, BUS_EVENT } from './bus.js';
 import { applyPattern } from './pattern-crud.js';
+import { TransportRegistry } from './transport-ui.js';
 
 const BUFSIZE = 2048;
 const buf = new Float32Array(BUFSIZE);
@@ -32,6 +33,7 @@ const NOTE_FREQS = {
 // --- State ---
 let frStream = null;
 let frAnalyser = null;
+let frAudioBuffer = null;   // decoded AudioBuffer when a file is loaded
 let isRecording = false;
 let recordStartAudioTime = 0; // AudioContext.currentTime at recording start
 let frInputLatencyMs = 0;     // computed once per recording: analyser buffer + device input latency
@@ -86,6 +88,9 @@ const saveBtn       = document.getElementById('frSaveBtn');
 const discardBtn    = document.getElementById('frDiscardBtn');
 const snapBtn           = document.getElementById('frSnapBtn');
 const sendToStudioBtn   = document.getElementById('frSendToStudioBtn');
+const frFileInput       = document.getElementById('frFileInput');
+const frUploadBtn       = document.getElementById('frUploadBtn');
+const frFileNameEl      = document.getElementById('frFileName');
 const nudgeLeftBtn      = document.getElementById('frNudgeLeft');
 const nudgeRightBtn     = document.getElementById('frNudgeRight');
 const savedList         = document.getElementById('frSavedList');
@@ -101,6 +106,7 @@ const handpanOverlayBotEl = document.getElementById('handpanOverlayBottom');
 // --- Standalone Metronome ---
 
 function frScheduleClick(atTime, kind) {
+  if (!activeGrid?.metronomeOn) return;
   const ctx = getAudioCtx();
   if (!ctx) return;
   const vol = getVolume('metronome') ?? 1;
@@ -280,6 +286,7 @@ function detectionLoop() {
 // --- Recording ---
 
 async function startRecording() {
+  if (frAudioBuffer) { analyzeFileOffline(); return; }
   if (isListening) await turnOffMic();
 
   try {
@@ -290,11 +297,9 @@ async function startRecording() {
     frStream = await navigator.mediaDevices.getUserMedia({
       audio: { echoCancellation: false, autoGainControl: false, noiseSuppression: false }
     });
-
-    const source = audioCtx.createMediaStreamSource(frStream);
     frAnalyser = audioCtx.createAnalyser();
     frAnalyser.fftSize = BUFSIZE;
-    source.connect(frAnalyser);
+    audioCtx.createMediaStreamSource(frStream).connect(frAnalyser);
 
     events = [];
     selectedIds.clear();
@@ -311,21 +316,15 @@ async function startRecording() {
     if (sendToStudioBtn) sendToStudioBtn.disabled = true;
 
     startCountdown(() => {
-      const audioCtx = getAudioCtx();
-      recordStartAudioTime = audioCtx.currentTime;
-
-      // Latency comp = half the analyser buffer (average note position in buffer) + device input latency.
-      // audioCtx.baseLatency covers hardware I/O round-trip; halving it approximates one-way input latency.
       const sampleRate = audioCtx.sampleRate || 44100;
+      recordStartAudioTime = audioCtx.currentTime;
       frInputLatencyMs = ((BUFSIZE / sampleRate) / 2 + (audioCtx.baseLatency || 0.02) / 2) * 1000;
-
       lastNoteTime = 0;
       prevRms = 0;
       lastDetectedLabel = null;
       noteGate.clear();
       isRecording = true;
 
-      // Auto-start metronome, anchored to AudioContext time for drift-free sync
       const metroPlayBtn = document.querySelector('#frTransport .t-play-btn');
       if (!frMetroPlaying) {
         startFrMetro(audioCtx.currentTime);
@@ -335,7 +334,7 @@ async function startRecording() {
       requestAnimationFrame(detectionLoop);
     });
   } catch (err) {
-    console.error('[FreeRecord] Mic error:', err);
+    console.error('[FreeRecord] Recording error:', err);
   }
 }
 
@@ -421,8 +420,11 @@ function updateTimelineHeight() {
     events.length ? Math.max(...events.map(e => e.time)) : 0
   );
   const newRows = maxTime > 0 ? (getRowPos(maxTime).row + 1) : MIN_ROWS;
-  const newHeight = Math.max(MIN_ROWS, newRows) * ROW_HEIGHT;
   const prevHeight = parseInt(timeline.style.minHeight) || 0;
+  // During recording updatePlayhead owns the height — only grow, never shrink.
+  const newHeight = isRecording
+    ? Math.max(prevHeight, Math.max(MIN_ROWS, newRows) * ROW_HEIGHT)
+    : Math.max(MIN_ROWS, newRows) * ROW_HEIGHT;
   timeline.style.minHeight = newHeight + 'px';
   if (newHeight !== prevHeight) renderLabels();
 }
@@ -796,6 +798,7 @@ export function closeFreeRecordView() {
   if (isRecording) stopRecording();
   stopPlayback();
   stopFrMetro();
+  clearAudioFile();
   clearPlaceholder();
   const metroPlayBtn = document.querySelector('#frTransport .t-play-btn');
   if (metroPlayBtn) { metroPlayBtn.textContent = '►'; metroPlayBtn.classList.remove('active'); }
@@ -964,6 +967,201 @@ document.addEventListener('pointercancel', e => {
   rerenderCells();
 });
 
+// --- BPM Detection ---
+
+function detectBpm(times) {
+  if (times.length < 4) return null;
+
+  // Consecutive inter-onset intervals, ignoring pauses > 3 s and glitches < 60 ms
+  const iois = [];
+  for (let i = 1; i < times.length; i++) {
+    const d = times[i] - times[i - 1];
+    if (d >= 60 && d <= 3000) iois.push(d);
+  }
+  if (iois.length < 3) return null;
+
+  // Histogram with 10 ms bins, triangle-smoothed so nearby bins share weight
+  const BIN = 10;
+  const bins = new Float32Array(301); // 0..3000 ms
+  iois.forEach(d => {
+    const b = Math.round(d / BIN);
+    if (b >= bins.length) return;
+    bins[b]     += 1;
+    if (b > 0)  bins[b - 1] += 0.5;
+    if (b > 1)  bins[b - 2] += 0.25;
+    if (b < bins.length - 1) bins[b + 1] += 0.5;
+    if (b < bins.length - 2) bins[b + 2] += 0.25;
+  });
+
+  let peak = 1, peakVal = 0;
+  for (let i = 1; i < bins.length; i++) {
+    if (bins[i] > peakVal) { peakVal = bins[i]; peak = i; }
+  }
+
+  const ioi = peak * BIN; // dominant IOI in ms
+  if (ioi < 60) return null;
+
+  // Fold into 40–180 BPM (halve if subdivisions are the dominant IOI)
+  let bpm = 60000 / ioi;
+  while (bpm > 180) bpm /= 2;
+  while (bpm < 40)  bpm *= 2;
+
+  return Math.round(bpm);
+}
+
+// --- Offline File Analysis ---
+// Processes the entire AudioBuffer directly rather than in real-time.
+// Benefits over real-time: 2× temporal resolution (50% hop overlap), normalization
+// so RMS_FLOOR never gates out notes, and a lower clarity threshold suited for
+// recorded audio (reverb, encoding artifacts, distance).
+
+const FILE_CLARITY_THRESHOLD = 0.72; // vs mic's 0.85
+
+async function analyzeFileOffline() {
+  events = [];
+  selectedIds.clear();
+  lastSelectedId = null;
+  clearPlaceholder();
+  resetTimeline();
+  updateNudgeBtns();
+
+  recordBtn.textContent = '⏳ Analyzing…';
+  recordBtn.classList.add('active');
+  playBtn.disabled = true;
+  saveBtn.disabled = true;
+  discardBtn.disabled = true;
+  if (sendToStudioBtn) sendToStudioBtn.disabled = true;
+
+  // Let the browser paint the "Analyzing…" state before the sync work begins.
+  await new Promise(r => setTimeout(r, 30));
+
+  const sampleRate = frAudioBuffer.sampleRate;
+  const len = frAudioBuffer.length;
+  const numCh = frAudioBuffer.numberOfChannels;
+
+  // Mix all channels to mono.
+  const mono = new Float32Array(len);
+  for (let c = 0; c < numCh; c++) {
+    const ch = frAudioBuffer.getChannelData(c);
+    for (let i = 0; i < len; i++) mono[i] += ch[i] / numCh;
+  }
+
+  // Normalize to peak ≈ 0.9 so autoCorrelate's RMS_FLOOR never rejects notes
+  // that are simply quieter than the mic tuning assumed.
+  let peak = 0;
+  for (let i = 0; i < len; i++) { const a = Math.abs(mono[i]); if (a > peak) peak = a; }
+  if (peak > 0.001) {
+    const gain = 0.9 / peak;
+    for (let i = 0; i < len; i++) mono[i] *= gain;
+  }
+
+  const hopSize = BUFSIZE >> 1; // 50% overlap → catch onsets between RAFs
+  const frame = new Float32Array(BUFSIZE);
+
+  let localPrevRms = 0;
+  let localLastNoteTime = -Infinity;
+  let localLastLabel = null;
+  const localGate = new Map();
+
+  for (let offset = 0; offset + BUFSIZE <= len; offset += hopSize) {
+    frame.set(mono.subarray(offset, offset + BUFSIZE));
+    const timeMs = (offset / sampleRate) * 1000;
+
+    const result = autoCorrelate(frame, sampleRate);
+    const frameRms = result ? result.rms : localPrevRms;
+    const flux = localPrevRms > 0 ? frameRms / localPrevRms : 99;
+    localPrevRms = frameRms;
+
+    if (result && result.clarity >= FILE_CLARITY_THRESHOLD) {
+      const label = findClosestNote(result.freq);
+      if (label && (timeMs - localLastNoteTime >= DEBOUNCE_MS)) {
+        const isGlobalSustain = label === localLastLabel && flux < FLUX_NEW_STRIKE;
+        let isGatedSustain = false;
+        const gate = localGate.get(label);
+        if (gate && (timeMs - gate.time) < NOTE_GATE_MS) {
+          if (frameRms / gate.rms < NOTE_RESTRIKE_FLUX) isGatedSustain = true;
+        }
+        if (!isGlobalSustain && !isGatedSustain) {
+          localLastNoteTime = timeMs;
+          localLastLabel = label;
+          localGate.set(label, { time: timeMs, rms: frameRms });
+          events.push({ id: nextEventId++, label, time: timeMs });
+        }
+      }
+    }
+  }
+
+  // Set duration from the actual audio length.
+  recordDuration = (len / sampleRate) * 1000;
+
+  events.sort((a, b) => a.time - b.time);
+
+  // --- BPM detection ---
+  const detectedBpm = detectBpm(events.map(e => e.time));
+  if (detectedBpm && activeGrid) {
+    activeGrid.bpm = detectedBpm;
+    TransportRegistry.updateAll(activeGrid);
+    updateBeatLines();
+  }
+
+  // --- Shift so the first note lands on beat 1 (t = 0) ---
+  if (events.length > 0) {
+    const offset = events[0].time;
+    events.forEach(ev => ev.time -= offset);
+    recordDuration = Math.max(0, recordDuration - offset);
+  }
+
+  // Render cells and trim trailing empty rows (mirrors stopRecording logic).
+  events.forEach(ev => appendCell(ev, false));
+
+  if (events.length) {
+    const bpm = activeGrid?.bpm || 120;
+    const beats = activeGrid?.beats || 4;
+    const measureMs = (60000 / bpm) * beats;
+    const lastNoteRow = Math.floor(Math.max(...events.map(e => e.time)) / measureMs);
+    const trimmedRows = Math.max(MIN_ROWS, lastNoteRow + 1);
+    timeline.style.minHeight = (trimmedRows * ROW_HEIGHT) + 'px';
+    recordDuration = Math.min(recordDuration, trimmedRows * measureMs);
+  } else {
+    updateTimelineHeight();
+  }
+  renderLabels();
+
+  recordBtn.textContent = '● Analyze File';
+  recordBtn.classList.remove('active');
+
+  const hasEvents = events.length > 0;
+  playBtn.disabled = !hasEvents;
+  saveBtn.disabled = !hasEvents;
+  discardBtn.disabled = !hasEvents;
+  if (sendToStudioBtn) sendToStudioBtn.disabled = !hasEvents;
+}
+
+// --- File Upload ---
+
+async function loadAudioFile(file) {
+  try {
+    unlockAudio();
+    const audioCtx = getAudioCtx();
+    const arrayBuffer = await file.arrayBuffer();
+    frAudioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+    if (frFileNameEl) {
+      frFileNameEl.textContent = file.name;
+      frFileNameEl.style.display = 'inline-flex';
+    }
+    recordBtn.textContent = '● Analyze File';
+  } catch (err) {
+    console.error('[FreeRecord] Audio decode error:', err);
+  }
+}
+
+function clearAudioFile() {
+  frAudioBuffer = null;
+  if (frFileNameEl) frFileNameEl.style.display = 'none';
+  recordBtn.textContent = '● Record';
+  if (frFileInput) frFileInput.value = '';
+}
+
 // --- Send to Studio ---
 
 function sendToStudio() {
@@ -1028,6 +1226,14 @@ playBtn?.addEventListener('click', () => {
 saveBtn?.addEventListener('click', saveRecording);
 discardBtn?.addEventListener('click', discardRecording);
 sendToStudioBtn?.addEventListener('click', sendToStudio);
+
+frUploadBtn?.addEventListener('click', () => frFileInput?.click());
+frFileInput?.addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (file) loadAudioFile(file);
+  e.target.value = '';
+});
+frFileNameEl?.addEventListener('click', clearAudioFile);
 
 // Time signature / subdivision controls in FR header
 frTsBeatsEl?.addEventListener('change', () => {
