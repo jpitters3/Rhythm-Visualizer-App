@@ -417,6 +417,25 @@ function renderItemResponse(item, responseData, isLocked) {
       `;
     }
 
+    case 'phrase': {
+      const config = item.config ?? {};
+      const phraseName = config.pattern_name ?? '';
+      const checked = responseData.completed ? 'checked' : '';
+      const loadBtn = !isLocked && config.pattern_json
+        ? `<button class="si-comp-load-btn" data-action="load-phrase" data-item-id="${item.id}">▶ Open in Studio</button>`
+        : '';
+      return `
+        <div class="si-composition-ref">
+          ${phraseName ? `<div class="si-comp-title">${escapeHtml(phraseName)}</div>` : ''}
+          ${loadBtn}
+          <label class="student-inbox-mark-complete-label" style="margin-top:10px">
+            <input type="checkbox" data-field="mark_complete" ${checked} ${disabled} />
+            <span>${responseData.completed ? '✅ Marked as practised' : 'Mark as practised'}</span>
+          </label>
+        </div>
+      `;
+    }
+
     default:
       return '';
   }
@@ -425,12 +444,19 @@ function renderItemResponse(item, responseData, isLocked) {
 // ===== ITEM RESPONSE EVENTS =====
 
 function handleItemsClick(e) {
-  // Load composition into studio
   if (e.target.closest('[data-action="load-composition"]')) {
     const btn = e.target.closest('[data-action="load-composition"]');
     const itemId = btn.dataset.itemId;
     const item = currentItems.find(i => i.id === itemId);
     if (item) loadCompositionInStudio(item);
+    return;
+  }
+
+  if (e.target.closest('[data-action="load-phrase"]')) {
+    const btn = e.target.closest('[data-action="load-phrase"]');
+    const itemId = btn.dataset.itemId;
+    const item = currentItems.find(i => i.id === itemId);
+    if (item) loadPhraseInStudio(item);
     return;
   }
 
@@ -444,10 +470,11 @@ function handleItemsClick(e) {
   const span = e.target.nextElementSibling;
   if (span) {
     const item = currentItems.find(i => i.id === itemId);
+    const isPhrase = item?.item_type === 'phrase';
     const isComp = item?.item_type === 'composition_reference';
     span.textContent = checked
-      ? (isComp ? '✅ Marked as studied' : '✅ Marked as done')
-      : (isComp ? 'Mark as studied' : 'Mark as completed');
+      ? (isPhrase ? '✅ Marked as practised' : isComp ? '✅ Marked as studied' : '✅ Marked as done')
+      : (isPhrase ? 'Mark as practised' : isComp ? 'Mark as studied' : 'Mark as completed');
   }
 }
 
@@ -458,6 +485,15 @@ async function loadCompositionInStudio(item) {
   const { openCompositionById } = await import('./song-composer.js');
   inboxPanel?.close();
   await openCompositionById(compositionId);
+}
+
+async function loadPhraseInStudio(item) {
+  const patternJson = item.config?.pattern_json;
+  if (!patternJson) return;
+
+  const { applyPattern } = await import('./pattern-crud.js');
+  inboxPanel?.close();
+  await applyPattern(patternJson);
 }
 
 function handleItemsChange(e) {
