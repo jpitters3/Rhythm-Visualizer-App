@@ -748,6 +748,11 @@ function renderEditor() {
   const courseSelect = document.getElementById('asgnCourseSelect');
   if (courseSelect) courseSelect.value = a?.course_id ?? '';
 
+  // Phrase select
+  populatePhraseSelect();
+  const phraseSelect = document.getElementById('asgnPhraseSelect');
+  if (phraseSelect) phraseSelect.value = a?.phrase_name ?? '';
+
   // Delete btn
   const deleteBtn = document.getElementById('asgnDeleteBtn');
   if (deleteBtn) deleteBtn.style.display = a?.id ? '' : 'none';
@@ -764,6 +769,19 @@ function renderEditor() {
   }
 
   renderItemsList();
+}
+
+function populatePhraseSelect() {
+  const sel = document.getElementById('asgnPhraseSelect');
+  if (!sel) return;
+  sel.innerHTML = '<option value="">— None —</option>';
+  phrasesList.forEach(p => {
+    const opt = document.createElement('option');
+    opt.value = p.name;
+    opt.textContent = p.name;
+    sel.appendChild(opt);
+  });
+  if (currentAssignment?.phrase_name) sel.value = currentAssignment.phrase_name;
 }
 
 function populateCourseSelect() {
@@ -1456,6 +1474,10 @@ async function handleSave() {
     video_url: document.getElementById('asgnVideoUrl')?.value.trim() || null,
     folder_id: document.getElementById('asgnFolderSelect')?.value || null,
     course_id: document.getElementById('asgnCourseSelect')?.value || null,
+    phrase_name: document.getElementById('asgnPhraseSelect')?.value || null,
+    phrase_json: document.getElementById('asgnPhraseSelect')?.value
+      ? (phrasesList.find(p => p.name === document.getElementById('asgnPhraseSelect').value)?.data ?? null)
+      : null,
     default_due_date: document.getElementById('asgnDueDate')?.value || null,
     is_published: document.getElementById('asgnPublished')?.checked ?? false,
     created_by: currentUser.id,

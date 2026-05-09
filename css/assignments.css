@@ -1393,7 +1393,7 @@ body.dark .student-inbox-item:hover {
   flex: 1;
 }
 
-.student-inbox-detail-desc {
+.student-inbox-detail-desc, .si-ref-phrase {
   font-size: 13px;
   line-height: 1.6;
   opacity: 0.7;
