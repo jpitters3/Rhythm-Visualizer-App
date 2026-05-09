@@ -118,7 +118,7 @@ async function loadAssignments() {
     .from('student_assignments')
     .select(`
       id, assignment_id, status, due_date, assigned_at, assigned_by,
-      assignments(id, title, description, video_url, is_published),
+      assignments(id, title, description, video_url, is_published, phrase_name, phrase_json),
       assignment_submissions(id, submitted_at, reviewed_at, feedback)
     `)
     .eq('student_id', currentUser.id)
@@ -142,6 +142,8 @@ async function loadAssignments() {
       title: row.assignments?.title ?? 'Untitled',
       description: row.assignments?.description ?? '',
       video_url: row.assignments?.video_url ?? null,
+      phrase_name: row.assignments?.phrase_name ?? null,
+      phrase_json: row.assignments?.phrase_json ?? null,
       submission: row.assignment_submissions ?? null,
     }));
 
@@ -228,6 +230,29 @@ async function openDetail(sa) {
     } else {
       videoEl.style.display = 'none';
       videoEl.innerHTML = '';
+    }
+  }
+
+  const phraseRefEl = document.getElementById('studentInboxPhraseRef');
+  if (phraseRefEl) {
+    if (sa.phrase_name && sa.phrase_json) {
+      phraseRefEl.style.display = '';
+      phraseRefEl.innerHTML = `
+        <div class="si-ref-phrase">
+          <span class="si-ref-phrase-label">Reference Phrase:</span>
+          <span class="si-ref-phrase-name" style="font-weight:bold">${escapeHtml(sa.phrase_name)}</span>
+          <p><button class="si-comp-load-btn" data-action="load-ref-phrase">▶ Open in Studio</button></p>
+        </div>
+      `;
+      phraseRefEl.querySelector('[data-action="load-ref-phrase"]')
+        ?.addEventListener('click', async () => {
+          const { applyPattern } = await import('./pattern-crud.js');
+          inboxPanel?.close();
+          await applyPattern(sa.phrase_json);
+        });
+    } else {
+      phraseRefEl.style.display = 'none';
+      phraseRefEl.innerHTML = '';
     }
   }
 
