@@ -28,6 +28,7 @@ let foldersList = [];
 let coursesList = [];
 let studentsList = [];
 let compositionsList = [];
+let phrasesList = [];
 let cachedAssigneeMap = null; // Map<student_id, status> — cleared when editor opens
 
 let selectedIds = new Set(); // currently checked assignment IDs
@@ -51,6 +52,7 @@ const ITEM_TYPE_ICONS = {
   video: '🎥',
   link: '🔗',
   composition_reference: '🎵',
+  phrase: '🥁',
 };
 
 const ITEM_TYPE_LABELS = {
@@ -60,6 +62,7 @@ const ITEM_TYPE_LABELS = {
   video: 'Video Upload',
   link: 'URL / Link',
   composition_reference: 'Study Composition',
+  phrase: 'Phrase',
 };
 
 // ===== INIT =====
@@ -194,6 +197,7 @@ async function loadInitialData() {
   if (coursesList.length === 0) tasks.push(loadCourses());
   if (studentsList.length === 0) tasks.push(loadStudents());
   if (compositionsList.length === 0) tasks.push(loadCompositions());
+  if (phrasesList.length === 0) tasks.push(loadPhrases());
   await Promise.all(tasks);
   populateFolderSelect();
   populateCourseSelect();
@@ -429,6 +433,16 @@ async function loadCompositions() {
     .eq('is_snapshot', false)
     .order('created_at', { ascending: false });
   compositionsList = data || [];
+}
+
+async function loadPhrases() {
+  const { data } = await supabase
+    .from('patterns')
+    .select('name, data')
+    .eq('user_id', currentUser.id)
+    .not('archived', 'is', true)
+    .order('updated_at', { ascending: false });
+  phrasesList = data || [];
 }
 
 async function loadStudents() {
@@ -806,6 +820,7 @@ function renderItemsList() {
         </label>
         ${item.item_type === 'quiz' ? renderQuizBuilderHTML(idx) : ''}
         ${item.item_type === 'composition_reference' ? renderCompositionPickerHTML(idx) : ''}
+        ${item.item_type === 'phrase' ? renderPhrasePickerHTML(idx) : ''}
       </div>
     `;
     el.appendChild(card);
@@ -889,6 +904,26 @@ function renderCompositionPickerHTML(idx) {
       </select>
     </div>
     ${sectionsPreview}
+  `;
+}
+
+function renderPhrasePickerHTML(idx) {
+  const item = currentItems[idx];
+  const selectedName = item.config?.pattern_name ?? '';
+
+  const options = phrasesList.map(p =>
+    `<option value="${escapeHtml(p.name)}" ${p.name === selectedName ? 'selected' : ''}>${escapeHtml(p.name)}</option>`
+  ).join('');
+
+  return `
+    <div>
+      <label class="asgn-label">Phrase</label>
+      <select data-field="phrase-select">
+        <option value="">— Choose a phrase —</option>
+        ${options}
+      </select>
+    </div>
+    ${selectedName ? `<div class="asgn-phrase-selected-name">${escapeHtml(selectedName)}</div>` : ''}
   `;
 }
 
@@ -1076,6 +1111,19 @@ function renderReviewPanel() {
               ).join('')}</div>`
           : '';
         responseHTML = `${statusHTML}${sectionList}`;
+        break;
+      }
+      case 'phrase': {
+        const config = resp.assignment_items?.config ?? {};
+        const phraseName = config.pattern_name ?? '';
+        const completed = resp.response_data?.completed;
+        const statusHTML = completed
+          ? '<span class="asgn-mark-complete-check">✅ Student marked as practised</span>'
+          : '<span style="opacity:0.5">Not yet marked as practised</span>';
+        responseHTML = `
+          ${phraseName ? `<div class="asgn-phrase-name-chip">${escapeHtml(phraseName)}</div>` : ''}
+          ${statusHTML}
+        `;
         break;
       }
       case 'quiz': {
@@ -1325,6 +1373,21 @@ async function handleItemsListChange(e) {
         item.title = comp?.title ?? '';
         const headerTitle = card.querySelector('.asgn-item-header-title');
         if (headerTitle) headerTitle.textContent = item.title || ITEM_TYPE_LABELS[item.item_type];
+      }
+      renderItemsList();
+      expandItem(idx);
+      break;
+    }
+    case 'phrase-select': {
+      const phraseName = e.target.value;
+      const phrase = phrasesList.find(p => p.name === phraseName);
+      item.config = phrase
+        ? { pattern_name: phrase.name, pattern_json: phrase.data }
+        : {};
+      if (!item.title && phraseName) {
+        item.title = phraseName;
+        const headerTitle = card.querySelector('.asgn-item-header-title');
+        if (headerTitle) headerTitle.textContent = item.title;
       }
       renderItemsList();
       expandItem(idx);
