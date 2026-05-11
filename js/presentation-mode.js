@@ -1,7 +1,7 @@
 /* ===== PRESENTATION MODE ===== */
 import { gridA, activeGrid } from './grid-context.js';
 import { labelForStep } from './notegrid.js';
-import { addTickObserver, getPlaybackPosition } from './noteplayer.js';
+import { addTickObserver, getPlaybackPosition, intervalMs } from './noteplayer.js';
 import { TransportRegistry } from './transport-ui.js';
 import { Bus, BUS_EVENT } from './bus.js';
 import { HANDPAN_MAP } from './handpanmap.js';
@@ -84,6 +84,7 @@ async function exitFullscreenIfPossible() {
 }
 
 let animationFrameId;
+let measureSwitchTimeout = null;
 
 function animatePresentation() {
   if (!document.body.classList.contains('present')) return;
@@ -247,11 +248,17 @@ export function initPresentation() {
     const stepsPerMeasure = ctx.stepsPerMeasure;
     const totalSteps = (ctx.measures || 1) * stepsPerMeasure;
 
-    // Switch to the next measure immediately on the last beat of the current measure.
+    // On the last beat of a measure, wait half a beat before switching — so the
+    // last cell's highlight is visible before the next measure snaps in.
     const isLastBeatOfMeasure = (step + 1) % stepsPerMeasure === 0;
     if (isLastBeatOfMeasure) {
+      if (measureSwitchTimeout) clearTimeout(measureSwitchTimeout);
+      const halfBeat = intervalMs(ctx) / 2;
       const nextStep = (step + 1) % totalSteps;
-      updatePresentationView(nextStep, ctx);
+      measureSwitchTimeout = setTimeout(() => {
+        measureSwitchTimeout = null;
+        updatePresentationView(nextStep, ctx);
+      }, halfBeat);
     }
   });
 
@@ -261,6 +268,7 @@ export function initPresentation() {
     if (!e.detail?.grid || e.detail.grid.id !== 'A') return;
     if (!e.detail.grid.playing) return;
     if (!document.body.classList.contains('present')) return;
+    if (measureSwitchTimeout) { clearTimeout(measureSwitchTimeout); measureSwitchTimeout = null; }
     const measuresEl = document.getElementById('measures');
     if (measuresEl) {
       Array.from(measuresEl.getElementsByClassName('measure-row')).forEach(row => {
