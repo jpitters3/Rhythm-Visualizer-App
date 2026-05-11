@@ -199,9 +199,6 @@ function updateStaticHeader(cols, ctx = gridA) {
   const container = document.getElementById('static-measure-labels');
   if (!container) return;
 
-  // Only update if needed (length changed) or empty
-  if (container.children.length === cols) return;
-
   container.innerHTML = '';
   container.style.display = 'grid'; // Ensure it's active
   container.style.setProperty('--cols', String(cols));
@@ -278,6 +275,12 @@ export function initPresentation() {
     }
     lastMeasureIndex = -1;
     updatePresentationView(0, gridA);
+  });
+
+  // Re-render static header when label notation preference changes (1 2 3 ↔ 1 & 2 &)
+  document.addEventListener('labelNotationChanged', () => {
+    if (!document.body.classList.contains('present')) return;
+    updateStaticHeader(gridA.stepsPerMeasure, gridA);
   });
 
   // Detect externally triggered Fullscreen exit (e.g. Esc key by user)
