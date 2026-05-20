@@ -140,6 +140,7 @@ export function restorePrefs() {
   }
   if (gridA) gridA.metronomeOn = isMetroOn;
   if (gridA) gridA.metronomeSubdiv = localStorage.getItem('groovepan_metro_subdiv-A') !== 'off';
+  if (gridA) gridA.countdownEnabled = localStorage.getItem('groovepan_countdown-A') === 'on';
 
   updateMetroUI();
 }

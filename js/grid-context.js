@@ -22,6 +22,7 @@ export class GridContext {
     this.bpm = 90;
     this.metronomeOn = false;
     this.metronomeSubdiv = true;
+    this.countdownEnabled = false;
     this.isMuted = false;
     this.transcriptionIndex = 0;
     this.tags = [];
@@ -72,6 +73,7 @@ export class GridContext {
     this.bpm = otherGrid.bpm;
     this.metronomeOn = otherGrid.metronomeOn;
     this.metronomeSubdiv = otherGrid.metronomeSubdiv;
+    this.countdownEnabled = otherGrid.countdownEnabled;
     this.isMuted = otherGrid.isMuted;
     this.beats = otherGrid.beats;
     this.subdivision = otherGrid.subdivision;
