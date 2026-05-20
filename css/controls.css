@@ -1,3 +1,9 @@
+#micDropdownMenu {
+  position: fixed;
+  top: 0;
+  left: 0;
+}
+
 .pattern-row {
   display: flex;
   gap: 8px;

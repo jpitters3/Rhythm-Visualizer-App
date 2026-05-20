@@ -405,6 +405,15 @@ export function initControls() {
     }
   });
 
+  micBtn?.addEventListener('mouseover', () => {
+    if (micDropdownMenu) {
+      const rect = micBtn.getBoundingClientRect();
+      micDropdownMenu.style.top = `${rect.bottom + 8}px`;
+      micDropdownMenu.style.left = `${rect.left}px`;
+      micDropdownMenu.classList.add('show');
+    }
+  });
+
   // 3. Grid Controls
   setupGridControls(gridA);
   setupGridControls(gridB);

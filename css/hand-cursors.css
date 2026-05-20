@@ -28,7 +28,6 @@
   will-change: transform, left, top;
   transition: top 0.15s cubic-bezier(0.25, 0.46, 0.45, 0.94),
     left 0.15s cubic-bezier(0.25, 0.46, 0.45, 0.94),
-    transform 0.1s ease-out,
     opacity 0.3s ease;
   display: flex;
   align-items: center;

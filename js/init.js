@@ -33,6 +33,7 @@ import { initLibrary } from './library.js';
 import { initCourseMarketplace } from './course-marketplace.js';
 import { Bus, BUS_EVENT } from './bus.js';
 import { initCoachingMode } from './coaching-mode.js';
+import { initCalProfiles } from './cal-profiles.js';
 import { initGames } from './games.js';
 import { initAdmin } from './admin.js';
 import { initNotifications } from './notifications.js';
@@ -74,6 +75,7 @@ async function init() {
     ChordUI.init();
     initHandpanMap();
     initTranscription();
+    initCalProfiles();
     initCoachingMode();
     initAiAssistant();
     initCalibration();
