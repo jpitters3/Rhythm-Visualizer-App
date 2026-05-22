@@ -634,3 +634,69 @@ body.dark .cell.visual-ding .inner::before {
 .cell.visual-ding .inner {
   color: transparent !important;
 }
+
+/* ===== FLAM (GRACE NOTE) ===== */
+
+/* Allow the flam circle to overflow the cell boundary */
+.cell.has-flam,
+.cell.flam-editing {
+  overflow: visible;
+}
+
+/* The grace-note circle — hidden by default, shown when has-flam or flam-editing */
+.flam-circle {
+  display: none;
+  position: absolute;
+  width: 36%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: var(--cell-bg);
+  border: 2px solid var(--cell-border);
+  align-items: center;
+  justify-content: center;
+  font-size: 22cqw;
+  font-weight: 700;
+  color: inherit;
+  /* Vertically centred, overlapping the left edge of the cell (Venn diagram) */
+  top: 32%;
+  left: -15%;
+  z-index: 6;
+  pointer-events: none;
+  line-height: 1;
+  box-sizing: border-box;
+}
+
+.cell.has-flam .flam-circle,
+.cell.flam-editing .flam-circle {
+  display: flex;
+}
+
+/* Tint the border/text to match the cell's hand colour */
+.cell.downbeat .flam-circle,
+.cell.force-hand-r .flam-circle {
+  border-color: var(--down-fill);
+  color: var(--down-fill);
+}
+
+.cell.upbeat .flam-circle,
+.cell.force-hand-l .flam-circle {
+  border-color: var(--up-fill);
+  color: var(--up-fill);
+}
+
+/* Empty placeholder in edit mode (before a note is typed) */
+.cell.flam-editing:not(.has-flam) .flam-circle {
+  opacity: 0.45;
+  border-style: dashed;
+  animation: flamBlink 0.9s ease-in-out infinite;
+}
+
+/* Pulse the existing flam circle when in edit mode */
+.cell.flam-editing.has-flam .flam-circle {
+  box-shadow: 0 0 0 2px var(--play-glow, #a855f7);
+}
+
+@keyframes flamBlink {
+  0%, 100% { opacity: 0.45; }
+  50%       { opacity: 0.15; }
+}

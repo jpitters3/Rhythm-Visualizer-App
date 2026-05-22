@@ -17,6 +17,7 @@ export class GridContext {
     // State
     this.innerLabels = Array(this.stepsPerMeasure).fill('');
     this.innerHands = Array(this.stepsPerMeasure).fill(null);
+    this.innerFlams = Array(this.stepsPerMeasure).fill('');
     this.step = 0;
     this.playing = false;
     this.bpm = 90;
@@ -53,6 +54,7 @@ export class GridContext {
     this._measures = m;
     this.innerLabels = Array(m * this.stepsPerMeasure).fill('');
     this.innerHands = Array(m * this.stepsPerMeasure).fill(null);
+    this.innerFlams = Array(m * this.stepsPerMeasure).fill('');
   }
 
   setBpm(bpm) {
@@ -68,6 +70,7 @@ export class GridContext {
   copyGrid(otherGrid) {
     this.innerLabels = otherGrid.innerLabels;
     this.innerHands = otherGrid.innerHands;
+    this.innerFlams = otherGrid.innerFlams;
     this.step = otherGrid.step;
     this.playing = otherGrid.playing;
     this.bpm = otherGrid.bpm;
@@ -115,6 +118,7 @@ export class GridContext {
     const m = this.measures;
     this.innerLabels = Array(m * s).fill('');
     this.innerHands = Array(m * s).fill(null);
+    this.innerFlams = Array(m * s).fill('');
     this.step = 0;
     this.playing = false;
     this.transcriptionIndex = 0;

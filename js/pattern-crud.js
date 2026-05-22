@@ -247,6 +247,7 @@ export function serializePattern(ctx = gridA) {
     measures: ctx.measures,
     labels: ctx.innerLabels ? ctx.innerLabels.slice() : [],
     hands: ctx.innerHands ? ctx.innerHands.slice() : [],
+    flams: ctx.innerFlams ? ctx.innerFlams.slice() : [],
     tags: ctx.tags ? ctx.tags.slice() : [],
   };
 
@@ -261,6 +262,7 @@ export function serializePattern(ctx = gridA) {
         measures: gridB.measures,
         labels: gridB.innerLabels ? gridB.innerLabels.slice() : [],
         hands: gridB.innerHands ? gridB.innerHands.slice() : [],
+        flams: gridB.innerFlams ? gridB.innerFlams.slice() : [],
       };
     }
   }
@@ -332,6 +334,7 @@ export async function applyPattern(state, ctx = gridA) {
   });
 
   ctx.innerHands = Array.isArray(state.hands) ? state.hands : Array(ctx.innerLabels.length).fill(null);
+  ctx.innerFlams = Array.isArray(state.flams) ? state.flams : Array(ctx.innerLabels.length).fill('');
 
   // Apply Tags
   if (Array.isArray(state.tags)) {

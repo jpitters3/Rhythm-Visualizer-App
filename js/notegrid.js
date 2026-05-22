@@ -4,7 +4,7 @@ import { stop, setBeats, setSubdivision } from './noteplayer.js';
 import { getScale } from './state.js';
 import { setCaret, setRange, clearRange, getRange, updateDragSelectionOver, startLongPress, cancelLongPress, hasRange } from './range-selection.js';
 import { HistoryManager } from './history.js';
-import { editHandsMode, isEditMulti, multiEditSessionSlot, longPressFired, setLongPressFired, setIsEditMulti, setMultiEditSessionSlot, labelNotation } from './state.js';
+import { editHandsMode, isEditMulti, multiEditSessionSlot, longPressFired, setLongPressFired, setIsEditMulti, setMultiEditSessionSlot, labelNotation, isEditFlam, setIsEditFlam } from './state.js';
 import { TransportRegistry } from './transport-ui.js';
 import { isReviewing, getFeedbackForStep, showFeedbackTooltip, copyLogsForStep, getExpectedNoteForStep } from './coaching-mode.js';
 import { Bus, BUS_EVENT } from './bus.js';
@@ -234,6 +234,10 @@ export function renderAllMeasures(ctx = activeGrid) {
   if (Array.isArray(ctx.innerHands) && ctx.innerHands.length < targetLength) {
     ctx.innerHands.push(...Array(targetLength - ctx.innerHands.length).fill(null));
   }
+  if (!Array.isArray(ctx.innerFlams) || ctx.innerFlams.length < targetLength) {
+    const existing = Array.isArray(ctx.innerFlams) ? ctx.innerFlams : [];
+    ctx.innerFlams = [...existing, ...Array(targetLength - existing.length).fill('')];
+  }
   const totalSteps = targetLength;
 
   measuresEl.innerHTML = '<div class="measures-scroller"></div>';
@@ -314,6 +318,11 @@ export function renderAllMeasures(ctx = activeGrid) {
       ghost.className = 'ghost-dot';
       cell.appendChild(ghost);
 
+      // Flam circle (grace note — always in DOM, shown via CSS when has-flam / flam-editing)
+      const flamCircle = document.createElement('div');
+      flamCircle.className = 'flam-circle';
+      cell.appendChild(flamCircle);
+
       // Global index
       const g = (m * s) + i;
       const lbl = ctx.innerLabels[g] || '';
@@ -335,6 +344,17 @@ export function renderAllMeasures(ctx = activeGrid) {
       }
 
       cell.dataset.index = g;
+
+      // Flam (grace note) content
+      const flamLbl = ctx.innerFlams && ctx.innerFlams[g];
+      if (flamLbl) {
+        flamCircle.textContent = resolveLabelText(flamLbl, pref, false);
+        cell.classList.add('has-flam');
+      }
+      if (ctx.id === 'A' && g === ctx.caretIndex && isEditFlam) {
+        cell.classList.add('flam-editing');
+      }
+
       if (lbl !== '') cell.classList.add('has-label');
       if (lbl === 'Ding') cell.classList.add('label-ding');
       else if (lbl === 'T') cell.classList.add('label-t');
@@ -379,6 +399,7 @@ export function clearGrid(ctx = activeGrid) {
   const s = ctx.stepsPerMeasure;
   ctx.innerLabels = Array(ctx.measures * s).fill('');
   ctx.innerHands = Array(ctx.measures * s).fill(null);
+  ctx.innerFlams = Array(ctx.measures * s).fill('');
   renderAllMeasures(ctx);
   ctx.step = 0;
 }
@@ -546,6 +567,30 @@ export function setInnerLabel(i, value, ctx = activeGrid) {
 
   if (ctx.id === 'A') {
     checkExportVisibility();
+  }
+}
+
+export function setInnerFlam(i, value, ctx = activeGrid) {
+  if (!Array.isArray(ctx.innerFlams)) ctx.innerFlams = Array(ctx.innerLabels.length).fill('');
+  ctx.innerFlams[i] = value || '';
+
+  const cell = cells(ctx)[i];
+  if (!cell) return;
+
+  let flamCircle = cell.querySelector('.flam-circle');
+  if (!flamCircle) {
+    flamCircle = document.createElement('div');
+    flamCircle.className = 'flam-circle';
+    cell.appendChild(flamCircle);
+  }
+
+  if (value) {
+    const pref = localStorage.getItem('handpanLabelPref') || 'Numbers';
+    flamCircle.textContent = resolveLabelText(value, pref, false);
+    cell.classList.add('has-flam');
+  } else {
+    flamCircle.textContent = '';
+    cell.classList.remove('has-flam');
   }
 }
 

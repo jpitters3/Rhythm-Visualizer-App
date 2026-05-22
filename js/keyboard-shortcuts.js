@@ -1,8 +1,8 @@
 // ===== KEYBOARD LABELING + SHORTCUTS =====
 import { gridA } from './grid-context.js';
-import { activeGrid } from './state.js';
+import { activeGrid, isEditFlam, setIsEditFlam } from './state.js';
 import { start, stop, ensureAudio, getAudioCtx } from './noteplayer.js';
-import { clearSelection, deleteSelection, copySelection, pasteSelection } from './notegrid.js';
+import { clearSelection, deleteSelection, copySelection, pasteSelection, setInnerFlam } from './notegrid.js';
 import { getRange, clearRange } from './range-selection.js';
 import { setPresentation } from './presentation-mode.js';
 import { TransportRegistry } from './transport-ui.js';
@@ -108,6 +108,50 @@ export function initShortcuts() {
     const k = e.key;
     const lower = k.toLowerCase();
     const map = { d: 'Ding', t: 'T', s: 'S' };
+
+    // F: toggle flam edit mode on the selected cell
+    if (lower === 'f' && !e.metaKey && !e.ctrlKey) {
+      e.preventDefault();
+      const i = ctx.caretIndex;
+      if (!isEditFlam) {
+        if (ctx.innerLabels[i]) {
+          setIsEditFlam(true);
+          Array.from(ctx.cells).forEach(c => {
+            c.classList.toggle('flam-editing', +c.dataset.index === i);
+          });
+        }
+      } else {
+        setIsEditFlam(false);
+        Array.from(ctx.cells).forEach(c => c.classList.remove('flam-editing'));
+      }
+      return;
+    }
+
+    // While in flam edit mode, intercept note keys → write to grace note slot
+    if (isEditFlam) {
+      const i = ctx.caretIndex;
+      const label = map[lower] || (/^[0-9?]$/.test(k) ? k : null);
+
+      if (label !== null) {
+        setInnerFlam(i, label, ctx);
+        setIsEditFlam(false);
+        Array.from(ctx.cells).forEach(c => c.classList.remove('flam-editing'));
+        return;
+      }
+
+      if (k === 'Backspace' || k === 'Delete' || k === 'g') {
+        e.preventDefault();
+        setInnerFlam(i, '', ctx);
+        setIsEditFlam(false);
+        Array.from(ctx.cells).forEach(c => c.classList.remove('flam-editing'));
+        return;
+      }
+
+      // Any other key exits flam mode without changing anything
+      setIsEditFlam(false);
+      Array.from(ctx.cells).forEach(c => c.classList.remove('flam-editing'));
+      return;
+    }
 
     if (map[lower]) {
       writeToSession(map[lower], { advance: !noAdvance }, ctx);

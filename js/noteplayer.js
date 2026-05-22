@@ -410,6 +410,13 @@ function scheduleAudio(c, step, time) {
     playNoteByLabel(currentData, realStep, delay);
   }
 
+  // Flam: play grace note 30ms before the primary note
+  const flamLabel = c.innerFlams && c.innerFlams[realStep];
+  if (flamLabel && typeof flamLabel === 'string') {
+    const graceDelay = Math.max(0, delay - 0.050);
+    playNoteByLabel(flamLabel, realStep, graceDelay);
+  }
+
   // 3. METRONOME
   if (c.metronomeOn) {
     const sub = c.subdivision || 2;
