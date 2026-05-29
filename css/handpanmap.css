@@ -874,3 +874,53 @@ body.dark .hp-loader {
 #myScalesModal .modal-content {
   padding: 20px;
 }
+
+/* ===== PERIMETER VIEW ===== */
+
+.hp-perimeter-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  /* background transparent; hit-area children handle pointer events */
+  pointer-events: none;
+}
+
+/* Wide invisible stroke for easier tapping */
+.hp-arc-hit {
+  fill: none;
+  stroke: transparent;
+  stroke-width: 10;
+  stroke-linecap: round;
+  pointer-events: stroke;
+  cursor: pointer;
+}
+
+.hp-arc {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.25);
+  stroke-width: 4;
+  stroke-linecap: round;
+  transition: stroke 0.12s ease, stroke-opacity 0.12s ease;
+}
+
+body:not(.dark) .hp-arc {
+  stroke: rgba(60, 60, 60, 0.35);
+}
+
+.hp-arc.active {
+  stroke-opacity: 1;
+}
+
+.hp-arc-label {
+  fill: rgba(255, 255, 255, 0.7);
+  font-size: 4.5px;
+  font-weight: 700;
+  pointer-events: none;
+  user-select: none;
+}
+
+body:not(.dark) .hp-arc-label {
+  fill: rgba(40, 40, 40, 0.8);
+}
