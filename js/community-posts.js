@@ -349,7 +349,8 @@ async function fetchPosts() {
     .select(`
             *,
             profiles:user_id (username),
-            pattern:shared_pattern_id (name, id)
+            pattern:shared_pattern_id (name, id),
+            post_likes(count)
         `)
     .order('created_at', { ascending: false })
     .limit(50);
@@ -359,11 +360,22 @@ async function fetchPosts() {
     return;
   }
 
+  // Fetch which posts the current user has already liked
+  let likedPostIds = new Set();
+  if (currentUser && data.length > 0) {
+    const { data: likedData } = await supabase
+      .from('post_likes')
+      .select('post_id')
+      .eq('user_id', currentUser.id)
+      .in('post_id', data.map(p => p.id));
+    if (likedData) likedData.forEach(l => likedPostIds.add(l.post_id));
+  }
+
   cachedPosts = data;
-  renderFeed(data);
+  renderFeed(data, likedPostIds);
 }
 
-function renderFeed(posts) {
+function renderFeed(posts, likedPostIds = new Set()) {
   if (!postsFeed) return;
   postsFeed.innerHTML = '';
   if (posts.length === 0) {
@@ -372,18 +384,18 @@ function renderFeed(posts) {
   }
 
   posts.forEach(post => {
-    postsFeed.appendChild(createPostCard(post));
+    postsFeed.appendChild(createPostCard(post, likedPostIds));
   });
 }
 
-function createPostCard(post) {
+function createPostCard(post, likedPostIds = new Set()) {
   const card = document.createElement('div');
   card.className = 'post-card';
   card.dataset.id = post.id;
 
   const author = post.profiles?.username || 'Unknown';
   const time = new Date(post.created_at).toLocaleString();
-  const isLiked = false; // TODO: Check user likes
+  const isLiked = likedPostIds.has(post.id);
 
   // Media Rendering
   let mediaHtml = '';
@@ -431,10 +443,10 @@ function createPostCard(post) {
         
         <div class="post-footer">
             <div class="pf-stats">
-               <span class="post-likes-count">${post.likes_count || 0} Likes</span>
+               <span class="post-likes-count">${post.post_likes?.[0]?.count ?? post.likes_count ?? 0} Likes</span>
             </div>
             <div class="pf-actions">
-                <button class="pf-btn like-btn" data-action="like-post" data-id="${post.id}">👍 Like</button>
+                <button class="pf-btn like-btn ${isLiked ? 'liked' : ''}" data-action="like-post" data-id="${post.id}">👍 Like</button>
                 <button class="pf-btn comment-btn" data-action="toggle-comments" data-id="${post.id}">💬 Comment</button>
                 ${deleteBtnHtml}
             </div>
@@ -491,12 +503,37 @@ async function deletePost(postId, btn) {
 
 async function togglePostLike(postId, btn) {
   if (!currentUser) {
-    await alert('Sign in to like');
+    await alert('Sign in to like posts');
     return;
   }
 
-  await alert('Like toggled (Mock)');
-  // TODO: implement real logic
+  const countSpan = btn.closest('.post-footer')?.querySelector('.post-likes-count');
+  const currentCount = parseInt(countSpan?.textContent) || 0;
+  const isLiked = btn.classList.contains('liked');
+
+  // Optimistic UI
+  btn.classList.toggle('liked');
+  if (countSpan) countSpan.textContent = `${isLiked ? Math.max(0, currentCount - 1) : currentCount + 1} Likes`;
+
+  if (isLiked) {
+    const { error } = await supabase
+      .from('post_likes')
+      .delete()
+      .eq('user_id', currentUser.id)
+      .eq('post_id', postId);
+    if (error) {
+      btn.classList.add('liked');
+      if (countSpan) countSpan.textContent = `${currentCount} Likes`;
+    }
+  } else {
+    const { error } = await supabase
+      .from('post_likes')
+      .insert([{ user_id: currentUser.id, post_id: postId }]);
+    if (error) {
+      btn.classList.remove('liked');
+      if (countSpan) countSpan.textContent = `${currentCount} Likes`;
+    }
+  }
 }
 
 async function toggleComments(postId) {
