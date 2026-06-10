@@ -306,7 +306,7 @@ export async function loadLesson(lessonId) {
 
     const lesson = allLessons.find(l => l.id === lessonId);
     if (!lesson) {
-      await alert(`DEBUG ERROR: Lesson not found! ID: ${lessonId}. Total lessons loaded: ${allLessons.length}`);
+      await alert(`Lesson unavailable. Please try again or return to the course.`);
       return;
     }
     currentLesson = lesson;

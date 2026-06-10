@@ -446,8 +446,6 @@ function createPostCard(post) {
             <div class="comment-input-area">
                 <textarea class="comment-input" placeholder="Write a comment..."></textarea>
                 <div class="comment-actions">
-                     <!-- Simplified comment attachments for now? User asked for them too. -->
-                    <button class="c-att-btn" title="Attach" data-action="comment-att-stub">📎</button> 
                     <button class="c-send-btn" data-action="submit-comment" data-id="${post.id}">➤</button>
                 </div>
             </div>
