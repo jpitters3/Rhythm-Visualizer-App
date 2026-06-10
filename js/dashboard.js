@@ -24,7 +24,7 @@ const PREVIEW_HP_MAP = {
 };
 
 // Set to a YouTube video ID when ready, e.g. 'dQw4w9WgXcQ'
-const GETTING_STARTED_VIDEO_ID = '';
+const GETTING_STARTED_VIDEO_ID = '3Jcwa8bQF5Y';
 
 let hpPreviewInterval = null;
 const hpPreviewDots = new Map();
@@ -74,6 +74,8 @@ function closeWelcomeModal() {
   hpPreviewInterval = null;
   hpPreviewDots.clear();
   previewCardEl = null;
+  const videoPlayer = modal.querySelector('#welcomeVideo');
+  if (videoPlayer) videoPlayer.innerHTML = '';
 }
 
 function buildWelcomeHandpan(modal, override = {}) {
@@ -227,16 +229,15 @@ function initWelcomeModal(modal) {
     document.getElementById('toggleSidebarBtn')?.click();
   });
 
-  // Play button: inject YouTube iframe on click
+  // Play button: show local video or YouTube iframe depending on what's configured
   const playBtn = modal.querySelector('#welcomePlayBtn');
   const videoPlayer = modal.querySelector('#welcomeVideo');
   playBtn?.addEventListener('click', () => {
-    if (!GETTING_STARTED_VIDEO_ID) return;
+    videoPlayer.innerHTML = '';
     const iframe = document.createElement('iframe');
     iframe.src = `https://www.youtube.com/embed/${GETTING_STARTED_VIDEO_ID}?autoplay=1`;
     iframe.allow = 'autoplay; encrypted-media; picture-in-picture';
     iframe.allowFullscreen = true;
-    videoPlayer.innerHTML = '';
     videoPlayer.appendChild(iframe);
   });
 }
