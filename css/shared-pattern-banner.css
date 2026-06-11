@@ -91,3 +91,53 @@
 .subscription-banner--expired #subscriptionBannerBtn:hover {
   background: #b91c1c;
 }
+
+/* ===== SHARE LINK MODAL ===== */
+.share-link-modal {
+  max-width: 420px;
+  width: 90vw;
+}
+
+.share-link-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin: 14px 0 4px;
+}
+
+.share-link-row input {
+  flex: 1;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--panel-border);
+  background: rgba(0,0,0,0.15);
+  color: var(--text);
+  font-size: 13px;
+  outline: none;
+  min-width: 0;
+}
+
+.share-link-copy-btn {
+  flex-shrink: 0;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  border: 1px solid var(--panel-border);
+  background: rgba(99,102,241,0.12);
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.share-link-copy-btn:hover {
+  background: rgba(99,102,241,0.28);
+  color: #818cf8;
+}
+
+.share-link-copy-btn.copied {
+  background: rgba(34,197,94,0.18);
+  color: #22c55e;
+}

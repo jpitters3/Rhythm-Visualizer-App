@@ -13,7 +13,23 @@ import { Bus, BUS_EVENT } from './bus.js';
 export const STORAGE_KEY = 'groovepan_patterns';
 export const LAST_USED_KEY = 'groovepan_last_pattern';
 
+// When set, syncPhraseNameDisplay always shows this name regardless of patternSelect.
+// Used when viewing a shared phrase (not in the user's saved list).
+let phraseNameOverride = null;
+
+export function setPhraseNameOverride(name) {
+  phraseNameOverride = name || null;
+}
+
 export function syncPhraseNameDisplay(name) {
+  if (phraseNameOverride) {
+    const ids = ['currentProjectName', 'currentPhraseName', 'gridPhraseName'];
+    for (const id of ids) {
+      const el = document.getElementById(id);
+      if (el) el.textContent = phraseNameOverride;
+    }
+    return;
+  }
   const patternSelect = document.getElementById('patternSelect');
   if (name !== undefined && patternSelect) patternSelect.value = name;
   const label = (patternSelect?.value || name) || 'Untitled';

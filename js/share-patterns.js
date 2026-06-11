@@ -3,7 +3,7 @@ import { supabase } from './supabase-client.js';
 import { currentUser } from './state.js';
 import { getProfileById } from './profile.js';
 import { saveCurrentPatternAs } from './controls.js';
-import { serializePattern, applyPattern, updatePatternButtons, getSelectedPatternName } from './pattern-crud.js';
+import { serializePattern, applyPattern, updatePatternButtons, getSelectedPatternName, setPhraseNameOverride } from './pattern-crud.js';
 import { clearSelection } from './notegrid.js';
 
 const shareBtn = document.getElementById('shareBtn');
@@ -17,14 +17,64 @@ function genShareId(len = 10) {
   return Array.from(bytes, b => chars[b % chars.length]).join('');
 }
 
-async function copyText(text) {
-  try {
-    await navigator.clipboard.writeText(text);
-    return true;
-  } catch {
-    await prompt('Copy this link:', text);
-    return false;
-  }
+export function showShareLinkModal(url, { isPublic, onPublish } = {}) {
+  return new Promise(resolve => {
+    const modal     = document.getElementById('shareLinkModal');
+    const input     = document.getElementById('shareLinkInput');
+    const copyBtn   = document.getElementById('shareLinkCopyBtn');
+    const closeBtn  = document.getElementById('shareLinkCloseBtn');
+    const publishBtn = document.getElementById('shareLinkPublishBtn');
+    const subtitle  = document.getElementById('shareLinkSubtitle');
+    if (!modal) { resolve(); return; }
+
+    input.value = url;
+    publishBtn.style.display = (!isPublic && onPublish) ? '' : 'none';
+
+    // Auto-copy
+    navigator.clipboard.writeText(url).then(() => {
+      subtitle.textContent = 'Link copied to clipboard.';
+    }).catch(() => {
+      subtitle.textContent = 'Copy the link below:';
+    });
+
+    modal.classList.add('open');
+    modal.setAttribute('aria-hidden', 'false');
+
+    // Select all text on focus for easy manual copy
+    input.addEventListener('focus', () => input.select(), { once: false });
+    input.select();
+
+    const copyIcon = `<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>`;
+    const checkIcon = `<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`;
+
+    const handleCopy = () => {
+      navigator.clipboard.writeText(url).catch(() => {});
+      copyBtn.innerHTML = checkIcon;
+      copyBtn.classList.add('copied');
+      setTimeout(() => { copyBtn.innerHTML = copyIcon; copyBtn.classList.remove('copied'); }, 2000);
+    };
+
+    const close = () => {
+      modal.classList.remove('open');
+      modal.setAttribute('aria-hidden', 'true');
+      copyBtn.removeEventListener('click', handleCopy);
+      closeBtn.removeEventListener('click', close);
+      publishBtn.removeEventListener('click', handlePublish);
+      resolve();
+    };
+
+    const handlePublish = async () => {
+      close();
+      await onPublish?.();
+    };
+
+    copyBtn.innerHTML = copyIcon;
+    copyBtn.classList.remove('copied');
+    copyBtn.addEventListener('click', handleCopy);
+    closeBtn.addEventListener('click', close);
+    publishBtn.addEventListener('click', handlePublish);
+    modal.addEventListener('click', e => { if (e.target === modal) close(); }, { once: true });
+  });
 }
 
 async function upsertSharedPattern() {
@@ -78,28 +128,21 @@ shareBtn?.addEventListener('click', async () => {
     const { share_id, is_public } = result;
 
     const url = `${location.origin}${location.pathname}?share=${encodeURIComponent(share_id)}`;
-    await copyText(url);
 
-    if (is_public) {
-      await alert('Link copied! (This pattern is Public)');
-      return;
-    }
-
-    if (await confirm('Link copied! Would you also like to publish this pattern to the Community Feed?')) {
-      const { error } = await supabase
-        .from('shared_patterns')
-        .update({ is_public: true })
-        .eq('share_id', share_id);
-
-      if (error) {
-        console.error('Failed to publish', error);
-        await alert('Link worked, but failed to publish to community feed.');
-      } else {
-        await alert('Published to Community Feed!');
-      }
-    } else {
-      await alert('Link copied! Pattern is private (only people with the link can see it).');
-    }
+    await showShareLinkModal(url, {
+      isPublic: is_public,
+      onPublish: async () => {
+        const { error } = await supabase
+          .from('shared_patterns')
+          .update({ is_public: true })
+          .eq('share_id', share_id);
+        if (error) {
+          await alert('Link worked, but failed to publish to community feed.');
+        } else {
+          await alert('Published to Community Feed!');
+        }
+      },
+    });
   } catch (e) {
     console.error(e);
     await alert('Share failed (see console).');
@@ -133,7 +176,17 @@ export async function loadSharedFromURL() {
     return false;
   }
 
-  await applyPattern(data.pattern_json);
+  let patternData = data.pattern_json;
+  if (typeof patternData === 'string') {
+    try { patternData = JSON.parse(patternData); } catch {
+      await alert('That share link is invalid or no longer public.');
+      return false;
+    }
+  }
+
+  if (data.name) setPhraseNameOverride(data.name);
+
+  await applyPattern(patternData);
 
   let creatorName = "Unknown";
   if (data.user_id) {
@@ -149,7 +202,7 @@ export async function loadSharedFromURL() {
 
   if (data.name) document.title = `Panafide — ${data.name}`;
 
-  return true;
+  return data.name || true;
 }
 
 
@@ -189,8 +242,8 @@ sharedSaveCopyBtn?.addEventListener('click', async () => {
 
   // We need to await saveCurrentPatternAs if we want to confirm, IF it returns a value.
   // controls.js export is async.
+  setPhraseNameOverride(null);
   await saveCurrentPatternAs(name, 'shared');
-  // It alerts on failure.
 });
 
 sharedExitBtn?.addEventListener('click', () => {
@@ -200,5 +253,6 @@ sharedExitBtn?.addEventListener('click', () => {
 
   viewingShared = false;
   sharedMeta = { shareId: null, name: null };
+  setPhraseNameOverride(null);
   updateSharedUI();
 });

@@ -11,7 +11,8 @@ import { navigate } from './router.js';
 
 export async function loadPatternFromFeed(json, name) {
   if (await confirm(`Load pattern "${name}"? Unsaved changes will be lost.`)) {
-    await applyPattern(json);
+    const data = typeof json === 'string' ? JSON.parse(json) : json;
+    await applyPattern(data);
     document.title = `Panafide — ${name}`;
     updateCurrentPhraseName(name);
     navigate('studio');

@@ -5,6 +5,7 @@ import { openComposerToComposition } from './song-composer.js';
 import { loadPatternByName, createNewPhrase } from './controls.js';
 import { dbDeletePattern, dbRenamePattern, dbSavePattern, dbListPatternNames } from './pattern-crud.js';
 import { alert, confirm, prompt } from './alert.js';
+import { showShareLinkModal } from './share-patterns.js';
 import { startRawAudioRecording, stopRawAudioRecording } from './audio-recorder.js';
 import { Bus, BUS_EVENT } from './bus.js';
 import { renderThumbnail } from './pattern-thumbnail.js';
@@ -542,7 +543,7 @@ async function sharePhrase(name, patternData) {
     .upsert({
       user_id: currentUser.id,
       name,
-      pattern_json: JSON.stringify(patternData),
+      pattern_json: patternData,
       share_id: shareId,
       is_public: true,
     }, { onConflict: 'user_id,name' });
@@ -550,12 +551,7 @@ async function sharePhrase(name, patternData) {
   if (error) { await alert('Could not create share link.'); return; }
 
   const url = `${location.origin}${location.pathname}?share=${encodeURIComponent(shareId)}`;
-  try {
-    await navigator.clipboard.writeText(url);
-    await alert('Share link copied to clipboard!');
-  } catch {
-    await alert(`Share link:\n${url}`);
-  }
+  await showShareLinkModal(url, { isPublic: true });
 }
 
 async function renamePhrase(oldName) {
@@ -1017,12 +1013,7 @@ async function shareClip(clip) {
 
   if (error || !data?.signedUrl) { await alert('Could not create share link.'); return; }
 
-  try {
-    await navigator.clipboard.writeText(data.signedUrl);
-    await alert('Share link copied!\n\nThis link is valid for 7 days.');
-  } catch {
-    await alert(`Share link (valid 7 days):\n${data.signedUrl}`);
-  }
+  await showShareLinkModal(data.signedUrl, { isPublic: true });
 }
 
 async function deleteClip(clip) {

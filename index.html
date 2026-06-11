@@ -2293,6 +2293,26 @@
   </div>
 
   <!-- Custom Confirmation / Alert / Prompt Modal -->
+  <!-- Share Link Modal -->
+  <div id="shareLinkModal" class="modal-overlay" aria-hidden="true">
+    <div class="modal glass-panel share-link-modal">
+      <div class="modal-title vibrant-text">Share Link</div>
+      <div class="modal-subtitle" id="shareLinkSubtitle">Link copied to clipboard.</div>
+      <div class="share-link-row">
+        <input id="shareLinkInput" type="text" readonly />
+        <button id="shareLinkCopyBtn" class="share-link-copy-btn" title="Copy link">
+          <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-actions">
+        <button id="shareLinkCloseBtn" class="secondary-btn">Close</button>
+        <button id="shareLinkPublishBtn" class="primary-btn active" style="display:none;">Publish to Feed</button>
+      </div>
+    </div>
+  </div>
+
   <div id="confirmModal" class="modal-overlay" aria-hidden="true">
     <div class="modal glass-panel">
       <div id="confirmTitle" class="modal-title vibrant-text">Confirm</div>

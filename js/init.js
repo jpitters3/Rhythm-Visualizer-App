@@ -300,7 +300,7 @@ function safeInit() {
     console.log('Initial Render Complete');
 
     (async () => {
-      await loadSharedFromURL();
+      const loadedShared = await loadSharedFromURL();
       await loadSharedCompositionFromURL();
 
       // After login, open any composition the user was trying to view before auth
@@ -308,12 +308,12 @@ function safeInit() {
       // refreshPatternSelect imported from pattern-crud.js
       await refreshPatternSelect();
 
-      // Synchronous Pattern Load
+      // Synchronous Pattern Load — skip if a shared pattern was already loaded
       const patternSelect = document.getElementById('patternSelect');
       let selected = (patternSelect) ? patternSelect.value : '';
 
       // If not signed in and there are no saved patterns, do nothing
-      if (selected) {
+      if (selected && !loadedShared) {
         // Fallback: If dropdown is empty, try to get last used directly
         // We use imported controls logic or pattern-crud Logic
         // But here we rely on refreshPatternSelect having populated it.
