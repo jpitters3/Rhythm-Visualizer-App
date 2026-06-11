@@ -333,16 +333,23 @@ function applyCustomHandpan(handpanData) {
   dispatchEvent(new Event('handpan-loaded'));
 }
 
+function hasBottomNotes() {
+  return mountedHandpanData && Array.isArray(mountedHandpanData.note_map) &&
+    mountedHandpanData.note_map.some(tf => (tf.side || 'top') === 'bottom');
+}
+
 export function toggleHandpanSide() {
   if (!mountedHandpanData || !mountedHandpanData.bottom_image_url) return;
 
-  // Cycle: Top -> Bottom -> Dual -> Both -> Top
+  // Cycle: Top -> Bottom -> Dual -> Both -> Perimeter (if bottom notes exist) -> Top
   if (currentHandpanSide === 'top') {
     currentHandpanSide = 'bottom';
   } else if (currentHandpanSide === 'bottom') {
     currentHandpanSide = 'dual';
   } else if (currentHandpanSide === 'dual') {
     currentHandpanSide = 'both';
+  } else if (currentHandpanSide === 'both') {
+    currentHandpanSide = hasBottomNotes() ? 'perimeter' : 'top';
   } else {
     currentHandpanSide = 'top';
   }
@@ -362,6 +369,9 @@ export function toggleHandpanSide() {
     } else if (currentHandpanSide === 'dual') {
       flipBtn.textContent = '⩓';
       flipBtn.title = "Dual View (Stacked)";
+    } else if (currentHandpanSide === 'perimeter') {
+      flipBtn.textContent = '◎';
+      flipBtn.title = "Perimeter View (bottom shell as arcs)";
     } else {
       flipBtn.textContent = '🔄';
       flipBtn.title = (currentHandpanSide === 'top') ? "Flip to Bottom" : "Flip to All";
@@ -416,6 +426,9 @@ export function toggleHandpanSide() {
       include = true;
       // No ghost flags for dual mode, they just go to different overlays
       // But we can set isGhost false explicitly
+      isGhost = false;
+    } else if (currentHandpanSide === 'perimeter') {
+      include = true; // include all; bottom notes rendered as arcs in buildHandpanOverlay
       isGhost = false;
     } else {
       // Normal strict side
@@ -716,7 +729,20 @@ export function buildHandpanOverlay() {
 
   if (handpanOverlayBottom) handpanOverlayBottom.innerHTML = '';
 
+  // Remove any existing perimeter SVG
+  const wrap = handpanOverlay.closest('.handpan-wrap');
+  wrap?.querySelector('.hp-perimeter-svg')?.remove();
+
+  // Collect bottom notes for perimeter mode
+  const perimeterNotes = [];
+
   for (const [note, p] of Object.entries(HANDPAN_MAP)) {
+    // Perimeter mode: bottom notes become SVG arcs, top notes render normally
+    if (currentHandpanSide === 'perimeter' && p.side === 'bottom') {
+      perimeterNotes.push({ note, p });
+      continue;
+    }
+
     let targetOverlay = handpanOverlay;
     if (currentHandpanSide === 'dual' && p.side === 'bottom' && handpanOverlayBottom) {
       targetOverlay = handpanOverlayBottom;
@@ -749,7 +775,7 @@ export function buildHandpanOverlay() {
     }
 
     targetOverlay.appendChild(dot);
-    
+
     // Create visual child to isolate pulse from label
     const visual = document.createElement('div');
     visual.className = 'hp-visual';
@@ -757,8 +783,101 @@ export function buildHandpanOverlay() {
 
     handpanDots.set(note, dot);
   }
+
+  // Build perimeter arcs for bottom-shell notes
+  if (perimeterNotes.length > 0 && wrap) {
+    const svg = buildPerimeterSvg(perimeterNotes);
+    wrap.appendChild(svg);
+  }
+
   if (overlayPitches || overlayNumbers)
     overlayNumberPitchNotes(); else removeNoteLabels();
+}
+
+function buildPerimeterSvg(perimeterNotes) {
+  const NS = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(NS, 'svg');
+  svg.setAttribute('class', 'hp-perimeter-svg');
+  svg.setAttribute('viewBox', '0 0 100 100');
+  svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+
+  const cx = 50, cy = 50;
+  const arcR = 47; // radius of arc path, just outside handpan edge
+  const toRad = d => d * Math.PI / 180;
+
+  perimeterNotes.forEach(({ note, p }, i) => {
+    // Mirror x because the bottom image is viewed from below (horizontally flipped vs top view).
+    // Angle is derived from the note's calibrated position, x-flipped.
+    const dx = (100 - p.x) - 50;
+    const dy = p.y - 50;
+    const midAngle = Math.atan2(dy, dx) * (180 / Math.PI);
+
+    // Arc length = note diameter → angle from chord-length formula: 2*arcsin(r/R)
+    const noteR = p.r || 8;
+    const arcDeg = (2 * Math.asin(Math.min(noteR / arcR, 1))) * (180 / Math.PI);
+
+    const a0 = midAngle - arcDeg / 2;
+    const a1 = midAngle + arcDeg / 2;
+
+    const sx = cx + arcR * Math.cos(toRad(a0));
+    const sy = cy + arcR * Math.sin(toRad(a0));
+    const ex = cx + arcR * Math.cos(toRad(a1));
+    const ey = cy + arcR * Math.sin(toRad(a1));
+    const largeArc = arcDeg > 180 ? 1 : 0;
+    const d = `M ${sx.toFixed(2)} ${sy.toFixed(2)} A ${arcR} ${arcR} 0 ${largeArc} 1 ${ex.toFixed(2)} ${ey.toFixed(2)}`;
+
+    // Invisible wide hit-area path (easier to tap)
+    const hit = document.createElementNS(NS, 'path');
+    hit.setAttribute('d', d);
+    hit.setAttribute('class', 'hp-arc-hit');
+    hit.dataset.note = note;
+    svg.appendChild(hit);
+
+    // Visible styled arc
+    const path = document.createElementNS(NS, 'path');
+    path.setAttribute('d', d);
+    path.setAttribute('class', 'hp-arc');
+    path.dataset.note = note;
+    svg.appendChild(path);
+
+    // Label at arc midpoint
+    const lx = cx + arcR * Math.cos(toRad(midAngle));
+    const ly = cy + arcR * Math.sin(toRad(midAngle));
+    const text = document.createElementNS(NS, 'text');
+    text.setAttribute('x', lx.toFixed(2));
+    text.setAttribute('y', ly.toFixed(2));
+    text.setAttribute('class', 'hp-arc-label');
+    text.setAttribute('text-anchor', 'middle');
+    text.setAttribute('dominant-baseline', 'middle');
+    text.textContent = note;
+    svg.appendChild(text);
+
+    // Store proxy in handpanDots so highlightHandpan can find it
+    handpanDots.set(note, { isArc: true, path, text });
+  });
+
+  // Click / touch handler for the whole SVG
+  svg.addEventListener('click', (e) => {
+    const arcNote = e.target.dataset?.note;
+    if (!arcNote) return;
+    playNoteByLabel(arcNote, null);
+    highlightHandpan(arcNote, null);
+    if (activeGrid.caretIndex !== null) writeToSession(arcNote, { advance: !e.altKey });
+  });
+
+  svg.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    for (const touch of e.changedTouches) {
+      const el = document.elementFromPoint(touch.clientX, touch.clientY);
+      const arcNote = el?.dataset?.note;
+      if (!arcNote) continue;
+      playNoteByLabel(arcNote, null);
+      highlightHandpan(arcNote, null);
+      if (activeGrid.caretIndex !== null) writeToSession(arcNote, { advance: true });
+    }
+  }, { passive: false });
+
+  return svg;
 }
 
 let hpPulseTimers = new Map();
@@ -787,11 +906,22 @@ export function highlightHandpan(note, stepIndex, forceHand = null, latency = 0)
     down = isDownbeatStep(stepIndex);
   }
 
-  // Use WAAPI for a buttery smooth, compositor-driven animation.
-  // This eliminates the non-performant `offsetWidth` reflow hack.
   const duration = Math.max(200, (intervalMs() * 4) * 0.8);
   const shadowColor = down ? 'var(--down-fill)' : 'var(--up-fill)';
 
+  // Perimeter arc highlight
+  if (el.isArc) {
+    el.path.classList.add('active');
+    setTimeout(() => el.path.classList.remove('active'), duration);
+    el.path.animate([
+      { stroke: shadowColor, strokeOpacity: 1, filter: `drop-shadow(0 0 3px ${shadowColor})` },
+      { stroke: shadowColor, strokeOpacity: 0.35, filter: 'none' }
+    ], { duration, easing: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)', delay: -latency * 1000 });
+    return;
+  }
+
+  // Use WAAPI for a buttery smooth, compositor-driven animation.
+  // This eliminates the non-performant `offsetWidth` reflow hack.
   const visual = el.querySelector('.hp-visual');
   if (!visual) return;
 
@@ -851,6 +981,7 @@ function setCalibrating(on) {
 function selectHpDot(note) {
   selectedHpNote = note;
   for (const [k, el] of handpanDots.entries()) {
+    if (el.isArc) continue;
     el.classList.toggle('selected', k === note);
   }
 }
@@ -991,6 +1122,8 @@ function overlayNumberPitchNotes() {
   const isCustom = scaleSelect.value.startsWith('custom:');
 
   for (const [note, el] of handpanDots.entries()) {
+    if (el.isArc) continue; // perimeter arcs carry their own SVG text label
+
     const p = HANDPAN_MAP[note];
     if (!p) continue;
 

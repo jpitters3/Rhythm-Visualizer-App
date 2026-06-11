@@ -56,24 +56,15 @@ export function initGridAutoscroll() {
 
     // 1. Instant Loop Hack
     // We only need to check this if we haven't already scrolled to top for this loop
-    const lastActiveIndex = (() => {
-      // Small optimization: cache this calculation for the current pattern
-      if (ctx._lastActiveIndex !== undefined && ctx._lastLabelsLength === ctx.innerLabels.length) {
-        return ctx._lastActiveIndex;
+    let lastActiveIndex = -1;
+    for (let i = ctx.innerLabels.length - 1; i >= 0; i--) {
+      const lbl = ctx.innerLabels[i];
+      if (Array.isArray(lbl)) {
+        if (lbl.some(l => l && l !== '')) { lastActiveIndex = i; break; }
+      } else if (lbl && lbl !== '') {
+        lastActiveIndex = i; break;
       }
-      let found = -1;
-      for (let i = ctx.innerLabels.length - 1; i >= 0; i--) {
-        const lbl = ctx.innerLabels[i];
-        if (Array.isArray(lbl)) {
-          if (lbl.some(l => l && l !== '')) { found = i; break; }
-        } else if (lbl && lbl !== '') {
-          found = i; break;
-        }
-      }
-      ctx._lastActiveIndex = found;
-      ctx._lastLabelsLength = ctx.innerLabels.length;
-      return found;
-    })();
+    }
 
     if (currentStep > lastActiveIndex && lastActiveIndex >= 0) {
       if (lastScrolledMeasure !== -2) { // Use -2 as a special state for "scrolled mid-measure"

@@ -635,6 +635,33 @@ body.dark .cell.visual-ding .inner::before {
   color: transparent !important;
 }
 
+/* Ding egg on sub-dots (chord cells in Pitches mode) */
+.sub-dot.visual-ding::before {
+  content: '';
+  position: absolute;
+  top: 49.5%;
+  left: 49.5%;
+  transform: translate(-50%, -50%);
+  width: 40%;
+  height: 50%;
+  border-radius: 50%;
+  box-shadow:
+    inset 0 0 0 2px #ffffff,
+    inset 0 0 0 5px color-mix(in srgb, var(--beat-fill) var(--mix), var(--cell-bg)),
+    inset 0 0 0 7px #ffffff;
+  z-index: 1;
+  pointer-events: none;
+}
+
+body.dark .sub-dot.visual-ding::before {
+  background: transparent;
+  box-shadow: inset 0 0 0 14px #ffffff;
+}
+
+.sub-dot.visual-ding {
+  color: transparent !important;
+}
+
 /* ===== FLAM (GRACE NOTE) ===== */
 
 /* Allow the flam circle to overflow the cell boundary */

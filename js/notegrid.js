@@ -161,7 +161,14 @@ function resolveLabelText(lbl, pref, isMulti = false, subIdx = null) {
   if (isMulti) {
     let subText = lbl[subIdx] || '';
     if (subText === '0' || subText === 'Ding') {
-      subText = (pref === 'Numbers') ? 'D' : '';
+      return (pref === 'Numbers') ? 'D' : '';
+    }
+    if (pref === 'Pitches' && subText !== '' && getScale) {
+      const scale = getScale();
+      if (scale && scale.map) {
+        const pitch = scale.map[subText];
+        if (pitch) return pitch.replace('s', '#').replace(/[0-9]/g, '');
+      }
     }
     return subText;
   }
@@ -212,6 +219,8 @@ export function updateGridLabels(ctx = activeGrid) {
       const allSubs = cell.querySelectorAll('.sub-dot');
       allSubs.forEach((sub, sIdx) => {
         sub.textContent = resolveLabelText(lbl, pref, true, sIdx);
+        const isSubDing = lbl[sIdx] === '0' || lbl[sIdx] === 'Ding';
+        sub.classList.toggle('visual-ding', isSubDing && pref === 'Pitches');
       });
     }
   });
@@ -340,6 +349,8 @@ export function renderAllMeasures(ctx = activeGrid) {
         for (let idx = 0; idx < allSubs.length; idx++) {
           allSubs[idx].textContent = resolveLabelText(lbl, pref, true, idx);
           allSubs[idx].classList.toggle('active', !!lbl[idx]);
+          const isSubDing = lbl[idx] === '0' || lbl[idx] === 'Ding';
+          allSubs[idx].classList.toggle('visual-ding', isSubDing && pref === 'Pitches');
         };
       }
 
@@ -557,11 +568,9 @@ export function setInnerLabel(i, value, ctx = activeGrid) {
 
     const subs = Array.from(cell.querySelectorAll('.sub-dot'));
     ctx.innerLabels[i].forEach((label, idx) => {
-      let subText = label || '';
-      if (subText === '0' || subText === 'Ding') {
-        subText = (pref === 'Numbers') ? 'D' : '';
-      }
-      subs[idx].textContent = subText;
+      subs[idx].textContent = resolveLabelText(ctx.innerLabels[i], pref, true, idx);
+      const isSubDing = label === '0' || label === 'Ding';
+      subs[idx].classList.toggle('visual-ding', isSubDing && pref === 'Pitches');
     });
   }
 
