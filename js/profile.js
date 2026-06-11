@@ -293,10 +293,13 @@ Bus.on(BUS_EVENT.PROFILE_LOAD_NEEDED, async () => {
 // ===== SUBSCRIPTION EXPIRY BANNER =====
 
 export function initSubscriptionBanner(profile) {
-  const banner = document.getElementById('subscriptionBanner');
-  const title  = document.getElementById('subscriptionBannerTitle');
-  const sub    = document.getElementById('subscriptionBannerSub');
-  const btn    = document.getElementById('subscriptionBannerBtn');
+  const banner       = document.getElementById('subscriptionBanner');
+  const title        = document.getElementById('subscriptionBannerTitle');
+  const sub          = document.getElementById('subscriptionBannerSub');
+  const btn          = document.getElementById('subscriptionBannerBtn');
+  const closeBtn     = document.getElementById('subscriptionBannerCloseBtn');
+  const dismissLabel = document.getElementById('subscriptionBannerDismissLabel');
+  const dismissCheck = document.getElementById('subscriptionBannerDismiss');
   if (!banner || !title || !sub || !btn) return;
 
   const tier      = profile?.subscription_tier;
@@ -306,7 +309,7 @@ export function initSubscriptionBanner(profile) {
     return;
   }
 
-  const msLeft  = new Date(expiresAt) - new Date();
+  const msLeft   = new Date(expiresAt) - new Date();
   const daysLeft = Math.ceil(msLeft / 86400000);
 
   if (daysLeft > 14) {
@@ -314,20 +317,40 @@ export function initSubscriptionBanner(profile) {
     return;
   }
 
-  if (daysLeft <= 0) {
+  const isExpired = daysLeft <= 0;
+
+  // Check if user dismissed this specific expiry period
+  if (isExpired) {
+    const dismissedUntil = localStorage.getItem('subscription_banner_dismissed');
+    if (dismissedUntil && new Date(dismissedUntil) >= new Date(expiresAt)) {
+      banner.style.display = 'none';
+      return;
+    }
+  }
+
+  if (isExpired) {
     banner.classList.add('subscription-banner--expired');
     title.textContent = 'Your Panafide access has expired';
     sub.textContent   = 'Renew to keep your compositions and full course access.';
     btn.textContent   = 'Renew Now';
+    if (dismissLabel) dismissLabel.style.display = '';
+    if (dismissCheck) dismissCheck.checked = false;
   } else {
     banner.classList.remove('subscription-banner--expired');
     title.textContent = `Your access expires in ${daysLeft} day${daysLeft === 1 ? '' : 's'}`;
     sub.textContent   = 'Renew before it expires to keep your full access.';
     btn.textContent   = 'Renew Access';
+    if (dismissLabel) dismissLabel.style.display = 'none';
   }
 
   banner.style.display = '';
   btn.addEventListener('click', () => {
     Bus.emit(BUS_EVENT.SHOW_UPGRADE_MODAL, { feature: 'renewal' });
+  }, { once: true });
+  closeBtn?.addEventListener('click', () => {
+    if (isExpired && dismissCheck?.checked) {
+      localStorage.setItem('subscription_banner_dismissed', expiresAt);
+    }
+    banner.style.display = 'none';
   }, { once: true });
 }

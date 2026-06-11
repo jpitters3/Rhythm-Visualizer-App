@@ -1,6 +1,7 @@
 .shared-banner{
   max-width: 900px;
-  margin: 0 0 14px;
+  width: 100%;
+  margin: 0 auto 14px;
   padding: 12px 14px;
   border-radius: 16px;
   background: var(--panel);
@@ -90,6 +91,23 @@
 
 .subscription-banner--expired #subscriptionBannerBtn:hover {
   background: #b91c1c;
+}
+
+/* ===== BANNER DISMISS CHECKBOX ===== */
+.banner-dismiss-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  opacity: 0.75;
+  cursor: pointer;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.banner-dismiss-label input[type="checkbox"] {
+  cursor: pointer;
+  accent-color: #dc2626;
 }
 
 /* ===== SHARE LINK MODAL ===== */
