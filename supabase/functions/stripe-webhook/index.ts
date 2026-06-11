@@ -72,23 +72,71 @@ Deno.serve(async (req) => {
       const session = event.data.object
       const userId = session.metadata?.supabase_user_id
       const customerId = session.customer
+      const subscriptionId = session.subscription
 
       if (userId) {
         const supabaseUrl = Deno.env.get('SUPABASE_URL')!
         const supabaseServiceKey = Deno.env.get('SERVICE_ROLE_KEY')!
         const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
+        // Fetch subscription period end from Stripe
+        let expiresAt: string | null = null
+        if (subscriptionId) {
+          const subRes = await fetch(`https://api.stripe.com/v1/subscriptions/${subscriptionId}`, {
+            headers: { 'Authorization': `Bearer ${stripeKey}` }
+          })
+          const sub = await subRes.json()
+          if (sub.current_period_end) {
+            expiresAt = new Date(sub.current_period_end * 1000).toISOString()
+          }
+        }
+
         const { error } = await supabase
           .from('profiles')
           .update({
-            subscription_tier: 'pro',
+            subscription_tier: 'player_plus',
             stripe_customer_id: customerId,
-            subscription_status: 'active'
+            subscription_status: 'active',
+            subscription_source: 'stripe',
+            ...(expiresAt && { subscription_expires_at: expiresAt }),
           })
           .eq('user_id', userId)
 
         if (error) throw error
-        console.log(`[stripe-webhook] Successfully upgraded ${userId}`)
+        console.log(`[stripe-webhook] Upgraded ${userId}, expires ${expiresAt}`)
+      }
+    }
+
+    // Renew expiry on each billing cycle
+    if (event.type === 'invoice.payment_succeeded') {
+      const invoice = event.data.object
+      if (invoice.billing_reason !== 'subscription_cycle') return new Response(JSON.stringify({ received: true }), { status: 200, headers: { 'Content-Type': 'application/json' } })
+
+      const customerId = invoice.customer
+      const subscriptionId = invoice.subscription
+
+      if (customerId && subscriptionId) {
+        const supabaseUrl = Deno.env.get('SUPABASE_URL')!
+        const supabaseServiceKey = Deno.env.get('SERVICE_ROLE_KEY')!
+        const supabase = createClient(supabaseUrl, supabaseServiceKey)
+
+        const subRes = await fetch(`https://api.stripe.com/v1/subscriptions/${subscriptionId}`, {
+          headers: { 'Authorization': `Bearer ${stripeKey}` }
+        })
+        const sub = await subRes.json()
+        const expiresAt = sub.current_period_end
+          ? new Date(sub.current_period_end * 1000).toISOString()
+          : null
+
+        if (expiresAt) {
+          const { error } = await supabase
+            .from('profiles')
+            .update({ subscription_expires_at: expiresAt, subscription_status: 'active' })
+            .eq('stripe_customer_id', customerId)
+
+          if (error) throw error
+          console.log(`[stripe-webhook] Renewed customer ${customerId}, expires ${expiresAt}`)
+        }
       }
     }
 

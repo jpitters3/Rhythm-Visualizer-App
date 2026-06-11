@@ -74,6 +74,7 @@ export async function loadCurrentProfile() {
 
     updateProfileUI(); // Update any UI components depending on profile
     Bus.emit(BUS_EVENT.PROFILE_LOADED, { profile: currentProfile });
+    initSubscriptionBanner(currentProfile);
   } catch (err) {
     console.error('Profile load exception:', err);
   }
@@ -288,3 +289,45 @@ saveProfileBtn?.addEventListener('click', async () => {
 Bus.on(BUS_EVENT.PROFILE_LOAD_NEEDED, async () => {
   await loadCurrentProfile();
 });
+
+// ===== SUBSCRIPTION EXPIRY BANNER =====
+
+export function initSubscriptionBanner(profile) {
+  const banner = document.getElementById('subscriptionBanner');
+  const title  = document.getElementById('subscriptionBannerTitle');
+  const sub    = document.getElementById('subscriptionBannerSub');
+  const btn    = document.getElementById('subscriptionBannerBtn');
+  if (!banner || !title || !sub || !btn) return;
+
+  const tier      = profile?.subscription_tier;
+  const expiresAt = profile?.subscription_expires_at;
+  if (!expiresAt || (tier !== 'player_plus' && tier !== 'pro')) {
+    banner.style.display = 'none';
+    return;
+  }
+
+  const msLeft  = new Date(expiresAt) - new Date();
+  const daysLeft = Math.ceil(msLeft / 86400000);
+
+  if (daysLeft > 14) {
+    banner.style.display = 'none';
+    return;
+  }
+
+  if (daysLeft <= 0) {
+    banner.classList.add('subscription-banner--expired');
+    title.textContent = 'Your Panafide access has expired';
+    sub.textContent   = 'Renew to keep your compositions and full course access.';
+    btn.textContent   = 'Renew Now';
+  } else {
+    banner.classList.remove('subscription-banner--expired');
+    title.textContent = `Your access expires in ${daysLeft} day${daysLeft === 1 ? '' : 's'}`;
+    sub.textContent   = 'Renew before it expires to keep your full access.';
+    btn.textContent   = 'Renew Access';
+  }
+
+  banner.style.display = '';
+  btn.addEventListener('click', () => {
+    Bus.emit(BUS_EVENT.SHOW_UPGRADE_MODAL, { feature: 'renewal' });
+  }, { once: true });
+}

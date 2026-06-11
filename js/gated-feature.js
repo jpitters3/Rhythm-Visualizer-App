@@ -30,7 +30,9 @@ export function canAccess(feature, context = {}) {
   if (document.documentElement.getAttribute('data-gp-test-mode') === 'true') return true;
 
   const tier = currentProfile?.subscription_tier || 'player';
-  if (tier === 'player_plus' || tier === 'pro') return true; // 'pro' retained for legacy rows
+  const expiresAt = currentProfile?.subscription_expires_at;
+  const isExpired = expiresAt ? new Date(expiresAt) < new Date() : false;
+  if ((tier === 'player_plus' || tier === 'pro') && !isExpired) return true;
 
   const accessMap = {
     'ai_assistant': false,

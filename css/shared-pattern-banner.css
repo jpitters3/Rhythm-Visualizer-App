@@ -56,3 +56,38 @@
     shared-btn-shimmer 1.8s linear infinite,
     shared-btn-pulse   2s ease-in-out infinite;
 }
+
+/* ===== SUBSCRIPTION EXPIRY BANNER ===== */
+.subscription-banner {
+  border-color: rgba(234, 179, 8, 0.4);
+  background: color-mix(in srgb, var(--panel) 90%, rgba(234, 179, 8, 0.15));
+}
+
+.subscription-banner--expired {
+  border-color: rgba(239, 68, 68, 0.4);
+  background: color-mix(in srgb, var(--panel) 90%, rgba(239, 68, 68, 0.15));
+}
+
+.subscription-banner #subscriptionBannerBtn {
+  background: #ca8a04;
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  padding: 7px 14px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.2s;
+}
+
+.subscription-banner #subscriptionBannerBtn:hover {
+  background: #a16207;
+}
+
+.subscription-banner--expired #subscriptionBannerBtn {
+  background: #dc2626;
+}
+
+.subscription-banner--expired #subscriptionBannerBtn:hover {
+  background: #b91c1c;
+}

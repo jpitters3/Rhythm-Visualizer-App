@@ -12,12 +12,16 @@ const { createTestUser, deleteTestUser, loginAsTestUser } = require('./utils/aut
  * 5. Attempt to save a 6th pattern -> Prompted to upgrade to Pro.
  */
 async function openPhraseMenu(page) {
+  // On mobile the nav is hidden behind a hamburger — open #appNav first
   if (await page.locator('#mobileMenuBtn').isVisible()) {
-    const menu = page.locator('#headerMenu');
-    if (!await menu.evaluate(el => el.classList.contains('open'))) {
-      await page.click('#mobileMenuBtn');
-    }
+    const appNav = page.locator('#appNav');
+    const isOpen = await appNav.evaluate(/** @param {HTMLElement} el */ el => el.classList.contains('open'));
+    if (!isOpen) await page.click('#mobileMenuBtn');
   }
+
+  // #accountBtn lives inside #navAccountWrapper (display:none until signed in)
+  await page.locator('#accountBtn').waitFor({ state: 'visible', timeout: 15000 });
+
   const accountDropdown = page.locator('#accountDropdownMenu');
   if (!await accountDropdown.evaluate(el => el.classList.contains('show'))) {
     await page.click('#accountBtn');
@@ -36,8 +40,8 @@ test.describe('Monetization Save Gating', () => {
     // 0. Create unique test user
     testUser = await createTestUser();
 
-    // 1. Initial Load as Guest
-    await page.goto('/');
+    // 1. Initial Load as Guest (suppress welcome modal — not under test here)
+    await page.goto('/?noWelcome');
   });
 
   test.afterEach(async ({ page }) => {
@@ -64,11 +68,9 @@ test.describe('Monetization Save Gating', () => {
     await page.keyboard.type('D');
 
     // 4. Attempt to save as Guest
+    // #saveBtn is inside the nav (hidden for guests) — trigger it directly
     console.log('[TEST] Checking guest save blocking...');
-
-    // Open File dropdown and click Save
-    await openPhraseMenu(page);
-    await page.click('#saveBtn');
+    await page.evaluate(() => document.getElementById('saveBtn')?.click());
 
     // Wait for Custom Confirm Modal (Alert mode for guest check)
     const confirmModal = page.locator('#confirmModal');
@@ -92,8 +94,9 @@ test.describe('Monetization Save Gating', () => {
     await page.locator('#authPass').fill(user.password);
     await page.click('#authLogin');
 
-    // Wait for login to complete (modal closes)
+    // Wait for login to complete (modal closes + nav updates)
     await expect(authModal).not.toHaveClass(/open/, { timeout: 15000 });
+    await page.locator('#navAccountWrapper').waitFor({ state: 'visible', timeout: 15000 });
     console.log('[TEST] Signed in successfully.');
 
     // 6. Save 5 patterns (the free limit)
@@ -117,7 +120,7 @@ test.describe('Monetization Save Gating', () => {
 
     // 7. Attempt to save 6th pattern -> Upgrade Modal should appear
     console.log('[TEST] Attempting to save 6th pattern (over the limit)...');
-    await page.click('#phraseMenuBtn');
+    await openPhraseMenu(page);
     await page.click('#saveBtn');
 
     // Custom Modal (Prompt mode for 6th save)
@@ -138,7 +141,7 @@ test.describe('Monetization Save Gating', () => {
     await page.screenshot({ path: 'upgrade_modal_highlight.png' });
     console.log('[TEST] Captured screenshot: upgrade_modal_highlight.png');
 
-    await expect(upgradeModal).toContainText('Unlock Pro Features');
+    await expect(upgradeModal).toContainText('Unlock Player+ Features');
     await expect(upgradeModal).toContainText('Unlimited Cloud Storage');
 
     console.log('[TEST] Verified: 6th pattern save triggered upgrade modal with feature highlight.');
