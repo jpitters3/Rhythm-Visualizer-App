@@ -341,14 +341,12 @@ function hasBottomNotes() {
 export function toggleHandpanSide() {
   if (!mountedHandpanData || !mountedHandpanData.bottom_image_url) return;
 
-  // Cycle: Top -> Bottom -> Dual -> Both -> Perimeter (if bottom notes exist) -> Top
+  // Cycle: Top -> Bottom -> Dual -> Perimeter (if bottom notes exist) -> Top
   if (currentHandpanSide === 'top') {
     currentHandpanSide = 'bottom';
   } else if (currentHandpanSide === 'bottom') {
     currentHandpanSide = 'dual';
   } else if (currentHandpanSide === 'dual') {
-    currentHandpanSide = 'both';
-  } else if (currentHandpanSide === 'both') {
     currentHandpanSide = hasBottomNotes() ? 'perimeter' : 'top';
   } else {
     currentHandpanSide = 'top';
@@ -359,14 +357,10 @@ export function toggleHandpanSide() {
   // Update toggle button state
   const flipBtn = document.getElementById('flipSideBtn');
   if (flipBtn) {
-    flipBtn.classList.remove('flipped', 'both');
+    flipBtn.classList.remove('flipped');
     if (currentHandpanSide === 'bottom') flipBtn.classList.add('flipped');
 
-    if (currentHandpanSide === 'both') {
-      flipBtn.classList.add('both');
-      flipBtn.textContent = '∞';
-      flipBtn.title = "Showing All Notes (merged)";
-    } else if (currentHandpanSide === 'dual') {
+    if (currentHandpanSide === 'dual') {
       flipBtn.textContent = '⩓';
       flipBtn.title = "Dual View (Stacked)";
     } else if (currentHandpanSide === 'perimeter') {
@@ -419,10 +413,7 @@ export function toggleHandpanSide() {
     let include = false;
     let isGhost = false;
 
-    if (currentHandpanSide === 'both') {
-      include = true;
-      if (noteSide !== 'top') isGhost = true;
-    } else if (currentHandpanSide === 'dual') {
+    if (currentHandpanSide === 'dual') {
       include = true;
       // No ghost flags for dual mode, they just go to different overlays
       // But we can set isGhost false explicitly
@@ -2024,15 +2015,12 @@ export async function initScale() {
   // been ready when initScale() first ran).
   Bus.on(BUS_EVENT.AUTH_LOGIN, async () => {
     const remoteScaleName = await loadScaleRemote();
+    // Always load custom handpans so they appear in the dropdown for signed-in users.
+    await loadAllUserCustomHandpans();
     if (remoteScaleName) {
       setSelectedScaleName(remoteScaleName);
       if (SCALES[remoteScaleName]) setCurrentScale(SCALES[remoteScaleName]);
       await preloadScaleSamples();
-      // For custom handpans, loadAllUserCustomHandpans handles fetching the
-      // layout data and calling applyCustomHandpan() to render it visually.
-      if (remoteScaleName.startsWith('custom:')) {
-        await loadAllUserCustomHandpans();
-      }
     }
   });
 }
