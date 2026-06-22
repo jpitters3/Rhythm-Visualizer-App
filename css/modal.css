@@ -114,7 +114,75 @@
 .modal-subtitle {
   font-size: 13px;
   opacity: 0.75;
+  margin-top: 12px;
   margin-bottom: 12px;
+}
+
+/* ===== SUBDIVISION STRETCH DIALOG ===== */
+#subdivStretchModal .modal {
+  width: min(480px, calc(100vw - 36px));
+  height: 340px;
+}
+
+.subdiv-stretch-options {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+button#subdivStretchBtn {
+  padding-bottom: 100px;
+}
+
+button#subdivKeepBtn {
+  padding-bottom: 80px;
+}
+
+.subdiv-stretch-opt {
+  width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 16px 18px;
+  border-radius: 12px;
+  border: 1px solid var(--panel-border);
+  background: rgba(99, 102, 241, 0.08);
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.subdiv-stretch-opt:hover {
+  background: rgba(99, 102, 241, 0.18);
+  border-color: rgba(99, 102, 241, 0.45);
+}
+
+.subdiv-stretch-opt--keep {
+  background: rgba(0, 0, 0, 0.1);
+}
+
+.subdiv-stretch-opt--keep:hover {
+  background: rgba(0, 0, 0, 0.18);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.subdiv-stretch-opt-title {
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.subdiv-stretch-opt-desc {
+  font-size: 12px;
+  opacity: 0.72;
+  line-height: 1.5;
+  white-space: normal;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 
 .modal-hint {

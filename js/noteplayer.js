@@ -285,9 +285,10 @@ function metroClick(kind, delay = 0) {
 }
 
 export function isDownbeatStep(stepIndex, mode) {
-  // Grid uses a simple index % 2 check for colors (R-L-R-L)
-  // regardless of 8th/16th note mode.
-  return stepIndex % 2 === 0;
+  // At 16th notes (subdivision ≥ 4) hands alternate every 2 steps so that
+  // R/L assignments stay at the 8th-note level, matching getEffectiveHand().
+  const handStride = (mode || 2) >= 4 ? 2 : 1;
+  return Math.floor(stepIndex / handStride) % 2 === 0;
 }
 
 // Helpers for the Countdown UI
@@ -899,6 +900,51 @@ export function restartIfPlaying(ctx) {
 
 export function getAudioCtx() { return audioCtx; }
 
+// ===== SUBDIVISION STRETCH =====
+
+const SUB_NAMES = { 1: 'quarter notes', 2: '8th notes', 4: '16th notes' };
+
+function hasNotes(ctx) {
+  return ctx.innerLabels.some(l => {
+    if (Array.isArray(l)) return l.some(x => x && x !== '');
+    return l && l !== '';
+  });
+}
+
+function stretchGrid(ctx, factor) {
+  const oldLen = ctx.innerLabels.length;
+  const newLen = oldLen * factor;
+  const newLabels = Array(newLen).fill('');
+  const newHands  = Array(newLen).fill(null);
+  const newFlams  = Array(newLen).fill('');
+  for (let i = 0; i < oldLen; i++) {
+    newLabels[i * factor] = ctx.innerLabels[i];
+    newHands[i * factor]  = ctx.innerHands[i];
+    newFlams[i * factor]  = ctx.innerFlams[i];
+  }
+  ctx.innerLabels = newLabels;
+  ctx.innerHands  = newHands;
+  ctx.innerFlams  = newFlams;
+}
+
+function showSubdivStretchDialog(toSub) {
+  return new Promise(resolve => {
+    const modal = document.getElementById('subdivStretchModal');
+    if (!modal) { resolve('keep'); return; }
+    const title = document.getElementById('subdivStretchTitle');
+    if (title) title.textContent = `Switching to ${SUB_NAMES[toSub] || `subdivision ${toSub}`}`;
+    modal.classList.add('open');
+    modal.setAttribute('aria-hidden', 'false');
+    function choose(val) {
+      modal.classList.remove('open');
+      modal.setAttribute('aria-hidden', 'true');
+      resolve(val);
+    }
+    document.getElementById('subdivStretchBtn')?.addEventListener('click', () => choose('stretch'), { once: true });
+    document.getElementById('subdivKeepBtn')?.addEventListener('click',   () => choose('keep'),    { once: true });
+  });
+}
+
 // ===== INITIALIZATION =====
 export function initNotePlayer() {
   // Attach beats / subdivision listeners
@@ -909,9 +955,20 @@ export function initNotePlayer() {
     if (HistoryManager) HistoryManager.pushState();
     setBeats(parseInt(tsBeatsEl.value) || 4);
   });
-  tsSubEl?.addEventListener('change', () => {
+  tsSubEl?.addEventListener('change', async () => {
     if (HistoryManager) HistoryManager.pushState();
-    setSubdivision(parseInt(tsSubEl.value) || 2);
+    const newVal = parseInt(tsSubEl.value) || 2;
+    const ctx = activeGrid || gridA;
+    const oldVal = ctx.subdivision;
+    if (newVal > oldVal && hasNotes(ctx)) {
+      const factor = newVal / oldVal;
+      const choice = await showSubdivStretchDialog(newVal);
+      if (choice === 'stretch') {
+        stretchGrid(gridA, factor);
+        if (gridB) stretchGrid(gridB, factor);
+      }
+    }
+    setSubdivision(newVal);
   });
 
   // Attempt to unlock audio on ANY user interaction (Click, Key, Touch)
