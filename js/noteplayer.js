@@ -10,6 +10,7 @@ import { SCALE_KEY_LOCAL, SCALE_KEY_REMOTE, AUDIO_DELAY, VISUAL_HEADSTART, BASE_
 import { renderAllMeasures } from './notegrid.js';
 import { coachingSession, isCoaching, isReviewing } from './coaching-mode.js';
 import { turnOffMic } from './transcription.js';
+import { confirm } from './alert.js';
 
 const SOUND_TAK = 'Tak';
 const SOUND_SLAP = 'Slap';
@@ -927,6 +928,30 @@ function stretchGrid(ctx, factor) {
   ctx.innerFlams  = newFlams;
 }
 
+function hasNotesAtSubdivisions(ctx, factor) {
+  return ctx.innerLabels.some((l, i) => {
+    if (i % factor === 0) return false;
+    if (Array.isArray(l)) return l.some(x => x && x !== '');
+    return l && l !== '';
+  });
+}
+
+function compressGrid(ctx, factor) {
+  const oldLen = ctx.innerLabels.length;
+  const newLen = Math.ceil(oldLen / factor);
+  const newLabels = Array(newLen).fill('');
+  const newHands  = Array(newLen).fill(null);
+  const newFlams  = Array(newLen).fill('');
+  for (let i = 0; i < newLen; i++) {
+    newLabels[i] = ctx.innerLabels[i * factor];
+    newHands[i]  = ctx.innerHands[i * factor];
+    newFlams[i]  = ctx.innerFlams[i * factor];
+  }
+  ctx.innerLabels = newLabels;
+  ctx.innerHands  = newHands;
+  ctx.innerFlams  = newFlams;
+}
+
 function showSubdivStretchDialog(toSub) {
   return new Promise(resolve => {
     const modal = document.getElementById('subdivStretchModal');
@@ -960,14 +985,33 @@ export function initNotePlayer() {
     const newVal = parseInt(tsSubEl.value) || 2;
     const ctx = activeGrid || gridA;
     const oldVal = ctx.subdivision;
+
     if (newVal > oldVal && hasNotes(ctx)) {
+      // Upgrading to finer subdivision — offer to stretch
       const factor = newVal / oldVal;
       const choice = await showSubdivStretchDialog(newVal);
       if (choice === 'stretch') {
         stretchGrid(gridA, factor);
         if (gridB) stretchGrid(gridB, factor);
       }
+    } else if (newVal < oldVal) {
+      // Downgrading to coarser subdivision — warn if notes will be lost
+      const factor = oldVal / newVal;
+      if (hasNotesAtSubdivisions(ctx, factor)) {
+        const toName = SUB_NAMES[newVal] || `subdivision ${newVal}`;
+        const ok = await confirm(
+          `Notes that fall between beats will be permanently deleted when switching to ${toName}. Continue?`,
+          'Notes will be lost'
+        );
+        if (!ok) {
+          tsSubEl.value = oldVal;
+          return;
+        }
+      }
+      compressGrid(gridA, factor);
+      if (gridB) compressGrid(gridB, factor);
     }
+
     setSubdivision(newVal);
   });
 
