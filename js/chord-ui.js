@@ -7,7 +7,8 @@ import { getScale } from './state.js';
 import { SCALES } from './config.js';
 import { ChordAnalyzer } from './chord-analyzer.js';
 import { assignChordToSelectedCell } from './notegrid.js';
-import { setChordHighlight } from './handpanmap.js';
+import { setChordHighlight, getPitchPositionMap, isChordTestMode } from './handpanmap.js';
+import { annotatePlayability } from './chord-playability.js';
 
 const ChordUI = (function () {
 
@@ -49,6 +50,7 @@ const ChordUI = (function () {
 
     // Also listen for detailed events if they exist
     window.addEventListener('handpan-loaded', updateLibraryFromState);
+    window.addEventListener('chord-test-mode-changed', updateLibraryFromState);
   }
 
   function toggleFavorite(cId) {
@@ -72,7 +74,7 @@ const ChordUI = (function () {
     const notes = getAllCurrentNotes();
     if (!notes || notes.length === 0) return;
 
-    const results = ChordAnalyzer.analyze(notes);
+    const results = annotatePlayability(ChordAnalyzer.analyze(notes), getPitchPositionMap());
     currentChords = results;
 
     if (countLabel) countLabel.textContent = results.length;
@@ -119,15 +121,13 @@ const ChordUI = (function () {
       return;
     }
 
-    // Sort: Favorites first
+    // Sort: favorites → playable → not playable
     chords.sort((a, b) => {
-      const aId = a.notes.join(',');
-      const bId = b.notes.join(',');
-      const aFav = favoriteChords.has(aId);
-      const bFav = favoriteChords.has(bId);
-      if (aFav && !bFav) return -1;
-      if (!aFav && bFav) return 1;
-      return 0; // maintain original order otherwise (usually root pitch)
+      const aFav = favoriteChords.has(a.notes.join(','));
+      const bFav = favoriteChords.has(b.notes.join(','));
+      if (aFav !== bFav) return aFav ? -1 : 1;
+      if (a.playable !== b.playable) return a.playable ? -1 : 1;
+      return 0;
     });
 
     let activeChordId = null;
@@ -171,14 +171,14 @@ const ChordUI = (function () {
 
         activeChordId = cId;
         chip.classList.add('active');
-        highlightChord(chord.notes, true);
+        highlightChord(chord, true);
       };
 
       const deactivate = () => {
         if (activeChordId === cId) {
           activeChordId = null;
           chip.classList.remove('active');
-          highlightChord(chord.notes, false);
+          highlightChord(chord, false);
         }
       };
 
@@ -215,22 +215,22 @@ const ChordUI = (function () {
     });
   }
 
-  function highlightChord(notes, active) {
-    const scale = getScale();
+  function highlightChord(chord, active) {
+    const notes    = chord.notes ?? chord;
+    const playable = isChordTestMode() ? (chord.playable ?? true) : true;
+    const scale    = getScale();
     const labelToPitch = scale ? scale.map : null;
-    const dingPitch = scale ? scale.ding : null;
+    const dingPitch    = scale ? scale.ding : null;
 
     if (!labelToPitch) return;
 
     const targetLabels = [];
-
     if (notes.includes(dingPitch)) { targetLabels.push('D'); targetLabels.push('Ding'); }
-
     for (const [lbl, pitch] of Object.entries(labelToPitch)) {
       if (notes.includes(pitch)) targetLabels.push(lbl);
     }
 
-    setChordHighlight(targetLabels, active);
+    setChordHighlight(targetLabels, active, playable);
   }
 
   function playChord(notes) {

@@ -364,18 +364,43 @@
   margin-left: 2px;
 }
 
+.method-chord-chip.not-playable {
+  border-color: rgba(239, 68, 68, 0.35);
+  background: rgba(239, 68, 68, 0.06);
+  color: rgba(239, 68, 68, 0.85);
+}
+
+.method-chord-chip.not-playable:hover {
+  background: rgba(239, 68, 68, 0.14);
+  border-color: rgba(239, 68, 68, 0.55);
+}
+
+.method-chord-chip.not-playable:active,
+.method-chord-chip.not-playable.active {
+  background: rgba(239, 68, 68, 0.28);
+  border-color: rgba(239, 68, 68, 0.8);
+}
+
+.method-chord-chip.not-playable .chord-quality {
+  color: rgba(239, 68, 68, 0.6);
+}
+
 .method-show-more-btn {
   font-size: 12px;
   font-weight: 600;
-  color: var(--text-secondary);
+  color: rgba(239, 68, 68, 0.8);
   background: none;
-  border: 1px solid var(--border-color, rgba(255,255,255,0.08));
+  border: 1px solid rgba(239, 68, 68, 0.4);
   border-radius: 999px;
   padding: 6px 16px;
   cursor: pointer;
-  transition: color 0.2s, border-color 0.2s;
+  transition: color 0.2s, border-color 0.2s, background 0.2s;
 }
-.method-show-more-btn:hover { color: var(--text-primary); border-color: rgba(255,255,255,0.2); }
+.method-show-more-btn:hover {
+  color: rgba(239, 68, 68, 1);
+  border-color: rgba(239, 68, 68, 0.7);
+  background: rgba(239, 68, 68, 0.06);
+}
 
 /* ── Progressions ── */
 .method-progressions {

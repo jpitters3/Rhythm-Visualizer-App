@@ -61,6 +61,9 @@ const HANDPAN_IMG_BRONZE = 'handpan-for-groovepan.png';
 
 const handpanDots = new Map();
 
+let chordTestMode = false;
+export function isChordTestMode() { return chordTestMode; }
+
 let overlayPitches = false;
 let overlayNumbers = false;
 let hpMapSaveTimeout = null;
@@ -981,6 +984,33 @@ function selectHpDot(note) {
 }
 
 /**
+ * Returns a map of { pitchString → { x, y, side } } for every note currently
+ * in HANDPAN_MAP, using the active scale to resolve label→pitch.
+ * Used by chord-playability.js to measure inter-note distances.
+ */
+export function getPitchPositionMap() {
+  const scale = getScale();
+  if (!scale) return {};
+
+  const posMap = {};
+
+  const dingEntry = HANDPAN_MAP['Ding'] ?? HANDPAN_MAP['D'];
+  if (dingEntry && scale.ding) {
+    posMap[scale.ding] = { x: dingEntry.x, y: dingEntry.y, side: dingEntry.side || 'top' };
+  }
+
+  if (scale.map) {
+    for (const [lbl, pitch] of Object.entries(scale.map)) {
+      if (posMap[pitch]) continue;
+      const entry = HANDPAN_MAP[lbl];
+      if (entry) posMap[pitch] = { x: entry.x, y: entry.y, side: entry.side || 'top' };
+    }
+  }
+
+  return posMap;
+}
+
+/**
  * Apply or remove the chord-highlight class on the dots that match the given
  * note labels.  Uses `handpanDots` directly — the same source as audio — so
  * the visual always stays in sync with what actually played.
@@ -988,10 +1018,12 @@ function selectHpDot(note) {
  * @param {string[]} labels  Note labels to highlight (e.g. ["D", "1", "5"])
  * @param {boolean}  active  true = add highlight, false = remove
  */
-const CHORD_HL_COLOR = 'rgba(99, 102, 241, 1)';
-const CHORD_HL_GLOW  = 'drop-shadow(0 0 5px rgba(99, 102, 241, 0.75))';
+const CHORD_HL_COLOR     = 'rgba(99, 102, 241, 1)';
+const CHORD_HL_GLOW      = 'drop-shadow(0 0 5px rgba(99, 102, 241, 0.75))';
+const CHORD_HL_RED_COLOR = 'rgba(239, 68, 68, 1)';
+const CHORD_HL_RED_GLOW  = 'drop-shadow(0 0 5px rgba(239, 68, 68, 0.75))';
 
-export function setChordHighlight(labels, active) {
+export function setChordHighlight(labels, active, playable = true) {
   for (const el of handpanDots.values()) {
     if (el.isArc) {
       el.path.style.stroke = '';
@@ -999,19 +1031,25 @@ export function setChordHighlight(labels, active) {
       el.path.style.filter = '';
     } else {
       el.classList.remove('chord-highlight');
+      el.classList.remove('chord-highlight-red');
     }
   }
 
   if (active) {
+    const useRed   = !playable;
+    const arcColor = useRed ? CHORD_HL_RED_COLOR : CHORD_HL_COLOR;
+    const arcGlow  = useRed ? CHORD_HL_RED_GLOW  : CHORD_HL_GLOW;
+    const divClass = useRed ? 'chord-highlight-red' : 'chord-highlight';
+
     for (const lbl of labels) {
       const el = handpanDots.get(lbl);
       if (!el) continue;
       if (el.isArc) {
-        el.path.style.stroke = CHORD_HL_COLOR;
+        el.path.style.stroke = arcColor;
         el.path.style.strokeOpacity = '1';
-        el.path.style.filter = CHORD_HL_GLOW;
+        el.path.style.filter = arcGlow;
       } else {
-        el.classList.add('chord-highlight');
+        el.classList.add(divClass);
       }
     }
   }
@@ -1391,6 +1429,17 @@ export function initHandpanMap() {
   handpanOverlayBottom = document.getElementById('handpanOverlayBottom');
 
   if (!handpanOverlay) return;
+
+  // Double-click / double-tap on the handpan image toggles chord-test mode
+  function toggleChordTestMode() {
+    chordTestMode = !chordTestMode;
+    const wrap = handpanImg?.closest('.handpan-wrap');
+    wrap?.classList.toggle('chord-test-mode', chordTestMode);
+    setChordHighlight([], false); // clear any active highlight
+    window.dispatchEvent(new CustomEvent('chord-test-mode-changed', { detail: { active: chordTestMode } }));
+  }
+  handpanImg?.addEventListener('dblclick', toggleChordTestMode);
+  handpanImgBottom?.addEventListener('dblclick', toggleChordTestMode);
 
   // Listeners
   myScalesBtn?.addEventListener('click', openMyScalesModal);

@@ -773,6 +773,30 @@ body.dark .chord-chip.minor .chord-root {
   transition: all 0.1s;
 }
 
+.hp-dot.chord-highlight-red .hp-visual {
+  background-color: rgba(239, 68, 68, 0.85) !important;
+  box-shadow: 0 0 0 6px rgba(239, 68, 68, 0.35) !important;
+  transform: scale(1.1);
+  transition: all 0.1s;
+}
+
+.handpan-wrap.chord-test-mode::after {
+  content: 'TEST MODE';
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(239, 68, 68, 0.85);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  padding: 3px 8px;
+  border-radius: 4px;
+  pointer-events: none;
+  z-index: 10;
+}
+
 /* Loading Overlay */
 .hp-loading-overlay {
   position: absolute;

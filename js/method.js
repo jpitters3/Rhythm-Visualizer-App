@@ -20,7 +20,8 @@ import { canAccess, FEATURE } from './gated-feature.js';
 import { Bus, BUS_EVENT } from './bus.js';
 import { navigate } from './router.js';
 import { isAdminUser, currentUser } from './state.js';
-import { setChordHighlight } from './handpanmap.js';
+import { setChordHighlight, getPitchPositionMap, isChordTestMode } from './handpanmap.js';
+import { annotatePlayability } from './chord-playability.js';
 import { HistoryManager } from './history.js';
 
 // ── State ──────────────────────────────────────────────────
@@ -29,10 +30,9 @@ let selectedRhythm = null;       // rhythm card OR library phrase
 let selectedPatternJson = null;  // resolved pattern_json for Open in Studio
 let previewCtx = null;
 let playingCardId = null;
-let chordsExpanded = false;
+let showToughChords = false;
 let allChords = [];
 let selectedProgression = null;  // { name, mood, resolvedChords }
-const CHORDS_COLLAPSED_COUNT = 4;
 
 // Original parent of handpan DOM nodes so we can return them on leave
 let handpanOriginalParent = null;
@@ -343,35 +343,39 @@ function renderChordSection() {
     return;
   }
 
-  allChords = ChordAnalyzer.analyze(notes);
-  chordsExpanded = false;
+  allChords = annotatePlayability(ChordAnalyzer.analyze(notes), getPitchPositionMap());
+  showToughChords = false;
 
   renderChordChips(chipsEl, moreBtn);
   renderProgressions(progsEl);
 }
 
-function renderChordChips(chipsEl, moreBtn) {
-  const visible = chordsExpanded ? allChords : allChords.slice(0, CHORDS_COLLAPSED_COUNT);
+function chordSortKey(c) {
+  return `${c.root} ${c.quality}`;
+}
 
-  chipsEl.innerHTML = visible.map(c => `
-    <button class="method-chord-chip" data-chord-id="${esc(c.id)}" title="Play ${esc(c.root)} ${esc(c.quality)}">
+function renderChordChips(chipsEl, moreBtn) {
+  const playable = allChords.filter(c =>  c.playable).sort((a, b) => chordSortKey(a).localeCompare(chordSortKey(b)));
+  const tough    = allChords.filter(c => !c.playable).sort((a, b) => chordSortKey(a).localeCompare(chordSortKey(b)));
+
+  const toShow = showToughChords ? [...playable, ...tough] : playable;
+
+  chipsEl.innerHTML = toShow.map(c => `
+    <button class="method-chord-chip${c.playable ? '' : ' not-playable'}" data-chord-id="${esc(c.id)}" title="Play ${esc(c.root)} ${esc(c.quality)}">
       ${esc(c.root)}<span class="chord-quality">${esc(c.quality)}</span>
     </button>
   `).join('');
 
-  // Click → play chord + highlight handpan
   chipsEl.querySelectorAll('.method-chord-chip').forEach(btn => {
     btn.addEventListener('click', () => {
       const chord = allChords.find(c => c.id === btn.dataset.chordId);
       if (!chord) return;
       stopProgressionPreview();
-      // Clear previous highlights
       setChordHighlight([], false);
       document.querySelectorAll('.method-chord-chip.active').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       highlightChordOnHandpan(chord, true);
       playChordNotes(chord);
-      // Auto-clear highlight after 2s
       setTimeout(() => {
         btn.classList.remove('active');
         highlightChordOnHandpan(chord, false);
@@ -380,13 +384,13 @@ function renderChordChips(chipsEl, moreBtn) {
   });
 
   if (moreBtn) {
-    if (allChords.length <= CHORDS_COLLAPSED_COUNT) {
+    if (tough.length === 0) {
       moreBtn.style.display = 'none';
     } else {
       moreBtn.style.display = '';
-      moreBtn.textContent = chordsExpanded
-        ? 'Show fewer'
-        : `Show all ${allChords.length} chords`;
+      moreBtn.textContent = showToughChords
+        ? 'Hide tough chords'
+        : 'Show chords that may be tough to play';
     }
   }
 }
@@ -531,7 +535,7 @@ function highlightChordOnHandpan(chord, active) {
     }
   }
 
-  setChordHighlight(labels, active);
+  setChordHighlight(labels, active, chord.playable ?? true);
 }
 
 function playChordNotes(chord) {
@@ -559,6 +563,7 @@ function parseRomanNumeral(token) {
 
 function resolveProgressionChords(notation) {
   if (!allChords.length) return [];
+  const chords = allChords.filter(c => c.playable);
   const scaleNotes = getScaleNotes();
   const uniqueRoots = [];
   const seen = new Set();
@@ -567,13 +572,23 @@ function resolveProgressionChords(notation) {
     if (!seen.has(pc)) { seen.add(pc); uniqueRoots.push(pc); }
   });
 
+  // Among candidates, pick the inversion whose root note is at the lowest octave.
+  function lowestRootOctave(candidates) {
+    if (!candidates.length) return null;
+    return candidates.reduce((best, c) => {
+      const rootNoteOf = ch => ch.notes.find(n => pitchClass(n) === ch.root);
+      const octaveOf   = n  => { const m = n?.match(/(\d+)$/); return m ? parseInt(m[1]) : Infinity; };
+      return octaveOf(rootNoteOf(c)) < octaveOf(rootNoteOf(best)) ? c : best;
+    });
+  }
+
   const parts = notation.split(/\s*[–-]\s*/).map(p => p.trim());
   return parts.map(part => {
     const { degree, quality } = parseRomanNumeral(part);
     if (degree < 0 || degree >= uniqueRoots.length) return null;
     const root = uniqueRoots[degree];
-    return allChords.find(c => c.root === root && c.quality === quality)
-      || allChords.find(c => c.root === root)
+    return lowestRootOctave(chords.filter(c => c.root === root && c.quality === quality))
+      || lowestRootOctave(chords.filter(c => c.root === root))
       || null;
   });
 }
@@ -994,7 +1009,7 @@ async function setAdminPattern(rhythmId) {
 export function wireMethodEvents() {
   // Chords expand/collapse
   document.getElementById('methodChordsMoreBtn')?.addEventListener('click', () => {
-    chordsExpanded = !chordsExpanded;
+    showToughChords = !showToughChords;
     renderChordChips(
       document.getElementById('methodChordChips'),
       document.getElementById('methodChordsMoreBtn')
@@ -1057,6 +1072,9 @@ export function wireMethodEvents() {
 
   // Method-view scale dropdown → propagate to studio, re-render chords
   document.getElementById('methodScaleSelect')?.addEventListener('change', onMethodScaleChange);
+
+  // Re-render chord chips when test mode toggles (show all vs playable-only)
+  window.addEventListener('chord-test-mode-changed', () => renderChordSection());
 
   // Re-render chords when scale changes (from either dropdown or handpan-loaded)
   window.addEventListener('handpan-loaded', () => {
