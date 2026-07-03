@@ -5,7 +5,7 @@ import { stop } from './noteplayer.js';
 import { gridA } from './grid-context.js';
 import { Sidepanel } from './sidepanel.js';
 
-const validRoutes = ['studio', 'dashboard', 'compose', 'community', 'library'];
+const validRoutes = ['studio', 'dashboard', 'compose', 'community', 'library', 'method'];
 let currentRoute = '';
 
 export function initRouter() {

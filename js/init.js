@@ -48,6 +48,7 @@ import { initGridAutoscroll } from './grid-autoscroll.js';
 import { initGridZoom } from './grid-zoom.js';
 import { initMonetization } from './monetization.js';
 import { initScrollIndicators } from './scroll-indicators.js';
+import { initMethod, wireMethodEvents } from './method.js';
 
 
 
@@ -103,6 +104,8 @@ async function init() {
     initComposeWizard();
     initGlossary();
     initMonetization();
+    initMethod();
+    wireMethodEvents();
     initRouter();
 
     // 3. Launch safeInit (which handles pattern loading and final renders)

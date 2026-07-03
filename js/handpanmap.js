@@ -331,6 +331,16 @@ function applyCustomHandpan(handpanData) {
 
   if (handpanOverlay) handpanOverlay.dataset.model = 'Bronze';
   dispatchEvent(new Event('handpan-loaded'));
+
+  // Restore saved view or default to Dual (Stacked)
+  if (handpanData.bottom_image_url) {
+    const preferred = localStorage.getItem('gp_handpanSide') || 'dual';
+    if (preferred !== 'top') {
+      const order = ['top', 'bottom', 'dual', 'perimeter'];
+      const steps = order.indexOf(preferred);
+      for (let i = 0; i < steps && i < order.length; i++) toggleHandpanSide();
+    }
+  }
 }
 
 function hasBottomNotes() {

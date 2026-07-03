@@ -56,6 +56,7 @@
   <link rel="stylesheet" href="./css/assignments.css">
   <link rel="stylesheet" href="./css/account-settings.css">
   <link rel="stylesheet" href="./css/student-management.css">
+  <link rel="stylesheet" href="./css/method.css">
 
   <!-- PWA & Mobile Optimization -->
   <link rel="manifest" href="./manifest.json">
@@ -113,6 +114,7 @@
         <button class="nav-link" id="toggleComposerBtn">Composer</button>
         <a class="nav-link" data-route="studio" href="#studio">Studio</a>
         <a class="nav-link" data-route="community" href="#community">Community</a>
+        <a class="nav-link" data-route="method" href="#method">The Method</a>
         <button class="nav-link" id="navDashboardBtn">Dashboard</button>
         <button class="nav-link" id="authBtn" style="display:none;">Sign In</button>
       </nav>
@@ -644,6 +646,166 @@
       <div id="libraryFolders" class="library-folders-section"></div>
       <div id="libraryGrid" class="library-grid"></div>
     </div> <!-- END view-library -->
+
+    <!-- METHOD VIEW -->
+    <div id="view-method" class="route-view method-view">
+      <div class="method-container">
+
+        <!-- Header -->
+        <div class="method-header">
+          <div class="method-eyebrow">Panafide</div>
+          <h1>The Panafide Method</h1>
+          <p class="method-intro">
+            The purpose of the Panafide Method is for players to easily learn how to combine
+            the 3 Pillars of the handpan: <strong>Rhythm</strong>, <strong>Harmony</strong>, and <strong>Melody</strong>.
+          </p>
+          <p class="method-body-quote">
+            There are many playing styles to explore on the handpan, and new styles are being
+            birthed every day. But before we explore the fringes, it's important to start with
+            the most fundamental skills when it comes to playing the instrument. So go ahead and
+            choose your rhythm, find a chord progression that you like, explore some melody and
+            fills, and start making some beautiful music!
+          </p>
+        </div>
+
+        <!-- Pillars -->
+        <div class="method-section-label">The 3 Pillars</div>
+        <div class="method-pillars">
+          <div class="method-pillar method-pillar-rhythm">
+            <div class="method-pillar-icon">🥁</div>
+            <div class="method-pillar-num">Pillar 1</div>
+            <div class="method-pillar-name">Rhythm</div>
+            <p class="method-pillar-desc">The pattern that drives everything forward — the subdivision and groove that makes people move and feel alive.</p>
+          </div>
+          <div class="method-pillar method-pillar-harmony">
+            <div class="method-pillar-icon">🎵</div>
+            <div class="method-pillar-num">Pillar 2</div>
+            <div class="method-pillar-name">Harmony</div>
+            <p class="method-pillar-desc">The chords and chord progressions that give your music its emotional colour — the feeling underneath the notes.</p>
+          </div>
+          <div class="method-pillar method-pillar-melody">
+            <div class="method-pillar-icon">✨</div>
+            <div class="method-pillar-num">Pillar 3</div>
+            <div class="method-pillar-name">Melody</div>
+            <p class="method-pillar-desc">The individual notes and phrases that create a sense of story — the voice singing on top of the rhythm.</p>
+          </div>
+        </div>
+
+        <!-- Step 1: Rhythm -->
+        <div class="method-step">
+          <div class="method-section-label">Step 1 of 3</div>
+          <div class="method-step-header">
+            <div class="method-step-num">1</div>
+            <div>
+              <div class="method-step-title">Choose your rhythm</div>
+              <p class="method-step-sub">Each rhythm has its own personality. Pick the one that resonates — you can always come back and try the others.</p>
+            </div>
+          </div>
+          <div class="method-carousel-outer">
+            <div class="method-carousel" id="methodCarousel"></div>
+          </div>
+          <p class="method-carousel-hint">← scroll to see more →</p>
+
+          <!-- Rhythm preview bar — always visible, disabled until a rhythm is selected -->
+          <div class="method-selected-bar" id="methodSelectedBar">
+            <span class="method-selected-name" id="methodSelectedName">No rhythm selected</span>
+            <button class="method-preview-selected-btn" id="methodPreviewSelectedBtn" disabled title="Select a rhythm to preview">▶ Preview</button>
+          </div>
+
+          <!-- Library phrase selector -->
+          <div class="method-library-block">
+            <div class="method-library-label">Or choose a phrase from your library</div>
+            <div class="method-library-row">
+              <select class="method-library-select" id="methodLibrarySelect">
+                <option value="">Select a saved phrase…</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 2: Chords (hidden until rhythm selected) -->
+        <div class="method-step method-step-hidden" id="method-step-chords">
+          <div class="method-section-label">Step 2 of 3</div>
+          <div class="method-step-header">
+            <div class="method-step-num">2</div>
+            <div>
+              <div class="method-step-title">Choose your chord progression</div>
+              <p class="method-step-sub">Explore the chords available on your current scale. Find two or three that move you — then see how they sound together.</p>
+            </div>
+          </div>
+
+          <!-- Scale selector + handpan (shown in step 2 context) -->
+          <div class="method-scale-bar">
+            <span class="method-scale-label">Your scale:</span>
+            <select class="method-scale-select" id="methodScaleSelect"></select>
+          </div>
+          <div class="method-handpan-slot" id="methodHandpanSlot"></div>
+
+          <div class="method-chord-section">
+            <div class="method-chord-group-label">Chords in your scale</div>
+            <div class="method-chord-chips" id="methodChordChips"></div>
+            <button class="method-show-more-btn" id="methodChordsMoreBtn" style="display:none;"></button>
+          </div>
+
+          <div class="method-chord-section">
+            <div class="method-chord-group-label">Common progressions</div>
+            <div class="method-progressions" id="methodProgressions"></div>
+          </div>
+
+          <!-- AI Chord Suggestion -->
+          <div class="method-ai-block" id="methodAiBlock">
+            <div class="method-ai-label">
+              AI Chord Suggestion
+              <span class="method-ai-lock-badge">Player+</span>
+            </div>
+            <div class="method-ai-question">What emotions do you want to evoke in your song?</div>
+            <textarea
+              class="method-ai-input"
+              id="methodAiInput"
+              rows="2"
+              placeholder="e.g. Happy, then suspenseful, then tense, and finally relieved and happy again…"
+            ></textarea>
+            <button class="method-ai-submit" id="methodAiSubmit">Suggest progressions</button>
+            <div class="method-ai-result" id="methodAiResult"></div>
+          </div>
+        </div>
+
+        <!-- Step 3: Melody (hidden until rhythm selected) -->
+        <div class="method-step method-step-hidden" id="method-step-melody">
+          <div class="method-section-label">Step 3 of 3</div>
+          <div class="method-step-header">
+            <div class="method-step-num">3</div>
+            <div>
+              <div class="method-step-title">Add melody &amp; fills</div>
+              <p class="method-step-sub">Once your rhythm and chords are locked in, the space between the chord notes is yours to explore.</p>
+            </div>
+          </div>
+
+          <!-- Selected progression summary -->
+          <div class="method-selected-progression" id="methodSelectedProgression">No progression selected</div>
+
+          <div class="method-melody-grid">
+            <div class="method-melody-card">
+              <div class="method-melody-tag">Melody</div>
+              <div class="method-melody-title">Notes between the chords</div>
+              <p class="method-melody-desc">Use the non-chord notes in your scale to create runs, accents, and phrases. Start simple — one or two extra notes per bar — and build from there.</p>
+            </div>
+            <div class="method-melody-card">
+              <div class="method-melody-tag">Fills</div>
+              <div class="method-melody-title">Transitions between sections</div>
+              <p class="method-melody-desc">A fill is a burst of notes at the end of a phrase — the musical equivalent of a breath before starting again. They signal a change and keep the music alive.</p>
+            </div>
+          </div>
+
+          <div class="method-studio-cta">
+            <h3>Ready to compose?</h3>
+            <p>Load your selected rhythm into the studio and start building your piece — pattern by pattern.</p>
+            <button class="method-studio-btn" id="methodStudioBtn" disabled>Open in Studio →</button>
+          </div>
+        </div>
+
+      </div>
+    </div> <!-- END view-method -->
 
   </div> <!-- End Container -->
 
