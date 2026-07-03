@@ -767,8 +767,8 @@ body.dark .chord-chip.minor .chord-root {
 
 /* Handpan Highlighting */
 .hp-dot.chord-highlight .hp-visual {
-  background-color: var(--primary) !important;
-  box-shadow: 0 0 0 8px rgba(99, 102, 241, 0.4) !important;
+  background-color: rgba(99, 102, 241, 0.85) !important;
+  box-shadow: 0 0 0 6px rgba(99, 102, 241, 0.35) !important;
   transform: scale(1.1);
   transition: all 0.1s;
 }
@@ -912,6 +912,7 @@ body:not(.dark) .hp-arc {
 .hp-arc.active {
   stroke-opacity: 1;
 }
+
 
 .hp-arc-label {
   fill: rgba(255, 255, 255, 0.7);

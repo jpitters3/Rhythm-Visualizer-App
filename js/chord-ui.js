@@ -7,6 +7,7 @@ import { getScale } from './state.js';
 import { SCALES } from './config.js';
 import { ChordAnalyzer } from './chord-analyzer.js';
 import { assignChordToSelectedCell } from './notegrid.js';
+import { setChordHighlight } from './handpanmap.js';
 
 const ChordUI = (function () {
 
@@ -108,7 +109,7 @@ const ChordUI = (function () {
     if (!list) return;
 
     // Clean up existing highlights
-    document.querySelectorAll('.chord-highlight').forEach(el => el.classList.remove('chord-highlight'));
+    setChordHighlight([], false);
 
     list.innerHTML = '';
 
@@ -165,7 +166,7 @@ const ChordUI = (function () {
           const prev = list.querySelector('.chord-chip.active');
           if (prev) prev.classList.remove('active');
           // Clear globals
-          document.querySelectorAll('.chord-highlight').forEach(el => el.classList.remove('chord-highlight'));
+          setChordHighlight([], false);
         }
 
         activeChordId = cId;
@@ -221,27 +222,15 @@ const ChordUI = (function () {
 
     if (!labelToPitch) return;
 
-    // Find labels that match the chord notes
     const targetLabels = [];
 
-    // Check Ding
-    if (notes.includes(dingPitch)) targetLabels.push('D');
-    if (notes.includes(dingPitch)) targetLabels.push('Ding');
+    if (notes.includes(dingPitch)) { targetLabels.push('D'); targetLabels.push('Ding'); }
 
-    // Check Map
     for (const [lbl, pitch] of Object.entries(labelToPitch)) {
       if (notes.includes(pitch)) targetLabels.push(lbl);
     }
 
-    targetLabels.forEach(lbl => {
-      // Find element with data-note="lbl"
-      // Usually in #handpanOverlay .hp-dot
-      const dots = document.querySelectorAll(`.hp-dot[data-note="${lbl}"]`);
-      dots.forEach(d => {
-        if (active) d.classList.add('chord-highlight');
-        else d.classList.remove('chord-highlight');
-      });
-    });
+    setChordHighlight(targetLabels, active);
   }
 
   function playChord(notes) {

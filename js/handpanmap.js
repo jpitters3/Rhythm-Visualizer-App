@@ -883,6 +883,40 @@ function buildPerimeterSvg(perimeterNotes) {
 
 let hpPulseTimers = new Map();
 
+function pulseDot(el, shadowColor, duration, latency) {
+  if (el.isArc) {
+    el.path.classList.add('active');
+    setTimeout(() => el.path.classList.remove('active'), duration);
+    el.path.animate([
+      { stroke: shadowColor, strokeOpacity: 1, filter: `drop-shadow(0 0 3px ${shadowColor})` },
+      { stroke: shadowColor, strokeOpacity: 0.35, filter: 'none' }
+    ], { duration, easing: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)', delay: -latency * 1000 });
+    return;
+  }
+  const visual = el.querySelector('.hp-visual');
+  if (!visual) return;
+  el.classList.add('active');
+  setTimeout(() => el.classList.remove('active'), duration);
+  visual.animate([
+    {
+      transform: 'scale(1)',
+      backgroundColor: 'rgba(255, 255, 255, 0.4)',
+      boxShadow: `0 0 20px 10px ${shadowColor}`,
+      opacity: 1
+    },
+    {
+      transform: 'scale(1.4)',
+      backgroundColor: 'transparent',
+      boxShadow: '0 0 0 0 transparent',
+      opacity: 0
+    }
+  ], {
+    duration,
+    easing: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+    delay: -latency * 1000
+  });
+}
+
 export function highlightHandpan(note, stepIndex, forceHand = null, latency = 0) {
   const sticking = forceHand || (activeGrid.innerHands && activeGrid.innerHands[stepIndex]);
 
@@ -898,7 +932,6 @@ export function highlightHandpan(note, stepIndex, forceHand = null, latency = 0)
 
   // Sticking Override
   let down;
-
   if (sticking === 'R') {
     down = true;
   } else if (sticking === 'L') {
@@ -910,47 +943,7 @@ export function highlightHandpan(note, stepIndex, forceHand = null, latency = 0)
   const duration = Math.max(200, (intervalMs() * 4) * 0.8);
   const shadowColor = down ? 'var(--down-fill)' : 'var(--up-fill)';
 
-  // Perimeter arc highlight
-  if (el.isArc) {
-    el.path.classList.add('active');
-    setTimeout(() => el.path.classList.remove('active'), duration);
-    el.path.animate([
-      { stroke: shadowColor, strokeOpacity: 1, filter: `drop-shadow(0 0 3px ${shadowColor})` },
-      { stroke: shadowColor, strokeOpacity: 0.35, filter: 'none' }
-    ], { duration, easing: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)', delay: -latency * 1000 });
-    return;
-  }
-
-  // Use WAAPI for a buttery smooth, compositor-driven animation.
-  // This eliminates the non-performant `offsetWidth` reflow hack.
-  const visual = el.querySelector('.hp-visual');
-  if (!visual) return;
-
-  // Mark dot as active for the duration of the pulse (enables CSS hooks and test assertions)
-  el.classList.add('active');
-  setTimeout(() => el.classList.remove('active'), duration);
-
-  // Pulse animation using Web Animations API (WAAPI)
-  // This eliminates the non-performant `offsetWidth` reflow hack.
-  // We animate the 'visual' child to avoid moving the label/number.
-  visual.animate([
-    { 
-      transform: 'scale(1)', 
-      backgroundColor: 'rgba(255, 255, 255, 0.4)',
-      boxShadow: `0 0 20px 10px ${shadowColor}`,
-      opacity: 1 
-    },
-    { 
-      transform: 'scale(1.4)', 
-      backgroundColor: 'transparent',
-      boxShadow: '0 0 0 0 transparent',
-      opacity: 0 
-    }
-  ], {
-    duration: duration,
-    easing: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)',
-    delay: -latency * 1000 // compensate for startup/audio latency
-  });
+  pulseDot(el, shadowColor, duration, latency);
 }
 
 /* Calibration */
@@ -984,6 +977,43 @@ function selectHpDot(note) {
   for (const [k, el] of handpanDots.entries()) {
     if (el.isArc) continue;
     el.classList.toggle('selected', k === note);
+  }
+}
+
+/**
+ * Apply or remove the chord-highlight class on the dots that match the given
+ * note labels.  Uses `handpanDots` directly — the same source as audio — so
+ * the visual always stays in sync with what actually played.
+ *
+ * @param {string[]} labels  Note labels to highlight (e.g. ["D", "1", "5"])
+ * @param {boolean}  active  true = add highlight, false = remove
+ */
+const CHORD_HL_COLOR = 'rgba(99, 102, 241, 1)';
+const CHORD_HL_GLOW  = 'drop-shadow(0 0 5px rgba(99, 102, 241, 0.75))';
+
+export function setChordHighlight(labels, active) {
+  for (const el of handpanDots.values()) {
+    if (el.isArc) {
+      el.path.style.stroke = '';
+      el.path.style.strokeOpacity = '';
+      el.path.style.filter = '';
+    } else {
+      el.classList.remove('chord-highlight');
+    }
+  }
+
+  if (active) {
+    for (const lbl of labels) {
+      const el = handpanDots.get(lbl);
+      if (!el) continue;
+      if (el.isArc) {
+        el.path.style.stroke = CHORD_HL_COLOR;
+        el.path.style.strokeOpacity = '1';
+        el.path.style.filter = CHORD_HL_GLOW;
+      } else {
+        el.classList.add('chord-highlight');
+      }
+    }
   }
 }
 

@@ -20,6 +20,7 @@ import { canAccess, FEATURE } from './gated-feature.js';
 import { Bus, BUS_EVENT } from './bus.js';
 import { navigate } from './router.js';
 import { isAdminUser, currentUser } from './state.js';
+import { setChordHighlight } from './handpanmap.js';
 import { HistoryManager } from './history.js';
 
 // ── State ──────────────────────────────────────────────────
@@ -90,6 +91,7 @@ function onLeave() {
 // ── Handpan teleport ───────────────────────────────────────
 function teleportHandpan(toMethod) {
   const wrap = document.getElementById('handpanWrap');
+  const wrapBottom = document.getElementById('handpanWrapBottom');
   if (!wrap) return;
 
   if (toMethod) {
@@ -97,9 +99,11 @@ function teleportHandpan(toMethod) {
     if (!slot || slot.contains(wrap)) return;
     handpanOriginalParent = wrap.parentElement;
     slot.appendChild(wrap);
+    if (wrapBottom) slot.appendChild(wrapBottom);
   } else {
     if (!handpanOriginalParent) return;
     handpanOriginalParent.appendChild(wrap);
+    if (wrapBottom) handpanOriginalParent.appendChild(wrapBottom);
     handpanOriginalParent = null;
   }
 }
@@ -362,7 +366,7 @@ function renderChordChips(chipsEl, moreBtn) {
       if (!chord) return;
       stopProgressionPreview();
       // Clear previous highlights
-      document.querySelectorAll('.hp-dot.chord-highlight').forEach(d => d.classList.remove('chord-highlight'));
+      setChordHighlight([], false);
       document.querySelectorAll('.method-chord-chip.active').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       highlightChordOnHandpan(chord, true);
@@ -432,7 +436,7 @@ function renderProgressions(progsEl) {
       const chord = allChords.find(c => c.id === btn.dataset.chordId);
       if (!chord) return;
       stopProgressionPreview();
-      document.querySelectorAll('.hp-dot.chord-highlight').forEach(d => d.classList.remove('chord-highlight'));
+      setChordHighlight([], false);
       document.querySelectorAll('.method-prog-chord-btn.active, .method-chord-chip.active').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       highlightChordOnHandpan(chord, true);
@@ -527,11 +531,7 @@ function highlightChordOnHandpan(chord, active) {
     }
   }
 
-  labels.forEach(lbl => {
-    document.querySelectorAll(`.hp-dot[data-note="${lbl}"]`).forEach(dot => {
-      dot.classList.toggle('chord-highlight', active);
-    });
-  });
+  setChordHighlight(labels, active);
 }
 
 function playChordNotes(chord) {
@@ -585,7 +585,7 @@ function stopProgressionPreview() {
     progressionPreviewTimer = null;
   }
   progressionPreviewActive = false;
-  document.querySelectorAll('.hp-dot.chord-highlight').forEach(d => d.classList.remove('chord-highlight'));
+  setChordHighlight([], false);
   document.querySelectorAll('.method-prog-chord-btn.playing').forEach(b => b.classList.remove('playing'));
   document.querySelectorAll('.method-prog-preview-btn.playing').forEach(b => {
     b.classList.remove('playing');
@@ -616,7 +616,7 @@ async function previewProgression(resolvedChords, previewBtn, chordBtns) {
       return;
     }
 
-    document.querySelectorAll('.hp-dot.chord-highlight').forEach(d => d.classList.remove('chord-highlight'));
+    setChordHighlight([], false);
     document.querySelectorAll('.method-prog-chord-btn.playing').forEach(b => b.classList.remove('playing'));
 
     const chord = resolvedChords[i];
@@ -953,16 +953,26 @@ function updateStudioBtn() {
 
 // ── Admin: set preview pattern ─────────────────────────────
 async function setAdminPattern(rhythmId) {
-  const pattern = serializePattern(gridA);
-  if (!pattern) return;
+  // Prefer the phrase selected from the library dropdown; fall back to studio grid
+  const pattern = selectedPatternJson ?? serializePattern(gridA);
+  if (!pattern) {
+    alert('No phrase selected. Pick one from the library dropdown or load one in the studio first.');
+    return;
+  }
 
-  const { error } = await supabase
+  const { error, count } = await supabase
     .from('method_rhythms')
     .update({ pattern_json: pattern })
-    .eq('id', rhythmId);
+    .eq('id', rhythmId)
+    .select('id', { count: 'exact', head: true });
 
   if (error) {
     alert(`Failed to save: ${error.message}`);
+    return;
+  }
+
+  if (count === 0) {
+    alert('Save blocked — no rows updated. Check that you are logged in as an admin and the RLS update policy exists.');
     return;
   }
 
