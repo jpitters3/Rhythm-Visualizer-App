@@ -194,6 +194,7 @@
   gap: 14px;
   overflow-x: auto;
   scroll-snap-type: x mandatory;
+  scroll-padding-left: 24px;
   -webkit-overflow-scrolling: touch;
   padding: 6px 24px 16px;
   scrollbar-width: none;

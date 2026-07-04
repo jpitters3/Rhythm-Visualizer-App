@@ -12,7 +12,7 @@
 import { supabase } from './supabase-client.js';
 import { GridContext } from './grid-context.js';
 import { applyPattern, serializePattern, dbListPatternsWithData } from './pattern-crud.js';
-import { start, stop, ensureAudio, playNoteByLabel } from './noteplayer.js';
+import { start, stop, ensureAudio, playNoteByLabel, getMetronomeSound, setMetronomeSound } from './noteplayer.js';
 import { gridA } from './grid-context.js';
 import { getScale } from './state.js';
 import { ChordAnalyzer } from './chord-analyzer.js';
@@ -30,6 +30,7 @@ let selectedRhythm = null;       // rhythm card OR library phrase
 let selectedPatternJson = null;  // resolved pattern_json for Open in Studio
 let previewCtx = null;
 let playingCardId = null;
+let savedMetronomeSound = null;
 let showToughChords = false;
 let allChords = [];
 let selectedProgression = null;  // { name, mood, resolvedChords }
@@ -308,6 +309,10 @@ async function togglePreview(rhythm, btn) {
   try {
     await ensureAudio();
     await applyPattern(rhythm.pattern_json, previewCtx);
+    previewCtx.metronomeOn = true;
+    previewCtx.metronomeSubdiv = false;
+    savedMetronomeSound = getMetronomeSound();
+    setMetronomeSound('Shaker');
     await start(previewCtx, false, true);
     playingCardId = rhythm.id;
     btn.textContent = '■';
@@ -319,6 +324,11 @@ async function togglePreview(rhythm, btn) {
 
 function stopPreview() {
   if (previewCtx?.playing) stop(previewCtx, false);
+  if (previewCtx) previewCtx.metronomeOn = false;
+  if (savedMetronomeSound !== null) {
+    setMetronomeSound(savedMetronomeSound);
+    savedMetronomeSound = null;
+  }
   playingCardId = null;
 
   document.querySelectorAll('.method-preview-btn').forEach(b => {
@@ -869,7 +879,7 @@ async function generateCompositionPattern() {
     if (!l || l === '') return '-';
     if (Array.isArray(l)) {
       const notes = l.filter(Boolean);
-      return notes.length ? notes.join('+') : '-';
+      return notes.length ? JSON.stringify(l) : '-';
     }
     return String(l);
   };
@@ -942,11 +952,17 @@ Rules:
       return null;
     }
 
+    const normalizeLabel = (l) => {
+      if (Array.isArray(l)) return l;
+      if (typeof l === 'string' && l.includes('+')) return labelsToChordSlots(l.split('+'));
+      return l;
+    };
+
     return {
       beats,
       subdivision,
       bpm:    selectedPatternJson?.bpm ?? 90,
-      labels: parsed.labels,
+      labels: parsed.labels.map(normalizeLabel),
       hands:  Array(totalSteps).fill(null),
       flams:  Array(totalSteps).fill(''),
     };
