@@ -405,16 +405,13 @@ function renderChordChips(chipsEl, moreBtn) {
   }
 }
 
-function renderProgressions(progsEl) {
-  if (!progsEl) return;
-
-  progsEl.innerHTML = PROGRESSIONS.map((p, pi) => {
+function buildProgressionCardsHTML(progressions) {
+  return progressions.map((p, pi) => {
     const resolved = resolveProgressionChords(p.name);
     const chordBtns = resolved.map(c => c
       ? `<button class="method-prog-chord-btn" data-chord-id="${esc(c.id)}" title="Play ${esc(c.root)} ${esc(c.quality)}">${esc(c.root)} <span class="chord-quality">${esc(c.quality)}</span></button>`
       : `<span class="method-prog-chord-unknown">?</span>`
     ).join('');
-
     return `
       <div class="method-prog-card" data-prog-idx="${pi}" role="button" tabindex="0" title="Select this progression">
         <div class="method-prog-header">
@@ -426,25 +423,28 @@ function renderProgressions(progsEl) {
       </div>
     `;
   }).join('');
+}
 
-  // Card click → select progression
-  progsEl.querySelectorAll('.method-prog-card').forEach(card => {
+function wireProgressionCards(container, progressions) {
+  // Card click → select
+  container.querySelectorAll('.method-prog-card').forEach(card => {
+    const getprog = () => progressions[parseInt(card.dataset.progIdx, 10)];
     card.addEventListener('click', (e) => {
       if (e.target.closest('.method-prog-chord-btn') || e.target.closest('.method-prog-preview-btn')) return;
-      const idx = parseInt(card.dataset.progIdx, 10);
-      selectProgression(idx, card);
+      const prog = getprog();
+      if (prog) selectProgressionObj(prog, card);
     });
     card.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' || e.key === ' ') {
         e.preventDefault();
-        const idx = parseInt(card.dataset.progIdx, 10);
-        selectProgression(idx, card);
+        const prog = getprog();
+        if (prog) selectProgressionObj(prog, card);
       }
     });
   });
 
-  // Wire individual chord buttons
-  progsEl.querySelectorAll('.method-prog-chord-btn').forEach(btn => {
+  // Individual chord buttons
+  container.querySelectorAll('.method-prog-chord-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
       const chord = allChords.find(c => c.id === btn.dataset.chordId);
@@ -462,21 +462,25 @@ function renderProgressions(progsEl) {
     });
   });
 
-  // Wire progression preview buttons
-  progsEl.querySelectorAll('.method-prog-preview-btn').forEach(previewBtn => {
+  // Preview buttons
+  container.querySelectorAll('.method-prog-preview-btn').forEach(previewBtn => {
     previewBtn.addEventListener('click', async (e) => {
       e.stopPropagation();
-      const idx = parseInt(previewBtn.dataset.progIdx, 10);
-      const prog = PROGRESSIONS[idx];
+      const idx  = parseInt(previewBtn.dataset.progIdx, 10);
+      const prog = progressions[idx];
       if (!prog) return;
-
-      const card = previewBtn.closest('.method-prog-card');
+      const card        = previewBtn.closest('.method-prog-card');
       const chordBtnEls = Array.from(card.querySelectorAll('.method-prog-chord-btn'));
-      const resolved = resolveProgressionChords(prog.name);
-
+      const resolved    = resolveProgressionChords(prog.name);
       await previewProgression(resolved, previewBtn, chordBtnEls);
     });
   });
+}
+
+function renderProgressions(progsEl) {
+  if (!progsEl) return;
+  progsEl.innerHTML = buildProgressionCardsHTML(PROGRESSIONS);
+  wireProgressionCards(progsEl, PROGRESSIONS);
 
   // Restore selection highlight if a progression was already selected
   if (selectedProgression !== null) {
@@ -487,18 +491,11 @@ function renderProgressions(progsEl) {
   }
 }
 
-function selectProgression(idx, cardEl) {
-  const prog = PROGRESSIONS[idx];
-  if (!prog) return;
-
+function selectProgressionObj(prog, cardEl) {
   const resolved = resolveProgressionChords(prog.name);
   selectedProgression = { ...prog, resolvedChords: resolved };
-
-  // Update visual selection
   document.querySelectorAll('.method-prog-card').forEach(c => c.classList.remove('selected'));
   cardEl.classList.add('selected');
-
-  // Update step 3 summary
   updateProgressionSummary();
 }
 
@@ -661,7 +658,7 @@ async function previewProgression(resolvedChords, previewBtn, chordBtns) {
 
 // ── AI Chord Suggestion ────────────────────────────────────
 async function submitAIChordPrompt(userText) {
-  const resultEl = document.getElementById('methodAiResult');
+  const resultEl  = document.getElementById('methodAiResult');
   const submitBtn = document.getElementById('methodAiSubmit');
   if (!resultEl || !submitBtn) return;
 
@@ -673,43 +670,67 @@ async function submitAIChordPrompt(userText) {
   submitBtn.disabled = true;
   submitBtn.textContent = 'Thinking…';
   resultEl.classList.remove('visible');
+  resultEl.innerHTML = '';
 
-  const scaleName = document.getElementById('scaleSelect')?.options[document.getElementById('scaleSelect')?.selectedIndex]?.text || 'your scale';
-  const chordList = allChords.map(c => `${c.root} ${c.quality}`).join(', ') || 'unknown chords';
+  const scaleEl   = document.getElementById('scaleSelect');
+  const scaleName = scaleEl?.options[scaleEl?.selectedIndex]?.text || 'your scale';
+
+  // Build the scale degree → note map so the AI knows which Roman numerals are valid
+  const scaleNotes  = getScaleNotes();
+  const uniqueRoots = [];
+  const seen = new Set();
+  scaleNotes.forEach(n => { const pc = pitchClass(n); if (!seen.has(pc)) { seen.add(pc); uniqueRoots.push(pc); } });
+  const degreeMap = uniqueRoots.map((r, i) => `${['i','ii','iii','iv','v','vi','vii'][i] ?? i} = ${r}`).join(', ');
 
   const systemPrompt = `
-You are a handpan music teacher helping a student choose a chord progression.
+You are a handpan music teacher suggesting chord progressions.
 
-The student's handpan scale is: ${scaleName}
-Available chords in this scale: ${chordList}
+Scale: ${scaleName}
+Scale degrees (lowercase = minor, uppercase = major): ${degreeMap}
 
 The student wants to evoke: "${userText}"
 
-Suggest 2–3 chord progressions using only the available chords above.
-For each progression:
-- List the chord names in order (e.g. D Minor → C Major → Bb Major)
-- Give it a short descriptive name (e.g. "The Resolution")
-- One sentence on why it evokes the requested feeling
+Suggest exactly 3 chord progressions. Respond with ONLY a JSON object — no markdown, no explanation:
+{
+  "progressions": [
+    { "name": "i – VII – VI – VII", "mood": "Two words" },
+    { "name": "i – v – VI",         "mood": "Two words" },
+    { "name": "VI – VII – i",        "mood": "Two words" }
+  ]
+}
 
-Keep your response concise and practical. Plain text only, no markdown.
+Rules:
+- "name" must use Roman numerals separated by " – " (en-dash with spaces). Lowercase = minor, uppercase = major.
+- Only use degrees that exist in the scale above (i through the highest available degree).
+- "mood" must be exactly two words describing the feeling (e.g. "Melancholic drift", "Rising hope").
+- Output ONLY the JSON object.
 `.trim();
 
   try {
     const { data, error } = await supabase.functions.invoke('ai-assistant', {
       body: { systemPrompt }
     });
-
     if (error) throw error;
 
-    const text = data?.reply || data?.content || data?.text
-      || (typeof data === 'string' ? data : JSON.stringify(data));
+    const raw = data?.candidates?.[0]?.content?.parts?.[0]?.text
+      ?? data?.reply ?? data?.content ?? data?.text
+      ?? (typeof data === 'string' ? data : '');
+    console.log('[Method] AI chord raw:', raw);
 
-    resultEl.textContent = text;
+    // Extract JSON object even if the AI added surrounding text
+    const jsonMatch = raw.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new Error('No JSON found in response');
+    const parsed = JSON.parse(jsonMatch[0]);
+
+    if (!Array.isArray(parsed?.progressions) || !parsed.progressions.length) throw new Error('No progressions returned');
+
+    resultEl.innerHTML = buildProgressionCardsHTML(parsed.progressions);
+    wireProgressionCards(resultEl, parsed.progressions);
     resultEl.classList.add('visible');
   } catch (err) {
-    resultEl.textContent = 'Something went wrong. Please try again.';
+    resultEl.innerHTML = '<p class="method-ai-error">Something went wrong. Please try again.</p>';
     resultEl.classList.add('visible');
-    console.error('[Method] AI error:', err);
+    console.error('[Method] AI chord suggestion error:', err);
   } finally {
     submitBtn.disabled = false;
     submitBtn.textContent = 'Suggest progressions';

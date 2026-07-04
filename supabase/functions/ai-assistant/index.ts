@@ -31,13 +31,13 @@ serve(async (req) => {
       )
     }
 
-    // Candidate models as requested by user
     const candidates = [
-      { model: 'gemini-2.5-flash', version: 'v1beta' },
-      { model: 'gemini-2.5-flash-latest', version: 'v1beta' },
-      { model: 'gemini-pro', version: 'v1' },
-      { model: 'gemini-2.5-pro', version: 'v1beta' },
-      { model: 'gemini-2.5-flash-8b', version: 'v1beta' }
+      { model: 'gemini-2.5-flash-preview-05-20', version: 'v1beta' },
+      { model: 'gemini-2.5-flash',               version: 'v1beta' },
+      { model: 'gemini-2.0-flash',               version: 'v1beta' },
+      { model: 'gemini-2.0-flash-lite',          version: 'v1beta' },
+      { model: 'gemini-1.5-flash',               version: 'v1beta' },
+      { model: 'gemini-1.5-flash-latest',        version: 'v1beta' },
     ];
 
     let lastError = null;
