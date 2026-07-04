@@ -49,6 +49,7 @@ import { initGridZoom } from './grid-zoom.js';
 import { initMonetization } from './monetization.js';
 import { initScrollIndicators } from './scroll-indicators.js';
 import { initMethod, wireMethodEvents } from './method.js';
+import { initExercises } from './exercises.js';
 
 
 
@@ -106,6 +107,7 @@ async function init() {
     initMonetization();
     initMethod();
     wireMethodEvents();
+    initExercises();
     initRouter();
 
     // 3. Launch safeInit (which handles pattern loading and final renders)

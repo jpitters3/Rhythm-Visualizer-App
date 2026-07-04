@@ -57,6 +57,7 @@
   <link rel="stylesheet" href="./css/account-settings.css">
   <link rel="stylesheet" href="./css/student-management.css">
   <link rel="stylesheet" href="./css/method.css">
+  <link rel="stylesheet" href="./css/exercises.css">
 
   <!-- PWA & Mobile Optimization -->
   <link rel="manifest" href="./manifest.json">
@@ -114,7 +115,7 @@
         <button class="nav-link" id="toggleComposerBtn">Composer</button>
         <a class="nav-link" data-route="studio" href="#studio">Studio</a>
         <a class="nav-link" data-route="community" href="#community">Community</a>
-        <a class="nav-link" data-route="method" href="#method">The Method</a>
+        <a class="nav-link" data-route="method-welcome" href="#method-welcome">The Method</a>
         <button class="nav-link" id="navDashboardBtn">Dashboard</button>
         <button class="nav-link" id="authBtn" style="display:none;">Sign In</button>
       </nav>
@@ -806,6 +807,50 @@
 
       </div>
     </div> <!-- END view-method -->
+
+    <!-- METHOD WELCOME VIEW -->
+    <div id="view-method-welcome" class="route-view method-welcome-view">
+      <div class="mw-content">
+        <div class="mw-eyebrow">Panafide</div>
+        <h1 class="mw-title">The Panafide Method</h1>
+        <p class="mw-subtitle">A complete system for becoming the handpan player you want to be.</p>
+        <div class="mw-cards">
+          <a href="#practice" class="mw-card mw-card-practice">
+            <div class="mw-card-icon">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#5b8cff;">
+                <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+              </svg>
+            </div>
+            <div class="mw-card-label">Practice</div>
+            <p class="mw-card-desc">Build the foundational skills that matter most. Work through exercises at your own pace and track your progress.</p>
+            <div class="mw-card-cta">Start Practicing →</div>
+          </a>
+          <a href="#method" class="mw-card mw-card-compose">
+            <div class="mw-card-icon">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#ffd166;">
+                <path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>
+              </svg>
+            </div>
+            <div class="mw-card-label">Compose</div>
+            <p class="mw-card-desc">Create music you love using the 3 pillars of handpan — rhythm, harmony, and melody — in a guided, step-by-step flow.</p>
+            <div class="mw-card-cta">Start Composing →</div>
+          </a>
+        </div>
+      </div>
+    </div> <!-- END view-method-welcome -->
+
+    <!-- PRACTICE / EXERCISES VIEW -->
+    <div id="view-practice" class="route-view practice-view">
+      <div class="exercises-container">
+        <a href="#method-welcome" class="exercises-back">← The Method</a>
+        <div class="exercises-title-row">
+          <h1 class="exercises-title">Practice</h1>
+          <button id="addExerciseBtn" class="exercises-add-btn" style="display:none;">+ Add Exercise</button>
+        </div>
+        <p class="exercises-subtitle">Select an exercise and track your progress.</p>
+        <div id="exercisesList"></div>
+      </div>
+    </div> <!-- END view-practice -->
 
   </div> <!-- End Container -->
 
@@ -2704,6 +2749,80 @@
         </div>
       </div>
 
+    </div>
+  </div>
+
+  <!-- Exercise Detail Modal -->
+  <div id="exerciseModal" class="modal-overlay" aria-hidden="true">
+    <div class="modal exercise-detail-modal">
+      <div class="modal-header">
+        <h2 class="modal-title" id="exerciseModalTitle"></h2>
+        <button id="exerciseModalClose" class="close-btn" aria-label="Close">&times;</button>
+      </div>
+
+      <div class="exercise-modal-body">
+        <div id="exerciseModalVideo" class="exercise-modal-video" style="display:none;"></div>
+        <p id="exerciseModalDesc" class="exercise-modal-desc"></p>
+      </div>
+
+      <div class="exercise-modal-footer">
+        <button id="exerciseModalStudioBtn" class="secondary-btn" style="display:none;">Open in Studio</button>
+        <div class="exercise-modal-status-group">
+          <button class="exercise-modal-status-btn" data-status="working_on_it">Working On It</button>
+          <button class="exercise-modal-status-btn" data-status="completed">Completed ✓</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Exercise Editor Modal (teacher/admin only) -->
+  <div id="exerciseEditorModal" class="modal-overlay" aria-hidden="true">
+    <div class="modal exercise-editor-modal">
+      <div class="modal-header">
+        <h2 class="modal-title" id="exerciseEditorTitle">Add Exercise</h2>
+        <button id="exerciseEditorClose" class="close-btn" aria-label="Close">&times;</button>
+      </div>
+
+      <div class="exercise-editor-body">
+        <div class="asgn-field-group">
+          <label class="asgn-label" for="exEdCategory">Category</label>
+          <input type="text" id="exEdCategory" list="exEdCategoryList" placeholder="e.g. Scale Runs" autocomplete="off" />
+          <datalist id="exEdCategoryList"></datalist>
+        </div>
+        <div class="asgn-field-group">
+          <label class="asgn-label" for="exEdName">Exercise Name</label>
+          <input type="text" id="exEdName" placeholder="e.g. Single-Stroke" />
+        </div>
+        <div class="asgn-field-group">
+          <label class="asgn-label" for="exEdDesc">Description</label>
+          <textarea id="exEdDesc" rows="3" placeholder="What will the student practice?"></textarea>
+        </div>
+        <div class="asgn-field-group">
+          <label class="asgn-label" for="exEdVideo">Video URL (YouTube or direct)</label>
+          <input type="url" id="exEdVideo" placeholder="https://youtube.com/watch?v=…" />
+        </div>
+        <div class="asgn-field-group">
+          <label class="asgn-label">Studio Pattern</label>
+          <div class="ex-ed-phrase-search" id="exEdPhraseSearch">
+            <input type="text" id="exEdPhraseInput" class="ex-ed-phrase-input" placeholder="Search Library…" autocomplete="off" />
+            <button type="button" id="exEdPhraseClear" class="ex-ed-phrase-clear-x" aria-label="Clear" style="display:none;">×</button>
+            <div id="exEdPhraseDropdown" class="ex-ed-phrase-dropdown" style="display:none;"></div>
+          </div>
+          <div class="ex-ed-pattern-row" style="margin-top:8px;">
+            <span id="exEdPatternStatus" class="ex-ed-pattern-status">None</span>
+            <button type="button" id="exEdUseCurrentBtn" class="secondary-btn ex-ed-pattern-btn">Use Current Pattern</button>
+            <button type="button" id="exEdClearPatternBtn" class="text-btn ex-ed-pattern-clear" style="display:none;">Clear</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="exercise-editor-footer">
+        <button id="exEdDeleteBtn" class="text-btn ex-ed-delete-btn" style="display:none;">Delete Exercise</button>
+        <div style="display:flex;gap:10px;margin-left:auto;">
+          <button id="exEdCancelBtn" class="secondary-btn">Cancel</button>
+          <button id="exEdSaveBtn" class="primary-btn">Save</button>
+        </div>
+      </div>
     </div>
   </div>
 

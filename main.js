@@ -89,5 +89,7 @@ import './js/song-composer.js';
 import './css/admin.css'; // Admin Styles
 import './js/admin.js';   // Admin Logic
 import './js/assignments.js';
+import './css/exercises.css';
+import './js/exercises.js';
 import './css/free-record.css';
 import './js/free-record.js';
