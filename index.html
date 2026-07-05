@@ -2981,6 +2981,125 @@
     </div>
   </div>
 
+  <!-- Technique Flash Cards Overlay -->
+  <div id="flashCardOverlay" class="fc-overlay" aria-hidden="true">
+
+    <!-- Main card area -->
+    <div class="fc-main">
+      <div class="fc-top-bar">
+        <button id="fcCloseBtn" class="fc-close-btn" aria-label="Close">← Back</button>
+        <div class="fc-deck-info">
+          <span id="fcDeckCount" class="fc-deck-count"></span>
+        </div>
+        <button id="fcSettingsBtn" class="fc-settings-btn" aria-label="Settings">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="fc-stage">
+        <div class="fc-card" id="fcCard">
+          <div class="fc-card-inner" id="fcCardInner">
+            <div class="fc-card-face" id="fcCardFace">
+              <div class="fc-card-category" id="fcCardCategory"></div>
+              <div class="fc-card-name" id="fcCardName"></div>
+              <button class="fc-disable-btn" id="fcDisableBtn" title="Hide this technique">✕ Hide</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="fc-controls">
+        <button id="fcPrevBtn" class="fc-nav-btn" aria-label="Previous">←</button>
+        <button id="fcToggleBtn" class="fc-toggle-btn" aria-label="Pause">⏸</button>
+        <button id="fcNextBtn" class="fc-nav-btn" aria-label="Next">→</button>
+      </div>
+
+      <div class="fc-metro-row">
+        <button id="fcMetroBtn" class="fc-metro-btn" title="Metronome: off">
+          <svg class="fc-metro-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="12 2 4 20 20 20"/>
+            <line x1="12" y1="8" x2="12" y2="14" class="fc-metro-needle"/>
+          </svg>
+        </button>
+        <span id="fcMetroLabel" class="fc-metro-label">Off</span>
+        <div class="fc-bpm-controls" id="fcBpmControls" style="display:none">
+          <button class="fc-bpm-btn" id="fcBpmDown">−</button>
+          <span class="fc-bpm-value" id="fcBpmValue">90</span>
+          <span class="fc-bpm-unit">BPM</span>
+          <button class="fc-bpm-btn" id="fcBpmUp">+</button>
+        </div>
+      </div>
+
+      <div class="fc-progress-wrap">
+        <div class="fc-progress-bar" id="fcProgressBar"></div>
+      </div>
+    </div>
+
+    <!-- Settings panel -->
+    <div class="fc-settings-panel" id="fcSettingsPanel" aria-hidden="true">
+      <div class="fc-settings-header">
+        <h3>Settings</h3>
+        <button id="fcSettingsCloseBtn" class="close-btn">&times;</button>
+      </div>
+      <div class="fc-settings-body" id="fcSettingsBody"></div>
+      <div class="fc-settings-admin-footer" id="fcSettingsAdminFooter" style="display:none">
+        <button class="fc-manage-btn" id="fcManageTechniquesBtn">Manage Techniques</button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Flash Card Technique Admin Modal -->
+  <div id="fcAdminModal" class="modal-overlay" aria-hidden="true">
+    <div class="modal fc-admin-modal">
+      <div class="modal-header">
+        <h2 class="modal-title" id="fcAdminTitle">Manage Techniques</h2>
+        <button id="fcAdminClose" class="close-btn" aria-label="Close">&times;</button>
+      </div>
+      <div class="fc-admin-body" id="fcAdminBody"></div>
+      <div class="fc-admin-modal-footer">
+        <button id="fcAdminAddBtn" class="primary-btn">+ Add Technique</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Flash Card Technique Editor Modal -->
+  <div id="fcTechEditorModal" class="modal-overlay" aria-hidden="true">
+    <div class="modal fc-tech-editor-modal">
+      <div class="modal-header">
+        <h2 class="modal-title" id="fcTechEditorTitle">Add Technique</h2>
+        <button id="fcTechEditorClose" class="close-btn" aria-label="Close">&times;</button>
+      </div>
+      <div class="exercise-editor-body">
+        <div class="asgn-field-group">
+          <label class="asgn-label" for="fcTechCategory">Category</label>
+          <input type="text" id="fcTechCategory" list="fcTechCategoryList" placeholder="e.g. Rolls" autocomplete="off" />
+          <datalist id="fcTechCategoryList"></datalist>
+        </div>
+        <div class="asgn-field-group">
+          <label class="asgn-label" for="fcTechName">Technique Name</label>
+          <input type="text" id="fcTechName" placeholder="e.g. Paradiddle" />
+        </div>
+        <div class="asgn-field-group" style="flex-direction:row;align-items:center;justify-content:space-between;">
+          <label class="asgn-label" style="margin:0;">Enabled by default</label>
+          <label class="fc-toggle">
+            <input type="checkbox" id="fcTechEnabled" checked />
+            <span class="fc-toggle-track"></span>
+          </label>
+        </div>
+      </div>
+      <div class="exercise-editor-footer">
+        <button id="fcTechDeleteBtn" class="text-btn ex-ed-delete-btn" style="display:none;">Delete Technique</button>
+        <div style="display:flex;gap:10px;margin-left:auto;">
+          <button id="fcTechCancelBtn" class="secondary-btn">Cancel</button>
+          <button id="fcTechSaveBtn" class="primary-btn">Save</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
 </body>
 
 </html>

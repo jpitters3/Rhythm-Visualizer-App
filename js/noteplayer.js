@@ -220,14 +220,15 @@ export function setMetronomeSound(sound) {
   localStorage.setItem('metronomeSoundPref', sound);
 }
 
-function metroClick(kind, delay = 0) {
+export function metroClick(kind, delay = 0, soundOverride) {
   ensureAudio();
   if (!audioCtx) return;
 
   const t = audioCtx.currentTime + (isFinite(delay) ? delay : 0);
   if (!isFinite(t)) return;
 
-  if (currentMetroSound === 'Shaker') {
+  const sound = soundOverride ?? currentMetroSound;
+  if (sound === 'Shaker') {
     // Shaker Synthesis (Filtered White Noise)
     const bufferSize = audioCtx.sampleRate * 0.1; // 100ms noise buffer
     const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);

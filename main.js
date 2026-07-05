@@ -91,5 +91,7 @@ import './js/admin.js';   // Admin Logic
 import './js/assignments.js';
 import './css/exercises.css';
 import './js/exercises.js';
+import './css/technique-flash-cards.css';
+import './js/technique-flash-cards.js';
 import './css/free-record.css';
 import './js/free-record.js';

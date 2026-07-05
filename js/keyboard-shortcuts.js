@@ -86,8 +86,9 @@ export function initShortcuts() {
 
     // Esc cancels range selection -- Handled above in "Escape" block generally
 
-    // Space: Play / Stop
+    // Space: Play / Stop (suppressed when flash card overlay is open)
     if (e.code === 'Space') {
+      if (document.getElementById('flashCardOverlay')?.classList.contains('open')) return;
       e.preventDefault();
       if (ctx.playing) {
         stop(ctx);

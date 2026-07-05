@@ -247,6 +247,29 @@ function openModal(ex) {
   }
 
   modalStudioBtn.style.display = ex.studio_pattern_json ? '' : 'none';
+
+  // Flash cards launch button
+  const isFlashCards = ex.name === 'Technique Flash Cards';
+  let fcBtn = document.getElementById('exModalFlashBtn');
+  if (isFlashCards) {
+    if (!fcBtn) {
+      fcBtn = document.createElement('button');
+      fcBtn.id = 'exModalFlashBtn';
+      fcBtn.className = 'primary-btn';
+      fcBtn.textContent = 'Start Flash Cards →';
+      fcBtn.addEventListener('click', async () => {
+        const bpm = bpmMap[activeExercise?.id] ?? 90;
+        closeModal();
+        const { openFlashCards } = await import('./technique-flash-cards.js');
+        openFlashCards(bpm);
+      });
+      document.querySelector('.exercise-modal-footer')?.prepend(fcBtn);
+    }
+    fcBtn.style.display = '';
+  } else if (fcBtn) {
+    fcBtn.style.display = 'none';
+  }
+
   syncModalStatusButtons(progressMap[ex.id] || null);
 
   // BPM

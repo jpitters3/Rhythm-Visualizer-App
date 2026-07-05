@@ -50,6 +50,7 @@ import { initMonetization } from './monetization.js';
 import { initScrollIndicators } from './scroll-indicators.js';
 import { initMethod, wireMethodEvents } from './method.js';
 import { initExercises } from './exercises.js';
+import { initFlashCards } from './technique-flash-cards.js';
 
 
 
@@ -108,6 +109,7 @@ async function init() {
     initMethod();
     wireMethodEvents();
     initExercises();
+    initFlashCards();
     initRouter();
 
     // 3. Launch safeInit (which handles pattern loading and final renders)
