@@ -2,20 +2,27 @@ import { supabase } from './supabase-client.js';
 import { currentUser } from './state.js';
 import { currentProfile } from './profile.js';
 import { extractYouTubeId, escapeHtml } from './utils.js';
+import { Sidepanel, updateBodySidebarClass, setLastSidebarType, registerPanelOpener } from './sidepanel.js';
+import { closeSidebar } from './courses.js';
 
 let exercises = [];
-let progressMap = {};
+let progressMap = {};        // exercise_id → status
+let bpmMap = {};             // exercise_id → current_bpm
 let phrasesList = [];        // { name, data } from patterns table
 let activeExercise = null;
 let editorExercise = null;   // null = new, object = editing
 let editorPatternJson = null;
+let bpmSaveTimer = null;
 
 // ── DOM refs ───────────────────────────────────────────────────────────────
 let modal, modalTitle, modalVideo, modalDesc, modalStudioBtn, modalStatusBtns;
+let bpmValueEl, bpmMinusBtn, bpmPlusBtn, bpmCheckBtn;
 let editorModal, editorTitle, editorCategory, editorName, editorDesc,
     editorVideo, editorPhraseInput, editorPhraseDropdown, editorPhraseClearX,
     editorPatternStatus, editorClearPatternBtn, editorDeleteBtn, editorCategoryList;
 let selectedPhraseName = null;
+
+let exercisesSidePanel;
 
 function isTeacher() {
   const role = currentProfile?.role;
@@ -36,6 +43,15 @@ export function initExercises() {
   modal?.addEventListener('click', e => { if (e.target === modal) closeModal(); });
   modalStatusBtns.forEach(btn => btn.addEventListener('click', () => handleModalStatusClick(btn.dataset.status)));
   modalStudioBtn?.addEventListener('click', openInStudio);
+
+  // BPM controls
+  bpmValueEl  = document.getElementById('exBpmValue');
+  bpmMinusBtn = document.getElementById('exBpmMinus');
+  bpmPlusBtn  = document.getElementById('exBpmPlus');
+  bpmCheckBtn = document.getElementById('exBpmCheck');
+  bpmMinusBtn?.addEventListener('click', () => adjustBpm(-5));
+  bpmPlusBtn?.addEventListener('click',  () => adjustBpm(+5));
+  bpmCheckBtn?.addEventListener('click', handleBpmCheck);
 
   // Editor modal
   editorModal           = document.getElementById('exerciseEditorModal');
@@ -75,6 +91,40 @@ export function initExercises() {
     if (detail.route === 'practice') loadPracticeView();
     else { closeModal(); closeEditor(); }
   });
+
+  // Sidebar
+  const sidebarEl = document.getElementById('exercisesSidebar');
+  exercisesSidePanel = new Sidepanel(sidebarEl, { onClose: updateBodySidebarClass });
+  document.getElementById('closeExercisesSidebar')?.addEventListener('click', closeExercisesSidebar);
+  document.getElementById('toggleExercisesBtn')?.addEventListener('click', toggleExercisesSidebar);
+  registerPanelOpener('exercises', openExercisesSidebar);
+}
+
+// ── Exercises sidebar ──────────────────────────────────────────────────────
+
+function openExercisesSidebar() {
+  setLastSidebarType('exercises');
+  closeSidebar({ reason: 'exercises-open', source: 'exercises' });
+  exercisesSidePanel.open();
+  updateBodySidebarClass();
+  loadSidebarContent();
+}
+
+export function closeExercisesSidebar() {
+  closeSidebar({ reason: 'exercises-close', source: 'exercises' });
+}
+
+export function toggleExercisesSidebar() {
+  if (exercisesSidePanel.isOpen) closeExercisesSidebar();
+  else openExercisesSidebar();
+}
+
+async function loadSidebarContent() {
+  const container = document.getElementById('exercisesSidebarList');
+  if (!container) return;
+  container.innerHTML = '<p class="exercises-loading">Loading…</p>';
+  await Promise.all([fetchExercises(), fetchProgress()]);
+  renderExercises(container);
 }
 
 // ── Practice view ──────────────────────────────────────────────────────────
@@ -102,15 +152,20 @@ async function fetchExercises() {
 }
 
 async function fetchProgress() {
-  if (!currentUser) { progressMap = {}; return; }
+  if (!currentUser) { progressMap = {}; bpmMap = {}; return; }
 
   const { data, error } = await supabase
     .from('student_exercise_progress')
-    .select('exercise_id, status')
+    .select('exercise_id, status, current_bpm')
     .eq('user_id', currentUser.id);
 
   if (error) { console.error('[Exercises] progress fetch error:', error); return; }
-  progressMap = Object.fromEntries((data || []).map(r => [r.exercise_id, r.status]));
+  progressMap = {};
+  bpmMap = {};
+  for (const r of (data || [])) {
+    progressMap[r.exercise_id] = r.status;
+    bpmMap[r.exercise_id] = r.current_bpm ?? 90;
+  }
 }
 
 function renderExercises(list) {
@@ -194,11 +249,16 @@ function openModal(ex) {
   modalStudioBtn.style.display = ex.studio_pattern_json ? '' : 'none';
   syncModalStatusButtons(progressMap[ex.id] || null);
 
+  // BPM
+  const bpm = bpmMap[ex.id] ?? 90;
+  if (bpmValueEl) bpmValueEl.textContent = bpm;
+
   modal.classList.add('open');
   modal.setAttribute('aria-hidden', 'false');
 }
 
 function closeModal() {
+  clearTimeout(bpmSaveTimer);
   modal.classList.remove('open');
   modal.setAttribute('aria-hidden', 'true');
   modalVideo.innerHTML = '';
@@ -250,12 +310,100 @@ async function handleModalStatusClick(targetStatus) {
   }
 }
 
+// ── BPM controls ───────────────────────────────────────────────────────────
+
+function currentBpm() {
+  return parseInt(bpmValueEl?.textContent, 10) || 90;
+}
+
+function adjustBpm(delta) {
+  if (!activeExercise) return;
+  const next = Math.max(40, Math.min(300, currentBpm() + delta));
+  bpmValueEl.textContent = next;
+  bpmMap[activeExercise.id] = next;
+  scheduleBpmSave(activeExercise.id, next);
+}
+
+function scheduleBpmSave(exerciseId, bpm) {
+  clearTimeout(bpmSaveTimer);
+  bpmSaveTimer = setTimeout(() => saveBpm(exerciseId, bpm), 800);
+}
+
+async function saveBpm(exerciseId, bpm) {
+  if (!currentUser) return;
+  await supabase
+    .from('student_exercise_progress')
+    .upsert(
+      { user_id: currentUser.id, exercise_id: exerciseId, current_bpm: bpm },
+      { onConflict: 'user_id,exercise_id' }
+    );
+}
+
+async function handleBpmCheck() {
+  if (!activeExercise || !currentUser) return;
+
+  const exerciseId = activeExercise.id;
+  const achieved   = currentBpm();
+  const next       = Math.min(300, achieved + 5);
+
+  // Celebration
+  burstConfetti(bpmCheckBtn);
+  bpmCheckBtn.classList.add('celebrate');
+  bpmCheckBtn.addEventListener('animationend', () => bpmCheckBtn.classList.remove('celebrate'), { once: true });
+
+  // Bump BPM after a short delay so the animation plays first
+  setTimeout(() => {
+    bpmValueEl.textContent = next;
+    bpmValueEl.classList.add('bump');
+    bpmValueEl.addEventListener('animationend', () => bpmValueEl.classList.remove('bump'), { once: true });
+    bpmMap[exerciseId] = next;
+    saveBpm(exerciseId, next);
+  }, 320);
+}
+
+function burstConfetti(triggerEl) {
+  const colors = ['#ffd166', '#5b8cff', '#4cd964', '#ff6b6b', '#c77dff', '#ff9f43'];
+  const rect = triggerEl.getBoundingClientRect();
+  const cx = rect.left + rect.width  / 2;
+  const cy = rect.top  + rect.height / 2;
+  const count = 12;
+
+  for (let i = 0; i < count; i++) {
+    const angle  = (2 * Math.PI * i) / count;
+    const radius = 36 + Math.random() * 24;
+    const dot    = document.createElement('span');
+    dot.className = 'bpm-confetti';
+    dot.style.cssText = [
+      `left:${cx}px`,
+      `top:${cy}px`,
+      `background:${colors[i % colors.length]}`,
+      `--dx:${Math.cos(angle) * radius}px`,
+      `--dy:${Math.sin(angle) * radius}px`,
+    ].join(';');
+    document.body.appendChild(dot);
+    setTimeout(() => dot.remove(), 700);
+  }
+}
+
 async function openInStudio() {
-  if (!activeExercise?.studio_pattern_json) return;
-  const { applyPattern } = await import('./pattern-crud.js');
-  closeModal();
-  window.location.hash = '#studio';
-  await applyPattern(activeExercise.studio_pattern_json);
+  if (!activeExercise) return;
+
+  if (!activeExercise.studio_pattern_json) {
+    alert('No studio pattern attached to this exercise yet.');
+    return;
+  }
+
+  try {
+    const { applyPattern } = await import('./pattern-crud.js');
+    const bpm = bpmMap[activeExercise.id] ?? 90;
+    const state = { ...activeExercise.studio_pattern_json, bpm };
+    closeModal();
+    window.location.hash = '#studio';
+    await applyPattern(state);
+  } catch (err) {
+    console.error('[Exercises] openInStudio error:', err);
+    alert('Failed to open in Studio. Check the console for details.');
+  }
 }
 
 // ── Editor modal ───────────────────────────────────────────────────────────

@@ -112,6 +112,7 @@
       <nav class="app-nav" id="appNav">
         <a class="nav-link" data-route="library" href="#library">Library</a>
         <button class="nav-link" id="toggleSidebarBtn" data-action="toggle-sidebar">Courses</button>
+        <button class="nav-link" id="toggleExercisesBtn">Practice</button>
         <button class="nav-link" id="toggleComposerBtn">Composer</button>
         <a class="nav-link" data-route="studio" href="#studio">Studio</a>
         <a class="nav-link" data-route="community" href="#community">Community</a>
@@ -1531,6 +1532,16 @@
     </div>
   </div>
 
+  <!-- Exercises (Practice) Sidebar -->
+  <div id="exercisesSidebar" class="sidebar exercises-sidebar" aria-hidden="true" data-panel-type="sidepanel">
+    <div class="sidebar-header">
+      <h3>Practice</h3>
+      <button id="closeExercisesSidebar" class="close-btn">&times;</button>
+    </div>
+    <div id="exercisesSidebarList" class="sidebar-content exercises-sidebar-content">
+    </div>
+  </div>
+
   <!-- Coaching Sidebar -->
   <div id="coachingSidebar" class="sidebar coaching-sidebar" aria-hidden="true" data-panel-type="sidepanel">
     <div class="sidebar-header">
@@ -2763,6 +2774,15 @@
       <div class="exercise-modal-body">
         <div id="exerciseModalVideo" class="exercise-modal-video" style="display:none;"></div>
         <p id="exerciseModalDesc" class="exercise-modal-desc"></p>
+        <div class="exercise-bpm-section">
+          <div class="exercise-bpm-label">Target BPM</div>
+          <div class="exercise-bpm-controls">
+            <button class="bpm-adj-btn" id="exBpmMinus" aria-label="Decrease BPM">−</button>
+            <span class="bpm-value" id="exBpmValue">90</span>
+            <button class="bpm-adj-btn" id="exBpmPlus" aria-label="Increase BPM">+</button>
+            <button class="bpm-check-btn" id="exBpmCheck" aria-label="Mark BPM as achieved">✓</button>
+          </div>
+        </div>
       </div>
 
       <div class="exercise-modal-footer">
