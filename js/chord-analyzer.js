@@ -12,13 +12,24 @@ const NOTE_MAP = {
   'A': 9, 'A#': 10, 'BB': 10, 'B': 11
 };
 
-const REVERSE_NOTE_MAP = [
-  'C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'
+// Pairs: [accidental semitone, natural-below semitone, sharp spelling, flat spelling]
+const ACCIDENTAL_PAIRS = [
+  [1,  0, 'C#', 'Db'],
+  [3,  2, 'D#', 'Eb'],
+  [6,  5, 'F#', 'Gb'],
+  [8,  7, 'G#', 'Ab'],
+  [10, 9, 'A#', 'Bb'],
 ];
 
-const REVERSE_NOTE_MAP_FLAT = [
-  'C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'
-];
+// Build a 12-element name array where each accidental is spelled by whether
+// its natural lower neighbour is already present in the scale.
+function buildSpellingMap(pitchClassSet) {
+  const map = ['C', null, 'D', null, 'E', 'F', null, 'G', null, 'A', null, 'B'];
+  for (const [acc, natural, sharpName, flatName] of ACCIDENTAL_PAIRS) {
+    map[acc] = pitchClassSet.has(natural) ? flatName : sharpName;
+  }
+  return map;
+}
 
 /**
  * Parse "D3" or "F#4" into { note: "D", octave: 3, midi: 50, original: "D3" }
@@ -72,21 +83,16 @@ function getCombinations(arr, k) {
  * Check if 3 notes form a chord
  * Returns { root: "D", quality: "Minor", name: "D Minor" } or null
  */
-function identifyTriad(notesObjArr, useFlats) {
-  // Sort by pitch
+function identifyTriad(notesObjArr, spellingMap) {
   const sorted = [...notesObjArr].sort((a, b) => a.midi - b.midi);
   const [n1, n2, n3] = sorted;
-
-  // Calculate intervals relative to root logic
-  // But the notes might be inverted! (e.g. A3, D4, F4 is D Minor inversed)
-  // We need to check pitch classes, not just absolute intervals.
 
   const pc1 = n1.midi % 12;
   const pc2 = n2.midi % 12;
   const pc3 = n3.midi % 12;
 
   const pcs = [pc1, pc2, pc3].sort((a, b) => a - b);
-  const map = useFlats ? REVERSE_NOTE_MAP_FLAT : REVERSE_NOTE_MAP;
+  const map = spellingMap;
 
   // Check for Root Position shapes in Pitch Class space
   // Try each note as potential root
@@ -130,8 +136,10 @@ export const ChordAnalyzer = {
     // scaleNotes is array of strings e.g. ["D3", "A3", ...]
     const parsedNotes = scaleNotes.map(parseNote).filter(n => n !== null);
 
-    // Determine if context is "Flat" based on input notes
-    const useFlats = scaleNotes.some(s => s.match(/[A-G]b/i));
+    // Build a set of natural pitch classes present in the scale so we can
+    // determine per-accidental spelling: if A is in the scale, use Bb not A#.
+    const naturalPCs = new Set(parsedNotes.map(n => n.midi % 12));
+    const spellingMap = buildSpellingMap(naturalPCs);
 
     // Deduplicate by strict name+octave to avoid double counting same note
     // Handpans rarely have duplicates, but if so, ignore.
@@ -154,7 +162,7 @@ export const ChordAnalyzer = {
     // Let's return individual voicings for now. We can group them in UI.
 
     combos.forEach(combo => {
-      const result = identifyTriad(combo, useFlats);
+      const result = identifyTriad(combo, spellingMap);
       if (result) {
         // Create unique ID for this specific voicing
         const noteIds = combo.map(n => n.original).sort().join(',');

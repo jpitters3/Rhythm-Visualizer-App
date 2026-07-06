@@ -169,6 +169,16 @@
   margin-bottom: 36px;
 }
 
+.exercises-category.dragging {
+  opacity: 0.4;
+}
+
+.exercises-category.drag-over {
+  outline: 2px dashed var(--btn-active);
+  outline-offset: 6px;
+  border-radius: 10px;
+}
+
 .exercises-category-label {
   font-size: 11px;
   font-weight: 700;
@@ -179,7 +189,22 @@
   margin-bottom: 12px;
   padding-bottom: 8px;
   border-bottom: 1px solid var(--panel-border);
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
+
+.category-drag-handle {
+  cursor: grab;
+  font-size: 16px;
+  opacity: 0.4;
+  line-height: 1;
+  flex-shrink: 0;
+  transition: opacity 0.15s;
+}
+
+.category-drag-handle:hover { opacity: 0.9; }
+.category-drag-handle:active { cursor: grabbing; }
 
 /* Exercise card */
 .exercise-card {

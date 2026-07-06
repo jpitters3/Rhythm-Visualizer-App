@@ -6,6 +6,7 @@ import { Sidepanel, updateBodySidebarClass, setLastSidebarType, registerPanelOpe
 import { closeSidebar } from './courses.js';
 
 let exercises = [];
+let categoryOrder = [];      // [{name, sort_order}] from exercise_categories
 let progressMap = {};        // exercise_id → status
 let bpmMap = {};             // exercise_id → current_bpm
 let phrasesList = [];        // { name, data } from patterns table
@@ -136,7 +137,7 @@ async function loadPracticeView() {
   if (addBtn) addBtn.style.display = isTeacher() ? '' : 'none';
 
   list.innerHTML = '<p class="exercises-loading">Loading…</p>';
-  await Promise.all([fetchExercises(), fetchProgress()]);
+  await Promise.all([fetchExercises(), fetchProgress(), fetchCategoryOrder()]);
   renderExercises(list);
 }
 
@@ -149,6 +150,15 @@ async function fetchExercises() {
 
   if (error) { console.error('[Exercises] fetch error:', error); return; }
   exercises = data || [];
+}
+
+async function fetchCategoryOrder() {
+  const { data, error } = await supabase
+    .from('exercise_categories')
+    .select('name, sort_order')
+    .order('sort_order');
+  if (error) console.error('[Exercises] category order fetch error:', error);
+  categoryOrder = data || [];
 }
 
 async function fetchProgress() {
@@ -174,19 +184,31 @@ function renderExercises(list) {
     return;
   }
 
-  const categories = [];
   const byCategory = {};
   for (const ex of exercises) {
-    if (!byCategory[ex.category]) { byCategory[ex.category] = []; categories.push(ex.category); }
-    byCategory[ex.category].push(ex);
+    (byCategory[ex.category] = byCategory[ex.category] || []).push(ex);
   }
 
+  // Ordered categories: DB order first, then any unlisted ones alphabetically
   const teacher = isTeacher();
 
-  list.innerHTML = categories.map(cat => `
-    <div class="exercises-category">
-      <div class="exercises-category-label">${escapeHtml(cat)}</div>
-      ${byCategory[cat].map(ex => exerciseCardHTML(ex, teacher)).join('')}
+  // All DB-defined categories come first in order; unlisted ones (from exercises) appended alphabetically
+  const ordered = categoryOrder.map(c => c.name);
+  for (const cat of Object.keys(byCategory).sort()) {
+    if (!ordered.includes(cat)) ordered.push(cat);
+  }
+
+  // Students only see categories that have exercises; teachers see all DB-defined categories too
+  const visible = ordered.filter(cat => byCategory[cat] || (teacher && categoryOrder.some(c => c.name === cat)));
+
+  list.innerHTML = visible.map(cat => `
+    <div class="exercises-category${teacher ? ' sortable-category' : ''}" data-category="${escapeHtml(cat)}">
+      <div class="exercises-category-label">
+        ${teacher ? '<span class="category-drag-handle" title="Drag to reorder">⠿</span>' : ''}
+        ${escapeHtml(cat)}
+      </div>
+      ${(byCategory[cat] || []).map(ex => exerciseCardHTML(ex, teacher)).join('')}
+      ${teacher && !byCategory[cat] ? '<p class="exercises-empty-cat">No exercises yet.</p>' : ''}
     </div>
   `).join('');
 
@@ -206,6 +228,60 @@ function renderExercises(list) {
         if (ex) openEditor(ex);
       });
     });
+    initCategoryDrag(list);
+  }
+}
+
+function initCategoryDrag(list) {
+  let dragSrc = null;
+
+  list.querySelectorAll('.sortable-category').forEach(el => {
+    el.setAttribute('draggable', 'true');
+
+    el.addEventListener('dragstart', e => {
+      dragSrc = el;
+      el.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+    });
+
+    el.addEventListener('dragend', () => {
+      el.classList.remove('dragging');
+      list.querySelectorAll('.drag-over').forEach(x => x.classList.remove('drag-over'));
+      saveCategoryOrder(list);
+    });
+
+    el.addEventListener('dragover', e => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      if (el === dragSrc) return;
+      list.querySelectorAll('.drag-over').forEach(x => x.classList.remove('drag-over'));
+      el.classList.add('drag-over');
+    });
+
+    el.addEventListener('drop', e => {
+      e.preventDefault();
+      if (!dragSrc || dragSrc === el) return;
+      const els = [...list.querySelectorAll('.sortable-category')];
+      const srcIdx = els.indexOf(dragSrc);
+      const tgtIdx = els.indexOf(el);
+      if (srcIdx < tgtIdx) el.after(dragSrc);
+      else el.before(dragSrc);
+    });
+  });
+}
+
+async function saveCategoryOrder(list) {
+  const cats = [...list.querySelectorAll('.sortable-category')].map((el, i) => ({
+    name: el.dataset.category,
+    sort_order: (i + 1) * 10,
+  }));
+
+  categoryOrder = cats;
+
+  for (const cat of cats) {
+    await supabase
+      .from('exercise_categories')
+      .upsert({ name: cat.name, sort_order: cat.sort_order }, { onConflict: 'name' });
   }
 }
 

@@ -1,4 +1,5 @@
 import { gridA, gridB } from './grid-context.js';
+import { spellNote } from './utils.js';
 import { activeGrid, currentUser, setActiveGrid } from './state.js';
 import { stop, setBeats, setSubdivision } from './noteplayer.js';
 import { getScale } from './state.js';
@@ -167,7 +168,7 @@ function resolveLabelText(lbl, pref, isMulti = false, subIdx = null) {
       const scale = getScale();
       if (scale && scale.map) {
         const pitch = scale.map[subText];
-        if (pitch) return pitch.replace('s', '#').replace(/[0-9]/g, '');
+        if (pitch) return spellNote(pitch, Object.values(scale.map));
       }
     }
     return subText;
@@ -184,7 +185,7 @@ function resolveLabelText(lbl, pref, isMulti = false, subIdx = null) {
       let pitch = scale.map[lbl];
       if (!pitch && isDing) pitch = scale.ding;
       if (pitch) {
-        return pitch.replace('s', '#').replace(/[0-9]/g, '');
+        return spellNote(pitch, Object.values(scale.map));
       }
     }
   }

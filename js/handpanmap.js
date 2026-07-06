@@ -1,4 +1,5 @@
 import { setCaret } from './range-selection.js';
+import { spellNote } from './utils.js';
 import { Modal } from './modal.js';
 import { updateUserLabelPreference } from './profile.js';
 import { writeToSession, clampIndex, getComposeOn } from './compose-mode.js';
@@ -1212,11 +1213,15 @@ function overlayNumberPitchNotes() {
     } else if (overlayPitches) {
       if (typeof noteForLabel === 'function') {
         const pitch = noteForLabel(note);
-        text = pitch ? pitch.replace('s', '#') : '';
-        if (note === 'T_R' || note === 'T_L') text = 'T';
-        else if (note === 'S_R' || note === 'S_L') text = 'S';
-        if (text && localStorage.getItem('handpanShowOctave') !== 'true') {
-          text = text.replace(/\d+$/, '');
+        if (note === 'T_R' || note === 'T_L') { text = 'T'; }
+        else if (note === 'S_R' || note === 'S_L') { text = 'S'; }
+        else if (pitch) {
+          const scale = typeof getScale === 'function' ? getScale() : null;
+          const allPitches = scale?.map ? Object.values(scale.map) : [];
+          const spelled = spellNote(pitch, allPitches);
+          text = localStorage.getItem('handpanShowOctave') === 'true'
+            ? spelled + (pitch.match(/\d+$/)?.[0] ?? '')
+            : spelled;
         }
       } else {
         text = note;

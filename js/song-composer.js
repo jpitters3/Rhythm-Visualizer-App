@@ -16,6 +16,7 @@ import { addTickObserver, removeTickObserver, start, stop } from './noteplayer.j
 import { TransportRegistry } from './transport-ui.js';
 import { gridA } from './grid-context.js';
 import { alert, confirm, prompt } from './alert.js';
+import { spellNote } from './utils.js';
 import { closeSidebar } from './courses.js';
 import { setLastSidebarType, registerPanelOpener } from './sidepanel.js';
 import { openTrimUI, closeTrimUI } from './recording-trim.js';
@@ -413,12 +414,12 @@ function _printLabel(raw) {
   const pitch = scale.map && scale.map[raw];
   if (!pitch) return raw;
 
-  // "Cs4" → "C#4" or "C#", "Fs4" → "F#4" or "F#", etc.
-  let display = pitch.replace(/s(\d)/, '#$1'); // normalise 's' sharp notation
-  if (localStorage.getItem('handpanShowOctave') !== 'true') {
-    display = display.replace(/\d+$/, '');     // strip octave unless show is on
+  const allPitches = Object.values(scale.map);
+  const spelled = spellNote(pitch, allPitches);
+  if (localStorage.getItem('handpanShowOctave') === 'true') {
+    return spelled + (pitch.match(/\d+$/)?.[0] ?? '');
   }
-  return display.replace(/B$/, 'b');           // trailing 'B' → 'b' for readability
+  return spelled;
 }
 
 function _buildPrintHTML(title, sectionData) {
