@@ -86,6 +86,24 @@
   transform-origin: center center;
 }
 
+/* Desktop: the panel fills .main's height; the wrap shrinks its width so the
+   (square-ish) image never overflows vertically. 160px = tabs (~80px) +
+   ghost section (~63px) + slack. Container query lets the wrap read the
+   panel's cqh and limit itself accordingly. */
+@media (min-width: 901px) {
+  .handpan-panel {
+    align-self: stretch;
+    min-height: 0;
+    overflow: hidden;
+    container-type: size;
+  }
+
+  .handpan-wrap {
+    max-width: min(100%, calc(100cqh - 160px));
+    margin: 0 auto;
+  }
+}
+
 .handpan-img {
   width: 100%;
   height: auto;
