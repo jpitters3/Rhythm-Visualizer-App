@@ -299,22 +299,21 @@ body .handpan-overlay {
 
 /* Make dots visible while calibrating (even when not playing) */
 body.calibrating .hp-dot {
-  opacity: 1;
-  /* Keep fully opaque parent so child opacity logic works */
-  pointer-events: auto;
-  cursor: grab;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  cursor: grab !important;
 }
 
 body.calibrating .hp-dot .hp-visual {
-  background: rgba(255, 255, 255, 0.25);
-  border: 2px solid rgba(255, 255, 255, 0.8);
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  background: rgba(255, 220, 0, 0.2) !important;
+  border: 3px solid rgba(255, 220, 0, 0.9) !important;
+  box-shadow: 0 0 12px rgba(255, 220, 0, 0.5) !important;
 }
 
 /* Dark mode tweaks */
 body.dark.calibrating .hp-dot .hp-visual {
-  background: rgba(255, 255, 255, 0.15);
-  border-color: rgba(255, 255, 255, 0.6);
+  background: rgba(255, 220, 0, 0.15) !important;
+  border-color: rgba(255, 220, 0, 0.8) !important;
 }
 
 /* Selected dot styling */
@@ -327,6 +326,54 @@ body.calibrating .hp-dot.selected {
 
 /* Dark mode outline tweak */
 body.dark.calibrating .hp-dot.selected {
+  outline-color: rgba(91, 140, 255, 0.95);
+  box-shadow: 0 0 0 10px rgba(91, 140, 255, 0.20);
+}
+
+/* Perimeter arc calibration */
+body.calibrating .hp-arc {
+  stroke: rgba(255, 220, 0, 0.9) !important;
+  stroke-width: 5 !important;
+  filter: drop-shadow(0 0 4px rgba(255, 220, 0, 0.5));
+}
+
+body.calibrating .hp-arc-hit {
+  cursor: grab !important;
+  pointer-events: stroke !important;
+}
+
+body.calibrating .hp-arc.selected {
+  stroke: rgba(255, 209, 102, 1) !important;
+  stroke-width: 7 !important;
+  filter: drop-shadow(0 0 8px rgba(255, 209, 102, 0.8));
+}
+
+/* Bottom dots during calibration (dual mode — wrap already visible) */
+body.calibrating #handpanOverlayBottom .hp-dot {
+  opacity: 1;
+  pointer-events: auto;
+  cursor: grab;
+}
+
+body.calibrating #handpanOverlayBottom .hp-dot .hp-visual {
+  background: rgba(255, 220, 0, 0.2) !important;
+  border: 3px solid rgba(255, 220, 0, 0.9) !important;
+  box-shadow: 0 0 12px rgba(255, 220, 0, 0.5) !important;
+}
+
+body.dark.calibrating #handpanOverlayBottom .hp-dot .hp-visual {
+  background: rgba(255, 220, 0, 0.15) !important;
+  border-color: rgba(255, 220, 0, 0.8) !important;
+}
+
+body.calibrating #handpanOverlayBottom .hp-dot.selected {
+  opacity: 1;
+  outline: 3px solid rgba(255, 209, 102, 0.9);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 10px rgba(255, 209, 102, 0.18);
+}
+
+body.dark.calibrating #handpanOverlayBottom .hp-dot.selected {
   outline-color: rgba(91, 140, 255, 0.95);
   box-shadow: 0 0 0 10px rgba(91, 140, 255, 0.20);
 }

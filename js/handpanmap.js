@@ -61,6 +61,7 @@ const HANDPAN_IMG_BRONZE = 'handpan-for-groovepan.png';
 
 
 const handpanDots = new Map();
+let perimSvgEl = null; // reference to the active perimeter SVG for arc calibration
 
 let chordTestMode = false;
 export function isChordTestMode() { return chordTestMode; }
@@ -336,11 +337,12 @@ function applyCustomHandpan(handpanData) {
   if (handpanOverlay) handpanOverlay.dataset.model = 'Bronze';
   dispatchEvent(new Event('handpan-loaded'));
 
-  // Restore saved view or default to Dual (Stacked)
+  // Restore saved view or default to perimeter (merged view)
   if (handpanData.bottom_image_url) {
-    const preferred = localStorage.getItem('gp_handpanSide') || 'dual';
+    let preferred = localStorage.getItem('gp_handpanSide') || 'perimeter';
+    if (preferred === 'dual') preferred = 'perimeter'; // dual no longer exists
     if (preferred !== 'top') {
-      const order = ['top', 'bottom', 'dual', 'perimeter'];
+      const order = ['top', 'bottom', 'perimeter'];
       const steps = order.indexOf(preferred);
       for (let i = 0; i < steps && i < order.length; i++) toggleHandpanSide();
     }
@@ -355,12 +357,10 @@ function hasBottomNotes() {
 export function toggleHandpanSide() {
   if (!mountedHandpanData || !mountedHandpanData.bottom_image_url) return;
 
-  // Cycle: Top -> Bottom -> Dual -> Perimeter (if bottom notes exist) -> Top
+  // Cycle: Top → Bottom → Merged (perimeter) → Top
   if (currentHandpanSide === 'top') {
     currentHandpanSide = 'bottom';
   } else if (currentHandpanSide === 'bottom') {
-    currentHandpanSide = 'dual';
-  } else if (currentHandpanSide === 'dual') {
     currentHandpanSide = hasBottomNotes() ? 'perimeter' : 'top';
   } else {
     currentHandpanSide = 'top';
@@ -368,52 +368,36 @@ export function toggleHandpanSide() {
 
   localStorage.setItem('gp_handpanSide', currentHandpanSide);
 
-  // Update toggle button state
+  // Update toggle button
   const flipBtn = document.getElementById('flipSideBtn');
   if (flipBtn) {
     flipBtn.classList.remove('flipped');
     if (currentHandpanSide === 'bottom') flipBtn.classList.add('flipped');
 
-    if (currentHandpanSide === 'dual') {
-      flipBtn.textContent = '⩓';
-      flipBtn.title = "Dual View (Stacked)";
-    } else if (currentHandpanSide === 'perimeter') {
+    if (currentHandpanSide === 'perimeter') {
       flipBtn.textContent = '◎';
-      flipBtn.title = "Perimeter View (bottom shell as arcs)";
+      flipBtn.title = "Flip to Top";
+    } else if (currentHandpanSide === 'bottom') {
+      flipBtn.textContent = '🔄';
+      flipBtn.title = "Flip to Merged View";
     } else {
       flipBtn.textContent = '🔄';
-      flipBtn.title = (currentHandpanSide === 'top') ? "Flip to Bottom" : "Flip to All";
+      flipBtn.title = "Flip to Bottom";
     }
   }
 
-  // Visuals Logic
-  // Dual Mode: Show Bottom Wrap, Set Bottom Image
-  if (currentHandpanSide === 'dual') {
-    if (handpanWrapBottom) handpanWrapBottom.style.display = 'block';
-    if (handpanImgBottom) {
-      handpanImgBottom.src = mountedHandpanData.bottom_image_url;
-      const botRot = mountedHandpanData.bottom_image_rotation || 0;
-      handpanImgBottom.style.transform = botRot ? `rotate(${botRot}deg)` : '';
-    }
-    // Top image stays as top
-    changeHandpanImage(mountedHandpanData.top_image_url, () => {
-      const topRot = mountedHandpanData.image_rotation || 0;
-      if (handpanImg) handpanImg.style.transform = topRot ? `rotate(${topRot}deg)` : '';
-    });
-  } else {
-    if (handpanWrapBottom) handpanWrapBottom.style.display = 'none';
-    if (handpanImgBottom) handpanImgBottom.src = "";
+  // Visuals — always single image, bottom wrap never shown
+  if (handpanWrapBottom) handpanWrapBottom.style.display = 'none';
+  if (handpanImgBottom) handpanImgBottom.src = "";
 
-    // Update Single Image (Both uses Top by default)
-    const imgSide = (currentHandpanSide === 'bottom') ? 'bottom' : 'top';
-    const targetSrc = (imgSide === 'top') ? mountedHandpanData.top_image_url : mountedHandpanData.bottom_image_url;
-    const rot = imgSide === 'bottom'
-      ? (mountedHandpanData.bottom_image_rotation || 0)
-      : (mountedHandpanData.image_rotation || 0);
-    changeHandpanImage(targetSrc, () => {
-      if (handpanImg) handpanImg.style.transform = rot ? `rotate(${rot}deg)` : '';
-    });
-  }
+  const imgSide = (currentHandpanSide === 'bottom') ? 'bottom' : 'top';
+  const targetSrc = (imgSide === 'top') ? mountedHandpanData.top_image_url : mountedHandpanData.bottom_image_url;
+  const rot = imgSide === 'bottom'
+    ? (mountedHandpanData.bottom_image_rotation || 0)
+    : (mountedHandpanData.image_rotation || 0);
+  changeHandpanImage(targetSrc, () => {
+    if (handpanImg) handpanImg.style.transform = rot ? `rotate(${rot}deg)` : '';
+  });
 
   // Re-run the visual map logic
   // We need to re-parse the note map but only keep notes for this side
@@ -427,16 +411,9 @@ export function toggleHandpanSide() {
     let include = false;
     let isGhost = false;
 
-    if (currentHandpanSide === 'dual') {
-      include = true;
-      // No ghost flags for dual mode, they just go to different overlays
-      // But we can set isGhost false explicitly
-      isGhost = false;
-    } else if (currentHandpanSide === 'perimeter') {
-      include = true; // include all; bottom notes rendered as arcs in buildHandpanOverlay
-      isGhost = false;
+    if (currentHandpanSide === 'perimeter') {
+      include = true; // all notes: top as dots, bottom as perimeter arcs
     } else {
-      // Normal strict side
       if (noteSide === currentHandpanSide) include = true;
     }
 
@@ -790,9 +767,11 @@ export function buildHandpanOverlay() {
   }
 
   // Build perimeter arcs for bottom-shell notes
+  perimSvgEl = null;
   if (perimeterNotes.length > 0 && wrap) {
     const svg = buildPerimeterSvg(perimeterNotes);
     wrap.appendChild(svg);
+    perimSvgEl = svg;
   }
 
   if (overlayPitches || overlayNumbers)
@@ -858,11 +837,12 @@ function buildPerimeterSvg(perimeterNotes) {
     svg.appendChild(text);
 
     // Store proxy in handpanDots so highlightHandpan can find it
-    handpanDots.set(note, { isArc: true, path, text });
+    handpanDots.set(note, { isArc: true, path, hitPath: hit, text });
   });
 
-  // Click / touch handler for the whole SVG
+  // Click handler — play note (skip when calibrating; mousedown handles selection)
   svg.addEventListener('click', (e) => {
+    if (calibrating) return;
     const arcNote = e.target.dataset?.note;
     if (!arcNote) return;
     playNoteByLabel(arcNote, null);
@@ -870,7 +850,23 @@ function buildPerimeterSvg(perimeterNotes) {
     if (activeGrid.caretIndex !== null) writeToSession(arcNote, { advance: !e.altKey });
   });
 
+  // Touch handler — play note (skip when calibrating; touchstart drag handler takes over)
   svg.addEventListener('touchstart', (e) => {
+    if (calibrating) {
+      e.preventDefault();
+      const t = e.touches[0];
+      const el = document.elementFromPoint(t.clientX, t.clientY);
+      const arcNote = el?.dataset?.note;
+      if (!arcNote || !HANDPAN_MAP[arcNote]) return;
+      selectHpDot(arcNote);
+      isHpDragging = true;
+      hpDragStart = { x: t.clientX, y: t.clientY };
+      hpNoteStart = { x: HANDPAN_MAP[arcNote].x, y: HANDPAN_MAP[arcNote].y };
+      const dx = 50 - HANDPAN_MAP[arcNote].x;
+      const dy = HANDPAN_MAP[arcNote].y - 50;
+      bottomDragRadius = Math.sqrt(dx * dx + dy * dy);
+      return;
+    }
     e.preventDefault();
     for (const touch of e.changedTouches) {
       const el = document.elementFromPoint(touch.clientX, touch.clientY);
@@ -882,7 +878,53 @@ function buildPerimeterSvg(perimeterNotes) {
     }
   }, { passive: false });
 
+  // Mousedown — start drag in calibration mode
+  svg.addEventListener('mousedown', (e) => {
+    if (!calibrating) return;
+    const arcNote = e.target.dataset?.note;
+    if (!arcNote || !HANDPAN_MAP[arcNote]) return;
+    e.preventDefault();
+    selectHpDot(arcNote);
+    isHpDragging = true;
+    hpDragStart = { x: e.clientX, y: e.clientY };
+    hpNoteStart = { x: HANDPAN_MAP[arcNote].x, y: HANDPAN_MAP[arcNote].y };
+    const dx = 50 - HANDPAN_MAP[arcNote].x;
+    const dy = HANDPAN_MAP[arcNote].y - 50;
+    bottomDragRadius = Math.sqrt(dx * dx + dy * dy);
+  });
+
   return svg;
+}
+
+function updateArcPath(note) {
+  const entry = handpanDots.get(note);
+  if (!entry?.isArc || !perimSvgEl) return;
+  const p = HANDPAN_MAP[note];
+  if (!p) return;
+
+  const cx = 50, cy = 50, arcR = 47;
+  const toRad = d => d * Math.PI / 180;
+  const dx = (100 - p.x) - 50;
+  const dy = p.y - 50;
+  const midAngle = Math.atan2(dy, dx) * (180 / Math.PI);
+  const noteR = p.r || 8;
+  const arcDeg = (2 * Math.asin(Math.min(noteR / arcR, 1))) * (180 / Math.PI);
+  const a0 = midAngle - arcDeg / 2;
+  const a1 = midAngle + arcDeg / 2;
+  const sx = cx + arcR * Math.cos(toRad(a0));
+  const sy = cy + arcR * Math.sin(toRad(a0));
+  const ex = cx + arcR * Math.cos(toRad(a1));
+  const ey = cy + arcR * Math.sin(toRad(a1));
+  const largeArc = arcDeg > 180 ? 1 : 0;
+  const d = `M ${sx.toFixed(2)} ${sy.toFixed(2)} A ${arcR} ${arcR} 0 ${largeArc} 1 ${ex.toFixed(2)} ${ey.toFixed(2)}`;
+
+  entry.path.setAttribute('d', d);
+  entry.hitPath?.setAttribute('d', d);
+
+  const lx = cx + arcR * Math.cos(toRad(midAngle));
+  const ly = cy + arcR * Math.sin(toRad(midAngle));
+  entry.text.setAttribute('x', lx.toFixed(2));
+  entry.text.setAttribute('y', ly.toFixed(2));
 }
 
 let hpPulseTimers = new Map();
@@ -965,7 +1007,10 @@ function setCalibrating(on) {
   if (!on) {
     // Clear selection
     selectedHpNote = null;
-    for (const el of handpanDots.values()) el.classList.remove('selected');
+    for (const el of handpanDots.values()) {
+      if (el?.isArc) { el.path?.classList?.remove('selected'); continue; }
+      el?.classList?.remove('selected');
+    }
     // Flush any pending debounced save immediately
     if (hpMapSaveTimeout) {
       clearTimeout(hpMapSaveTimeout);
@@ -979,7 +1024,7 @@ function setCalibrating(on) {
 function selectHpDot(note) {
   selectedHpNote = note;
   for (const [k, el] of handpanDots.entries()) {
-    if (el.isArc) continue;
+    if (el.isArc) { el.path?.classList?.toggle('selected', k === note); continue; }
     el.classList.toggle('selected', k === note);
   }
 }
@@ -1061,6 +1106,8 @@ export function setChordHighlight(labels, active, playable = true) {
 let isHpDragging = false;
 let hpDragStart = { x: 0, y: 0 }; // px
 let hpNoteStart = { x: 0, y: 0 }; // %
+let isBottomDrag = false;          // constrain to radial arc
+let bottomDragRadius = 0;          // locked radius in % units
 
 
 
@@ -1518,8 +1565,11 @@ export function initHandpanMap() {
     if (!HANDPAN_MAP[note]) return;
     selectHpDot(note);
     isHpDragging = true;
+    isBottomDrag = true;
     hpDragStart = { x: e.clientX, y: e.clientY };
     hpNoteStart = { x: HANDPAN_MAP[note].x, y: HANDPAN_MAP[note].y };
+    const dx = hpNoteStart.x - 50, dy = hpNoteStart.y - 50;
+    bottomDragRadius = Math.sqrt(dx * dx + dy * dy);
   });
 
   handpanOverlay?.addEventListener('mousedown', (e) => {
@@ -1531,35 +1581,60 @@ export function initHandpanMap() {
     if (!HANDPAN_MAP[note]) return;
     selectHpDot(note);
     isHpDragging = true;
+    isBottomDrag = false;
     hpDragStart = { x: e.clientX, y: e.clientY };
     hpNoteStart = { x: HANDPAN_MAP[note].x, y: HANDPAN_MAP[note].y };
   });
 
+  function applyHpDragMove(clientX, clientY) {
+    const p = HANDPAN_MAP[selectedHpNote];
+    const el = handpanDots.get(selectedHpNote);
+
+    if (el?.isArc && perimSvgEl) {
+      // Arc drag: radial-constrained along the perimeter circle, mirrored x
+      const svgRect = perimSvgEl.getBoundingClientRect();
+      if (svgRect.width === 0) return;
+      const cursorXPct = ((clientX - svgRect.left) / svgRect.width) * 100;
+      const cursorYPct = ((clientY - svgRect.top) / svgRect.height) * 100;
+      const angle = Math.atan2(cursorYPct - 50, cursorXPct - 50);
+      p.x = 50 - bottomDragRadius * Math.cos(angle);
+      p.y = 50 + bottomDragRadius * Math.sin(angle);
+      updateArcPath(selectedHpNote);
+      return;
+    }
+
+    const overlayEl = isBottomDrag && handpanOverlayBottom ? handpanOverlayBottom : handpanOverlay;
+    const overlay = overlayEl.getBoundingClientRect();
+    if (overlay.width === 0 || overlay.height === 0) return;
+
+    if (isBottomDrag) {
+      const cursorXPct = ((clientX - overlay.left) / overlay.width) * 100;
+      const cursorYPct = ((clientY - overlay.top) / overlay.height) * 100;
+      const angle = Math.atan2(cursorYPct - 50, cursorXPct - 50);
+      p.x = 50 + bottomDragRadius * Math.cos(angle);
+      p.y = 50 + bottomDragRadius * Math.sin(angle);
+    } else {
+      p.x = clamp(hpNoteStart.x + ((clientX - hpDragStart.x) / overlay.width)  * 100, 0, 100);
+      p.y = clamp(hpNoteStart.y + ((clientY - hpDragStart.y) / overlay.height) * 100, 0, 100);
+    }
+
+    if (el) { el.style.left = `${p.x}%`; el.style.top = `${p.y}%`; }
+  }
+
+  function endHpDrag() {
+    if (!isHpDragging) return;
+    isHpDragging = false;
+    isBottomDrag = false;
+    if (hpMapSaveTimeout) clearTimeout(hpMapSaveTimeout);
+    hpMapSaveTimeout = setTimeout(saveHandpanPositions, 1000);
+  }
+
   window.addEventListener('mousemove', (e) => {
     if (!isHpDragging || !calibrating || !selectedHpNote) return;
-    const overlay = handpanOverlay.getBoundingClientRect();
-    if (overlay.width === 0 || overlay.height === 0) return;
-    const dxPx = e.clientX - hpDragStart.x;
-    const dyPx = e.clientY - hpDragStart.y;
-    const dxPct = (dxPx / overlay.width) * 100;
-    const dyPct = (dyPx / overlay.height) * 100;
-    const p = HANDPAN_MAP[selectedHpNote];
-    p.x = clamp(hpNoteStart.x + dxPct, 0, 100);
-    p.y = clamp(hpNoteStart.y + dyPct, 0, 100);
-    const el = handpanDots.get(selectedHpNote);
-    if (el) {
-      el.style.left = `${p.x}%`;
-      el.style.top = `${p.y}%`;
-    }
+    applyHpDragMove(e.clientX, e.clientY);
   });
 
-  window.addEventListener('mouseup', () => {
-    if (isHpDragging) {
-      isHpDragging = false;
-      if (hpMapSaveTimeout) clearTimeout(hpMapSaveTimeout);
-      hpMapSaveTimeout = setTimeout(saveHandpanPositions, 1000);
-    }
-  });
+  window.addEventListener('mouseup', endHpDrag);
 
   handpanOverlay?.addEventListener('touchstart', (e) => {
     if (!calibrating) return;
@@ -1570,6 +1645,7 @@ export function initHandpanMap() {
     if (!HANDPAN_MAP[note]) return;
     selectHpDot(note);
     isHpDragging = true;
+    isBottomDrag = false;
     const t = e.touches[0];
     hpDragStart = { x: t.clientX, y: t.clientY };
     hpNoteStart = { x: HANDPAN_MAP[note].x, y: HANDPAN_MAP[note].y };
@@ -1584,37 +1660,22 @@ export function initHandpanMap() {
     if (!HANDPAN_MAP[note]) return;
     selectHpDot(note);
     isHpDragging = true;
+    isBottomDrag = true;
     const t = e.touches[0];
     hpDragStart = { x: t.clientX, y: t.clientY };
     hpNoteStart = { x: HANDPAN_MAP[note].x, y: HANDPAN_MAP[note].y };
+    const dx = HANDPAN_MAP[note].x - 50, dy = HANDPAN_MAP[note].y - 50;
+    bottomDragRadius = Math.sqrt(dx * dx + dy * dy);
   }, { passive: false });
 
   window.addEventListener('touchmove', (e) => {
     if (!isHpDragging || !calibrating || !selectedHpNote) return;
     e.preventDefault();
     const t = e.touches[0];
-    const overlay = handpanOverlay.getBoundingClientRect();
-    const dxPx = t.clientX - hpDragStart.x;
-    const dyPx = t.clientY - hpDragStart.y;
-    const dxPct = (dxPx / overlay.width) * 100;
-    const dyPct = (dyPx / overlay.height) * 100;
-    const p = HANDPAN_MAP[selectedHpNote];
-    p.x = clamp(hpNoteStart.x + dxPct, 0, 100);
-    p.y = clamp(hpNoteStart.y + dyPct, 0, 100);
-    const el = handpanDots.get(selectedHpNote);
-    if (el) {
-      el.style.left = `${p.x}%`;
-      el.style.top = `${p.y}%`;
-    }
+    applyHpDragMove(t.clientX, t.clientY);
   }, { passive: false });
 
-  window.addEventListener('touchend', () => {
-    if (isHpDragging) {
-      isHpDragging = false;
-      if (hpMapSaveTimeout) clearTimeout(hpMapSaveTimeout);
-      hpMapSaveTimeout = setTimeout(saveHandpanPositions, 1000);
-    }
-  });
+  window.addEventListener('touchend', endHpDrag);
 
   document.addEventListener('keydown', (e) => {
     if (!calibrating) return;
