@@ -58,6 +58,7 @@
   <link rel="stylesheet" href="./css/student-management.css">
   <link rel="stylesheet" href="./css/method.css">
   <link rel="stylesheet" href="./css/exercises.css">
+  <link rel="stylesheet" href="./css/dashboard.css">
 
   <!-- PWA & Mobile Optimization -->
   <link rel="manifest" href="./manifest.json">
@@ -117,7 +118,7 @@
         <a class="nav-link" data-route="studio" href="#studio" style="text-decoration:underline">Studio</a>
         <a class="nav-link" data-route="community" href="#community">Community</a>
         <a class="nav-link" data-route="method-welcome" href="#method-welcome">The Method</a>
-        <button class="nav-link" id="navDashboardBtn">Dashboard</button>
+        <a class="nav-link" id="navDashboardBtn" data-route="dashboard" href="#dashboard">Dashboard</a>
         <button class="nav-link" id="authBtn" style="display:none;">Sign In</button>
       </nav>
 
@@ -538,33 +539,76 @@
     </div><!-- End view-studio -->
 
     <!-- DASHBOARD VIEW -->
-    <div id="view-dashboard" class="route-view" style="display: none; padding: 40px; text-align: center;">
-      <h1 style="font-size: 32px; font-weight: 800; margin-bottom: 20px;">Welcome to Panafide</h1>
-      <p style="color: var(--text-secondary); margin-bottom: 40px;">Select a mode to begin.</p>
+    <div id="view-dashboard" class="route-view" style="display: none;">
 
-      <div style="display: flex; gap: 20px; justify-content: center; flex-wrap: wrap;">
-        <!-- Free Play Card -->
-        <div
-          style="background: var(--panel); border: 1px solid var(--panel-border); border-radius: 16px; padding: 30px; width: 300px; cursor: pointer; transition: all 0.2s ease;"
-          onclick="window.location.hash = '#studio'" onmouseover="this.style.borderColor='var(--primary)'"
-          onmouseout="this.style.borderColor='var(--panel-border)'">
-          <div style="font-size: 48px; margin-bottom: 16px;">🥁</div>
-          <h2 style="font-size: 20px; font-weight: 700; margin-bottom: 8px;">Free Play Engine</h2>
-          <p style="font-size: 14px; color: var(--text-secondary);">Compose, practice, and explore in our fully-featured
-            sequencer.</p>
+      <!-- Teacher "viewing as student" banner -->
+      <div id="dashViewingBanner" class="dash-viewing-banner" hidden>
+        <span>Viewing as <strong id="dashViewingName"></strong></span>
+        <button id="dashViewingExitBtn" class="dash-viewing-exit">Exit</button>
+      </div>
+
+      <!-- Main dashboard content -->
+      <div class="dash-content">
+
+        <!-- Greeting -->
+        <div class="dash-greeting">
+          <h1>Hey, <span id="dashGreetName">there</span></h1>
         </div>
 
-        <!-- Guided Composition Card -->
-        <div
-          style="background: var(--panel); border: 1px solid var(--panel-border); border-radius: 16px; padding: 30px; width: 300px; cursor: pointer; transition: all 0.2s ease;"
-          onclick="window.location.hash = '#compose'" onmouseover="this.style.borderColor='var(--accent-glow)'"
-          onmouseout="this.style.borderColor='var(--panel-border)'">
-          <div style="font-size: 48px; margin-bottom: 16px;">🎼</div>
-          <h2 style="font-size: 20px; font-weight: 700; margin-bottom: 8px;">The Creation Current</h2>
-          <p style="font-size: 14px; color: var(--text-secondary);">Guided Composition: Turn ideas into full multi-track
-            arrangements step by step.</p>
+        <!-- Current Assignment (hero) -->
+        <section class="dash-section">
+          <div class="dash-section-header">
+            <h2 class="dash-section-title">Current Assignment</h2>
+          </div>
+          <div id="dashAssignmentCard"></div>
+        </section>
+
+        <!-- Goals -->
+        <section class="dash-section">
+          <div class="dash-section-header">
+            <h2 class="dash-section-title">Your Goals</h2>
+            <button class="dash-section-edit-btn" id="dashGoalsEditBtn">Edit</button>
+          </div>
+          <div id="dashGoalsContent" class="dash-goals-grid"></div>
+        </section>
+
+        <!-- Practice Plan + Active Courses -->
+        <div class="dash-columns">
+          <section class="dash-section">
+            <div class="dash-section-header">
+              <h2 class="dash-section-title">Practice Plan</h2>
+              <button class="dash-section-link" id="dashPracticeLink">View all</button>
+            </div>
+            <div id="dashPracticeContent" class="dash-practice-list"></div>
+          </section>
+
+          <section class="dash-section">
+            <div class="dash-section-header">
+              <h2 class="dash-section-title">Active Courses</h2>
+            </div>
+            <div id="dashCoursesContent" class="dash-courses-list"></div>
+          </section>
+        </div>
+
+      </div>
+
+      <!-- Goals edit modal -->
+      <div id="dashGoalsModal" class="dash-goals-modal" hidden>
+        <div class="dash-goals-modal-box">
+          <h3>Set Your Goals</h3>
+          <label class="dash-goals-label">Dream Goal</label>
+          <p class="dash-goals-hint">Where do you ultimately want to go with handpan?</p>
+          <textarea id="dashDreamGoalInput" class="dash-goals-textarea" rows="3" maxlength="500" placeholder="e.g. Play a live concert for 500 people"></textarea>
+          <label class="dash-goals-label">Current Short-Term Goal</label>
+          <p class="dash-goals-hint">What are you working toward right now?</p>
+          <textarea id="dashShortGoalInput" class="dash-goals-textarea" rows="3" maxlength="500" placeholder="e.g. Master the alternating hand pattern at 80 BPM"></textarea>
+          <div class="dash-goals-modal-actions">
+            <button id="dashGoalsCancelBtn" class="dash-goals-cancel-btn">Cancel</button>
+            <button id="dashGoalsSaveBtn" class="dash-goals-save-btn">Save Goals</button>
+          </div>
         </div>
       </div>
+
     </div> <!-- END view-dashboard -->
 
     <!-- COMPOSE VIEW (Creation Current) -->

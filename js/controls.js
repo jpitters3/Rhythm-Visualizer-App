@@ -1,7 +1,6 @@
 // ==== EVENTS FOR BUTTONS / CONTROLS ====
 import { gridA, gridB, activeGrid } from './grid-context.js';
 import { isAuthed, openAuthModal } from './auth.js';
-import { openWelcomeDashboard } from './dashboard.js';
 import { start, stop, addTickObserver } from './noteplayer.js';
 import { renderAllMeasures, invertRange, invertFollowing, setDualGrid, clearGrid, resetGridToDefault } from './notegrid.js';
 import { TransportRegistry, TransportUI } from './transport-ui.js';
@@ -796,7 +795,7 @@ export function initControls() {
     }
   });
 
-  navDashboardBtn?.addEventListener('click', () => openWelcomeDashboard());
+  // navDashboardBtn is now an <a data-route="dashboard"> — navigation handled by router
 
   // eslint-disable-next-line no-unused-vars
   async function openLegacyDashboard() {

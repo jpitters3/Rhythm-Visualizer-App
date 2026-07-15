@@ -15,6 +15,7 @@ import { supabase } from './supabase-client.js';
 import { Bus, BUS_EVENT } from './bus.js';
 import { escapeHtml } from './utils.js';
 import { openAuthModal } from './auth.js';
+import { viewStudentDashboard } from './dashboard.js';
 
 const APP_URL = 'https://panafide.com';
 
@@ -278,6 +279,12 @@ function renderList(sessionsByStudent = new Map()) {
     </div>
     <div class="stmgmt-invite-form" id="stmgmtInviteForm" hidden>
       <input class="stmgmt-invite-input" type="email" id="stmgmtInviteEmail" placeholder="Student's email address" />
+      <div class="stmgmt-invite-courses" id="stmgmtInviteCourses">
+        <div class="stmgmt-invite-courses-label">Grant course access</div>
+        <div class="stmgmt-invite-courses-list" id="stmgmtInviteCoursesList">
+          <span class="stmgmt-invite-courses-loading">Loading courses…</span>
+        </div>
+      </div>
       <div class="stmgmt-invite-actions">
         <button class="stmgmt-invite-send-btn" id="stmgmtInviteSend">Send invitation</button>
         <button class="stmgmt-invite-cancel-btn" id="stmgmtInviteCancel">Cancel</button>
@@ -302,10 +309,13 @@ function renderList(sessionsByStudent = new Map()) {
   });
 
   // Invite toggle
-  body.querySelector('#stmgmtInviteToggle').addEventListener('click', () => {
+  body.querySelector('#stmgmtInviteToggle').addEventListener('click', async () => {
     const form = body.querySelector('#stmgmtInviteForm');
     form.hidden = !form.hidden;
-    if (!form.hidden) body.querySelector('#stmgmtInviteEmail').focus();
+    if (!form.hidden) {
+      body.querySelector('#stmgmtInviteEmail').focus();
+      await loadInviteCourses(body);
+    }
   });
 
   // Invite cancel
@@ -319,7 +329,9 @@ function renderList(sessionsByStudent = new Map()) {
   body.querySelector('#stmgmtInviteSend').addEventListener('click', () => {
     const email = body.querySelector('#stmgmtInviteEmail').value.trim();
     if (!email) return;
-    sendInvite(email);
+    const courseIds = [...body.querySelectorAll('.stmgmt-invite-course-checkbox:checked')]
+      .map(cb => cb.value);
+    sendInvite(email, courseIds);
   });
 
   body.querySelector('#stmgmtInviteEmail').addEventListener('keydown', e => {
@@ -329,7 +341,27 @@ function renderList(sessionsByStudent = new Map()) {
 
 // ===== INVITE =====
 
-async function sendInvite(email) {
+async function loadInviteCourses(body) {
+  const listEl = body.querySelector('#stmgmtInviteCoursesList');
+  if (!listEl) return;
+  const { data, error } = await supabase
+    .from('courses')
+    .select('id, title')
+    .eq('owner_id', currentUser.id)
+    .order('title');
+  if (error || !data?.length) {
+    listEl.innerHTML = '<span class="stmgmt-invite-courses-empty">No courses yet.</span>';
+    return;
+  }
+  listEl.innerHTML = data.map(c => `
+    <label class="stmgmt-invite-course-row">
+      <input type="checkbox" class="stmgmt-invite-course-checkbox" value="${c.id}" />
+      <span>${escapeHtml(c.title)}</span>
+    </label>
+  `).join('');
+}
+
+async function sendInvite(email, courseIds = []) {
   const statusEl = sidebarEl.querySelector('#stmgmtInviteStatus');
   const sendBtn = sidebarEl.querySelector('#stmgmtInviteSend');
 
@@ -341,6 +373,7 @@ async function sendInvite(email) {
     // Create invitation in DB (security definer — looks up student by email server-side)
     const { data, error } = await supabase.rpc('create_teacher_invitation', {
       p_student_email: email,
+      p_course_ids: courseIds,
     });
 
     if (error) throw error;
@@ -497,6 +530,7 @@ async function openDetail(studentId) {
       <button class="stmgmt-back-btn" id="stmgmtBackBtn">← Students</button>
       <div class="stmgmt-detail-name-row">
         <div class="stmgmt-detail-name">${escapeHtml(buildName(student))}</div>
+        <button class="stmgmt-view-dashboard-btn" id="stmgmtViewDashBtn">View Dashboard</button>
         <button class="stmgmt-remove-btn" id="stmgmtRemoveBtn">Remove student</button>
       </div>
     </div>
@@ -508,6 +542,10 @@ async function openDetail(studentId) {
 
   document.getElementById('stmgmtBackBtn')?.addEventListener('click', () => loadAndRenderList());
   document.getElementById('stmgmtRemoveBtn')?.addEventListener('click', () => removeStudent(studentId, buildName(student)));
+  document.getElementById('stmgmtViewDashBtn')?.addEventListener('click', () => {
+    close();
+    viewStudentDashboard(studentId, buildName(student));
+  });
   renderSessions(studentId);
   await loadAndRenderDetail(studentId);
 }

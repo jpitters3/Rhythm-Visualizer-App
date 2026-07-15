@@ -581,3 +581,92 @@ body.dark .section-header button {
   background: var(--btn-bg);
 }
 
+
+/* ===== Lesson Assignment Box ===== */
+.lesson-assignment-box {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--panel-border);
+}
+.lesson-assignment-box .meta-label {
+  font-size: 11px;
+  font-weight: 700;
+  opacity: 0.6;
+  margin-bottom: 8px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+.lesson-assignment-linked {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: color-mix(in srgb, var(--btn-active) 10%, var(--panel));
+  border: 1px solid color-mix(in srgb, var(--btn-active) 30%, transparent);
+  border-radius: 8px;
+  padding: 8px 12px;
+}
+.lesson-assignment-name {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+}
+.small-unlink-btn {
+  background: none;
+  border: none;
+  color: var(--text);
+  opacity: 0.4;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 0 4px;
+  line-height: 1;
+  transition: opacity 0.15s;
+}
+.small-unlink-btn:hover { opacity: 1; color: #e74c3c; }
+
+.lesson-assignment-empty {
+  display: flex;
+  gap: 8px;
+}
+.small-link-btn,
+.small-create-btn {
+  font-size: 12px;
+  padding: 5px 12px;
+  border-radius: 7px;
+  cursor: pointer;
+  transition: all 0.15s;
+  border: 1px solid var(--panel-border);
+  background: none;
+  color: var(--text);
+}
+.small-link-btn:hover { border-color: var(--btn-active); color: var(--btn-active); }
+.small-create-btn { border-color: var(--btn-active); color: var(--btn-active); }
+.small-create-btn:hover { background: var(--btn-active); color: #000; }
+
+.lesson-assignment-picker {
+  flex: 1;
+  padding: 5px 8px;
+  border-radius: 7px;
+  border: 1px solid var(--btn-active);
+  background: var(--panel);
+  color: var(--text);
+  font-size: 13px;
+}
+.small-cancel-btn {
+  font-size: 12px;
+  padding: 5px 10px;
+  border-radius: 7px;
+  border: 1px solid var(--panel-border);
+  background: none;
+  color: var(--text);
+  opacity: 0.6;
+  cursor: pointer;
+}
+.small-cancel-btn:hover { opacity: 1; }
+
+.lesson-assignment-unsaved {
+  font-size: 12px;
+  color: var(--text);
+  opacity: 0.45;
+  font-style: italic;
+}

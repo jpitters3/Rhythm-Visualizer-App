@@ -4,6 +4,7 @@ import { Bus, BUS_EVENT } from './bus.js';
 import { dbListPatternNames, dbLoadPatternByName, getSavedPatterns, serializePattern } from './pattern-crud.js';
 import { supabase } from './supabase-client.js';
 import { alert, confirm, prompt } from './alert.js';
+import { escapeHtml } from './utils.js';
 
 // ===== STATE =====
 let currentCourseData = {
@@ -13,6 +14,7 @@ let currentCourseData = {
 };
 
 let availablePatterns = [];
+let availableAssignments = []; // All teacher assignments for the link picker
 const expandedSections = new Set();
 const expandedLessons = new Set(); // Strings "sIdx-lIdx"
 
@@ -80,6 +82,16 @@ async function loadPatternOptions() {
   }
 }
 
+async function loadAvailableAssignments() {
+  if (!currentUser) return;
+  const { data } = await supabase
+    .from('assignments')
+    .select('id, title, lesson_id')
+    .eq('created_by', currentUser.id)
+    .order('title');
+  availableAssignments = data || [];
+}
+
 // Function to add a lesson to a section
 function addLessonToSection(sectionIndex) {
   const lesson = {
@@ -87,7 +99,8 @@ function addLessonToSection(sectionIndex) {
     description: "",
     video_url: "",
     pattern_json: serializePattern(), // Default to current grid
-    pattern_name: "" // New field for dropdown selection
+    pattern_name: "", // New field for dropdown selection
+    assignment: null, // Linked assignment { id, title } or null
   };
   currentCourseData.sections[sectionIndex].lessons.push(lesson);
 
@@ -118,6 +131,34 @@ function addLessonToSection(sectionIndex) {
   } else {
     renderCourseStructure();
   }
+}
+
+function renderLessonAssignmentBox(lesson, sIdx, lIdx) {
+  if (!lesson.id) {
+    return `
+      <div class="lesson-assignment-box">
+        <div class="meta-label">ASSIGNMENT</div>
+        <div class="lesson-assignment-unsaved">Save the course first to link an assignment.</div>
+      </div>`;
+  }
+  if (lesson.assignment) {
+    return `
+      <div class="lesson-assignment-box">
+        <div class="meta-label">ASSIGNMENT</div>
+        <div class="lesson-assignment-linked">
+          <span class="lesson-assignment-name">📋 ${escapeHtml(lesson.assignment.title)}</span>
+          <button class="small-unlink-btn" data-action="unlinkAssignment" data-sidx="${sIdx}" data-lidx="${lIdx}" title="Unlink assignment">✕</button>
+        </div>
+      </div>`;
+  }
+  return `
+    <div class="lesson-assignment-box">
+      <div class="meta-label">ASSIGNMENT</div>
+      <div class="lesson-assignment-empty">
+        <button class="small-link-btn" data-action="showLinkAssignment" data-sidx="${sIdx}" data-lidx="${lIdx}">Link existing</button>
+        <button class="small-create-btn" data-action="createAssignment" data-sidx="${sIdx}" data-lidx="${lIdx}">+ Create new</button>
+      </div>
+    </div>`;
 }
 
 // Build a single lesson DOM element
@@ -161,6 +202,7 @@ function renderLessonEl(sIdx, lIdx) {
           <button class="small-capture-btn" data-action="capturePattern" data-sidx="${sIdx}" data-lidx="${lIdx}" title="Save current grid as pattern">📸</button>
         </div>
       </div>
+      ${renderLessonAssignmentBox(lesson, sIdx, lIdx)}
     </div>
   `;
   return lessonEl;
@@ -205,6 +247,14 @@ function handleCourseCreatorClick(e) {
     triggerLessonVideoUpload(sIdx, lIdx);
   } else if (action === 'capturePattern') {
     capturePatternForLesson(sIdx, lIdx);
+  } else if (action === 'showLinkAssignment') {
+    showLinkAssignmentPicker(target, sIdx, lIdx);
+  } else if (action === 'cancelLinkAssignment') {
+    rerenderAssignmentBox(sIdx, lIdx);
+  } else if (action === 'createAssignment') {
+    createAssignmentForLesson(sIdx, lIdx);
+  } else if (action === 'unlinkAssignment') {
+    unlinkAssignmentFromLesson(sIdx, lIdx);
   }
 }
 
@@ -236,6 +286,8 @@ function handleCourseCreatorChange(e) {
     currentCourseData.sections[sIdx].lessons[lIdx].video_url = target.value;
   } else if (field === 'lesson-pattern') {
     handlePatternSelect(target, sIdx, lIdx);
+  } else if (field === 'lesson-assignment-link') {
+    if (target.value) linkAssignmentToLesson(sIdx, lIdx, target.value);
   }
 }
 
@@ -584,6 +636,111 @@ async function triggerLessonVideoUpload(sIdx, lIdx) {
   fileInput.click();
 }
 
+// ===== ASSIGNMENT MANAGEMENT =====
+
+function getLessonEl(sIdx, lIdx) {
+  return document.querySelector(`.lesson-builder[data-sidx="${sIdx}"][data-lidx="${lIdx}"]`);
+}
+
+function rerenderAssignmentBox(sIdx, lIdx) {
+  const el = getLessonEl(sIdx, lIdx);
+  if (!el) return;
+  const box = el.querySelector('.lesson-assignment-box');
+  if (!box) return;
+  const lesson = currentCourseData.sections[sIdx]?.lessons[lIdx];
+  if (!lesson) return;
+  const tmp = document.createElement('div');
+  tmp.innerHTML = renderLessonAssignmentBox(lesson, sIdx, lIdx);
+  box.replaceWith(tmp.firstElementChild);
+}
+
+function showLinkAssignmentPicker(triggerEl, sIdx, lIdx) {
+  const lesson = currentCourseData.sections[sIdx]?.lessons[lIdx];
+  if (!lesson) return;
+
+  // Assignments that aren't linked to a different lesson
+  const options = availableAssignments
+    .filter(a => !a.lesson_id || a.lesson_id === lesson.id)
+    .map(a => `<option value="${a.id}">${escapeHtml(a.title)}</option>`)
+    .join('');
+
+  if (!options) {
+    alert('No assignments available. Create one first from the Assignments tab, or use "+ Create new" here.');
+    return;
+  }
+
+  const emptyEl = triggerEl.closest('.lesson-assignment-empty') ?? triggerEl.parentElement;
+  if (!emptyEl) return;
+  emptyEl.innerHTML = `
+    <select class="lesson-assignment-picker" data-field="lesson-assignment-link" data-sidx="${sIdx}" data-lidx="${lIdx}">
+      <option value="">— Select assignment —</option>
+      ${options}
+    </select>
+    <button class="small-cancel-btn" data-action="cancelLinkAssignment" data-sidx="${sIdx}" data-lidx="${lIdx}">Cancel</button>
+  `;
+}
+
+async function linkAssignmentToLesson(sIdx, lIdx, assignmentId) {
+  const lesson = currentCourseData.sections[sIdx]?.lessons[lIdx];
+  if (!lesson?.id) return;
+
+  const { error } = await supabase
+    .from('assignments')
+    .update({ lesson_id: lesson.id, course_id: currentCourseData.id || null })
+    .eq('id', assignmentId);
+
+  if (error) { await alert('Failed to link assignment: ' + error.message); return; }
+
+  const asgn = availableAssignments.find(a => a.id === assignmentId);
+  lesson.assignment = { id: assignmentId, title: asgn?.title ?? '' };
+  // Update availableAssignments local state so it reflects the link
+  if (asgn) asgn.lesson_id = lesson.id;
+  rerenderAssignmentBox(sIdx, lIdx);
+}
+
+async function createAssignmentForLesson(sIdx, lIdx) {
+  const lesson = currentCourseData.sections[sIdx]?.lessons[lIdx];
+  if (!lesson?.id) { await alert('Save the course first before creating an assignment.'); return; }
+
+  const title = await prompt('Assignment title:', '');
+  if (!title?.trim()) return;
+
+  const { data, error } = await supabase
+    .from('assignments')
+    .insert({
+      title: title.trim(),
+      created_by: currentUser.id,
+      lesson_id: lesson.id,
+      course_id: currentCourseData.id || null,
+      is_published: true,
+    })
+    .select('id, title')
+    .single();
+
+  if (error) { await alert('Failed to create assignment: ' + error.message); return; }
+
+  lesson.assignment = { id: data.id, title: data.title };
+  availableAssignments.push({ id: data.id, title: data.title, lesson_id: lesson.id });
+  rerenderAssignmentBox(sIdx, lIdx);
+}
+
+async function unlinkAssignmentFromLesson(sIdx, lIdx) {
+  const lesson = currentCourseData.sections[sIdx]?.lessons[lIdx];
+  if (!lesson?.assignment) return;
+
+  const { error } = await supabase
+    .from('assignments')
+    .update({ lesson_id: null })
+    .eq('id', lesson.assignment.id);
+
+  if (error) { await alert('Failed to unlink assignment: ' + error.message); return; }
+
+  const asgn = availableAssignments.find(a => a.id === lesson.assignment.id);
+  if (asgn) asgn.lesson_id = null;
+  lesson.assignment = null;
+  rerenderAssignmentBox(sIdx, lIdx);
+}
+
 async function removeSection(sIdx) {
   if (await confirm("Delete section and all its lessons?")) {
     currentCourseData.sections.splice(sIdx, 1);
@@ -608,7 +765,7 @@ const openCourseBtn = document.getElementById('openCourseModalBtn');
 const closeCourseBtn = document.getElementById('closeCourseModal');
 
 async function openCourseCreator() {
-  await loadPatternOptions(); // Fetch patterns before opening
+  await Promise.all([loadPatternOptions(), loadAvailableAssignments()]);
 
   courseModalPanel.open();
   // Initialize with one empty section if new
@@ -620,8 +777,6 @@ async function openCourseCreator() {
 }
 
 export async function loadCourseToEdit(course) {
-  await loadPatternOptions(); // Fetch patterns first
-
   currentCourseData = JSON.parse(JSON.stringify(course)); // Deep copy to avoid mutating original
   currentCourseData.sections = (currentCourseData.sections || [])
     .sort((a, b) => a.order_index - b.order_index)
@@ -636,6 +791,20 @@ export async function loadCourseToEdit(course) {
 
   // Collapse all by default on edit
   expandedSections.clear();
+
+  // Hydrate lesson.assignment from DB for all saved lessons
+  const lessonIds = currentCourseData.sections
+    .flatMap(s => s.lessons.map(l => l.id).filter(Boolean));
+  if (lessonIds.length > 0) {
+    const { data: linked } = await supabase
+      .from('assignments')
+      .select('id, title, lesson_id')
+      .in('lesson_id', lessonIds);
+    const byLesson = new Map((linked || []).map(a => [a.lesson_id, { id: a.id, title: a.title }]));
+    currentCourseData.sections.forEach(s => {
+      s.lessons.forEach(l => { l.assignment = byLesson.get(l.id) ?? null; });
+    });
+  }
 
   openCourseCreator();
 }
