@@ -61,7 +61,7 @@ body.present .grid {
 }
 
 body.present .cell .inner {
-  font-size: 44px;
+  font-size: 36px;
 }
 
 .present-exit {
@@ -230,7 +230,7 @@ body.present .add-measure {
 body.present .current-measure .sub-dot {
   width: 30px;
   height: 30px;
-  font-size: 24px;
+  font-size: 16px;
 }
 
 body.present .handpan-header,
