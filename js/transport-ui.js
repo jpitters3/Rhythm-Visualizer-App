@@ -2,6 +2,11 @@
 import { start, stop, getMetronomeSound, setMetronomeSound, getAudioCtx } from './noteplayer.js';
 import { Bus, BUS_EVENT } from './bus.js';
 
+function suppressHover(btn) {
+  btn.classList.add('no-hover');
+  btn.addEventListener('mouseleave', () => btn.classList.remove('no-hover'), { once: true });
+}
+
 export class TransportUI {
   constructor(ctx, container) {
     this.ctx = ctx;
@@ -55,6 +60,8 @@ export class TransportUI {
         }
         localStorage.setItem('groovepan_metro' + '-' + this.ctx.id, this.ctx.metronomeOn ? 'on' : 'off');
         TransportRegistry.updateAll(this.ctx);
+        e.currentTarget.blur();
+        if (!this.ctx.metronomeOn) suppressHover(e.currentTarget);
       };
     }
 
@@ -76,7 +83,10 @@ export class TransportUI {
         this.applyBpm(val, this.bpmNum);
         Bus.emit(BUS_EVENT.GRID_CHANGED);
       };
-      this.bpmNum.addEventListener('focus', () => this.bpmNum.select());
+      this.bpmNum.addEventListener('focus', () => setTimeout(() => this.bpmNum.select(), 0));
+      this.bpmNum.addEventListener('mousedown', () => {
+        if (document.activeElement === this.bpmNum) setTimeout(() => this.bpmNum.select(), 0);
+      });
       this.bpmNum.addEventListener('blur', applyNum);
       this.bpmNum.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') { e.preventDefault(); applyNum(); this.bpmNum.blur(); }
@@ -93,6 +103,8 @@ export class TransportUI {
         this.ctx.countdownEnabled = !this.ctx.countdownEnabled;
         localStorage.setItem('groovepan_countdown-' + this.ctx.id, this.ctx.countdownEnabled ? 'on' : 'off');
         TransportRegistry.updateAll(this.ctx);
+        e.currentTarget.blur();
+        if (!this.ctx.countdownEnabled) suppressHover(e.currentTarget);
       };
     }
 
@@ -102,6 +114,8 @@ export class TransportUI {
         this.ctx.metronomeSubdiv = !this.ctx.metronomeSubdiv;
         localStorage.setItem('groovepan_metro_subdiv-' + this.ctx.id, this.ctx.metronomeSubdiv ? 'on' : 'off');
         TransportRegistry.updateAll(this.ctx);
+        e.currentTarget.blur();
+        if (!this.ctx.metronomeSubdiv) suppressHover(e.currentTarget);
       };
     }
 
@@ -182,7 +196,7 @@ export class TransportUI {
       this.metroBtn.classList.toggle('active', isOn);
       this.metroBtn.classList.toggle('metro-beeps', isOn && sound === 'Click');
       this.metroBtn.classList.toggle('metro-shaker', isOn && sound === 'Shaker');
-      
+      if (isOn) this.metroBtn.classList.remove('no-hover');
       this.metroBtn.style.opacity = isOn ? '1' : '0.5';
       this.metroBtn.title = isOn ? `Metronome: ${sound}` : 'Metronome: Off';
     }
@@ -190,6 +204,7 @@ export class TransportUI {
     if (this.subdivBtn) {
       const isOn = this.ctx.metronomeSubdiv;
       this.subdivBtn.classList.toggle('active', isOn);
+      if (isOn) this.subdivBtn.classList.remove('no-hover');
       this.subdivBtn.style.opacity = isOn ? '1' : '0.5';
       this.subdivBtn.title = isOn ? 'Subdivision clicks: On' : 'Subdivision clicks: Off';
     }
@@ -197,7 +212,8 @@ export class TransportUI {
     if (this.countdownBtn) {
       const isOn = this.ctx.countdownEnabled;
       this.countdownBtn.classList.toggle('active', isOn);
-      this.countdownBtn.style.opacity = isOn ? '1' : '0.5';
+      if (isOn) this.countdownBtn.classList.remove('no-hover');
+      this.countdownBtn.style.opacity = '';
       this.countdownBtn.title = isOn ? 'Count-in: On' : 'Count-in: Off';
     }
 

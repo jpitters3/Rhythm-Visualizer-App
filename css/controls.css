@@ -179,7 +179,8 @@ select {
 /* --- Transport buttons: match composer playbar aesthetic --- */
 .transport-group .t-play-btn,
 .transport-group .t-metro-btn,
-.transport-group .t-subdiv-btn {
+.transport-group .t-subdiv-btn,
+.transport-group .t-countdown-btn {
   background: none;
   border: 1px solid var(--panel-border);
   border-radius: 8px;
@@ -200,9 +201,18 @@ select {
 
 .transport-group .t-play-btn:hover,
 .transport-group .t-metro-btn:hover,
-.transport-group .t-subdiv-btn:hover {
+.transport-group .t-subdiv-btn:hover,
+.transport-group .t-countdown-btn:hover {
   border-color: var(--accent-glow, var(--accent-light));
   color: var(--accent-glow, var(--accent-light));
+}
+
+.transport-group .t-metro-btn.no-hover:hover,
+.transport-group .t-subdiv-btn.no-hover:hover,
+.transport-group .t-countdown-btn.no-hover:hover {
+  border-color: var(--panel-border);
+  color: var(--text);
+  background: none;
 }
 
 .transport-group .t-play-btn.active {
@@ -211,7 +221,8 @@ select {
   color: var(--accent-glow, var(--accent-light));
 }
 
-.transport-group .t-subdiv-btn.active {
+.transport-group .t-subdiv-btn.active,
+.transport-group .t-countdown-btn.active {
   background: rgba(var(--accent-rgb), 0.12);
   border-color: var(--accent-glow, var(--accent-light));
   color: var(--accent-glow, var(--accent-light));
@@ -220,17 +231,27 @@ select {
 /* Light mode overrides */
 body:not(.dark) .transport-group .t-play-btn,
 body:not(.dark) .transport-group .t-metro-btn,
-body:not(.dark) .transport-group .t-subdiv-btn {
+body:not(.dark) .transport-group .t-subdiv-btn,
+body:not(.dark) .transport-group .t-countdown-btn {
   border-color: rgba(var(--accent-rgb), 0.25);
   color: var(--accent-dark);
 }
 
 body:not(.dark) .transport-group .t-play-btn:hover,
 body:not(.dark) .transport-group .t-metro-btn:hover,
-body:not(.dark) .transport-group .t-subdiv-btn:hover {
+body:not(.dark) .transport-group .t-subdiv-btn:hover,
+body:not(.dark) .transport-group .t-countdown-btn:hover {
   border-color: var(--accent);
   color: #fff;
   background: var(--accent);
+}
+
+body:not(.dark) .transport-group .t-metro-btn.no-hover:hover,
+body:not(.dark) .transport-group .t-subdiv-btn.no-hover:hover,
+body:not(.dark) .transport-group .t-countdown-btn.no-hover:hover {
+  border-color: rgba(var(--accent-rgb), 0.25);
+  color: var(--accent-dark);
+  background: none;
 }
 
 body:not(.dark) .transport-group .t-play-btn.active {
@@ -239,7 +260,8 @@ body:not(.dark) .transport-group .t-play-btn.active {
   color: var(--accent-dark);
 }
 
-body:not(.dark) .transport-group .t-subdiv-btn.active {
+body:not(.dark) .transport-group .t-subdiv-btn.active,
+body:not(.dark) .transport-group .t-countdown-btn.active {
   background: rgba(var(--accent-rgb), 0.12);
   border-color: var(--accent);
   color: var(--accent-dark);
@@ -402,8 +424,10 @@ body:not(.dark) .transport-group .t-tap-btn.tapping {
   .transport-group .t-play-btn,
   .transport-group .t-metro-btn,
   .transport-group .t-subdiv-btn,
-  .transport-group .t-tap-btn {
-    padding: 6px 10px;
+  .transport-group .t-tap-btn,
+  .transport-group .t-countdown-btn {
+    padding: 6px 7px;
+    font-size: 13px;
   }
 }
 
@@ -420,8 +444,10 @@ body:not(.dark) .transport-group .t-tap-btn.tapping {
   .transport-group .t-play-btn,
   .transport-group .t-metro-btn,
   .transport-group .t-subdiv-btn,
-  .transport-group .t-tap-btn {
-    padding: 6px 8px;
+  .transport-group .t-tap-btn,
+  .transport-group .t-countdown-btn {
+    padding: 6px 6px;
+    font-size: 12px;
   }
 }
 
@@ -446,6 +472,21 @@ body:not(.dark) .transport-group .t-tap-btn.tapping {
   }
 
   #primaryControlsWrapper.pattern-row.player button {
-    padding: 0 10px;
+    padding: 0 6px;
+    height: 32px;
+    font-size: 12px;
+  }
+
+  .t-bpm-label {
+    display: none;
+  }
+
+  .bpm-control {
+    padding: 4px 8px;
+    gap: 4px;
+  }
+
+  .t-bpm-num {
+    width: 36px;
   }
 }

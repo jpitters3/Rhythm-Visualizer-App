@@ -53,10 +53,21 @@
   .transport-container {
     padding: 8px 12px;
     margin-bottom: 0;
-    max-width: calc(100vw - 24px);
     box-sizing: border-box;
     overflow: hidden;
     border-radius: 16px;
+  }
+
+  .transport-container .transport-group button {
+    padding: 0 6px;
+    height: 32px;
+    font-size: 12px;
+    min-width: 0;
+    width: 44px;
+  }
+
+  .transport-container .transport-group {
+    gap: 4px;
   }
 
   /* Fixed to the physical bottom of the screen — immune to flex/overflow layout
@@ -110,25 +121,25 @@ body.present #presentationControls {
 
 /* --- Metronome Sound States --- */
 .t-metro-btn.metro-beeps {
-  background: rgba(251, 146, 60, 0.18) !important;
-  color: #fb923c !important;
-  border-color: rgba(251, 146, 60, 0.5) !important;
+  background: rgba(var(--accent-rgb), 0.18) !important;
+  color: var(--accent-light) !important;
+  border-color: var(--accent-light) !important;
 }
 
 .t-metro-btn.metro-shaker {
-  background: rgba(var(--accent-rgb), 0.18) !important;
-  color: var(--accent-light) !important;
-  border-color: rgba(var(--accent-rgb), 0.4) !important;
+  background: rgba(97, 10, 66, 0.18) !important;
+  color: #d4689a !important;
+  border-color: #d4689a !important;
 }
 
 body:not(.dark) .t-metro-btn.metro-beeps {
-  background: rgba(234, 88, 12, 0.10) !important;
-  color: #c2410c !important;
-  border-color: rgba(234, 88, 12, 0.40) !important;
+  background: rgba(var(--accent-rgb), 0.10) !important;
+  color: var(--accent-dark) !important;
+  border-color: var(--accent) !important;
 }
 
 body:not(.dark) .t-metro-btn.metro-shaker {
-  background: rgba(var(--accent-rgb), 0.1) !important;
-  color: var(--accent-dark) !important;
-  border-color: rgba(var(--accent-rgb), 0.3) !important;
+  background: rgba(97, 10, 66, 0.10) !important;
+  color: #610a42 !important;
+  border-color: #610a42 !important;
 }
