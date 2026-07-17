@@ -57,12 +57,12 @@ body.dark .sidebar {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: linear-gradient(135deg, rgba(255, 240, 248, 0.9) 0%, rgba(250, 225, 238, 0.9) 100%);
+  background: linear-gradient(135deg, rgba(236, 244, 255, 0.9) 0%, rgba(219, 234, 254, 0.9) 100%);
   border-bottom: 1px solid rgba(var(--accent-rgb), 0.12);
 }
 
 body.dark .sidebar-header {
-  background: linear-gradient(135deg, rgba(30, 27, 75, 0.7) 0%, rgba(45, 10, 50, 0.6) 100%);
+  background: linear-gradient(135deg, rgba(10, 20, 50, 0.7) 0%, rgba(10, 30, 70, 0.6) 100%);
   border-bottom-color: rgba(var(--accent-rgb), 0.20);
 }
 
@@ -79,7 +79,7 @@ body.dark .sidebar-header {
 }
 
 body.dark .sidebar-header h3 {
-  background: linear-gradient(135deg, #fff, #e8b4cc);
+  background: linear-gradient(135deg, #fff, #a8c8f0);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -113,7 +113,7 @@ body.dark .sidebar-header h3 {
 body.dark .browse-icon-btn {
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  color: #e8b4cc;
+  color: #a8c8f0;
 }
 
 body.dark .browse-icon-btn:hover {
@@ -345,7 +345,7 @@ body.dark .course-header h4 {
 }
 
 body.dark .course-item.active .course-header h4 {
-  color: #f0d0e0;
+  color: #c8deff;
   text-shadow: 0 0 10px rgba(var(--accent-rgb), 0.5);
 }
 
@@ -420,7 +420,7 @@ body.dark .lesson-link {
 
 body.dark .lesson-link:hover {
   background: rgba(var(--accent-rgb), 0.10);
-  color: #f0d0e0;
+  color: #c8deff;
 }
 
 .lesson-link.active-lesson {

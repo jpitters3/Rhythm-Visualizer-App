@@ -1,5 +1,5 @@
 import { getScale } from './state.js';
-import { ACCENT } from './brand.js';
+import { ACCENT, DOWN } from './brand.js';
 
 function effectiveHand(index, hands, subdivision) {
   if (hands[index]) return hands[index];
@@ -81,8 +81,8 @@ export function renderThumbnail(canvas, patternData) {
   const subColors = [
     isDark ? 'rgb(30,121,232)' : 'rgb(2,68,150)',
     isDark ? 'rgb(30,121,232)' : 'rgb(2,68,150)',
-    isDark ? '#fd0380' : ACCENT,
-    isDark ? '#fd0380' : ACCENT,
+    isDark ? '#fd0380' : DOWN,
+    isDark ? '#fd0380' : DOWN,
   ];
 
   for (let i = 0; i < stepsToRender; i++) {
@@ -96,7 +96,7 @@ export function renderThumbnail(canvas, patternData) {
     const hasNote = isChord ? label.some(l => l && l !== '') : (label && label !== '');
     const hand = effectiveHand(i, hands, subdivision);
     const fillColor = hand === 'R'
-      ? (isDark ? '#fd0380' : ACCENT)
+      ? (isDark ? '#fd0380' : DOWN)
       : (isDark ? 'rgb(30,121,232)' : 'rgb(2,68,150)');
 
     if (isChord && hasNote) {
