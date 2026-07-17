@@ -229,7 +229,6 @@
 }
 
 .dash-cta-primary {
-  padding: 13px 24px;
   background: var(--accent, #6366f1);
   border: none;
   border-radius: 10px;
@@ -238,13 +237,13 @@
   font-weight: 600;
   cursor: pointer;
   transition: opacity 0.15s;
+
 }
 .dash-cta-primary:hover {
   opacity: 0.88;
 }
 
 .dash-cta-secondary {
-  padding: 11px 24px;
   background: transparent;
   border: 1px solid var(--panel-border);
   border-radius: 10px;

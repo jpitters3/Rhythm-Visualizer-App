@@ -112,14 +112,21 @@
       </a>
 
       <nav class="app-nav" id="appNav">
-        <button class="nav-link" id="toggleSidebarBtn" data-action="toggle-sidebar">Courses</button>
-        <button class="nav-link" id="toggleExercisesBtn">Practice</button>
-        <button class="nav-link" id="toggleComposerBtn">Composer</button>
-        <a class="nav-link" id="navDashboardBtn" style="text-decoration:underline" data-route="dashboard" data-also-route="home" href="#dashboard">Dashboard</a>
-        <a class="nav-link" data-route="library" href="#library" style="text-decoration:underline">Library</a>
-        <a class="nav-link" data-route="studio" href="#studio" style="text-decoration:underline">Studio</a>
+        <!-- Side-panel openers -->
+        <button class="nav-link nav-panel-btn" id="toggleSidebarBtn" data-action="toggle-sidebar">Courses</button>
+        <button class="nav-link nav-panel-btn" id="toggleExercisesBtn">Practice</button>
+        <button class="nav-link nav-panel-btn" id="toggleComposerBtn">Composer</button>
+
+        <!-- Divider: panels vs. main views -->
+        <span class="nav-divider" aria-hidden="true"></span>
+
+        <!-- Main views -->
+        <a class="nav-link" id="navDashboardBtn" data-route="dashboard" data-also-route="home" href="#dashboard">Dashboard</a>
+        <a class="nav-link" data-route="studio" href="#studio">Studio</a>
+        <a class="nav-link" data-route="library" href="#library">Library</a>
         <a class="nav-link" data-route="community" href="#community">Community</a>
         <!--<a class="nav-link" data-route="method-welcome" href="#method-welcome">The Method</a>-->
+
         <button class="nav-link" id="authBtn" style="display:none;">Sign In</button>
       </nav>
 

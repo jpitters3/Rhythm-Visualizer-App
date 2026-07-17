@@ -4,6 +4,8 @@ import { currentProfile } from './profile.js';
 import { extractYouTubeId, escapeHtml } from './utils.js';
 import { Sidepanel, updateBodySidebarClass, setLastSidebarType, registerPanelOpener } from './sidepanel.js';
 import { closeSidebar } from './courses.js';
+import { Bus, BUS_EVENT } from './bus.js';
+import { openAuthModal } from './auth.js';
 
 let exercises = [];
 let categoryOrder = [];      // [{name, sort_order}] from exercise_categories
@@ -101,6 +103,10 @@ export function initExercises() {
   registerPanelOpener('exercises', openExercisesSidebar);
 }
 
+Bus.on(BUS_EVENT.AUTH_LOGIN, () => {
+  if (exercisesSidePanel?.isOpen) loadSidebarContent();
+});
+
 // ── Exercises sidebar ──────────────────────────────────────────────────────
 
 function openExercisesSidebar() {
@@ -108,7 +114,18 @@ function openExercisesSidebar() {
   closeSidebar({ reason: 'exercises-open', source: 'exercises' });
   exercisesSidePanel.open();
   updateBodySidebarClass();
-  loadSidebarContent();
+  if (currentUser) {
+    loadSidebarContent();
+  } else {
+    const container = document.getElementById('exercisesSidebarList');
+    if (container) container.innerHTML = `
+      <div class="empty-courses">
+        <h4>Please sign in to access your Practice Plan.</h4>
+        <button class="primary-btn" id="practiceSignInBtn">Sign In</button>
+      </div>
+    `;
+    document.getElementById('practiceSignInBtn')?.addEventListener('click', openAuthModal);
+  }
 }
 
 export function closeExercisesSidebar() {

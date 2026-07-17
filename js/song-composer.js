@@ -7,6 +7,7 @@ import { migratePatternState } from './rhythm-core.js';
 import { Sidepanel } from './sidepanel.js';
 import { supabase } from './supabase-client.js';
 import { currentUser, getScale } from './state.js';
+import { openAuthModal } from './auth.js';
 import {
   dbLoadPatternByName, dbSavePattern, applyPattern, serializePattern,
   dbListPatternNames, hasUnsavedChanges, getSelectedPatternName,
@@ -75,6 +76,10 @@ TransportRegistry.register({
       if (btn && !audioSectionId) btn.innerText = '▶';
     }
   },
+});
+
+Bus.on(BUS_EVENT.AUTH_LOGIN, () => {
+  if (composerPanel?.isOpen) fetchCompositions();
 });
 
 Bus.on(BUS_EVENT.PATTERN_SAVED, (e) => {
@@ -168,7 +173,16 @@ export function openComposer() {
   setLastSidebarType('composer');
   closeSidebar({ reason: 'composer', source: 'composer' });
   composerPanel.open();
-  if (currentUser) fetchCompositions();
+  if (currentUser) {
+    fetchCompositions();
+  } else {
+    setListHTML(`
+      <div class="empty-courses">
+        <h4>Please sign in to access the Composer.</h4>
+        <button class="primary-btn" data-action="sign-in">Sign In</button>
+      </div>
+    `);
+  }
   const btn = document.getElementById('composerPlayBtn');
   if (btn) btn.innerText = gridA.playing ? '■' : '▶';
 }
@@ -1958,6 +1972,10 @@ composerEl?.addEventListener('click', async (e) => {
   const comp   = btn.dataset.comp;
 
   switch (action) {
+    case 'sign-in':
+      openAuthModal();
+      break;
+
     case 'enter-folder':
       composerFolderId   = btn.dataset.folderId;
       composerFolderName = btn.dataset.folderName;

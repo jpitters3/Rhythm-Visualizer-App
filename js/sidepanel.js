@@ -19,9 +19,10 @@ import { Bus, BUS_EVENT } from './bus.js';
 // Map of panel element IDs to their nav button IDs.
 // Add entries here when new panels should highlight a nav button.
 const NAV_BUTTON_MAP = {
-  composerSidebar: 'toggleComposerBtn',
-  courseSidebar:   'toggleSidebarBtn',
-  lessonPlayer:    'toggleSidebarBtn',
+  composerSidebar:  'toggleComposerBtn',
+  courseSidebar:    'toggleSidebarBtn',
+  lessonPlayer:     'toggleSidebarBtn',
+  exercisesSidebar: 'toggleExercisesBtn',
 };
 
 // The Studio nav link stays active whenever any panel that lives inside the
