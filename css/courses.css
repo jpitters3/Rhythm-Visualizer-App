@@ -53,10 +53,12 @@ body.dark .sidebar {
    HEADER
    ============================== */
 .sidebar-header {
-  padding: 24px 28px;
+  height: 63px;
+  padding: 0 28px;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-shrink: 0;
   background: linear-gradient(135deg, rgba(236, 244, 255, 0.9) 0%, rgba(219, 234, 254, 0.9) 100%);
   border-bottom: 1px solid rgba(var(--accent-rgb), 0.12);
 }

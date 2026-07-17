@@ -44,7 +44,10 @@ body.dark .composer-save-status.saved {
 }
 
 .composer-toolbar {
-  padding: 12px 16px;
+  height: var(--header-h);
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
   border-bottom: 1px solid var(--panel-border);
   flex-shrink: 0;
 }

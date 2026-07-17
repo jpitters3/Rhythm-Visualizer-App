@@ -50,6 +50,9 @@ h2 {
 /* ===== THEME VARS ===== */
 :root {
 
+  /* ── Layout ── */
+  --header-h: 58px;
+
   /* ── Brand colour ── */
   --accent:      #024496;
   --accent-dark:  #013270;

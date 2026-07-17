@@ -17,6 +17,7 @@
 
 /* Primary controls bar — flush below header, semi-transparent strip */
 #primaryControlsWrapper.pattern-row.player {
+  height: 58px;
   border-radius: 0;
   border-left: none;
   border-right: none;
@@ -26,6 +27,7 @@
   padding: 6px 24px;
   gap: 6px;
   flex-wrap: nowrap;
+  justify-content: center;
   overflow-x: auto;
   scrollbar-width: none;
 }
