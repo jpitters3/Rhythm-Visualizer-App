@@ -77,8 +77,8 @@ h2 {
   --down-glow: rgba(97, 10, 66, 0.22);
   --up-glow: rgba(2, 68, 150, 0.22);
   --btn-bg: #e8e5dc;
-  --btn-active: #e4bc08;
-  --primary-color: #e4bc08;
+  --btn-active: #f1cd00;
+  --primary-color: #f1cd00;
 }
 
 body.dark {
