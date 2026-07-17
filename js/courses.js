@@ -96,6 +96,66 @@ export async function fetchCourses() {
   }
 }
 
+// ── Course sidebar helpers ──────────────────────────────────────────────────
+
+function courseStatusSVG(state) {
+  if (state === 'complete') return `
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" class="status-icon">
+      <circle cx="10" cy="10" r="9" fill="#22c55e"/>
+      <path d="M6 10.5l2.5 2.5 5.5-5.5" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>`;
+  if (state === 'inprogress') return `
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" class="status-icon">
+      <circle cx="10" cy="10" r="9" fill="#e5e7eb" stroke="#d1d5db" stroke-width="1"/>
+      <path d="M10 1A9 9 0 0 0 10 19Z" fill="#6b7280"/>
+    </svg>`;
+  return `
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" class="status-icon">
+      <circle cx="10" cy="10" r="9" stroke="#d1d5db" stroke-width="1.5"/>
+    </svg>`;
+}
+
+function lessonCompleteSVG() {
+  return `
+    <svg width="16" height="16" viewBox="0 0 20 20" fill="none" class="lesson-check-icon">
+      <circle cx="10" cy="10" r="9" fill="#22c55e"/>
+      <path d="M6 10.5l2.5 2.5 5.5-5.5" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>`;
+}
+
+function lessonTypeInfo(lesson) {
+  if (lesson.video_url) return {
+    icon: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>`,
+    label: 'Video'
+  };
+  if (lesson.pattern_json) return {
+    icon: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>`,
+    label: 'Pattern'
+  };
+  return {
+    icon: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>`,
+    label: 'Reading'
+  };
+}
+
+function courseState(course) {
+  const all = course.sections.flatMap(s => s.lessons);
+  if (all.length === 0) return 'empty';
+  if (all.every(l => completedLessonIds.has(l.id))) return 'complete';
+  if (all.some(l => completedLessonIds.has(l.id))) return 'inprogress';
+  return 'empty';
+}
+
+function sectionState(section) {
+  const ls = section.lessons;
+  if (ls.length === 0) return 'empty';
+  if (ls.every(l => completedLessonIds.has(l.id))) return 'complete';
+  if (ls.some(l => completedLessonIds.has(l.id))) return 'inprogress';
+  return 'empty';
+}
+
+// ── Render ─────────────────────────────────────────────────────────────────
+
 export function renderCourseSidebar(courses) {
 
   const list = document.getElementById('courseList');
@@ -172,74 +232,90 @@ export function renderCourseSidebar(courses) {
     if (id) firstPositions[id] = item.getBoundingClientRect().top;
   });
 
-  // 3. Render
-  list.innerHTML = sortedCourses.map(course => {
-    // The active course can be collapsed without losing its active status
+  // 3. Progress bar — scoped to the active course
+  const activeCourse = courses.find(c => c.id === activeCourseId);
+  const activeLessons = activeCourse ? activeCourse.sections.flatMap(s => s.lessons) : [];
+  const pct = activeLessons.length > 0
+    ? Math.round(activeLessons.filter(l => completedLessonIds.has(l.id)).length / activeLessons.length * 100)
+    : 0;
+  const progressHtml = `
+    <div class="course-progress">
+      <span class="course-progress-label"><strong>${pct}%</strong> Completed</span>
+      <div class="course-progress-bar"><div class="course-progress-fill" style="width:${pct}%"></div></div>
+    </div>`;
+
+  // 4. Render
+  const chevronDown = `<svg class="course-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>`;
+  const chevronRight = `<svg class="course-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>`;
+
+  list.innerHTML = progressHtml + sortedCourses.map(course => {
     const isActive = course.id === activeCourseId && !activeCourseCollapsed;
 
     if (isActive) {
       // === EXPANDED (ACTIVE) ===
-      let adminActions = '';
-      if (isAdminUser(currentUser)) {
-        adminActions = `
-          <div class="lesson-admin-actions" style="display:flex; gap:10px; margin-top:10px;">
-          </div>
-        `;
-      }
+      const isAdmin = isAdminUser(currentUser);
+      const isOwner = course.owner_id === currentUser?.id;
+
+      const sectionsHtml = course.sections
+        .filter(s => s.is_published || isAdmin || isOwner)
+        .sort((a, b) => a.order_index - b.order_index)
+        .map(section => {
+          const state = sectionState(section);
+          const draftBadge = !section.is_published ? '<span class="draft-badge">Draft</span>' : '';
+          const lessonsHtml = section.lessons
+            .sort((a, b) => a.order_index - b.order_index)
+            .map(lesson => {
+              const isComplete = completedLessonIds.has(lesson.id);
+              const { icon, label } = lessonTypeInfo(lesson);
+              const leftIcon = isComplete
+                ? lessonCompleteSVG()
+                : `<span class="lesson-type-icon">${icon}</span>`;
+              return `
+                <div class="lesson-link" data-action="load-lesson" data-id="${lesson.id}">
+                  ${leftIcon}
+                  <div class="lesson-text">
+                    <span class="lesson-title">${lesson.title}</span>
+                    <span class="lesson-meta">${label}</span>
+                  </div>
+                </div>`;
+            }).join('');
+
+          return `
+            <div class="course-section">
+              <div class="section-header">
+                ${courseStatusSVG(state)}
+                <span class="section-header-title">${section.title}${draftBadge}</span>
+              </div>
+              <div class="lesson-list">${lessonsHtml}</div>
+            </div>`;
+        }).join('');
+
+      const editBtn = isAdmin ? `
+        <button class="edit-course secondary-btn" data-action="edit-course" data-id="${course.id}" title="Edit Course" style="background:none;border:none;cursor:pointer;padding:4px;display:flex;align-items:center;color:#9ca3af;">
+          <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16"><path d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.813-6.814z"/><path fill-rule="evenodd" d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5H9a.5.5 0 0 0 0-1H2.5A1.5 1.5 0 0 0 1 2.5z"/></path></svg>
+        </button>` : '';
 
       return `
         <div class="course-item active" data-id="${course.id}">
-          <div class="course-header" data-action="toggle-course" data-id="${course.id}" style="justify-content: flex-start; gap: 8px;">
-            <button class="toggle-course-btn" data-action="toggle-course" data-id="${course.id}" style="background: none; border: none; cursor: pointer; padding: 0; display: flex; align-items: center; color: currentColor;">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="transform: rotate(90deg); transition: transform 0.2s;"><polyline points="9 18 15 12 9 6"></polyline></svg>
-            </button>
-            <h4 style="margin: 0; flex-grow: 1;">${course.title}</h4>
-            ${(isAdminUser(currentUser)) ? `<div style="width: 100px">
-               <button class="edit-course secondary-btn" style="width: 100%; display:flex; align-items:center; gap:6px;" data-action="edit-course" data-id="${course.id}" title="Edit Course">
-                <svg width="16px" height="16px" style="pointer-events: none;" fill="currentColor" viewBox="0 0 16 16"><path d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.813-6.814z"/><path fill-rule="evenodd" d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5H9a.5.5 0 0 0 0-1H2.5A1.5 1.5 0 0 0 1 2.5z"/></svg>
-                &nbsp;Edit
-              </button>
-             </div>` : ''}
+          <div class="course-header" data-action="toggle-course" data-id="${course.id}">
+            <h4>${course.title}</h4>
+            ${editBtn}
+            ${chevronDown}
           </div>
-          <div class="course-body">
-            ${course.sections
-          .filter(s => {
-            const isAdmin = isAdminUser(currentUser);
-            const isOwner = course.owner_id === currentUser?.id;
-            return s.is_published || isAdmin || isOwner;
-          })
-          .sort((a, b) => a.order_index - b.order_index).map(section => `
-              <div class="section-title" style="${!section.is_published ? 'opacity: 0.8; font-style: italic;' : ''}">
-                ${section.title} ${!section.is_published ? '(Draft)' : ''}
-              </div>
-              ${section.lessons.sort((a, b) => a.order_index - b.order_index).map(lesson => {
-            const isComplete = completedLessonIds.has(lesson.id);
-            return `
-                <div class="lesson-link" data-action="load-lesson" data-id="${lesson.id}">
-                  ${isComplete
-                ? '<span style="color:#4CAF50; margin-right:6px; font-weight:bold;">✓</span>'
-                : '<span style="opacity:0.6; margin-right:6px;">•</span>'}
-                  ${lesson.title}
-                </div>
-              `}).join('')}
-            `).join('')}
-            ${adminActions}
-          </div>
-        </div>
-      `;
+          <div class="course-body">${sectionsHtml}</div>
+        </div>`;
+
     } else {
       // === COLLAPSED (INACTIVE) ===
+      const state = courseState(course);
       return `
-        <div class="course-item collapsed" data-id="${course.id}" >
-          <div class="course-header" style="justify-content: flex-start; gap: 8px; cursor: pointer;" data-action="toggle-course" data-id="${course.id}">
-            <button class="toggle-course-btn" style="background: none; border: none; cursor: pointer; padding: 0; display: flex; align-items: center; color: currentColor; pointer-events: none;">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="transition: transform 0.2s;"><polyline points="9 18 15 12 9 6"></polyline></svg>
-            </button>
-            <h4 style="margin: 0; flex-grow: 1;">${course.title}</h4>
-            <span class="collapsed-hint">Click to expand</span>
+        <div class="course-item collapsed" data-id="${course.id}">
+          <div class="course-header" data-action="toggle-course" data-id="${course.id}">
+            ${courseStatusSVG(state)}
+            <h4>${course.title}</h4>
+            ${chevronRight}
           </div>
-        </div>
-      `;
+        </div>`;
     }
   }).join('');
 

@@ -827,12 +827,7 @@ body.dark .composer-save-status.saved {
    (dark mode is unchanged — all rules below are light-only)
    ============================================================ */
 
-body:not(.dark) .composer-sidebar .sidebar-header h3 {
-  background: linear-gradient(135deg, var(--accent), var(--accent-light));
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
+
 
 body:not(.dark) .composer-new-btn {
   background: linear-gradient(135deg, var(--accent-dark) 0%, var(--accent-light) 100%);
