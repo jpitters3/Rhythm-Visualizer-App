@@ -4,6 +4,7 @@ import { supabase } from './supabase-client.js';
 import { applyPattern } from './pattern-crud.js';
 import { openLessonSidebar, closeSidebar } from './courses.js';
 import { Sidepanel, updateBodySidebarClass, setLastSidebarType, registerPanelOpener } from './sidepanel.js';
+import { navigate } from './router.js';
 
 // State
 let practiceItems = [];
@@ -42,9 +43,12 @@ export function closePracticeSidebar() {
 
 export function initPractice() {
   document.getElementById('togglePracticeBtn')?.addEventListener('click', togglePracticeSidebar);
+  document.getElementById('toggleExercisesBtn')?.addEventListener('click', togglePracticeSidebar);
   document.getElementById('closePracticeSidebar')?.addEventListener('click', closePracticeSidebar);
-  document.getElementById('refreshPracticeBtn')?.addEventListener('click', fetchPracticeItems);
-  document.getElementById('startPracticeBtn')?.addEventListener('click', async () => await startPractice());
+  document.getElementById('browseExercisesBtn')?.addEventListener('click', () => {
+    closePracticeSidebar();
+    navigate('practice');
+  });
 
   Bus.on(BUS_EVENT.AUTH_LOGOUT, () => {
     practiceItems = [];
@@ -94,155 +98,142 @@ export async function fetchPracticeItems() {
   renderPracticeItems();
 }
 
+function practiceItemHTML(item) {
+  return `
+    <div class="practice-item" draggable="true" data-id="${item.id}">
+      <div class="practice-item-drag">⋮⋮</div>
+      <div class="practice-item-content" data-type="${item.item_type}" data-ref="${item.reference_id}">
+        <div class="practice-item-type">${item.item_type}</div>
+        <div class="practice-item-title">${item.title || 'Untitled'}</div>
+      </div>
+      <button class="remove-practice-btn" data-id="${item.id}" aria-label="Remove">&times;</button>
+    </div>
+  `;
+}
+
+function sectionHTML(label, category, items) {
+  return `
+    <div class="practice-section">
+      <div class="practice-section-label">${label}</div>
+      <div class="practice-section-list" data-category="${category}">
+        ${items.map(practiceItemHTML).join('')}
+        <div class="practice-section-empty">Drag exercises here</div>
+      </div>
+    </div>
+  `;
+}
+
 function renderPracticeItems() {
   if (!container) return;
 
-  if (practiceItems.length === 0) {
-    container.innerHTML = `<div class="empty-courses"><p>Practice plan is empty.</p></div>`;
-    return;
-  }
+  const daily = practiceItems.filter(p => p.category === 'daily');
+  const other = practiceItems.filter(p => p.category !== 'daily');
 
-  container.innerHTML = practiceItems.map((item, index) => `
-        <div class="practice-item" draggable="true" data-id="${item.id}" data-index="${index}"
-             style="padding: 12px; background: rgba(0,0,0,0.03); border-radius: 8px; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between; cursor: grab;">
-            <div style="cursor: move; padding-right:8px; opacity:0.3;">⋮⋮</div>
-            <div class="practice-item-content" data-type="${item.item_type}" data-ref="${item.reference_id}" style="flex:1; cursor: pointer;">
-                <div style="font-size: 11px; text-transform: uppercase; color: #888; font-weight: 700;">${item.item_type}</div>
-                <div style="font-weight: 600; font-size: 14px;">${item.title || 'Untitled'}</div>
-            </div>
-            <button class="remove-practice-btn text-btn" data-id="${item.id}" style="color: #999; padding: 4px;">&times;</button>
-        </div>
-    `).join('');
+  container.innerHTML =
+    sectionHTML('Daily Practice', 'daily', daily) +
+    sectionHTML('Other Exercises', 'other', other);
 
+  syncEmptyStates();
   setupDragAndDrop();
 }
 
-// Event Delegation for Practice List
+function syncEmptyStates() {
+  container.querySelectorAll('.practice-section-list').forEach(list => {
+    const hasItems = list.querySelector('.practice-item') !== null;
+    list.querySelector('.practice-section-empty')?.classList.toggle('visible', !hasItems);
+  });
+}
+
+// Event delegation — wired once at module load, works across re-renders
 if (container) {
-  container.addEventListener('click', async (e) => {
-    // Handle Item Click (Load)
+  container.addEventListener('click', async e => {
     const contentDiv = e.target.closest('.practice-item-content');
     if (contentDiv) {
-      const type = contentDiv.dataset.type;
-      const ref = contentDiv.dataset.ref;
-      await loadPracticeItem(type, ref);
+      await loadPracticeItem(contentDiv.dataset.type, contentDiv.dataset.ref);
       return;
     }
-
-    // Handle Remove Click
     const removeBtn = e.target.closest('.remove-practice-btn');
     if (removeBtn) {
-      const id = removeBtn.dataset.id;
-      removeFromPractice(id);
-      return;
+      removeFromPractice(removeBtn.dataset.id);
     }
   });
 }
 
+// ── Drag and drop ─────────────────────────────────────────────────────────
 
 let dragSrcEl = null;
 
 function setupDragAndDrop() {
-  const items = document.querySelectorAll('.practice-item');
-  items.forEach(item => {
-    item.addEventListener('dragstart', handleDragStart);
-    item.addEventListener('dragover', handleDragOver);
-    item.addEventListener('drop', handleDrop);
-    item.addEventListener('dragend', handleDragEnd);
+  container.querySelectorAll('.practice-item').forEach(item => {
+    item.addEventListener('dragstart', e => {
+      dragSrcEl = item;
+      item.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+    });
+    item.addEventListener('dragend', () => {
+      item.classList.remove('dragging');
+      dragSrcEl = null;
+      container.querySelectorAll('.practice-section-list').forEach(l => l.classList.remove('drag-over'));
+      syncEmptyStates();
+      updateSortOrder();
+    });
+  });
+
+  container.querySelectorAll('.practice-section-list').forEach(list => {
+    list.addEventListener('dragover', e => {
+      e.preventDefault();
+      if (!dragSrcEl) return;
+      list.classList.add('drag-over');
+      const after = getDragAfterElement(list, e.clientY);
+      if (after == null) {
+        list.insertBefore(dragSrcEl, list.querySelector('.practice-section-empty'));
+      } else {
+        list.insertBefore(dragSrcEl, after);
+      }
+    });
+    list.addEventListener('dragleave', e => {
+      if (!list.contains(e.relatedTarget)) list.classList.remove('drag-over');
+    });
+    list.addEventListener('drop', e => {
+      e.preventDefault();
+      list.classList.remove('drag-over');
+    });
   });
 }
 
-function handleDragStart(e) {
-  this.style.opacity = '0.4';
-  this.classList.add('squeezed');
-  dragSrcEl = this;
-  e.dataTransfer.effectAllowed = 'move';
-  e.dataTransfer.setData('text/html', this.innerHTML);
-}
-
-function handleDragOver(e) {
-  e.preventDefault();
-  const afterElement = getDragAfterElement(container, e.clientY);
-
-  if (!dragSrcEl) return;
-  const currentNext = dragSrcEl.nextElementSibling;
-  if (afterElement === currentNext) return;
-
-  // FLIP Animation logic retained...
-  const siblings = [...container.querySelectorAll('.practice-item')];
-  const positions = new Map();
-  siblings.forEach(el => positions.set(el, el.getBoundingClientRect().top));
-
-  if (afterElement == null) {
-    container.appendChild(dragSrcEl);
-  } else {
-    container.insertBefore(dragSrcEl, afterElement);
-  }
-
-  siblings.forEach(el => {
-    if (el === dragSrcEl) return;
-    const oldTop = positions.get(el);
-    const newTop = el.getBoundingClientRect().top;
-    const delta = oldTop - newTop;
-
-    if (delta && delta !== 0) {
-      el.style.transition = 'none';
-      el.style.transform = `translateY(${delta}px)`;
-      el.getBoundingClientRect(); // Force reflow
-      requestAnimationFrame(() => {
-        el.style.transition = 'transform 0.3s cubic-bezier(0.2, 0, 0.2, 1)';
-        el.style.transform = '';
-      });
-    }
-  });
-}
-
-function getDragAfterElement(container, y) {
-  const draggableElements = [...container.querySelectorAll('.practice-item:not(.squeezed)')];
-
-  return draggableElements.reduce((closest, child) => {
+function getDragAfterElement(list, y) {
+  const items = [...list.querySelectorAll('.practice-item:not(.dragging)')];
+  return items.reduce((closest, child) => {
     const box = child.getBoundingClientRect();
     const offset = y - box.top - box.height / 2;
-    if (offset < 0 && offset > closest.offset) {
-      return { offset: offset, element: child };
-    } else {
-      return closest;
-    }
+    return offset < 0 && offset > closest.offset ? { offset, element: child } : closest;
   }, { offset: Number.NEGATIVE_INFINITY }).element;
 }
 
-function handleDrop(e) {
-  if (e.stopPropagation) e.stopPropagation();
-
-  // Rebuild array from DOM order
-  const newItems = [];
-  [...container.children].forEach(child => {
-    const id = child.dataset.id;
-    const item = practiceItems.find(p => p.id === id);
-    if (item) newItems.push(item);
-  });
-
-  practiceItems = newItems;
-  updateSortOrder();
-  return false;
-}
-
-function handleDragEnd(e) {
-  this.style.opacity = '1';
-  this.classList.remove('squeezed');
-  document.querySelectorAll('.practice-item').forEach(i => {
-    i.style.transform = '';
-    i.style.transition = '';
-  });
-}
-
 async function updateSortOrder() {
-  const updates = practiceItems.map((item, index) => ({
-    ...item,
-    sort_order: index
-  }));
-  const { error } = await supabase.from('practice_items').upsert(updates);
-  if (error) console.error("Sort update failed", error);
+  const updates = [];
+  container.querySelectorAll('.practice-section-list').forEach(list => {
+    const category = list.dataset.category;
+    [...list.querySelectorAll('.practice-item')].forEach((el, index) => {
+      const item = practiceItems.find(p => p.id === el.dataset.id);
+      if (item) {
+        item.category = category;
+        item.sort_order = index;
+        updates.push({ id: item.id, category, sort_order: index });
+      }
+    });
+  });
+
+  const results = await Promise.all(
+    updates.map(u =>
+      supabase.from('practice_items')
+        .update({ category: u.category, sort_order: u.sort_order })
+        .eq('id', u.id)
+    )
+  );
+
+  const firstError = results.find(r => r.error)?.error;
+  if (firstError) console.error('[Practice] updateSortOrder failed:', firstError);
 }
 
 export function isItemInPractice(type, id) {
@@ -290,7 +281,11 @@ export async function removeFromPractice(recordId) {
 }
 
 async function loadPracticeItem(type, id) {
-  if (type === 'lesson') {
+  if (type === 'exercise') {
+    navigate('practice');
+    const { openExerciseById } = await import('./exercises.js');
+    openExerciseById(id);
+  } else if (type === 'lesson') {
     Bus.emit(BUS_EVENT.REQUEST_LOAD_LESSON, { lessonId: id });
   } else if (type === 'pattern') {
     const { data, error } = await supabase

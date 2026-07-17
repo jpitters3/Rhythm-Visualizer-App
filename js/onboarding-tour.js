@@ -174,7 +174,7 @@ const TOURS = {
     cta: { label: 'Open the Courses panel ☝️' },
     steps: [
       {
-        target: '#exercisesSidebar',
+        target: '#practiceSidebar',
         title: '👈 Your practice plan',
         body: "These are the exercises you're working on every day. Tap one to load it into the Studio.",
         position: 'center',

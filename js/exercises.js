@@ -2,10 +2,7 @@ import { supabase } from './supabase-client.js';
 import { currentUser } from './state.js';
 import { currentProfile } from './profile.js';
 import { extractYouTubeId, escapeHtml } from './utils.js';
-import { Sidepanel, updateBodySidebarClass, setLastSidebarType, registerPanelOpener } from './sidepanel.js';
-import { closeSidebar } from './courses.js';
-import { Bus, BUS_EVENT } from './bus.js';
-import { openAuthModal } from './auth.js';
+import { togglePracticeItem, isItemInPractice, fetchPracticeItems } from './practice.js';
 
 let exercises = [];
 let categoryOrder = [];      // [{name, sort_order}] from exercise_categories
@@ -25,11 +22,19 @@ let editorModal, editorTitle, editorCategory, editorName, editorDesc,
     editorPatternStatus, editorClearPatternBtn, editorDeleteBtn, editorCategoryList;
 let selectedPhraseName = null;
 
-let exercisesSidePanel;
-
 function isTeacher() {
   const role = currentProfile?.role;
   return role === 'teacher' || role === 'admin';
+}
+
+function isAdmin() {
+  return currentProfile?.role === 'admin';
+}
+
+function canEdit(ex) {
+  if (!currentUser) return false;
+  if (currentProfile?.role === 'admin') return true;
+  return ex.created_by === currentUser.id;
 }
 
 // ── Init ───────────────────────────────────────────────────────────────────
@@ -89,60 +94,35 @@ export function initExercises() {
   });
 
   document.getElementById('addExerciseBtn')?.addEventListener('click', () => openEditor(null));
+  document.getElementById('exerciseModalAddToPlanBtn')?.addEventListener('click', handleAddToPlan);
 
   window.addEventListener('routeChanged', ({ detail }) => {
     if (detail.route === 'practice') loadPracticeView();
     else { closeModal(); closeEditor(); }
   });
-
-  // Sidebar
-  const sidebarEl = document.getElementById('exercisesSidebar');
-  exercisesSidePanel = new Sidepanel(sidebarEl, { onClose: updateBodySidebarClass });
-  document.getElementById('closeExercisesSidebar')?.addEventListener('click', closeExercisesSidebar);
-  document.getElementById('toggleExercisesBtn')?.addEventListener('click', toggleExercisesSidebar);
-  registerPanelOpener('exercises', openExercisesSidebar);
 }
 
-Bus.on(BUS_EVENT.AUTH_LOGIN, () => {
-  if (exercisesSidePanel?.isOpen) loadSidebarContent();
-});
+// ── Add to Plan ────────────────────────────────────────────────────────────
 
-// ── Exercises sidebar ──────────────────────────────────────────────────────
-
-function openExercisesSidebar() {
-  setLastSidebarType('exercises');
-  closeSidebar({ reason: 'exercises-open', source: 'exercises' });
-  exercisesSidePanel.open();
-  updateBodySidebarClass();
-  if (currentUser) {
-    loadSidebarContent();
-  } else {
-    const container = document.getElementById('exercisesSidebarList');
-    if (container) container.innerHTML = `
-      <div class="empty-courses">
-        <h4>Please sign in to access your Practice Plan.</h4>
-        <button class="primary-btn" id="practiceSignInBtn">Sign In</button>
-      </div>
-    `;
-    document.getElementById('practiceSignInBtn')?.addEventListener('click', openAuthModal);
-  }
+async function handleAddToPlan() {
+  if (!activeExercise) return;
+  const btn = document.getElementById('exerciseModalAddToPlanBtn');
+  const inPlan = isItemInPractice('exercise', activeExercise.id);
+  await togglePracticeItem('exercise', activeExercise.id, activeExercise.name);
+  syncAddToPlanBtn(!inPlan);
 }
 
-export function closeExercisesSidebar() {
-  closeSidebar({ reason: 'exercises-close', source: 'exercises' });
+function syncAddToPlanBtn(inPlan) {
+  const btn = document.getElementById('exerciseModalAddToPlanBtn');
+  if (!btn) return;
+  btn.textContent = inPlan ? '✓ In Plan' : '+ Add to Plan';
+  btn.classList.toggle('active', inPlan);
 }
 
-export function toggleExercisesSidebar() {
-  if (exercisesSidePanel.isOpen) closeExercisesSidebar();
-  else openExercisesSidebar();
-}
-
-async function loadSidebarContent() {
-  const container = document.getElementById('exercisesSidebarList');
-  if (!container) return;
-  container.innerHTML = '<p class="exercises-loading">Loading…</p>';
-  await Promise.all([fetchExercises(), fetchProgress()]);
-  renderExercises(container);
+export async function openExerciseById(id) {
+  if (!exercises.length) await Promise.all([fetchExercises(), fetchProgress()]);
+  const ex = exercises.find(e => e.id === id);
+  if (ex) openModal(ex);
 }
 
 // ── Practice view ──────────────────────────────────────────────────────────
@@ -154,14 +134,14 @@ async function loadPracticeView() {
   if (addBtn) addBtn.style.display = isTeacher() ? '' : 'none';
 
   list.innerHTML = '<p class="exercises-loading">Loading…</p>';
-  await Promise.all([fetchExercises(), fetchProgress(), fetchCategoryOrder()]);
+  await Promise.all([fetchExercises(), fetchProgress(), fetchCategoryOrder(), fetchPracticeItems()]);
   renderExercises(list);
 }
 
 async function fetchExercises() {
   const { data, error } = await supabase
     .from('exercises')
-    .select('id, category, name, description, sort_order, video_url, studio_pattern_json')
+    .select('id, category, name, description, sort_order, video_url, studio_pattern_json, created_by')
     .order('category')
     .order('sort_order');
 
@@ -208,8 +188,8 @@ function renderExercises(list) {
 
   // Ordered categories: DB order first, then any unlisted ones alphabetically
   const teacher = isTeacher();
+  const admin = isAdmin();
 
-  // All DB-defined categories come first in order; unlisted ones (from exercises) appended alphabetically
   const ordered = categoryOrder.map(c => c.name);
   for (const cat of Object.keys(byCategory).sort()) {
     if (!ordered.includes(cat)) ordered.push(cat);
@@ -219,21 +199,38 @@ function renderExercises(list) {
   const visible = ordered.filter(cat => byCategory[cat] || (teacher && categoryOrder.some(c => c.name === cat)));
 
   list.innerHTML = visible.map(cat => `
-    <div class="exercises-category${teacher ? ' sortable-category' : ''}" data-category="${escapeHtml(cat)}">
+    <div class="exercises-category${admin ? ' sortable-category' : ''}" data-category="${escapeHtml(cat)}">
       <div class="exercises-category-label">
-        ${teacher ? '<span class="category-drag-handle" title="Drag to reorder">⠿</span>' : ''}
+        ${admin ? '<span class="category-drag-handle" title="Drag to reorder">⠿</span>' : ''}
         ${escapeHtml(cat)}
       </div>
-      ${(byCategory[cat] || []).map(ex => exerciseCardHTML(ex, teacher)).join('')}
-      ${teacher && !byCategory[cat] ? '<p class="exercises-empty-cat">No exercises yet.</p>' : ''}
+      <div class="exercises-cards">
+        ${(byCategory[cat] || []).map(ex => exerciseCardHTML(ex)).join('')}
+        ${teacher && !byCategory[cat] ? '<p class="exercises-empty-cat">No exercises yet.</p>' : ''}
+      </div>
     </div>
   `).join('');
 
   list.querySelectorAll('.exercise-card').forEach(card => {
     card.addEventListener('click', e => {
+      if (e.target.closest('.exercise-card-drag')) return;
       if (e.target.closest('.exercise-edit-btn')) return;
+      if (e.target.closest('.exercise-plan-btn')) return;
       const ex = exercises.find(e => e.id === card.dataset.id);
       if (ex) openModal(ex);
+    });
+  });
+
+  list.querySelectorAll('.exercise-plan-btn').forEach(btn => {
+    btn.addEventListener('click', async e => {
+      e.stopPropagation();
+      const ex = exercises.find(e => e.id === btn.dataset.id);
+      if (!ex) return;
+      await togglePracticeItem('exercise', ex.id, ex.name);
+      const inPlan = isItemInPractice('exercise', ex.id);
+      btn.textContent = inPlan ? '✓' : '+';
+      btn.title = inPlan ? 'Remove from plan' : 'Add to plan';
+      btn.classList.toggle('in-plan', inPlan);
     });
   });
 
@@ -245,7 +242,11 @@ function renderExercises(list) {
         if (ex) openEditor(ex);
       });
     });
+  }
+
+  if (admin) {
     initCategoryDrag(list);
+    list.querySelectorAll('.exercises-cards').forEach(initCardDrag);
   }
 }
 
@@ -302,20 +303,78 @@ async function saveCategoryOrder(list) {
   }
 }
 
-function exerciseCardHTML(ex, teacher) {
-  const status = progressMap[ex.id] || null;
-  const cardClass = status ? `status-${status}` : '';
-  const btnLabel = statusLabel(status);
-  const btnClass = status ? `status-${status}` : 'status-none';
+function initCardDrag(cardsEl) {
+  let dragSrc = null;
 
+  cardsEl.querySelectorAll('.exercise-card').forEach(card => {
+    card.addEventListener('dragstart', e => {
+      // Only handle card drags, not category drags initiated from parent
+      if (!e.target.closest('.exercise-card')) return;
+      dragSrc = card;
+      card.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+      e.stopPropagation(); // prevent category dragstart from also firing
+    });
+    card.addEventListener('dragend', () => {
+      card.classList.remove('dragging');
+      dragSrc = null;
+      saveCardOrder(cardsEl);
+    });
+  });
+
+  cardsEl.addEventListener('dragover', e => {
+    if (!dragSrc) return; // not a card drag — let category drag events through
+    e.preventDefault();
+    e.stopPropagation();
+    const after = getCardAfterElement(cardsEl, e.clientY);
+    if (after == null) cardsEl.appendChild(dragSrc);
+    else cardsEl.insertBefore(dragSrc, after);
+  });
+}
+
+function getCardAfterElement(container, y) {
+  const items = [...container.querySelectorAll('.exercise-card:not(.dragging)')];
+  return items.reduce((closest, child) => {
+    const box = child.getBoundingClientRect();
+    const offset = y - box.top - box.height / 2;
+    return offset < 0 && offset > closest.offset ? { offset, element: child } : closest;
+  }, { offset: Number.NEGATIVE_INFINITY }).element;
+}
+
+async function saveCardOrder(cardsEl) {
+  const cards = [...cardsEl.querySelectorAll('.exercise-card')];
+  const updates = cards.map((card, i) => ({ id: card.dataset.id, sort_order: i * 10 }));
+
+  updates.forEach(u => {
+    const ex = exercises.find(e => e.id === u.id);
+    if (ex) ex.sort_order = u.sort_order;
+  });
+
+  const results = await Promise.all(
+    updates.map(u =>
+      supabase.from('exercises').update({ sort_order: u.sort_order }).eq('id', u.id)
+    )
+  );
+
+  const firstError = results.find(r => r.error)?.error;
+  if (firstError) console.error('[Exercises] saveCardOrder failed:', firstError);
+}
+
+function exerciseCardHTML(ex) {
+  const inPlan = isItemInPractice('exercise', ex.id);
+  const editable = canEdit(ex);
+  const admin = isAdmin();
   return `
-    <div class="exercise-card ${cardClass}" data-id="${ex.id}" role="button" tabindex="0">
+    <div class="exercise-card" data-id="${ex.id}" role="button" tabindex="0"${admin ? ' draggable="true"' : ''}>
+      ${admin ? '<div class="exercise-card-drag" title="Drag to reorder">⠿</div>' : ''}
       <div class="exercise-card-body">
         <div class="exercise-card-name">${escapeHtml(ex.name)}</div>
         ${ex.description ? `<p class="exercise-card-desc">${escapeHtml(ex.description)}</p>` : ''}
       </div>
-      <span class="exercise-status-btn ${btnClass}">${btnLabel}</span>
-      ${teacher ? `<button class="exercise-edit-btn" data-id="${ex.id}" title="Edit exercise" aria-label="Edit">✏️</button>` : ''}
+      <div class="exercise-card-footer">
+        ${editable ? `<button class="exercise-edit-btn" data-id="${ex.id}" title="Edit exercise" aria-label="Edit">✏️</button>` : ''}
+        <button class="exercise-plan-btn${inPlan ? ' in-plan' : ''}" data-id="${ex.id}" title="${inPlan ? 'Remove from plan' : 'Add to plan'}" aria-label="${inPlan ? 'Remove from plan' : 'Add to plan'}">${inPlan ? '✓' : '+'}</button>
+      </div>
     </div>
   `;
 }
@@ -364,6 +423,7 @@ function openModal(ex) {
   }
 
   syncModalStatusButtons(progressMap[ex.id] || null);
+  syncAddToPlanBtn(isItemInPractice('exercise', ex.id));
 
   // BPM
   const bpm = bpmMap[ex.id] ?? 90;
@@ -719,7 +779,7 @@ async function saveExercise() {
     ({ error } = await supabase.from('exercises').update(payload).eq('id', editorExercise.id));
   } else {
     const maxOrder = exercises.filter(e => e.category === category).reduce((m, e) => Math.max(m, e.sort_order), 0);
-    ({ error } = await supabase.from('exercises').insert({ ...payload, sort_order: maxOrder + 10 }));
+    ({ error } = await supabase.from('exercises').insert({ ...payload, sort_order: maxOrder + 10, created_by: currentUser.id }));
   }
 
   saveBtn.disabled = false;

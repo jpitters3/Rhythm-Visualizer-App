@@ -22,7 +22,7 @@ const NAV_BUTTON_MAP = {
   composerSidebar:  'toggleComposerBtn',
   courseSidebar:    'toggleSidebarBtn',
   lessonPlayer:     'toggleSidebarBtn',
-  exercisesSidebar: 'toggleExercisesBtn',
+  practiceSidebar:  'toggleExercisesBtn',
 };
 
 // The Studio nav link stays active whenever any panel that lives inside the

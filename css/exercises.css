@@ -129,10 +129,17 @@
    PRACTICE / EXERCISES VIEW
    ============================================================ */
 .exercises-container {
-  max-width: 640px;
+  max-width: 1200px;
   margin: 0 auto;
-  padding: 48px 24px 80px;
+  padding: 48px 32px 80px;
   animation: mwFadeUp 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+#exercisesList {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+  align-items: start;
 }
 
 .exercises-back {
@@ -166,7 +173,9 @@
 
 /* Category section */
 .exercises-category {
-  margin-bottom: 36px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .exercises-category.dragging {
@@ -206,16 +215,23 @@
 .category-drag-handle:hover { opacity: 0.9; }
 .category-drag-handle:active { cursor: grabbing; }
 
+/* Cards within a category stack vertically */
+.exercises-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
 /* Exercise card */
 .exercise-card {
   display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 16px 18px;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 16px;
+  position: relative;
   border-radius: 12px;
   background: var(--panel);
   border: 1px solid var(--panel-border);
-  margin-bottom: 10px;
   cursor: pointer;
   transition: border-color 0.2s, transform 0.15s, box-shadow 0.15s;
 }
@@ -226,17 +242,44 @@
   box-shadow: 0 4px 16px rgba(0,0,0,0.1);
 }
 
-.exercise-card.status-completed {
-  border-color: rgba(52, 199, 89, 0.35);
+.exercise-card.dragging {
+  opacity: 0.4;
+  transform: none;
+  box-shadow: none;
 }
 
-.exercise-card.status-working_on_it {
-  border-color: rgba(255, 209, 102, 0.4);
+.exercise-card:has(.exercise-card-drag) {
+  padding-right: 32px;
 }
+
+.exercise-card-drag {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  transform: translateY(-50%);
+  font-size: 16px;
+  color: var(--text);
+  opacity: 0.2;
+  cursor: grab;
+  line-height: 1;
+  padding: 4px;
+  transition: opacity 0.15s;
+}
+
+.exercise-card:hover .exercise-card-drag { opacity: 0.5; }
+.exercise-card-drag:active { cursor: grabbing; }
 
 .exercise-card-body {
   flex: 1;
   min-width: 0;
+}
+
+.exercise-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  margin-top: 4px;
 }
 
 .exercise-card-name {
@@ -255,44 +298,35 @@
 }
 
 /* Status button */
-.exercise-status-btn {
+.exercise-plan-btn {
   flex-shrink: 0;
-  border: none;
-  border-radius: 20px;
-  padding: 6px 14px;
-  font-size: 12px;
-  font-weight: 600;
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  padding: 0;
+  border-radius: 50%;
+  border: 1.5px solid var(--panel-border);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 16px;
+  line-height: 1;
   cursor: pointer;
-  transition: background 0.15s, color 0.15s, opacity 0.15s;
-  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
 }
 
-.exercise-status-btn.status-none {
-  background: var(--btn-bg);
-  color: var(--text);
-  opacity: 0.55;
+.exercise-plan-btn:hover {
+  border-color: var(--accent, #6366f1);
+  color: var(--accent, #6366f1);
 }
 
-.exercise-status-btn.status-none:hover {
-  opacity: 1;
-}
-
-.exercise-status-btn.status-working_on_it {
-  background: rgba(255, 209, 102, 0.15);
-  color: #8a6000;
-  border: 1px solid rgba(255, 209, 102, 0.4);
-}
-
-.exercise-status-btn.status-completed {
-  background: rgba(52, 199, 89, 0.12);
-  color: #28a745;
-  border: 1px solid rgba(52, 199, 89, 0.35);
-}
-
-/* Dark mode overrides for status colors */
-@media (prefers-color-scheme: dark) {
-  .exercise-status-btn.status-working_on_it { color: #b8860b; }
-  .exercise-status-btn.status-completed { color: #4cd964; }
+.exercise-plan-btn.in-plan {
+  border-color: var(--accent, #6366f1);
+  background: var(--accent, #6366f1);
+  color: #fff;
+  font-size: 13px;
 }
 
 .exercises-title-row {
@@ -363,10 +397,13 @@
   padding: 32px 16px;
 }
 
+@media (max-width: 900px) {
+  #exercisesList { grid-template-columns: repeat(2, 1fr); }
+}
+
 @media (max-width: 520px) {
   .exercises-container { padding: 32px 16px 60px; }
-  .exercise-card { flex-direction: column; align-items: flex-start; gap: 12px; }
-  .exercise-status-btn { align-self: flex-start; }
+  #exercisesList { grid-template-columns: 1fr; }
 }
 
 

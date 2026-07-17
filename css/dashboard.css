@@ -4,6 +4,30 @@
   flex-direction: column;
   background: var(--bg);
   overflow-y: auto;
+  position: relative;
+}
+
+/* Handpan watermark behind dashboard content */
+#view-dashboard::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: url('../public/assets/images/handpan-for-groovepan.png');
+  background-repeat: no-repeat;
+  background-position: center 55%;
+  background-size: 720px auto;
+  opacity: 0.06;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Content must sit above the watermark */
+#view-dashboard > * {
+  position: relative;
+  z-index: 1;
 }
 
 /* ── Viewing-as Banner ─────────────────────────────── */

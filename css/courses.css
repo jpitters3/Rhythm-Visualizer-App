@@ -752,18 +752,123 @@ body.dark button#closeLessonBtn:hover {
 }
 
 /* Practice Drag & Drop */
-.practice-item {
-  transition: transform 0.3s cubic-bezier(0.2, 0, 0.2, 1), box-shadow 0.2s;
-  border: 1px solid transparent;
+.practice-section {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
-.practice-item.squeezed {
-  transform: scale(0.9);
-  background: #fff !important;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
-  z-index: 100;
-  cursor: grabbing !important;
+.practice-section + .practice-section {
+  margin-top: 16px;
 }
+
+.practice-section-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-secondary);
+  padding: 0 4px 4px;
+  opacity: 0.6;
+}
+
+.practice-section-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-height: 40px;
+  border-radius: 8px;
+  transition: background 0.15s;
+  padding: 2px;
+}
+
+.practice-section-list.drag-over {
+  background: rgba(99, 102, 241, 0.06);
+  outline: 1.5px dashed rgba(99, 102, 241, 0.35);
+  outline-offset: -1px;
+}
+
+.practice-section-empty {
+  display: none;
+  font-size: 12px;
+  color: var(--text-secondary);
+  opacity: 0.45;
+  text-align: center;
+  padding: 10px 0;
+  font-style: italic;
+}
+
+.practice-section-empty.visible {
+  display: block;
+}
+
+.practice-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  cursor: grab;
+  transition: border-color 0.15s, box-shadow 0.15s, opacity 0.15s;
+}
+
+.practice-item:hover {
+  border-color: rgba(99, 102, 241, 0.35);
+}
+
+.practice-item.dragging {
+  opacity: 0.4;
+  cursor: grabbing;
+}
+
+.practice-item-drag {
+  opacity: 0.25;
+  font-size: 13px;
+  flex-shrink: 0;
+  cursor: grab;
+}
+
+.practice-item-content {
+  flex: 1;
+  min-width: 0;
+  cursor: pointer;
+}
+
+.practice-item-type {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-secondary);
+  opacity: 0.6;
+}
+
+.practice-item-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.remove-practice-btn {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 2px 4px;
+  opacity: 0.3;
+  transition: opacity 0.15s;
+}
+
+.practice-item:hover .remove-practice-btn { opacity: 0.7; }
+.remove-practice-btn:hover { opacity: 1 !important; }
 
 /* Removed over style */
 /* Helper for Lesson Description */

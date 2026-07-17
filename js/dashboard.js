@@ -184,7 +184,7 @@ function renderAssignment(sa) {
   if (!el) return;
 
   if (!sa) {
-    el.innerHTML = `<div class="dash-assignment-empty">No assignment yet — your teacher will send one here.</div>`;
+    el.innerHTML = `<div class="dash-assignment-empty">No assignment yet. Assignments appear when taking a course, or when assigned directly by a teacher.</div>`;
     return;
   }
 

@@ -946,7 +946,6 @@
     <!-- PRACTICE / EXERCISES VIEW -->
     <div id="view-practice" class="route-view practice-view">
       <div class="exercises-container">
-        <a href="#method-welcome" class="exercises-back">← The Method</a>
         <div class="exercises-title-row">
           <h1 class="exercises-title">Practice</h1>
           <button id="addExerciseBtn" class="exercises-add-btn" style="display:none;">+ Add Exercise</button>
@@ -1621,27 +1620,15 @@
   <!-- Practice Sidebar -->
   <div id="practiceSidebar" class="sidebar" aria-hidden="true" data-panel-type="sidepanel">
     <div class="sidebar-header">
-      <h3>Daily Practice</h3>
+      <h3>Practice Plan</h3>
+      <button id="browseExercisesBtn" class="browse-icon-btn">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M12 8v8m-4-4h8"></path></svg>
+        Browse Exercises
+      </button>
       <button id="closePracticeSidebar" class="close-btn">&times;</button>
-    </div>
-    <div class="sidebar-search">
-      <div style="display:flex; gap:10px;">
-        <button id="startPracticeBtn" class="primary-btn" style="flex:1;">▶ Start</button>
-        <button id="refreshPracticeBtn" class="secondary-btn" title="Refresh">↻</button>
-      </div>
     </div>
     <div id="practiceList" class="sidebar-content">
       <!-- Items go here -->
-    </div>
-  </div>
-
-  <!-- Exercises (Practice) Sidebar -->
-  <div id="exercisesSidebar" class="sidebar exercises-sidebar" aria-hidden="true" data-panel-type="sidepanel">
-    <div class="sidebar-header">
-      <h3>Practice</h3>
-      <button id="closeExercisesSidebar" class="close-btn">&times;</button>
-    </div>
-    <div id="exercisesSidebarList" class="sidebar-content exercises-sidebar-content">
     </div>
   </div>
 
@@ -2890,6 +2877,7 @@
 
       <div class="exercise-modal-footer">
         <button id="exerciseModalStudioBtn" class="secondary-btn" style="display:none;">Open in Studio</button>
+        <button id="exerciseModalAddToPlanBtn" class="secondary-btn">+ Add to Plan</button>
         <div class="exercise-modal-status-group">
           <button class="exercise-modal-status-btn" data-status="working_on_it">Working On It</button>
           <button class="exercise-modal-status-btn" data-status="completed">Completed ✓</button>
