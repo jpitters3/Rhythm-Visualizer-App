@@ -15,31 +15,35 @@ body {
   position: relative;
 }
 
-/* Comment this section to remove the background 
+/* Subtle fixed atmosphere layer.
+   Light mode: soft colour blooms (a photo here reads as a visible vignette
+   at any opacity low enough not to fight the grid, so gradients instead).
+   Dark mode: the starry-sky photo works because stars are sparse, low-contrast. */
 body::after {
   content: "";
-  background-image: url('../public/assets/images/backgrounds/river_wallpaper.jpg');
-  /* background-attachment: scroll; -> REMOVED: causes full page repaints 
-  background-position: center top;
-  background-size: cover;
-  opacity: 0;
-  /* Adjusted opacity to compensate for removed blend-mode 
+  background-image:
+    radial-gradient(ellipse 60% 45% at 12% 8%, rgba(255, 209, 102, 0.16), transparent 70%),
+    radial-gradient(ellipse 55% 45% at 90% 95%, rgba(var(--accent-rgb), 0.10), transparent 70%);
   position: fixed;
-  /* Fix layer to viewport 
+  /* Fixed layer, painted once — no scroll-driven repaint cost */
   inset: 0;
-  /* Full coverage 
   z-index: -1;
   pointer-events: none;
-  background-repeat: no-repeat;
   will-change: transform;
-  /* Hardware acceleration hint 
   transform: translateZ(0);
-  /* Force GPU compositing layer 
+  /* Force its own GPU compositing layer */
 }
-  */
 
 body.dark::after {
   background-image: url('../public/assets/images/backgrounds/starry-sky.jpg');
+  background-position: center top;
+  background-size: cover;
+  background-repeat: no-repeat;
+  opacity: 0.12;
+}
+
+h1, h2, h3 {
+  font-family: 'Fraunces', Georgia, serif;
 }
 
 h2 {

@@ -66,10 +66,23 @@ button {
   font-weight: 500;
   font-size: 13px;
   white-space: nowrap;
+  transition: transform 0.15s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.15s ease, background 0.15s ease;
+}
+
+button:hover:not(:disabled) {
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+  transform: translateY(-1px);
+}
+
+button:active:not(:disabled) {
+  transform: translateY(0) scale(0.96);
+  transition: transform 0.07s ease-out;
 }
 
 button.active {
   background: var(--btn-active);
+  box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.15);
 }
 
 button:disabled {
