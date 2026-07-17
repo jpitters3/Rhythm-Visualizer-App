@@ -5,7 +5,7 @@ import { stop } from './noteplayer.js';
 import { gridA } from './grid-context.js';
 import { Sidepanel } from './sidepanel.js';
 
-const validRoutes = ['studio', 'dashboard', 'compose', 'community', 'library', 'method', 'method-welcome', 'practice'];
+const validRoutes = ['studio', 'home', 'dashboard', 'compose', 'community', 'library', 'method', 'method-welcome', 'practice'];
 let currentRoute = '';
 
 export function initRouter() {
@@ -42,9 +42,10 @@ function handleHashChange() {
     view.style.display = '';
   });
 
-  // Sync nav link active states
+  // Sync nav link active states (data-also-route lets one link cover two routes)
   document.querySelectorAll('.nav-link[data-route]').forEach(link => {
-    link.classList.toggle('active', link.dataset.route === hash);
+    const alsoRoutes = (link.dataset.alsoRoute || '').split(',').map(s => s.trim());
+    link.classList.toggle('active', link.dataset.route === hash || alsoRoutes.includes(hash));
   });
 
   window.dispatchEvent(new CustomEvent('routeChanged', { detail: { route: hash } }));

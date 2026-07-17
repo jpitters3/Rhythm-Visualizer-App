@@ -59,6 +59,7 @@
   <link rel="stylesheet" href="./css/method.css">
   <link rel="stylesheet" href="./css/exercises.css">
   <link rel="stylesheet" href="./css/dashboard.css">
+  <link rel="stylesheet" href="./css/onboarding-tour.css">
 
   <!-- PWA & Mobile Optimization -->
   <link rel="manifest" href="./manifest.json">
@@ -118,7 +119,7 @@
         <a class="nav-link" data-route="studio" href="#studio" style="text-decoration:underline">Studio</a>
         <a class="nav-link" data-route="community" href="#community">Community</a>
         <a class="nav-link" data-route="method-welcome" href="#method-welcome">The Method</a>
-        <a class="nav-link" id="navDashboardBtn" data-route="dashboard" href="#dashboard">Dashboard</a>
+        <a class="nav-link" id="navDashboardBtn" data-route="dashboard" data-also-route="home" href="#dashboard">Dashboard</a>
         <button class="nav-link" id="authBtn" style="display:none;">Sign In</button>
       </nav>
 
@@ -538,7 +539,58 @@
 
     </div><!-- End view-studio -->
 
-    <!-- DASHBOARD VIEW -->
+    <!-- HOME VIEW (logged-out landing) -->
+    <div id="view-home" class="route-view" style="display: none;">
+      <div class="dash-logged-out">
+        <div class="dash-logged-out-hero">
+          <h2 class="dash-logged-out-title">Your handpan journey starts here</h2>
+          <p class="dash-logged-out-subtitle">Create a free account to unlock everything below — or sign in if you already have one.</p>
+        </div>
+        <ul class="dash-feature-list">
+          <li class="dash-feature-item">
+            <span class="dash-feature-icon">🎵</span>
+            <div class="dash-feature-text">
+              <span class="dash-feature-name">Save phrases to your Library</span>
+              <span class="dash-feature-desc">Build a personal collection of rhythms and compositions.</span>
+            </div>
+          </li>
+          <li class="dash-feature-item">
+            <span class="dash-feature-icon">📚</span>
+            <div class="dash-feature-text">
+              <span class="dash-feature-name">Access your courses &amp; lessons</span>
+              <span class="dash-feature-desc">Follow a structured path from first notes to full compositions.</span>
+            </div>
+          </li>
+          <li class="dash-feature-item">
+            <span class="dash-feature-icon">📝</span>
+            <div class="dash-feature-text">
+              <span class="dash-feature-name">Receive &amp; submit assignments</span>
+              <span class="dash-feature-desc">Your teacher assigns exercises and reviews your submissions.</span>
+            </div>
+          </li>
+          <li class="dash-feature-item">
+            <span class="dash-feature-icon">🎯</span>
+            <div class="dash-feature-text">
+              <span class="dash-feature-name">Track your goals &amp; progress</span>
+              <span class="dash-feature-desc">Set a dream goal and short-term focus your teacher can see.</span>
+            </div>
+          </li>
+          <li class="dash-feature-item">
+            <span class="dash-feature-icon">🤝</span>
+            <div class="dash-feature-text">
+              <span class="dash-feature-name">Connect with your teacher</span>
+              <span class="dash-feature-desc">Accept your teacher's invitation to get personalized guidance.</span>
+            </div>
+          </li>
+        </ul>
+        <div class="dash-logged-out-actions">
+          <button class="dash-cta-primary" id="dashCreateAccountBtn">Create a free account</button>
+          <button class="dash-cta-secondary" id="dashSignInBtn">Sign in</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- DASHBOARD VIEW (logged-in) -->
     <div id="view-dashboard" class="route-view" style="display: none;">
 
       <!-- Teacher "viewing as student" banner -->

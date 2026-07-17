@@ -4,6 +4,8 @@ import { currentProfile } from './profile.js';
 import { openAuthModal } from './auth.js';
 import { navigate } from './router.js';
 import { escapeHtml } from './utils.js';
+import { Bus, BUS_EVENT } from './bus.js';
+import { startTour, TOUR_KEY } from './onboarding-tour.js';
 
 // ── Module state ──────────────────────────────────────────────────────────────
 
@@ -14,12 +16,35 @@ let viewingAsName = null;
 // ── Public API ────────────────────────────────────────────────────────────────
 
 export function initDashboard() {
-  // Route listener
+  // Route listener — guard: redirect to home if not logged in
   window.addEventListener('routeChanged', e => {
     if (e.detail.route === 'dashboard') {
+      if (!currentUser) { navigate('home'); return; }
       loadDashboard();
     }
   });
+
+  // On login: go to bespoke dashboard, then start the tour if unseen
+  Bus.on(BUS_EVENT.AUTH_LOGIN, async () => {
+    navigate('dashboard');
+    await loadDashboard();
+    if (!localStorage.getItem(TOUR_KEY)) startTour();
+  });
+
+  // On logout: go to the home/feature page
+  Bus.on(BUS_EVENT.AUTH_LOGOUT, () => {
+    navigate('home');
+  });
+
+  // Dashboard nav link: route based on auth state
+  document.getElementById('navDashboardBtn')?.addEventListener('click', e => {
+    e.preventDefault();
+    navigate(currentUser ? 'dashboard' : 'home');
+  });
+
+  // Home view CTA buttons
+  document.getElementById('dashCreateAccountBtn')?.addEventListener('click', () => openAuthModal());
+  document.getElementById('dashSignInBtn')?.addEventListener('click', () => openAuthModal());
 
   // Goals modal buttons (exist in DOM from page load)
   document.getElementById('dashGoalsEditBtn')
@@ -55,11 +80,7 @@ export function viewStudentDashboard(studentId, displayName) {
 
 async function loadDashboard() {
   const userId = viewingAsUserId ?? currentUser?.id;
-
-  if (!userId) {
-    renderNotLoggedIn();
-    return;
-  }
+  if (!userId) return;
 
   // Viewing-as banner
   const banner = document.getElementById('dashViewingBanner');
@@ -267,18 +288,6 @@ async function renderCourses(courseIds) {
       setActiveCourse(row.dataset.id);
     });
   });
-}
-
-function renderNotLoggedIn() {
-  const content = document.querySelector('.dash-content');
-  if (!content) return;
-  content.innerHTML = `
-    <div class="dash-not-logged-in">
-      <p>Sign in to see your dashboard.</p>
-      <button class="dash-signin-btn" id="dashSignInBtn">Sign In</button>
-    </div>
-  `;
-  document.getElementById('dashSignInBtn')?.addEventListener('click', openAuthModal);
 }
 
 // ── Goals modal ───────────────────────────────────────────────────────────────

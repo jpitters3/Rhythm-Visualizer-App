@@ -15,6 +15,7 @@ import { updateComposeUI } from './compose-mode.js';
 import { setPresentation, initPresentation } from './presentation-mode.js';
 import { initAuth } from './auth.js';
 import { initDashboard } from './dashboard.js';
+import { initTour } from './onboarding-tour.js';
 import { STEPS } from './rhythm-core.js';
 import { supabase } from './supabase-client.js';
 import { initCourses } from './courses.js';
@@ -64,6 +65,7 @@ async function init() {
     // 1. Auth + Dashboard (shown immediately while the rest of the app loads)
     await initAuth();
     initDashboard();
+    initTour();
 
     // 2. Core UI/Logic
     await initScale();

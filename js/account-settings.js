@@ -9,6 +9,7 @@ import { supabase } from './supabase-client.js';
 import { Bus, BUS_EVENT } from './bus.js';
 import { renderNotifSettings } from './notification-settings.js';
 import { openAuthModal } from './auth.js';
+import { startTour, resetTour } from './onboarding-tour.js';
 
 let sidebarEl = null;
 let backdropEl = null;
@@ -70,6 +71,11 @@ function renderSidebar() {
       <div id="acctNotifSettingsContainer"></div>
     </div>
 
+    <div class="acct-section">
+      <div class="acct-section-title">App Tour</div>
+      <button class="acct-link-btn" id="acctReplayTourBtn">Replay onboarding tour</button>
+    </div>
+
     <div class="acct-section acct-section-footer">
       <button class="acct-signout-btn" id="acctSignOutBtn">Sign out</button>
     </div>
@@ -85,6 +91,12 @@ function renderSidebar() {
   body.querySelector('#acctChangePasswordBtn')?.addEventListener('click', () => {
     close();
     openAuthModal();
+  });
+
+  body.querySelector('#acctReplayTourBtn')?.addEventListener('click', () => {
+    close();
+    resetTour();
+    startTour();
   });
 
   body.querySelector('#acctSignOutBtn')?.addEventListener('click', async () => {
