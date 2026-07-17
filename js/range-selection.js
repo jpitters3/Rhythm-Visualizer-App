@@ -94,6 +94,25 @@ export function updateRangeUI(ctx) {
     selectionTools.classList.toggle('visible', showBar);
     document.body.classList.toggle('has-selection', showBar);
     if (selBarText) selBarText.textContent = `${count} selected`;
+
+    if (window.innerWidth <= 768) {
+      const mt = document.getElementById('measureTools');
+      const panel = document.querySelector('.handpan-panel');
+      if (mt && panel) {
+        if (showBar && mt.parentElement !== panel) {
+          panel.style.minHeight = panel.getBoundingClientRect().height + 'px';
+          mt._origParent = mt.parentElement;
+          mt._origNext = mt.nextSibling;
+          panel.appendChild(mt);
+          panel.classList.add('selection-mode');
+        } else if (!showBar && mt._origParent) {
+          mt._origParent.insertBefore(mt, mt._origNext || null);
+          mt._origParent = null;
+          panel.classList.remove('selection-mode');
+          panel.style.minHeight = '';
+        }
+      }
+    }
   }
 }
 

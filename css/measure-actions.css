@@ -90,6 +90,10 @@
   .measure-tools {
     width: 85vw;
     z-index: 2000;
+    margin-left: auto;
+    margin-right: auto;
+    align-self: center;
+    left: 0px;
   }
 
 
@@ -102,7 +106,10 @@
   }
 
   #measureTools:has(.selection-group.visible) {
-    display: block !important;
+    display: flex !important;
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
   }
 
   #selectionToolsWrapper {
@@ -133,5 +140,40 @@
     margin-right: 8px;
     font-size: 13px;
     font-weight: 700;
+  }
+
+  /* When selection is active, hide the handpan content and show the actions */
+  .handpan-panel.selection-mode .handpan-tabs,
+  .handpan-panel.selection-mode .handpan-wrap,
+  .handpan-panel.selection-mode #handpanWrapBottom,
+  .handpan-panel.selection-mode #ghostNoteSection {
+    display: none !important;
+  }
+
+  .handpan-panel.selection-mode {
+    justify-content: center;
+    align-items: stretch;
+    padding: 16px 12px;
+  }
+
+  .handpan-panel.selection-mode #measureTools {
+    display: flex !important;
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+    gap: 12px;
+  }
+
+  .handpan-panel.selection-mode .selection-group {
+    max-width: none !important;
+    flex-wrap: wrap !important;
+    justify-content: center !important;
+    gap: 8px;
+    padding: 0 !important;
+  }
+
+  .handpan-panel.selection-mode .selection-group button {
+    flex: 1 1 auto;
+    min-width: 64px;
   }
 }
