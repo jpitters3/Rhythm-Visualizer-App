@@ -7,9 +7,36 @@ export function initMobileMenu() {
 
   if (!mobileMenuBtn || !appNav) return;
 
+  function openControls() {
+    if (!primaryControlsWrapper) return;
+    const panel = document.querySelector('.handpan-panel');
+    const slot = document.getElementById('panelControlsSlot');
+    if (panel && slot && primaryControlsWrapper.parentElement !== slot) {
+      primaryControlsWrapper._origParent = primaryControlsWrapper.parentElement;
+      primaryControlsWrapper._origNext = primaryControlsWrapper.nextSibling;
+      slot.appendChild(primaryControlsWrapper);
+      panel.classList.add('controls-mode');
+    }
+    primaryControlsWrapper.classList.add('mobile-open');
+    mobileControlsBtn?.setAttribute('aria-expanded', 'true');
+  }
+
+  function closeControls() {
+    if (!primaryControlsWrapper) return;
+    const panel = document.querySelector('.handpan-panel');
+    primaryControlsWrapper.classList.remove('mobile-open');
+    if (primaryControlsWrapper._origParent) {
+      primaryControlsWrapper._origParent.insertBefore(primaryControlsWrapper, primaryControlsWrapper._origNext || null);
+      primaryControlsWrapper._origParent = null;
+      primaryControlsWrapper._origNext = null;
+    }
+    panel?.classList.remove('controls-mode');
+    mobileControlsBtn?.setAttribute('aria-expanded', 'false');
+  }
+
   mobileMenuBtn.addEventListener('click', (e) => {
     e.stopPropagation();
-    if (primaryControlsWrapper) primaryControlsWrapper.classList.remove('mobile-open');
+    closeControls();
     appNav.classList.toggle('open');
     mobileMenuBtn.setAttribute('aria-expanded', appNav.classList.contains('open'));
   });
@@ -19,36 +46,33 @@ export function initMobileMenu() {
       e.stopPropagation();
       appNav.classList.remove('open');
       mobileMenuBtn.setAttribute('aria-expanded', 'false');
-      primaryControlsWrapper.classList.toggle('mobile-open');
-      mobileControlsBtn.setAttribute('aria-expanded', primaryControlsWrapper.classList.contains('mobile-open'));
+      if (primaryControlsWrapper.classList.contains('mobile-open')) {
+        closeControls();
+      } else {
+        openControls();
+      }
     });
-
   }
 
-  // Close nav when a nav link is clicked
   appNav.addEventListener('click', (e) => {
     const btn = e.target.closest('button, a');
     if (!btn) return;
-    // Don't close for dropdown triggers
     if (btn.id === 'accountBtn' || btn.id === 'phraseMenuBtn' || btn.id === 'adminMenuBtn') return;
     appNav.classList.remove('open');
     mobileMenuBtn.setAttribute('aria-expanded', 'false');
   });
 
-  // Use capture phase so stopPropagation in child handlers (handpan, notegrid) doesn't block us
   document.addEventListener('click', (e) => {
     if (appNav.classList.contains('open') && !appNav.contains(e.target) && !mobileMenuBtn.contains(e.target)) {
       appNav.classList.remove('open');
       mobileMenuBtn.setAttribute('aria-expanded', 'false');
     }
     if (
-      primaryControlsWrapper &&
-      primaryControlsWrapper.classList.contains('mobile-open') &&
+      primaryControlsWrapper?.classList.contains('mobile-open') &&
       !primaryControlsWrapper.contains(e.target) &&
-      !mobileControlsBtn.contains(e.target)
+      !mobileControlsBtn?.contains(e.target)
     ) {
-      primaryControlsWrapper.classList.remove('mobile-open');
-      mobileControlsBtn?.setAttribute('aria-expanded', 'false');
+      closeControls();
     }
   }, true);
 }

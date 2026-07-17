@@ -461,22 +461,6 @@ body:not(.dark) .transport-group .t-tap-btn.tapping {
     display: none;
   }
 
-  #primaryControlsWrapper.mobile-open {
-    display: flex;
-    background: var(--panel);
-    backdrop-filter: none;
-  }
-  #primaryControlsWrapper.pattern-row.player {
-    background: var(--panel);
-    backdrop-filter: none;
-  }
-
-  #primaryControlsWrapper.pattern-row.player button {
-    padding: 0 6px;
-    height: 32px;
-    font-size: 12px;
-  }
-
   .t-bpm-label {
     display: none;
   }

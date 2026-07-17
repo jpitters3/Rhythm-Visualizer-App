@@ -142,18 +142,90 @@
     font-weight: 700;
   }
 
-  /* When selection is active, hide the handpan content and show the actions */
+  /* When controls or selection is active, hide the handpan content */
   .handpan-panel.selection-mode .handpan-tabs,
   .handpan-panel.selection-mode .handpan-wrap,
   .handpan-panel.selection-mode #handpanWrapBottom,
-  .handpan-panel.selection-mode #ghostNoteSection {
+  .handpan-panel.selection-mode #ghostNoteSection,
+  .handpan-panel.controls-mode .handpan-tabs,
+  .handpan-panel.controls-mode .handpan-wrap,
+  .handpan-panel.controls-mode #handpanWrapBottom,
+  .handpan-panel.controls-mode #ghostNoteSection {
     display: none !important;
   }
 
-  .handpan-panel.selection-mode {
+  #panelControlsSlot {
+    display: none;
+  }
+
+  .handpan-panel.controls-mode {
+    top: -180px;
+  }
+
+  .handpan-panel.selection-mode #panelControlsSlot,
+  .handpan-panel.controls-mode #panelControlsSlot {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    border-radius: 16px;
+    box-shadow: none;
+    padding: 12px;
+    box-sizing: border-box;
+    overflow: visible;
+  }
+
+  .handpan-panel.selection-mode,
+  .handpan-panel.controls-mode {
+    box-shadow: none;
+  }
+
+  .handpan-panel.controls-mode {
     justify-content: center;
     align-items: stretch;
-    padding: 16px 12px;
+    padding: 12px;
+  }
+
+  /* Strip every .pattern-row.player constraint from the wrapper */
+  #panelControlsSlot #primaryControlsWrapper {
+    display: flex !important;
+    position: static !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    flex-wrap: wrap !important;
+    overflow: visible !important;
+    background: none !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    border-radius: 0 !important;
+    width: 100% !important;
+    gap: 8px !important;
+    justify-content: center !important;
+    align-items: center !important;
+  }
+
+  #panelControlsSlot .scrollable-controls-wrapper {
+    width: 100% !important;
+    overflow: visible !important;
+  }
+
+  #panelControlsSlot .scroll-indicator {
+    display: none !important;
+  }
+
+  #panelControlsSlot .scrollable-controls-content {
+    flex-wrap: wrap !important;
+    overflow: visible !important;
+    white-space: normal !important;
+    justify-content: center !important;
+    gap: 8px !important;
+    padding: 0 !important;
+    width: 100% !important;
+    scrollbar-width: none !important;
   }
 
   .handpan-panel.selection-mode #measureTools {
