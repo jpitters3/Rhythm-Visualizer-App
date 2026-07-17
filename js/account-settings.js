@@ -95,8 +95,8 @@ function renderSidebar() {
 
   body.querySelector('#acctReplayTourBtn')?.addEventListener('click', () => {
     close();
-    resetTour();
-    startTour();
+    resetTour(); // resets all sections
+    startTour('dashboard');
   });
 
   body.querySelector('#acctSignOutBtn')?.addEventListener('click', async () => {

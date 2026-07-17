@@ -1,83 +1,296 @@
 /**
  * js/onboarding-tour.js
- * First-login guided tour + logged-out feature promotion.
  *
- * All tour steps live in STEPS below — add/remove/reorder freely.
- * Steps whose target element is absent are skipped automatically.
+ * Per-section guided tour. Each feature area has its own step list and
+ * localStorage flag. Tours are triggered by their respective route modules
+ * on first visit.
+ *
+ * Step fields:
+ *   target       CSS selector | null (null = centered card, no spotlight)
+ *   title        Tooltip heading
+ *   body         Tooltip body text
+ *   position     'bottom' | 'top' | 'left' | 'right' | 'center'
+ *   clickToAdvance  (optional) — spotlight the target, make overlay passthrough,
+ *                    complete this tour when the user clicks the target
+ *   tryme        (optional) — center card with a single "Got it" button;
+ *                    used for Courses interactive prompts
+ *
+ * TBD selectors: '#__TBD__' won't match the DOM, so that step is silently
+ * skipped until you replace it with the real selector.
  */
 
+// ── Tour keys ─────────────────────────────────────────────────────────────────
 
-export const TOUR_KEY = 'panafide_tour_seen';
+export const TOUR_KEYS = {
+  dashboard: 'panafide_tour_dashboard',
+  studio:    'panafide_tour_studio',
+  library:   'panafide_tour_library',
+  composer:  'panafide_tour_composer',
+  practice:  'panafide_tour_practice',
+  courses:   'panafide_tour_courses',
+  community: 'panafide_tour_community',
+};
+
+// Backward-compat alias used by dashboard.js
+export const TOUR_KEY = TOUR_KEYS.dashboard;
 
 // ── Step definitions ──────────────────────────────────────────────────────────
-// position: 'center' | 'top' | 'bottom' | 'left' | 'right'
-// target: CSS selector, or null for a centered card with no spotlight
+// Each tour has:
+//   cta   { label }  — replaces the Skip button on the last card of the tour
+//   steps [ ...step objects ]
 
-const STEPS = [
-  {
-    target: null,
-    title: 'Welcome to Panafide!',
-    body: "Your teacher set up this app to guide your handpan journey. Let's take 30 seconds to show you around.",
-    position: 'center',
+const TOURS = {
+
+  // ── Dashboard ──────────────────────────────────────────────────────────────
+  dashboard: {
+    cta: { label: 'Explore the Studio ☝️' },
+    steps: [
+      {
+        target: null,
+        title: 'Welcome to Panafide!',
+        body: "Your teacher set up this app to guide your handpan journey. Let's take 30 seconds to show you around.",
+        position: 'center',
+      },
+      {
+        target: null,
+        title: 'Your current assignment',
+        body: "This is the main thing you're working on to improve your handpan game. Assignments can come from your current course or directly from your teacher.",
+        position: 'bottom',
+      },
+      {
+        target: '#dashGoalsContent',
+        title: 'Your goals',
+        body: 'Set your dream goal and a short-term focus. Your teacher can see these — it helps them tailor your lessons to where you want to go.',
+        position: 'bottom',
+      },
+      {
+        target: '#dashPracticeContent',
+        title: 'Your practice plan',
+        body: "The exercises you're currently working on every day.",
+        position: 'bottom',
+      },
+      {
+        target: '#dashCoursesContent',
+        title: 'Active courses',
+        body: "The courses you're currently working through.",
+        position: 'bottom',
+      },
+      {
+        target: 'a[data-route="studio"]',
+        title: 'Next: the Studio',
+        body: "This is where you'll play and compose. Click Studio in the nav to explore it.",
+        position: 'bottom',
+        clickToAdvance: true,
+      },
+    ],
   },
-  {
-    target: '#dashAssignmentCard',
-    title: 'Your current assignment',
-    body: "Your teacher assigns exercises here. Tap the card to open your practice session and submit your work when you're ready.",
-    position: 'bottom',
+
+  // ── Studio ─────────────────────────────────────────────────────────────────
+  studio: {
+    cta: { label: 'Check out the Library ☝️' },
+    steps: [
+      {
+        target: '#handpanWrap',
+        title: 'Play the virtual handpan',
+        body: 'Click or tap the notes on the handpan to play it. Give it a try!',
+        position: 'bottom',
+      },
+      {
+        target: '.handpan-tabs',
+        title: 'Scale options',
+        body: 'Change your handpan scale, add a custom tuning, and explore the chords available on your instrument.',
+        position: 'bottom',
+      },
+      {
+        target: '#measures',
+        title: 'Compose a phrase',
+        body: 'Select a cell, then play the handpan to record notes into it.',
+        position: 'left',
+      },
+      {
+        target: '#primaryControlsWrapper',
+        title: 'Studio settings',
+        body: 'Clear the grid, enable compose mode, change time signature, and more.',
+        position: 'bottom',
+      },
+      {
+        target: '#mainTransport-A',
+        title: 'Playback controls',
+        body: 'Adjust metronome sound, tempo, countdown, and other playback settings here.',
+        position: 'top',
+      },
+      {
+        target: 'a[data-route="library"]',
+        title: 'Next: your Library',
+        body: 'Phrases you save in the Studio live here. Click Library to explore it.',
+        position: 'bottom',
+        clickToAdvance: true,
+      },
+    ],
   },
-  {
-    target: '#dashGoalsContent',
-    title: 'Your goals',
-    body: 'Set your dream goal and a short-term focus. Your teacher can see these — it helps them tailor your lessons to where you want to go.',
-    position: 'bottom',
+
+  // ── Library ────────────────────────────────────────────────────────────────
+  library: {
+    cta: { label: 'Open the Composer ☝️' },
+    steps: [
+      {
+        target: null,
+        title: 'Your phrase library',
+        body: 'Every phrase you create in the Studio is saved here. Organize, rename, and reload them any time.',
+        position: 'center',
+      },
+      {
+        target: '#toggleComposerBtn',
+        title: 'Next: the Composer',
+        body: 'Stack multiple phrases into a full song. Click Composer to check it out.',
+        position: 'bottom',
+        clickToAdvance: true,
+      },
+    ],
   },
-  {
-    target: '#dashCoursesContent',
-    title: 'Your courses',
-    body: 'Your enrolled courses live here. Each one guides you through a structured path of lessons at your own pace.',
-    position: 'bottom',
+
+  // ── Composer ───────────────────────────────────────────────────────────────
+  composer: {
+    cta: { label: 'Open the Practice panel ☝️' },
+    steps: [
+      {
+        target: '#newCompositionBtn',
+        title: 'Create a new composition',
+        body: 'Build a composition by adding multiple phrases and arrange them into a full song. Composer is a premium feature. Upgrade to unlock.',
+        position: 'bottom',
+      },
+      {
+        target: '#toggleExercisesBtn',
+        title: 'Next: Practice',
+        body: 'Your daily exercises live in Practice. Click it to take a look.',
+        position: 'bottom',
+        clickToAdvance: true,
+      },
+    ],
   },
-  {
-    target: null,
-    title: "You're all set!",
-    body: 'Your teacher will guide you from here. Tap your assignment card any time to start playing.',
-    position: 'center',
+
+  // ── Practice ───────────────────────────────────────────────────────────────
+  practice: {
+    cta: { label: 'Open the Courses panel ☝️' },
+    steps: [
+      {
+        target: '#exercisesSidebar',
+        title: '👈 Your practice plan',
+        body: "These are the exercises you're working on every day. Tap one to load it into the Studio.",
+        position: 'center',
+      },
+      {
+        target: '#toggleSidebarBtn',
+        title: 'Next: Courses',
+        body: 'Structured learning paths to improve your playing. Click Courses to explore them.',
+        position: 'bottom',
+        clickToAdvance: true,
+      },
+    ],
   },
-];
+
+  // ── Courses ────────────────────────────────────────────────────────────────
+  courses: {
+    cta: { label: 'Browse courses →' },
+    steps: [
+      {
+        target: null,
+        title: 'Your course library',
+        body: 'Courses are structured paths of lessons. Each lesson includes a phrase you can load straight into the Studio.',
+        position: 'center',
+      },
+      {
+        target: '.browse-icon-btn', // marketplace / browse area
+        title: 'Marketplace',
+        body: 'Find a free course and tap Get Course to add it to your dashboard. Give it a try!',
+        position: 'bottom',
+        tryme: true,
+      },
+      {
+        target: '#__TBD__', // lesson list
+        title: 'Open a lesson',
+        body: 'Tap any lesson to see its content and load its phrase into the Studio.',
+        position: 'bottom',
+        tryme: true,
+      },
+      {
+        target: '#__TBD__', // mark-complete button
+        title: 'Mark it complete',
+        body: "When you're done with a lesson, mark it complete to track your progress.",
+        position: 'top',
+        tryme: true,
+      },
+      {
+        target: 'a[data-route="community"]',
+        title: 'Next: Community',
+        body: 'Connect with other handpan players. Click Community to check it out.',
+        position: 'bottom',
+        clickToAdvance: true,
+      },
+    ],
+  },
+
+  // ── Community ──────────────────────────────────────────────────────────────
+  community: {
+    cta: { label: 'Go to my Dashboard →' },
+    steps: [
+      {
+        target: '#__TBD__', // community feed / root
+        title: 'The Panafide community',
+        body: 'Share music, connect with other handpan players, and grow together.',
+        position: 'bottom',
+      },
+      {
+        target: null,
+        title: "You're all set!",
+        body: 'Your teacher will guide you from here. Come back to your Dashboard any time to see your latest assignment.',
+        position: 'center',
+      },
+    ],
+  },
+
+};
+
+// ── Public API ────────────────────────────────────────────────────────────────
+
+export function hasSeen(sectionKey) {
+  return !!localStorage.getItem(TOUR_KEYS[sectionKey]);
+}
+
+export function startTour(sectionKey = 'dashboard') {
+  if (active) return;
+  const tour = TOURS[sectionKey];
+  if (!tour) return;
+  activeSectionKey = sectionKey;
+  activeCta = tour.cta ?? null;
+  active = true;
+  currentStep = 0;
+  activeSteps = tour.steps.filter(s => !s.target || document.querySelector(s.target));
+  if (activeSteps.length === 0) { markSeen(sectionKey); return; }
+  buildDOM();
+  showStep(0);
+}
+
+export function resetTour(sectionKey) {
+  if (sectionKey) {
+    localStorage.removeItem(TOUR_KEYS[sectionKey]);
+  } else {
+    Object.values(TOUR_KEYS).forEach(k => localStorage.removeItem(k));
+  }
+}
 
 // ── State ─────────────────────────────────────────────────────────────────────
 
-let activeSteps = [];   // filtered copy of STEPS (only those whose targets exist)
+let activeSectionKey = null;
+let activeCta = null;
+let activeSteps = [];
 let currentStep = 0;
 let overlayEl = null;
 let ringEl = null;
 let tooltipEl = null;
 let active = false;
 let pendingRaf = null;
-
-// ── Init ──────────────────────────────────────────────────────────────────────
-
-export function initTour() {
-  // Tour is triggered by dashboard.js after AUTH_LOGIN + loadDashboard() complete.
-}
-
-// ── Public API ────────────────────────────────────────────────────────────────
-
-export function startTour() {
-  if (active) return;
-  active = true;
-  currentStep = 0;
-  // Filter once at start — steps whose target isn't in the DOM are omitted.
-  // Back/Next navigate a flat valid list with no runtime skipping.
-  activeSteps = STEPS.filter(s => !s.target || document.querySelector(s.target));
-  buildDOM();
-  showStep(0);
-}
-
-export function resetTour() {
-  localStorage.removeItem(TOUR_KEY);
-}
+let advanceCleanup = null;
 
 // ── DOM construction ──────────────────────────────────────────────────────────
 
@@ -105,33 +318,74 @@ function showStep(index) {
   const isLast = index === activeSteps.length - 1;
   const total = activeSteps.length;
 
+  // Clean up any previous clickToAdvance listener
+  if (advanceCleanup) { advanceCleanup(); advanceCleanup = null; }
+
   const targetEl = step.target ? document.querySelector(step.target) : null;
 
-  // Spotlight ring — ring shadow dims outside the target; overlay dims for center steps
-  if (targetEl) {
+  // Overlay + ring
+  if (step.clickToAdvance && targetEl) {
+    // Passthrough overlay so the user can actually click the target
     overlayEl.classList.remove('tour-overlay--dim');
+    overlayEl.classList.add('tour-overlay--passthrough');
+    ringEl.hidden = false;
+    positionRing(targetEl);
+    // Complete this section's tour when they click the highlighted element
+    const handler = () => completeTour();
+    targetEl.addEventListener('click', handler, { once: true });
+    advanceCleanup = () => targetEl.removeEventListener('click', handler);
+  } else if (targetEl) {
+    overlayEl.classList.remove('tour-overlay--dim', 'tour-overlay--passthrough');
     ringEl.hidden = false;
     positionRing(targetEl);
   } else {
     overlayEl.classList.add('tour-overlay--dim');
+    overlayEl.classList.remove('tour-overlay--passthrough');
     ringEl.hidden = true;
   }
 
+  // On the last card, the CTA replaces the Skip button
+  const ctaHtml = (isLast && activeCta)
+    ? `<button class="tour-btn-cta" id="tourCtaBtn">${activeCta.label}</button>`
+    : `<button class="tour-btn-skip" id="tourSkipBtn">${step.clickToAdvance ? 'Skip tour' : 'Skip'}</button>`;
+
   // Tooltip content
-  tooltipEl.innerHTML = `
-    <div class="tour-step-count">${index + 1} / ${total}</div>
-    <h3 class="tour-title">${step.title}</h3>
-    <p class="tour-body">${step.body}</p>
-    <div class="tour-actions">
-      ${!isFirst
-        ? '<button class="tour-btn-back" id="tourPrevBtn">← Back</button>'
-        : '<div></div>'}
-      <div class="tour-actions-right">
-        <button class="tour-btn-skip" id="tourSkipBtn">Skip</button>
-        <button class="tour-btn-next" id="tourNextBtn">${isLast ? 'Get started' : 'Next →'}</button>
+  if (step.clickToAdvance) {
+    tooltipEl.innerHTML = `
+      <div class="tour-step-count">${index + 1} / ${total}</div>
+      <h3 class="tour-title">${step.title}</h3>
+      <p class="tour-body">${step.body}</p>
+      <div class="tour-actions">
+        ${!isFirst ? '<button class="tour-btn-back" id="tourPrevBtn">← Back</button>' : '<div></div>'}
+        <div class="tour-actions-right">${ctaHtml}</div>
       </div>
-    </div>
-  `;
+    `;
+  } else if (step.tryme) {
+    tooltipEl.innerHTML = `
+      <div class="tour-step-count">${index + 1} / ${total}</div>
+      <h3 class="tour-title">${step.title}</h3>
+      <p class="tour-body">${step.body}</p>
+      <div class="tour-actions">
+        <div></div>
+        <div class="tour-actions-right">
+          <button class="tour-btn-next" id="tourNextBtn">Got it →</button>
+        </div>
+      </div>
+    `;
+  } else {
+    tooltipEl.innerHTML = `
+      <div class="tour-step-count">${index + 1} / ${total}</div>
+      <h3 class="tour-title">${step.title}</h3>
+      <p class="tour-body">${step.body}</p>
+      <div class="tour-actions">
+        ${!isFirst ? '<button class="tour-btn-back" id="tourPrevBtn">← Back</button>' : '<div></div>'}
+        <div class="tour-actions-right">
+          ${ctaHtml}
+          ${!isLast ? '<button class="tour-btn-next" id="tourNextBtn">Next →</button>' : ''}
+        </div>
+      </div>
+    `;
+  }
 
   positionTooltip(targetEl, step.position);
 
@@ -142,6 +396,7 @@ function showStep(index) {
     if (index > 0) showStep(index - 1);
   });
   document.getElementById('tourSkipBtn')?.addEventListener('click', completeTour);
+  document.getElementById('tourCtaBtn')?.addEventListener('click', completeTour);
 }
 
 // ── Positioning ───────────────────────────────────────────────────────────────
@@ -205,13 +460,57 @@ function scheduleRaf(fn) {
 
 // ── Completion ────────────────────────────────────────────────────────────────
 
+function markSeen(sectionKey) {
+  localStorage.setItem(TOUR_KEYS[sectionKey], '1');
+}
+
 function completeTour() {
-  localStorage.setItem(TOUR_KEY, '1');
+  markSeen(activeSectionKey);
   active = false;
+  activeSectionKey = null;
+  activeCta = null;
+  if (advanceCleanup) { advanceCleanup(); advanceCleanup = null; }
   if (pendingRaf) { cancelAnimationFrame(pendingRaf); pendingRaf = null; }
   overlayEl?.remove();
   ringEl?.remove();
   tooltipEl?.remove();
   overlayEl = ringEl = tooltipEl = null;
   activeSteps = [];
+}
+
+// ── Route → tour key map ──────────────────────────────────────────────────────
+
+const ROUTE_TOUR = {
+  studio:    'studio',
+  library:   'library',
+  compose:   'composer',
+  practice:  'practice',
+  community: 'community',
+  // dashboard is triggered by dashboard.js after loadDashboard() completes
+  // courses is triggered separately (sidebar, not a hash route)
+};
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+
+export function initTour() {
+  // Hash-route sections
+  window.addEventListener('routeChanged', e => {
+    const sectionKey = ROUTE_TOUR[e.detail.route];
+    if (sectionKey && !hasSeen(sectionKey)) startTour(sectionKey);
+  });
+
+  // Sidebar-panel sections (no route change — listen for button clicks instead)
+  const sidebarTours = [
+    { btnId: 'toggleComposerBtn',  sectionKey: 'composer' },
+    { btnId: 'toggleExercisesBtn', sectionKey: 'practice' },
+    { btnId: 'toggleSidebarBtn',   sectionKey: 'courses'  },
+  ];
+  sidebarTours.forEach(({ btnId, sectionKey }) => {
+    document.getElementById(btnId)?.addEventListener('click', () => {
+      if (!hasSeen(sectionKey)) {
+        // Small delay so the panel finishes opening before we spotlight elements inside it
+        setTimeout(() => startTour(sectionKey), 300);
+      }
+    });
+  });
 }
