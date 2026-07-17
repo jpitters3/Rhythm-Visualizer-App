@@ -742,7 +742,7 @@ body.dark .icon-btn.active {
   gap: 8px;
   max-height: 220px;
   overflow-y: auto;
-  padding: 2px;
+  padding: 18px;
   justify-content: center;
 }
 

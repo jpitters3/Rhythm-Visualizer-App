@@ -74,7 +74,7 @@
 /* Compact size for handpan drawer modals */
 .hp-drawer-modal {
   max-width: 400px;
-  padding: 0;
+  padding: 12px;
 }
 
 #chordDrawer.modal-overlay {
@@ -696,6 +696,13 @@ button#subdivKeepBtn {
   .course-modal {
     max-height: 90dvh;
     overflow-y: auto;
+  }
+
+  #handpanSettingsDrawer,
+  #chordDrawer,
+  #customizeDrawer {
+    align-items: flex-start;
+    padding-top: 70px;
   }
 
 
