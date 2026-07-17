@@ -24,7 +24,7 @@
   box-shadow:
     0 0 0 3px var(--accent),
     0 0 0 6px rgba(var(--accent-rgb), 0.25),
-    0 0 0 9999px rgba(0, 0, 0, 0.65);
+    0 0 0 9999px rgba(0, 0, 0, 0.3);
   z-index: 9001;
   pointer-events: none;
   transition: top 0.25s ease, left 0.25s ease, width 0.25s ease, height 0.25s ease;

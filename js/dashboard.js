@@ -6,6 +6,7 @@ import { navigate } from './router.js';
 import { escapeHtml } from './utils.js';
 import { Bus, BUS_EVENT } from './bus.js';
 import { startTour, TOUR_KEY } from './onboarding-tour.js';
+import { togglePracticeSidebar } from './practice.js';
 
 // ── Module state ──────────────────────────────────────────────────────────────
 
@@ -269,7 +270,7 @@ function renderPractice(items) {
   }).join('');
 
   el.querySelectorAll('.dash-list-item').forEach(row => {
-    row.addEventListener('click', () => navigate('practice'));
+    row.addEventListener('click', () => togglePracticeSidebar());
   });
 }
 

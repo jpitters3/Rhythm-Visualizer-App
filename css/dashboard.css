@@ -244,7 +244,6 @@
 }
 .dash-goal-card--empty {
   border-style: dashed;
-  border-color: rgba(255,255,255,0.1);
 }
 
 /* ── Two-column row ───────────────────────────────────── */
