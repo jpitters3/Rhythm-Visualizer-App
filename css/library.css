@@ -622,7 +622,7 @@ body.dark .library-card:hover {
 
 .clip-play-btn:hover,
 .clip-play-btn.playing {
-  background: var(--btn-active, rgba(99,102,241,0.15));
+  background: var(--btn-active, rgba(var(--accent-rgb),0.15));
   border-color: var(--text-secondary);
 }
 

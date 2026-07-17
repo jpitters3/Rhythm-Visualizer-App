@@ -1,4 +1,5 @@
 import { getScale } from './state.js';
+import { ACCENT } from './brand.js';
 
 function effectiveHand(index, hands, subdivision) {
   if (hands[index]) return hands[index];
@@ -28,7 +29,7 @@ function renderPlayIconThumbnail(canvas) {
   const cx = W / 2, cy = H / 2, r = Math.min(W, H) * 0.28;
   ctx.beginPath();
   ctx.arc(cx, cy, r, 0, Math.PI * 2);
-  ctx.fillStyle = isDark ? '#6366f1' : '#4f46e5';
+  ctx.fillStyle = ACCENT;
   ctx.globalAlpha = 0.18;
   ctx.fill();
   ctx.globalAlpha = 1;
@@ -39,7 +40,7 @@ function renderPlayIconThumbnail(canvas) {
   ctx.lineTo(cx - ps * 0.6, cy + ps);
   ctx.lineTo(cx + ps, cy);
   ctx.closePath();
-  ctx.fillStyle = isDark ? '#6366f1' : '#4f46e5';
+  ctx.fillStyle = ACCENT;
   ctx.globalAlpha = 0.85;
   ctx.fill();
   ctx.globalAlpha = 1;
@@ -80,8 +81,8 @@ export function renderThumbnail(canvas, patternData) {
   const subColors = [
     isDark ? 'rgb(30,121,232)' : 'rgb(2,68,150)',
     isDark ? 'rgb(30,121,232)' : 'rgb(2,68,150)',
-    isDark ? '#fd0380' : '#610a42',
-    isDark ? '#fd0380' : '#610a42',
+    isDark ? '#fd0380' : ACCENT,
+    isDark ? '#fd0380' : ACCENT,
   ];
 
   for (let i = 0; i < stepsToRender; i++) {
@@ -95,7 +96,7 @@ export function renderThumbnail(canvas, patternData) {
     const hasNote = isChord ? label.some(l => l && l !== '') : (label && label !== '');
     const hand = effectiveHand(i, hands, subdivision);
     const fillColor = hand === 'R'
-      ? (isDark ? '#fd0380' : '#610a42')
+      ? (isDark ? '#fd0380' : ACCENT)
       : (isDark ? 'rgb(30,121,232)' : 'rgb(2,68,150)');
 
     if (isChord && hasNote) {

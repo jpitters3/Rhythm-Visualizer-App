@@ -32,8 +32,8 @@
 }
 
 .cp-row-active {
-  border-color: var(--accent, #818cf8);
-  background: color-mix(in srgb, var(--accent, #818cf8) 6%, var(--panel));
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 6%, var(--panel));
 }
 
 .cp-row-main {
@@ -54,7 +54,7 @@
 }
 
 .cp-row-active .cp-dot {
-  background: var(--accent, #818cf8);
+  background: var(--accent);
 }
 
 .cp-row-info {
@@ -104,12 +104,12 @@
 }
 
 .cp-use-btn {
-  border-color: var(--accent, #818cf8);
-  color: var(--accent, #818cf8);
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
 .cp-use-btn:hover {
-  background: var(--accent, #818cf8);
+  background: var(--accent);
   color: #fff;
 }
 
@@ -122,8 +122,8 @@
 .cp-active-badge {
   font-size: 11px;
   font-weight: 600;
-  color: var(--accent, #818cf8);
-  background: color-mix(in srgb, var(--accent, #818cf8) 14%, transparent);
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
   padding: 4px 9px;
   border-radius: 6px;
   white-space: nowrap;
@@ -142,7 +142,7 @@
 }
 
 .cp-text-input:focus {
-  outline: 2px solid var(--accent, #818cf8);
+  outline: 2px solid var(--accent);
   outline-offset: 0;
   border-color: transparent;
 }

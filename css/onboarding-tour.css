@@ -22,8 +22,8 @@
   border-radius: 14px;
   /* Glowing accent ring + outer shadow that darkens everything outside */
   box-shadow:
-    0 0 0 3px var(--accent, #6366f1),
-    0 0 0 6px rgba(99, 102, 241, 0.25),
+    0 0 0 3px var(--accent),
+    0 0 0 6px rgba(var(--accent-rgb), 0.25),
     0 0 0 9999px rgba(0, 0, 0, 0.65);
   z-index: 9001;
   pointer-events: none;
@@ -35,7 +35,7 @@
   position: fixed;
   width: 320px;
   background: var(--panel, #1e1e2e);
-  border: 1px solid rgba(99, 102, 241, 0.3);
+  border: 1px solid rgba(var(--accent-rgb), 0.3);
   border-radius: 16px;
   padding: 22px 22px 18px;
   z-index: 9002;
@@ -49,7 +49,7 @@
 .tour-step-count {
   font-size: 11px;
   font-weight: 600;
-  color: var(--accent, #6366f1);
+  color: var(--accent);
   text-transform: uppercase;
   letter-spacing: 0.08em;
 }
@@ -112,7 +112,7 @@
 
 .tour-btn-next {
   padding: 8px 18px;
-  background: var(--accent, #6366f1);
+  background: var(--accent);
   border: none;
   border-radius: 8px;
   color: #fff;
@@ -127,7 +127,7 @@
 
 .tour-btn-cta {
   padding: 8px 18px;
-  background: var(--accent, #6366f1);
+  background: var(--accent);
   border: none;
   border-radius: 8px;
   color: #fff;
@@ -229,7 +229,7 @@
 }
 
 .dash-cta-primary {
-  background: var(--accent, #6366f1);
+  background: var(--accent);
   border: none;
   border-radius: 10px;
   color: #fff;
@@ -253,6 +253,6 @@
   transition: border-color 0.15s, color 0.15s;
 }
 .dash-cta-secondary:hover {
-  border-color: var(--accent, #6366f1);
+  border-color: var(--accent);
   color: var(--text);
 }

@@ -318,13 +318,13 @@
 }
 
 .exercise-plan-btn:hover {
-  border-color: var(--accent, #6366f1);
-  color: var(--accent, #6366f1);
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
 .exercise-plan-btn.in-plan {
-  border-color: var(--accent, #6366f1);
-  background: var(--accent, #6366f1);
+  border-color: var(--accent);
+  background: var(--accent);
   color: #fff;
   font-size: 13px;
 }

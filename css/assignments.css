@@ -702,9 +702,9 @@ body.dark .asgn-quiz-question {
   font-size: 11px;
   padding: 2px 8px;
   border-radius: 12px;
-  background: rgba(99,102,241,0.12);
+  background: rgba(var(--accent-rgb),0.12);
   color: var(--text);
-  border: 1px solid rgba(99,102,241,0.25);
+  border: 1px solid rgba(var(--accent-rgb),0.25);
 }
 
 /* ===== COMPOSITION REFERENCE — student inbox ===== */
@@ -765,9 +765,9 @@ body.dark .asgn-quiz-question {
   align-self: flex-start;
   padding: 6px 14px;
   border-radius: 7px;
-  border: 1px solid rgba(99,102,241,0.4);
-  background: rgba(99,102,241,0.08);
-  color: #818cf8;
+  border: 1px solid rgba(var(--accent-rgb),0.4);
+  background: rgba(var(--accent-rgb),0.08);
+  color: var(--accent-light);
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
@@ -775,8 +775,8 @@ body.dark .asgn-quiz-question {
 }
 
 .si-comp-load-btn:hover {
-  background: rgba(99,102,241,0.18);
-  border-color: #6366f1;
+  background: rgba(var(--accent-rgb),0.18);
+  border-color: var(--accent);
   color: #a5b4fc;
 }
 
@@ -1346,7 +1346,7 @@ body.dark .student-inbox-item:hover {
   letter-spacing: 0.04em;
 }
 
-.student-inbox-status-pill.pending     { background: rgba(var(--accent-rgb, 99,102,241), 0.12); color: var(--accent, #6366f1); }
+.student-inbox-status-pill.pending     { background: rgba(var(--accent-rgb), 0.12); color: var(--accent); }
 .student-inbox-status-pill.in_progress { background: rgba(245, 158, 11, 0.12); color: #d97706; }
 .student-inbox-status-pill.submitted   { background: rgba(59, 130, 246, 0.12); color: #2563eb; }
 .student-inbox-status-pill.reviewed    { background: rgba(34, 197, 94, 0.12);  color: #16a34a; }
@@ -1374,7 +1374,7 @@ body.dark .student-inbox-item:hover {
   border: none;
   cursor: pointer;
   font-size: 14px;
-  color: var(--accent, #6366f1);
+  color: var(--accent);
   font-family: inherit;
   padding: 4px 8px;
   border-radius: 6px;
@@ -1496,7 +1496,7 @@ body.dark .student-inbox-item-block {
   width: 18px;
   height: 18px;
   cursor: pointer;
-  accent-color: var(--accent, #6366f1);
+  accent-color: var(--accent);
 }
 
 /* Quiz */
@@ -1537,7 +1537,7 @@ body.dark .student-inbox-quiz-option:hover {
 }
 
 .student-inbox-quiz-option input[type="radio"] {
-  accent-color: var(--accent, #6366f1);
+  accent-color: var(--accent);
   width: 15px;
   height: 15px;
   flex-shrink: 0;
@@ -1578,7 +1578,7 @@ body.dark .student-inbox-quiz-option:hover {
 
 .student-inbox-url-input:focus {
   outline: none;
-  border-color: var(--accent, #6366f1);
+  border-color: var(--accent);
 }
 
 body.dark .student-inbox-url-input {
@@ -1785,7 +1785,7 @@ body.dark .notif-item:hover {
 }
 
 .notif-item.unread {
-  background: rgba(var(--accent-rgb, 99,102,241), 0.05);
+  background: rgba(var(--accent-rgb), 0.05);
 }
 
 .notif-item.unread::before {
@@ -1800,7 +1800,7 @@ body.dark .notif-item:hover {
 }
 
 .notif-item.unread:hover {
-  background: rgba(var(--accent-rgb, 99,102,241), 0.09);
+  background: rgba(var(--accent-rgb), 0.09);
 }
 
 .notif-item-title {

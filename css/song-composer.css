@@ -189,7 +189,7 @@ body.dark .composer-save-status.saved {
   transition: background 0.1s;
   border-radius: 0;
   position: relative;
-  border-top: 1px solid rgba(99, 102, 241, 0.12);
+  border-top: 1px solid rgba(var(--accent-rgb), 0.12);
 }
 
 .section-item:hover {
@@ -272,13 +272,13 @@ body.dark .composer-save-status.saved {
   font-weight: inherit;
   color: var(--text);
   background: var(--input-bg, rgba(255,255,255,0.08));
-  border: 1px solid var(--c-accent, #6366f1);
+  border: 1px solid var(--c-accent, var(--accent));
   border-radius: 4px;
   padding: 1px 5px;
   width: 100%;
   box-sizing: border-box;
   outline: none;
-  box-shadow: 0 0 0 2px rgba(99,102,241,0.15);
+  box-shadow: 0 0 0 2px rgba(var(--accent-rgb),0.15);
   display: block;
 }
 
@@ -286,7 +286,7 @@ body.dark .composer-save-status.saved {
   position: fixed;
   z-index: 9999;
   background: var(--panel, #1e1e2e);
-  border: 1px solid var(--c-border, rgba(99,102,241,0.3));
+  border: 1px solid var(--c-border, rgba(var(--accent-rgb),0.3));
   border-radius: 6px;
   box-shadow: 0 4px 16px rgba(0,0,0,0.3);
   overflow-y: auto;
@@ -302,7 +302,7 @@ body.dark .composer-save-status.saved {
 }
 
 .section-label-option:hover {
-  background: rgba(99,102,241,0.15);
+  background: rgba(var(--accent-rgb),0.15);
   color: #a5b4fc;
 }
 
@@ -360,7 +360,7 @@ body.dark .composer-save-status.saved {
 /* Add section row */
 .add-section-rows {
   margin-top: 10px;
-  border-top: 4px solid rgba(99, 102, 241, 0.22);
+  border-top: 4px solid rgba(var(--accent-rgb), 0.22);
   padding: 8px 16px 4px 20px;
   display: flex;
   flex-direction: column;
@@ -825,113 +825,113 @@ body.dark .composer-save-status.saved {
    ============================================================ */
 
 body:not(.dark) .composer-sidebar .sidebar-header h3 {
-  background: linear-gradient(135deg, #7b1e42, #4f46e5);
+  background: linear-gradient(135deg, var(--accent), var(--accent-light));
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
 body:not(.dark) .composer-new-btn {
-  background: linear-gradient(135deg, #7b1e42 0%, #6366f1 60%, #3b82f6 100%);
+  background: linear-gradient(135deg, var(--accent-dark) 0%, var(--accent-light) 100%);
   border-color: transparent;
   color: #fff;
   font-weight: 600;
 }
 
 body:not(.dark) .composer-new-btn:hover {
-  background: linear-gradient(135deg, #6b1535 0%, #4f46e5 60%, #2563eb 100%);
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-light) 100%);
   opacity: 1;
 }
 
 body:not(.dark) .composer-toolbar {
-  border-bottom-color: rgba(99, 102, 241, 0.18);
+  border-bottom-color: rgba(var(--accent-rgb), 0.18);
 }
 
 body:not(.dark) .composition-item {
-  border-bottom-color: rgba(99, 102, 241, 0.15);
+  border-bottom-color: rgba(var(--accent-rgb), 0.15);
 }
 
 body:not(.dark) .composition-header:hover {
-  background: rgba(99, 102, 241, 0.07);
+  background: rgba(var(--accent-rgb), 0.07);
 }
 
 body:not(.dark) .composition-sections {
-  background: rgba(99, 102, 241, 0.04);
-  border-top: 1px solid rgba(99, 102, 241, 0.12);
+  background: rgba(var(--accent-rgb), 0.04);
+  border-top: 1px solid rgba(var(--accent-rgb), 0.12);
 }
 
 body:not(.dark) .section-item + .section-item {
-  border-top-color: rgba(99, 102, 241, 0.22);
+  border-top-color: rgba(var(--accent-rgb), 0.22);
 }
 
 body:not(.dark) .section-item:hover {
-  background: rgba(99, 102, 241, 0.07);
+  background: rgba(var(--accent-rgb), 0.07);
 }
 
 
 
 body:not(.dark) .add-section-btn {
-  border-color: rgba(99, 102, 241, 0.30);
-  color: #4f46e5;
+  border-color: rgba(var(--accent-rgb), 0.30);
+  color: var(--accent);
 }
 
 body:not(.dark) .add-section-btn:hover {
-  border-color: #6366f1;
+  border-color: var(--accent);
   color: #fff;
-  background: #6366f1;
+  background: var(--accent);
 }
 
 body:not(.dark) .composer-playbar {
-  background: linear-gradient(135deg, #fdf2f8 0%, #eef2ff 100%);
-  border-top-color: rgba(99, 102, 241, 0.20);
+  background: linear-gradient(135deg, #fdf2f8 0%, #fce8f3 100%);
+  border-top-color: rgba(var(--accent-rgb), 0.20);
 }
 
 body:not(.dark) .playbar-controls button {
-  border-color: rgba(99, 102, 241, 0.30);
-  color: #4f46e5;
+  border-color: rgba(var(--accent-rgb), 0.30);
+  color: var(--accent);
 }
 
 body:not(.dark) .playbar-controls button:hover {
-  border-color: #6366f1;
+  border-color: var(--accent);
   color: #fff;
-  background: #6366f1;
+  background: var(--accent);
 }
 
 body:not(.dark) .playbar-seek {
-  accent-color: #6366f1;
+  accent-color: var(--accent);
 }
 
 body:not(.dark) .trim-btn {
-  border-color: rgba(99, 102, 241, 0.30);
-  color: #4f46e5;
+  border-color: rgba(var(--accent-rgb), 0.30);
+  color: var(--accent);
 }
 
 body:not(.dark) .trim-btn:hover {
-  border-color: #6366f1;
+  border-color: var(--accent);
   color: #fff;
-  background: #6366f1;
+  background: var(--accent);
 }
 
 body:not(.dark) .trim-btn-primary {
-  border-color: #6366f1;
-  color: #6366f1;
+  border-color: var(--accent);
+  color: var(--accent);
   font-weight: 600;
 }
 
 body:not(.dark) .trim-btn-primary:hover {
-  background: #6366f1;
+  background: var(--accent);
   color: #fff;
 }
 
 body:not(.dark) .note-editor textarea:focus {
-  border-color: #6366f1;
-  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.15);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(var(--accent-rgb), 0.15);
 }
 
 body:not(.dark) .phrase-picker-item:hover {
-  background: rgba(99, 102, 241, 0.07);
+  background: rgba(var(--accent-rgb), 0.07);
 }
 
 body:not(.dark) .composer-context-menu button:hover {
-  background: rgba(99, 102, 241, 0.08);
+  background: rgba(var(--accent-rgb), 0.08);
 }

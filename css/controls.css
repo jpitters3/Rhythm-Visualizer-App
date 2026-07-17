@@ -100,7 +100,7 @@ select {
 
 .bpm-control input[type=range] {
   width: 140px;
-  accent-color: var(--accent-glow, #6366f1);
+  accent-color: var(--accent-glow, var(--accent));
 }
 
 /* Dropdown Container */
@@ -147,7 +147,7 @@ select {
 
 .ts-select:focus {
   outline: none;
-  color: #6366f1;
+  color: var(--accent);
 }
 
 .ts-select option {
@@ -199,48 +199,48 @@ select {
 .transport-group .t-play-btn:hover,
 .transport-group .t-metro-btn:hover,
 .transport-group .t-subdiv-btn:hover {
-  border-color: var(--accent-glow, #818cf8);
-  color: var(--accent-glow, #818cf8);
+  border-color: var(--accent-glow, var(--accent-light));
+  color: var(--accent-glow, var(--accent-light));
 }
 
 .transport-group .t-play-btn.active {
-  background: rgba(99, 102, 241, 0.12);
-  border-color: var(--accent-glow, #818cf8);
-  color: var(--accent-glow, #818cf8);
+  background: rgba(var(--accent-rgb), 0.12);
+  border-color: var(--accent-glow, var(--accent-light));
+  color: var(--accent-glow, var(--accent-light));
 }
 
 .transport-group .t-subdiv-btn.active {
-  background: rgba(99, 102, 241, 0.12);
-  border-color: var(--accent-glow, #818cf8);
-  color: var(--accent-glow, #818cf8);
+  background: rgba(var(--accent-rgb), 0.12);
+  border-color: var(--accent-glow, var(--accent-light));
+  color: var(--accent-glow, var(--accent-light));
 }
 
 /* Light mode overrides */
 body:not(.dark) .transport-group .t-play-btn,
 body:not(.dark) .transport-group .t-metro-btn,
 body:not(.dark) .transport-group .t-subdiv-btn {
-  border-color: rgba(99, 102, 241, 0.25);
-  color: #4f46e5;
+  border-color: rgba(var(--accent-rgb), 0.25);
+  color: var(--accent-dark);
 }
 
 body:not(.dark) .transport-group .t-play-btn:hover,
 body:not(.dark) .transport-group .t-metro-btn:hover,
 body:not(.dark) .transport-group .t-subdiv-btn:hover {
-  border-color: #6366f1;
+  border-color: var(--accent);
   color: #fff;
-  background: #6366f1;
+  background: var(--accent);
 }
 
 body:not(.dark) .transport-group .t-play-btn.active {
-  background: rgba(99, 102, 241, 0.12);
-  border-color: #6366f1;
-  color: #4f46e5;
+  background: rgba(var(--accent-rgb), 0.12);
+  border-color: var(--accent);
+  color: var(--accent-dark);
 }
 
 body:not(.dark) .transport-group .t-subdiv-btn.active {
-  background: rgba(99, 102, 241, 0.12);
-  border-color: #6366f1;
-  color: #4f46e5;
+  background: rgba(var(--accent-rgb), 0.12);
+  border-color: var(--accent);
+  color: var(--accent-dark);
 }
 
 /* --- BPM control: refined card style --- */
@@ -258,7 +258,7 @@ body:not(.dark) .transport-group .t-subdiv-btn.active {
 }
 
 body:not(.dark) .bpm-control {
-  border-color: rgba(99, 102, 241, 0.25);
+  border-color: rgba(var(--accent-rgb), 0.25);
 }
 
 .bpm-control label,
@@ -292,7 +292,7 @@ body:not(.dark) .bpm-control {
 }
 .t-bpm-num:focus {
   outline: none;
-  color: var(--accent-glow, #818cf8);
+  color: var(--accent-glow, var(--accent-light));
 }
 
 /* Tap button */
@@ -309,26 +309,26 @@ body:not(.dark) .bpm-control {
 }
 
 .transport-group .t-tap-btn:hover {
-  border-color: var(--accent-glow, #818cf8);
-  color: var(--accent-glow, #818cf8);
+  border-color: var(--accent-glow, var(--accent-light));
+  color: var(--accent-glow, var(--accent-light));
 }
 
 .transport-group .t-tap-btn.tapping {
-  background: rgba(99, 102, 241, 0.18);
-  border-color: var(--accent-glow, #818cf8);
-  color: var(--accent-glow, #818cf8);
+  background: rgba(var(--accent-rgb), 0.18);
+  border-color: var(--accent-glow, var(--accent-light));
+  color: var(--accent-glow, var(--accent-light));
 }
 
 body:not(.dark) .transport-group .t-tap-btn {
-  border-color: rgba(99, 102, 241, 0.25);
-  color: #4f46e5;
+  border-color: rgba(var(--accent-rgb), 0.25);
+  color: var(--accent-dark);
 }
 
 body:not(.dark) .transport-group .t-tap-btn:hover,
 body:not(.dark) .transport-group .t-tap-btn.tapping {
-  border-color: #6366f1;
+  border-color: var(--accent);
   color: #fff;
-  background: #6366f1;
+  background: var(--accent);
 }
 
 

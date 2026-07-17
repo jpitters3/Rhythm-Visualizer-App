@@ -60,7 +60,7 @@
 
 #autoDetectBtn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 5px 15px rgba(99, 102, 241, 0.4);
+  box-shadow: 0 5px 15px rgba(var(--accent-rgb), 0.4);
 }
 
 #autoDetectBtn:active {
@@ -196,8 +196,8 @@
   /* Default */
   height: 100px;
   border-radius: 50%;
-  border: 2px solid rgba(99, 102, 241, 0.6);
-  background: rgba(99, 102, 241, 0.15);
+  border: 2px solid rgba(var(--accent-rgb), 0.6);
+  background: rgba(var(--accent-rgb), 0.15);
   cursor: grab;
   display: flex;
   flex-direction: column;
@@ -214,14 +214,14 @@
 }
 
 .tonefield:hover {
-  border-color: #8b5cf6;
+  border-color: var(--accent-light);
   background: rgba(139, 92, 246, 0.2);
 }
 
 .tonefield.selected {
   border-color: #fff;
-  background: rgba(99, 102, 241, 0.4);
-  box-shadow: 0 0 15px rgba(99, 102, 241, 0.5);
+  background: rgba(var(--accent-rgb), 0.4);
+  box-shadow: 0 0 15px rgba(var(--accent-rgb), 0.5);
   z-index: 10;
 }
 
@@ -450,8 +450,8 @@
   font-size: 11px;
   padding: 2px 6px;
   border-radius: 4px;
-  background: rgba(99, 102, 241, 0.2);
-  color: #818cf8;
+  background: rgba(var(--accent-rgb), 0.2);
+  color: var(--accent-light);
   text-transform: uppercase;
 }
 

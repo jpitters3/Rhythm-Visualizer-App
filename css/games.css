@@ -55,7 +55,7 @@
 
 .simon-turn-indicator.user-turn .turn-message {
   color: var(--accent-glow);
-  text-shadow: 0 0 20px rgba(99, 102, 241, 0.6);
+  text-shadow: 0 0 20px rgba(var(--accent-rgb), 0.6);
 }
 
 .simon-turn-indicator .turn-timer {

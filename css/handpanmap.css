@@ -630,7 +630,7 @@ body.dark .icon-btn.active {
   background: var(--btn-active);
   border-color: var(--primary);
   color: #fff;
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+  box-shadow: 0 4px 12px rgba(var(--accent-rgb), 0.3);
 }
 
 .tab-pane {
@@ -811,17 +811,17 @@ body.dark .chord-chip.major .chord-root {
 }
 
 .chord-chip.minor {
-  background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(139, 92, 246, 0.05));
-  border-color: rgba(99, 102, 241, 0.3);
+  background: linear-gradient(135deg, rgba(var(--accent-rgb), 0.1), rgba(139, 92, 246, 0.05));
+  border-color: rgba(var(--accent-rgb), 0.3);
 }
 
 .chord-chip.minor .chord-root {
-  color: #4f46e5;
+  color: var(--accent-dark);
   /* Indigo 600 */
 }
 
 body.dark .chord-chip.minor .chord-root {
-  color: #818cf8;
+  color: var(--accent-light);
   /* Indigo 400 */
 }
 
@@ -832,8 +832,8 @@ body.dark .chord-chip.minor .chord-root {
 
 /* Handpan Highlighting */
 .hp-dot.chord-highlight .hp-visual {
-  background-color: rgba(99, 102, 241, 0.85) !important;
-  box-shadow: 0 0 0 6px rgba(99, 102, 241, 0.35) !important;
+  background-color: rgba(var(--accent-rgb), 0.85) !important;
+  box-shadow: 0 0 0 6px rgba(var(--accent-rgb), 0.35) !important;
   transform: scale(1.1);
   transition: all 0.1s;
 }
@@ -912,7 +912,7 @@ body.dark .chord-chip.minor .chord-root {
 
 body.dark .hp-loader {
   border-color: rgba(255, 255, 255, 0.1);
-  border-left-color: #818cf8;
+  border-left-color: var(--accent-light);
 }
 
 @keyframes hp-spin {

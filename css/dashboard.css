@@ -39,8 +39,8 @@
   align-items: center;
   gap: 10px;
   padding: 10px 24px;
-  background: rgba(99, 102, 241, 0.15);
-  border-bottom: 1px solid rgba(99, 102, 241, 0.35);
+  background: rgba(var(--accent-rgb), 0.15);
+  border-bottom: 1px solid rgba(var(--accent-rgb), 0.35);
   font-size: 13px;
   color: var(--text-secondary);
   flex-shrink: 0;
@@ -52,15 +52,15 @@
   margin-left: auto;
   padding: 4px 12px;
   background: transparent;
-  border: 1px solid rgba(99, 102, 241, 0.5);
+  border: 1px solid rgba(var(--accent-rgb), 0.5);
   border-radius: 6px;
-  color: var(--accent, #6366f1);
+  color: var(--accent);
   font-size: 12px;
   cursor: pointer;
   transition: background 0.15s;
 }
 .dash-viewing-exit:hover {
-  background: rgba(99, 102, 241, 0.12);
+  background: rgba(var(--accent-rgb), 0.12);
 }
 
 /* ── Content wrapper ─────────────────────────────────── */
@@ -104,7 +104,7 @@
 .dash-section-edit-btn,
 .dash-section-link {
   font-size: 12px;
-  color: var(--accent, #6366f1);
+  color: var(--accent);
   background: transparent;
   border: none;
   cursor: pointer;
@@ -120,8 +120,8 @@
 
 /* ── Assignment Hero ──────────────────────────────────── */
 .dash-assignment-hero {
-  background: linear-gradient(135deg, rgba(99,102,241,0.12) 0%, rgba(99,102,241,0.04) 100%);
-  border: 1px solid rgba(99, 102, 241, 0.3);
+  background: linear-gradient(135deg, rgba(var(--accent-rgb),0.12) 0%, rgba(var(--accent-rgb),0.04) 100%);
+  border: 1px solid rgba(var(--accent-rgb), 0.3);
   border-radius: 14px;
   padding: 22px 24px;
   cursor: pointer;
@@ -131,8 +131,8 @@
   gap: 8px;
 }
 .dash-assignment-hero:hover {
-  border-color: rgba(99, 102, 241, 0.6);
-  box-shadow: 0 0 0 1px rgba(99, 102, 241, 0.2), 0 4px 24px rgba(99, 102, 241, 0.12);
+  border-color: rgba(var(--accent-rgb), 0.6);
+  box-shadow: 0 0 0 1px rgba(var(--accent-rgb), 0.2), 0 4px 24px rgba(var(--accent-rgb), 0.12);
 }
 .dash-assignment-badge {
   display: inline-flex;
@@ -140,7 +140,7 @@
   gap: 6px;
   font-size: 11px;
   font-weight: 600;
-  color: var(--accent, #6366f1);
+  color: var(--accent);
   text-transform: uppercase;
   letter-spacing: 0.08em;
 }
@@ -173,8 +173,8 @@
 }
 .dash-assignment-status--pending,
 .dash-assignment-status--assigned {
-  background: rgba(99, 102, 241, 0.15);
-  color: var(--accent, #6366f1);
+  background: rgba(var(--accent-rgb), 0.15);
+  color: var(--accent);
 }
 .dash-assignment-status--in_progress {
   background: rgba(251, 191, 36, 0.15);
@@ -190,7 +190,7 @@
 }
 .dash-assignment-cta {
   font-size: 13px;
-  color: var(--accent, #6366f1);
+  color: var(--accent);
   font-weight: 500;
 }
 .dash-assignment-empty {
@@ -223,7 +223,7 @@
   transition: border-color 0.15s;
 }
 .dash-goal-card:hover {
-  border-color: var(--accent, #6366f1);
+  border-color: var(--accent);
 }
 .dash-goal-label {
   font-size: 11px;
@@ -280,7 +280,7 @@
   transition: border-color 0.15s;
 }
 .dash-list-item:hover {
-  border-color: var(--accent, #6366f1);
+  border-color: var(--accent);
 }
 .dash-list-icon {
   font-size: 16px;
@@ -350,7 +350,7 @@
 }
 .dash-goals-textarea:focus {
   outline: none;
-  border-color: var(--accent, #6366f1);
+  border-color: var(--accent);
 }
 .dash-goals-modal-actions {
   display: flex;
@@ -369,7 +369,7 @@
 }
 .dash-goals-save-btn {
   padding: 8px 20px;
-  background: var(--accent, #6366f1);
+  background: var(--accent);
   border: none;
   border-radius: 8px;
   color: #fff;
@@ -395,7 +395,7 @@
 }
 .dash-signin-btn {
   padding: 10px 24px;
-  background: var(--accent, #6366f1);
+  background: var(--accent);
   border: none;
   border-radius: 10px;
   color: #fff;

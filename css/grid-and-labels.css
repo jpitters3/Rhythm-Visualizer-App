@@ -468,7 +468,7 @@ body:not(.dark) .cell.selected {
 
 /* Two colors only */
 :root {
-  --down-fill: #610a42;
+  --down-fill: var(--accent);
   /* wine red */
   --up-fill: rgb(2, 68, 150);
   /* blue */

@@ -74,8 +74,8 @@
 }
 
 .gcal-dot-ding {
-  background: rgba(97, 10, 66, 0.35);
-  border-color: var(--down-fill, #610a42);
+  background: rgba(var(--accent-rgb), 0.35);
+  border-color: var(--down-fill, var(--accent));
   width: 48px;
   height: 48px;
   font-size: 11px;

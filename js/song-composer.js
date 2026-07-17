@@ -4,6 +4,7 @@
 // and sequential playback that auto-advances after each phrase loop.
 
 import { migratePatternState } from './rhythm-core.js';
+import { ACCENT } from './brand.js';
 import { Sidepanel } from './sidepanel.js';
 import { supabase } from './supabase-client.js';
 import { currentUser, getScale } from './state.js';
@@ -383,7 +384,7 @@ const PRINT_CSS = `
   .note { font-size: 13px; font-weight: 600; min-height: 20px; display: flex; align-items: center; justify-content: center; }
   .note-multi { font-size: 11px; font-weight: 600; min-height: 20px; display: flex; align-items: center; justify-content: center; white-space: nowrap; }
   .note-empty { color: #ccc; font-size: 11px; }
-  .rh { color: #610a42; }
+  .rh { color: ${ACCENT}; }
   .lh { color: #1a55cc; }
   .section + .section { border-top: 1px dashed #ccc; padding-top: 24px; }
   @media print { body { padding: 16px; } .section + .section { border-top: none; } }

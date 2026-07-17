@@ -324,7 +324,7 @@ body.present div.present-controls {
 }
 
 .presentation-mode-select select:focus {
-  color: #6366f1;
+  color: var(--accent);
 }
 
 /* ===== MOBILE PRESENTATION FIXES ===== */
@@ -682,7 +682,7 @@ body.present .transport-container:not(#presentationControls) {
   background: rgba(150, 113, 236, 0.973);
   color: #fff;
   border-color: transparent;
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+  box-shadow: 0 4px 12px rgba(var(--accent-rgb), 0.3);
 }
 
 .dash-pill.loading::after {

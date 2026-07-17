@@ -149,7 +149,7 @@ button#subdivKeepBtn {
   padding: 16px 18px;
   border-radius: 12px;
   border: 1px solid var(--panel-border);
-  background: rgba(99, 102, 241, 0.08);
+  background: rgba(var(--accent-rgb), 0.08);
   color: var(--text);
   text-align: left;
   cursor: pointer;
@@ -157,8 +157,8 @@ button#subdivKeepBtn {
 }
 
 .subdiv-stretch-opt:hover {
-  background: rgba(99, 102, 241, 0.18);
-  border-color: rgba(99, 102, 241, 0.45);
+  background: rgba(var(--accent-rgb), 0.18);
+  border-color: rgba(var(--accent-rgb), 0.45);
 }
 
 .subdiv-stretch-opt--keep {

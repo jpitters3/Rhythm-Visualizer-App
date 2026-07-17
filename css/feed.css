@@ -48,13 +48,11 @@
   background: rgba(0, 0, 0, 0.05);
 }
 
-/* Active Tab: Indigo */
 .feed-main-tab.active {
-  background: #6366f1;
-  /* Indigo */
+  background: var(--accent);
   color: white;
   opacity: 1;
-  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.4);
+  box-shadow: 0 2px 8px rgba(var(--accent-rgb), 0.4);
 }
 
 /* --- Sub-Filters (Old Tabs) --- */
@@ -85,11 +83,10 @@
   background: rgba(0, 0, 0, 0.05);
 }
 
-/* Filter Active: Indigo Text */
 .feed-filter-tab.active {
-  color: #6366f1;
+  color: var(--accent);
   opacity: 1;
-  background: rgba(99, 102, 241, 0.1);
+  background: rgba(var(--accent-rgb), 0.1);
 }
 
 /* --- Main Views --- */
@@ -141,7 +138,7 @@
 .feed-card:hover {
   transform: translateY(-2px);
   box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
-  border-color: #6366f1;
+  border-color: var(--accent);
   /* Highlight border on hover */
 }
 
@@ -247,8 +244,7 @@
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #6366f1, #8b5cf6);
-  /* Indigo Circle (Kept) */
+  background: linear-gradient(135deg, var(--accent), var(--accent-light));
   display: flex;
   align-items: center;
   justify-content: center;
@@ -347,8 +343,7 @@
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #6366f1, #8b5cf6);
-  /* Indigo Circle */
+  background: linear-gradient(135deg, var(--accent), var(--accent-light));
   color: #fff;
   display: flex;
   align-items: center;
@@ -489,8 +484,8 @@
 
 /* Attached Pattern Card */
 .post-pattern-card {
-  background: rgba(99, 102, 241, 0.05);
-  border: 1px solid rgba(99, 102, 241, 0.2);
+  background: rgba(var(--accent-rgb), 0.05);
+  border: 1px solid rgba(var(--accent-rgb), 0.2);
   border-radius: 8px;
   padding: 10px;
   display: flex;
@@ -502,7 +497,7 @@
 }
 
 .post-pattern-card:hover {
-  background: rgba(99, 102, 241, 0.1);
+  background: rgba(var(--accent-rgb), 0.1);
 }
 
 .pp-icon {
@@ -515,7 +510,7 @@
 
 .pp-name {
   font-weight: bold;
-  color: #6366f1;
+  color: var(--accent);
 }
 
 .pp-sub {
@@ -525,7 +520,7 @@
 }
 
 .pp-play-btn {
-  background: #6366f1;
+  background: var(--accent);
   color: white;
   border: none;
   padding: 6px 12px;
@@ -690,7 +685,7 @@
 }
 
 .c-send-btn:hover {
-  color: #6366f1;
+  color: var(--accent);
   opacity: 1;
 }
 

@@ -19,7 +19,7 @@
   font-size: 24px;
   font-weight: 700;
   color: var(--text);
-  background: linear-gradient(135deg, #6366f1, #8e44ad);
+  background: linear-gradient(135deg, var(--accent), var(--accent-light));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
@@ -158,14 +158,13 @@
 }
 
 .market-btn.get {
-  background: #6366f1;
-  /* Indigo */
+  background: var(--accent);
   color: white;
 }
 
 .market-btn.get:hover {
-  background: #4f46e5;
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+  background: var(--accent-dark);
+  box-shadow: 0 4px 12px rgba(var(--accent-rgb), 0.35);
 }
 
 .market-btn.buy {

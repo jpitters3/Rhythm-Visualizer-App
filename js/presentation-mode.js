@@ -1,5 +1,6 @@
 /* ===== PRESENTATION MODE ===== */
 import { gridA, activeGrid } from './grid-context.js';
+import { ACCENT } from './brand.js';
 import { labelForStep } from './notegrid.js';
 import { addTickObserver, getPlaybackPosition, intervalMs } from './noteplayer.js';
 import { TransportRegistry } from './transport-ui.js';
@@ -742,7 +743,7 @@ function drawHighway(ctx) {
 
   // Theme Detection
   const isDark = document.body.classList.contains('dark');
-  const handRCol = isDark ? '#fd0380' : '#610a42';
+  const handRCol = isDark ? '#fd0380' : ACCENT;
   const handLCol = isDark ? 'rgb(30, 121, 232)' : 'rgb(2, 68, 150)';
 
   // Glassmorphism for Nature & Sky Mode
@@ -998,7 +999,7 @@ function drawGravity(ctx) {
 
   // Theme & Colors
   const isDark = document.body.classList.contains('dark');
-  const handRCol = isDark ? '#fd0380' : '#610a42';
+  const handRCol = isDark ? '#fd0380' : ACCENT;
   const handLCol = isDark ? 'rgb(30, 121, 232)' : 'rgb(2, 68, 150)';
   let cellBgCol = isDark ? '#222233' : '#ffffff';
   let isGlass = false;

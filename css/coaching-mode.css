@@ -25,7 +25,7 @@
 
 
 #calOptimizationModal .primary-btn.active {
-  background: linear-gradient(135deg, var(--accent-glow), #4f46e5);
+  background: linear-gradient(135deg, var(--accent-glow), var(--accent-dark));
   border: none;
   height: 50px;
   font-weight: 700;

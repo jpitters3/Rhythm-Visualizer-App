@@ -49,6 +49,13 @@ h2 {
 
 /* ===== THEME VARS ===== */
 :root {
+
+  /* ── Brand colour (wine) ── */
+  --accent:     #610a42;
+  --accent-dark: #4a0831;
+  --accent-light: #a83258;
+  --accent-rgb: 97, 10, 66;
+
   /* LIGHT MODE */
   --bg: #f9f6ef;
   --panel: #f4f1e8;
@@ -59,8 +66,8 @@ h2 {
   --cell-bg: #fffef8;
   --cell-border: #dbd5c8;
   --cell-on: #eaeaea;
-  --play-glow: rgba(97, 10, 66, 0.35);
-  --down-glow: rgba(97, 10, 66, 0.22);
+  --play-glow: rgba(var(--accent-rgb), 0.35);
+  --down-glow: rgba(var(--accent-rgb), 0.22);
   --up-glow: rgba(2, 68, 150, 0.22);
   --btn-bg: #e8e5dc;
   --btn-active: #ffd166;

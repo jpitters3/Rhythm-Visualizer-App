@@ -309,7 +309,7 @@ body.dark .stmgmt-back-btn { color: var(--accent-glow, #a78bfa); }
 .stmgmt-view-dashboard-btn {
   flex-shrink: 0;
   background: none;
-  border: 1px solid rgba(99, 102, 241, 0.4);
+  border: 1px solid rgba(var(--accent-rgb), 0.4);
   color: var(--primary);
   font-size: 12px;
   font-weight: 500;
@@ -319,7 +319,7 @@ body.dark .stmgmt-back-btn { color: var(--accent-glow, #a78bfa); }
   transition: background 0.15s, border-color 0.15s;
 }
 .stmgmt-view-dashboard-btn:hover {
-  background: rgba(99, 102, 241, 0.1);
+  background: rgba(var(--accent-rgb), 0.1);
   border-color: var(--primary);
 }
 
@@ -638,7 +638,7 @@ body.dark .stmgmt-session-add-btn:hover {
   border-radius: 6px;
 }
 .stmgmt-invite-course-row:hover { background: rgba(255,255,255,0.04); }
-.stmgmt-invite-course-checkbox { accent-color: var(--accent, #6366f1); }
+.stmgmt-invite-course-checkbox { accent-color: var(--accent); }
 .stmgmt-invite-courses-loading,
 .stmgmt-invite-courses-empty {
   font-size: 12px;
