@@ -75,11 +75,46 @@
 }
 
 /* ── Greeting ─────────────────────────────────────────── */
+.dash-greeting {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
 .dash-greeting h1 {
   font-size: 26px;
   font-weight: 700;
   color: var(--text);
   margin: 0;
+}
+
+/* Mobile-only shortcut straight into the Studio, skipping the nav menu */
+.dash-studio-btn {
+  display: none;
+  flex-shrink: 0;
+  padding: 8px 18px;
+  border-radius: 999px;
+  background: var(--btn-active);
+  color: var(--text);
+  font-weight: 600;
+  font-size: 14px;
+  text-decoration: none;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.12);
+  transition: transform 0.15s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.15s ease;
+}
+.dash-studio-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.16);
+}
+.dash-studio-btn:active {
+  transform: translateY(0) scale(0.96);
+}
+
+@media (max-width: 768px) {
+  .dash-studio-btn {
+    display: inline-flex;
+    align-items: center;
+  }
 }
 
 /* ── Sections ─────────────────────────────────────────── */
