@@ -73,8 +73,8 @@
 }
 
 @keyframes handpanBreathe {
-  from { transform: scale(1);    filter: drop-shadow(0 8px 24px rgba(0,0,0,0.12)); }
-  to   { transform: scale(1.02); filter: drop-shadow(0 14px 36px rgba(0,0,0,0.20)); }
+  from { transform: scale(1); }
+  to   { transform: scale(1.02); }
 }
 
 .handpan-wrap {
