@@ -248,6 +248,7 @@ async function openDetail(sa) {
         ?.addEventListener('click', async () => {
           const { applyPattern } = await import('./pattern-crud.js');
           inboxPanel?.close();
+          window.location.hash = '#studio';
           await applyPattern(sa.phrase_json);
         });
     } else {
@@ -509,6 +510,7 @@ async function loadCompositionInStudio(item) {
 
   const { openCompositionById } = await import('./song-composer.js');
   inboxPanel?.close();
+  window.location.hash = '#studio';
   await openCompositionById(compositionId);
 }
 
@@ -518,6 +520,7 @@ async function loadPhraseInStudio(item) {
 
   const { applyPattern } = await import('./pattern-crud.js');
   inboxPanel?.close();
+  window.location.hash = '#studio';
   await applyPattern(patternJson);
 }
 
