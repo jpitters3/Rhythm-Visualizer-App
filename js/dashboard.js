@@ -150,7 +150,7 @@ function renderAssignment(sa) {
   }
 
   const a = sa.assignments;
-  const statusLabel = { assigned: 'New', in_progress: 'In Progress', submitted: 'Submitted' }[sa.status] ?? sa.status;
+  const statusLabel = { pending: 'New', assigned: 'New', in_progress: 'In Progress', submitted: 'Submitted' }[sa.status] ?? sa.status;
   const statusClass = `dash-assignment-status--${sa.status}`;
 
   const dueStr = sa.due_date

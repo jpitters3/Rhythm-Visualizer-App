@@ -391,8 +391,10 @@ export async function initAuth() {
       }
     } catch (err) {
       console.warn('Email check failed:', err);
-      authHint.textContent = 'Unable to verify email. Please try again or check your connection.';
-      authHint.style.color = 'var(--error, #ff4444)';
+      // Edge Function unreachable (offline, CORS, ServiceWorker) — fall through
+      // to the login step. Wrong-password error will surface if they're new.
+      confirmedEmail = email;
+      showLoginStep(email);
     } finally {
       authContinueBtn.disabled = false;
       authContinueBtn.textContent = 'Continue';

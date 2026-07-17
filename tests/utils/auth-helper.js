@@ -45,6 +45,10 @@ async function loginAsTestUser(page, testUser) {
   // auth-helper.js
   await waitForPageReady(page);
 
+  // On mobile the account button lives inside the hamburger menu — open it first.
+  const mobileMenu = page.locator('#mobileMenuBtn');
+  if (await mobileMenu.isVisible()) await mobileMenu.click();
+
   // Auth Logic...
   const authBtnSelector = await page.locator('#authBtn').isVisible() ? '#authBtn' : '#accountBtn';
   const loginBtn = page.locator(authBtnSelector);

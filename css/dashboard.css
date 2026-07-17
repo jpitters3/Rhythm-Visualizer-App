@@ -147,6 +147,7 @@
   border-radius: 20px;
   font-weight: 500;
 }
+.dash-assignment-status--pending,
 .dash-assignment-status--assigned {
   background: rgba(99, 102, 241, 0.15);
   color: var(--accent, #6366f1);
