@@ -42,6 +42,13 @@ export function initDashboard() {
     if (!localStorage.getItem(TOUR_KEY)) startTour('dashboard');
   });
 
+  // Profile loads 500ms after AUTH_LOGIN — update the greeting once it arrives
+  Bus.on(BUS_EVENT.PROFILE_LOADED, () => {
+    if (viewingAsUserId) return;
+    const greetEl = document.getElementById('dashGreetName');
+    if (greetEl) greetEl.textContent = currentProfile?.first_name || currentProfile?.username || (currentUser?.email?.split('@')[0] ?? 'there');
+  });
+
   // On logout: go to the home/feature page
   Bus.on(BUS_EVENT.AUTH_LOGOUT, () => {
     navigate('home');
