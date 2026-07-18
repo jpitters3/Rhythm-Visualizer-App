@@ -52,7 +52,7 @@ const TOURS = {
         position: 'center',
       },
       {
-        target: null,
+        target: '#dashAssignmentCard',
         title: 'Your current assignment ☝️',
         body: "This is the main thing you're working on to improve your handpan game. Assignments can come from the course you're currently working on, or directly from your teacher.",
         position: 'bottom',
@@ -103,7 +103,7 @@ const TOURS = {
       },
       {
         target: '#measures',
-        title: 'Compose a phrase',
+        title: 'Compose a phrase ☝️',
         body: 'Select a cell, then play the handpan to record notes into it.',
         position: 'left',
       },
@@ -135,7 +135,7 @@ const TOURS = {
     steps: [
       {
         target: null,
-        title: 'Your phrase library',
+        title: 'Your phrase library 🔴🔵',
         body: 'Every phrase you create in the Studio is saved here. Organize, rename, and reload them any time.',
         position: 'center',
       },
@@ -162,7 +162,7 @@ const TOURS = {
       {
         target: '#toggleExercisesBtn',
         title: 'Next: Practice',
-        body: 'Your daily exercises live in Practice. Click it to take a look.',
+        body: 'Your daily exercises live in the Practice panel. Click it to take a look.',
         position: 'bottom',
         clickToAdvance: true,
       },
@@ -178,6 +178,12 @@ const TOURS = {
         title: '👈 Your practice plan',
         body: "These are the exercises you're working on every day. Tap one to load it into the Studio.",
         position: 'center',
+      },
+      {
+        target: '#browseExercisesBtn',
+        title: 'Browse exercises',
+        body: "Discover new exercises to practice to improve your game.",
+        position: 'bottom',
       },
       {
         target: '#toggleSidebarBtn',
@@ -235,8 +241,8 @@ const TOURS = {
     cta: { label: 'Go to my Dashboard →' },
     steps: [
       {
-        target: '#__TBD__', // community feed / root
-        title: 'The Panafide community',
+        target: null, // community feed / root
+        title: 'The Panafide community 👥',
         body: 'Share music, connect with other handpan players, and grow together.',
         position: 'bottom',
       },
@@ -289,7 +295,8 @@ let overlayEl = null;
 let ringEl = null;
 let tooltipEl = null;
 let active = false;
-let pendingRaf = null;
+let pendingRingRaf = null;
+let pendingTooltipRaf = null;
 let advanceCleanup = null;
 
 // ── DOM construction ──────────────────────────────────────────────────────────
@@ -403,7 +410,7 @@ function showStep(index) {
 
 function positionRing(el) {
   el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-  scheduleRaf(() => {
+  pendingRingRaf = scheduleRaf(pendingRingRaf, () => {
     const rect = el.getBoundingClientRect();
     const pad = 10;
     ringEl.style.top    = `${rect.top    - pad}px`;
@@ -417,32 +424,30 @@ function positionTooltip(targetEl, position) {
   const GAP = 18;
   const TW  = 320;
 
-  if (!targetEl || position === 'center') {
-    tooltipEl.style.cssText = 'top:50%;left:50%;transform:translate(-50%,-50%)';
-    return;
-  }
-
-  tooltipEl.style.transform = '';
-
-  scheduleRaf(() => {
-    const rect = targetEl.getBoundingClientRect();
-    const th   = tooltipEl.offsetHeight;
-    const vw   = window.innerWidth;
-    const vh   = window.innerHeight;
+  pendingTooltipRaf = scheduleRaf(pendingTooltipRaf, () => {
+    const th = tooltipEl.offsetHeight;
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
 
     let top, left;
-    if (position === 'bottom') {
-      top  = rect.bottom + GAP;
-      left = rect.left + rect.width / 2 - TW / 2;
-    } else if (position === 'top') {
-      top  = rect.top - th - GAP;
-      left = rect.left + rect.width / 2 - TW / 2;
-    } else if (position === 'right') {
-      top  = rect.top + rect.height / 2 - th / 2;
-      left = rect.right + GAP;
+    if (!targetEl || position === 'center') {
+      top  = (vh - th) / 2;
+      left = (vw - TW) / 2;
     } else {
-      top  = rect.top + rect.height / 2 - th / 2;
-      left = rect.left - TW - GAP;
+      const rect = targetEl.getBoundingClientRect();
+      if (position === 'bottom') {
+        top  = rect.bottom + GAP;
+        left = rect.left + rect.width / 2 - TW / 2;
+      } else if (position === 'top') {
+        top  = rect.top - th - GAP;
+        left = rect.left + rect.width / 2 - TW / 2;
+      } else if (position === 'right') {
+        top  = rect.top + rect.height / 2 - th / 2;
+        left = rect.right + GAP;
+      } else {
+        top  = rect.top + rect.height / 2 - th / 2;
+        left = rect.left - TW - GAP;
+      }
     }
 
     left = Math.max(12, Math.min(left, vw - TW - 12));
@@ -453,9 +458,12 @@ function positionTooltip(targetEl, position) {
   });
 }
 
-function scheduleRaf(fn) {
-  if (pendingRaf) cancelAnimationFrame(pendingRaf);
-  pendingRaf = requestAnimationFrame(() => { pendingRaf = null; fn(); });
+// Each caller tracks its own pending frame id (passed in, returned back out) so
+// unrelated callers — e.g. the ring and the tooltip, positioned independently
+// in the same step — can't cancel each other's still-pending update.
+function scheduleRaf(pendingId, fn) {
+  if (pendingId) cancelAnimationFrame(pendingId);
+  return requestAnimationFrame(fn);
 }
 
 // ── Completion ────────────────────────────────────────────────────────────────
@@ -470,7 +478,8 @@ function completeTour() {
   activeSectionKey = null;
   activeCta = null;
   if (advanceCleanup) { advanceCleanup(); advanceCleanup = null; }
-  if (pendingRaf) { cancelAnimationFrame(pendingRaf); pendingRaf = null; }
+  if (pendingRingRaf) { cancelAnimationFrame(pendingRingRaf); pendingRingRaf = null; }
+  if (pendingTooltipRaf) { cancelAnimationFrame(pendingTooltipRaf); pendingTooltipRaf = null; }
   overlayEl?.remove();
   ringEl?.remove();
   tooltipEl?.remove();

@@ -185,7 +185,7 @@ export function renderCourseSidebar(courses) {
       <div class="empty-courses">
         <h4>No courses yet</h4>
         <p>Browse the marketplace to start learning.</p>
-        <button class="browse-big-btn" data-action="open-marketplace">Browse Courses</button>
+        <button class="browse-big-btn" data-action="open-marketplace">Browse Course Marketplace</button>
       </div>
     `;
     // Clean header action
