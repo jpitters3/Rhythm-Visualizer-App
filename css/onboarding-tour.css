@@ -9,7 +9,7 @@
 }
 /* Center steps have no spotlight ring, so the overlay itself dims the screen */
 .tour-overlay--dim {
-  background: rgba(0, 0, 0, 0.65);
+  background: rgba(0, 0, 0, 0.3);
 }
 /* clickToAdvance steps: let clicks pass through to the highlighted nav element */
 .tour-overlay--passthrough {

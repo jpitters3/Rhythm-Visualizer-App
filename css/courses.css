@@ -194,7 +194,6 @@ body.dark .empty-courses p {
   background: linear-gradient(135deg, var(--accent), var(--accent-light));
   color: white;
   border: none;
-  padding: 14px 28px;
   border-radius: 12px;
   font-weight: 700;
   font-size: 14px;

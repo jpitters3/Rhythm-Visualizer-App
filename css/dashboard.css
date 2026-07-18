@@ -30,6 +30,33 @@
   z-index: 1;
 }
 
+/* ===== Logged-out landing (view-home) ===== */
+/* Same handpan watermark treatment as the dashboard above, but avoids that
+   pattern's "force position+z-index onto every child" rule — isolation:
+   isolate makes #view-home its own stacking context, so a negative z-index
+   on the watermark alone is enough to sit behind normal in-flow content. */
+#view-home {
+  position: relative;
+  isolation: isolate;
+  background: var(--bg);
+}
+
+#view-home::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: url('../public/assets/images/handpan-for-groovepan.png');
+  background-repeat: no-repeat;
+  background-position: center 55%;
+  background-size: 720px auto;
+  opacity: 0.06;
+  pointer-events: none;
+  z-index: -1;
+}
+
 /* ── Viewing-as Banner ─────────────────────────────── */
 .dash-viewing-banner[hidden] {
   display: none;

@@ -17,7 +17,7 @@ function handleHashChange() {
   let hash = window.location.hash.replace('#', '');
 
   if (!hash || !validRoutes.includes(hash)) {
-    hash = 'studio';
+    hash = 'dashboard';
     history.replaceState(null, null, `#${hash}`);
   }
 
