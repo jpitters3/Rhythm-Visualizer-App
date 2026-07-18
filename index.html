@@ -1974,7 +1974,19 @@
   <script src="/js/background-list.js"></script>
 
   <!-- Vite Entry Point -->
-  <script type="module" src="/main.js"></script>
+  <!-- GitHub Pages caches index.html for ~10min with no way to override via
+       config, so a link opened after a fresh deploy (e.g. an email
+       confirmation link sitting unread) can reference a JS bundle hash that
+       no longer exists (404) — the page loads with no JS at all. Auto-reload
+       once to recover, same as a manual refresh would; a session flag stops
+       it from looping if the failure isn't actually cache-related. Preserves
+       the URL/hash exactly (needed for Supabase auth callbacks). -->
+  <script type="module" src="/main.js" onerror="
+    if (!sessionStorage.getItem('gp_reload_once')) {
+      sessionStorage.setItem('gp_reload_once', '1');
+      location.reload();
+    }
+  "></script>
 
   <!-- Camera Modal -->
   <div id="cameraModal" class="camera-overlay" aria-hidden="true">

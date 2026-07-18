@@ -16,7 +16,16 @@ export function initRouter() {
 function handleHashChange() {
   let hash = window.location.hash.replace('#', '');
 
-  if (!hash || !validRoutes.includes(hash)) {
+  // Supabase auth callbacks (email confirmation, magic link, password recovery)
+  // land here as #access_token=...&type=signup etc. — never valid routes. Don't
+  // clobber the hash via replaceState: Supabase's own detectSessionInUrl logic
+  // needs to read and clear it itself. Just render a sensible default view and
+  // let the auth SDK finish; it'll clean up the URL when it's done.
+  const isAuthCallback = hash.includes('access_token=') || hash.includes('refresh_token=');
+
+  if (isAuthCallback) {
+    hash = 'dashboard';
+  } else if (!hash || !validRoutes.includes(hash)) {
     hash = 'dashboard';
     history.replaceState(null, null, `#${hash}`);
   }

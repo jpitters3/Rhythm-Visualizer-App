@@ -61,6 +61,11 @@ import { initFlashCards } from './technique-flash-cards.js';
 async function init() {
   console.log('--- APP INIT START ---');
 
+  // The entry script tag (index.html) auto-reloads once if it 404s on a stale
+  // GitHub Pages cache. Reaching this line means the reload (if any) worked —
+  // clear the guard so a future genuine incident in this same tab can recover too.
+  sessionStorage.removeItem('gp_reload_once');
+
   try {
     // 1. Auth + Dashboard (shown immediately while the rest of the app loads)
     await initAuth();
