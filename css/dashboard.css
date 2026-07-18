@@ -329,14 +329,22 @@
 
 /* ── Goals Edit Modal ─────────────────────────────────── */
 .dash-goals-modal {
-  position: fixed;
   inset: 0;
   background: rgba(0,0,0,0.6);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  z-index: 10000;
   padding: 20px;
+}
+/* #view-dashboard > * (above) forces position:relative + z-index:1 on every
+   direct child for watermark layering — it outranks .dash-goals-modal on
+   both properties by specificity, so both need the #view-dashboard qualifier
+   to win back. Kept to just these two properties so it doesn't also outrank
+   [hidden] below. */
+#view-dashboard .dash-goals-modal {
+  position: fixed;
+  z-index: 10000;
 }
 .dash-goals-modal[hidden] {
   display: none;
