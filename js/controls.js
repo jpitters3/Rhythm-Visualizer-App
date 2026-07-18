@@ -13,11 +13,11 @@ import {
 import { setPresentation } from './presentation-mode.js';
 import { getRange } from './range-selection.js';
 import { exportAudioWav } from './audio-export.js';
-import { editHandsMode, setEditHandsMode, labelNotation, setLabelNotation } from './state.js';
+import { editHandsMode, setEditHandsMode, labelNotation, setLabelNotation, currentUser } from './state.js';
 import { updateUserGridLabelNotation } from './profile.js';
 import { HistoryManager } from './history.js';
 import { canAccess, FEATURE } from './gated-feature.js';
-import { alert, confirm, prompt } from './alert.js';
+import { alert, confirm, prompt, confirmCustom } from './alert.js';
 import { Bus, BUS_EVENT } from './bus.js';
 import { Modal } from './modal.js';
 import { escapeHtml } from './utils.js';
@@ -502,6 +502,30 @@ export function initControls() {
     Bus.on(BUS_EVENT.GRID_RENDERED, updateQuickSave);
     quickSaveBtn.addEventListener('click', () => {
       saveBtn?.click();
+    });
+  }
+
+  // Guest notice - Create an account to save phrases
+  {
+    let shown = false;
+    const gridHasNotes = () => {
+      if (!activeGrid?.innerLabels) return false;
+      return activeGrid.innerLabels.some(l => {
+        if (Array.isArray(l)) return l.some(sub => sub !== '');
+        return l !== '';
+      });
+    };
+    Bus.on(BUS_EVENT.GRID_CHANGED, async () => {
+      const onStudio = document.body.classList.contains('route-studio');
+      if (shown || currentUser || !onStudio || !gridHasNotes()) return;
+      shown = true;
+      const wantsToSignIn = await confirmCustom(
+        "You can keep creating, but to save your creations, you'll need to create a free account otherwise it'll be lost when you leave.",
+        "Let's make sure your creation is saved",
+        'Sign Up / Sign In 👤',
+        'Got it 👍'
+      );
+      if (wantsToSignIn) openAuthModal();
     });
   }
 

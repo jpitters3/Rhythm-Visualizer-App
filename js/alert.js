@@ -99,6 +99,10 @@ export const alert = (message, title = 'Panafide') => alertInstance.show({ type:
 export const confirm = (message, title = 'Panafide') => alertInstance.show({ type: 'confirm', title, message });
 export const prompt = (message, defaultValue = '', title = 'Panafide') => alertInstance.show({ type: 'prompt', title, message, defaultValue });
 
+// Same confirm modal, with custom button labels (e.g. "Sign In" / "Cancel")
+export const confirmCustom = (message, title = 'Panafide', confirmText = 'OK', cancelText = 'Cancel') =>
+  alertInstance.show({ type: 'confirm', title, message, confirmText, cancelText });
+
 // Also expose globally for legacy scripts not using modules yet
 window._customAlert = alert;
 window._customConfirm = confirm;

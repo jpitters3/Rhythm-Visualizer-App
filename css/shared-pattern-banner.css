@@ -1,7 +1,7 @@
 .shared-banner{
   max-width: 900px;
   width: 100%;
-  margin: 0 auto 14px;
+  margin: 15px auto 14px;
   padding: 12px 14px;
   border-radius: 16px;
   background: var(--panel);
