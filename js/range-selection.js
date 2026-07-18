@@ -68,7 +68,7 @@ export function setRange(a, b, ctx) {
   updateRangeUI(c);
 }
 
-export function updateRangeUI(ctx) {
+export function updateRangeHighlight(ctx) {
   const c = ctx || activeGrid;
   const cells = allCells(c);
   cells.forEach(cell => cell.classList.remove('range', 'range-start', 'range-end'));
@@ -83,6 +83,13 @@ export function updateRangeUI(ctx) {
       if (i === r.end) cell.classList.add('range-end');
     }
   }
+}
+
+/** Shows/hides the selection toolbar and (on mobile) swaps in the
+ *  controls-mode panel that hides the handpan tabs. */
+export function showSelectionMenu(ctx) {
+  const c = ctx || activeGrid;
+  const r = getRange(c);
 
   // Update action bar (global for now, but linked to activeGrid)
   const selectionTools = document.getElementById('selectionTools');
@@ -115,6 +122,13 @@ export function updateRangeUI(ctx) {
       }
     }
   }
+}
+
+/** Highlight + menu together. */
+export function updateRangeUI(ctx) {
+  const c = ctx || activeGrid;
+  updateRangeHighlight(c);
+  showSelectionMenu(c);
 }
 
 // ===== MOBILE LONG-PRESS RANGE SELECTION =====

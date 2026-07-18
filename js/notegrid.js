@@ -717,11 +717,15 @@ function attachCellListeners(cell, ctx = activeGrid) {
       return;
     }
 
+    // Plain tap: just move the caret so the user can write into the cell as
+    // normal. Deliberately does NOT set a range — that's what triggers the
+    // selection toolbar/mobile selection-mode UI, which should only appear
+    // from a long-press (see startLongPress below), not a quick tap. Clear
+    // any leftover range/highlight from a previous long-press too.
     ctx.selecting = false;
+    clearRange(ctx);
     ctx.anchorIndex = i;
     setCaret(i, ctx);
-
-    if (typeof setRange === 'function') setRange(i, i, ctx);
   });
 
   cell.addEventListener('dblclick', (ev) => {
@@ -743,22 +747,29 @@ function attachCellListeners(cell, ctx = activeGrid) {
   cell.addEventListener('pointermove', (ev) => {
     if (ctx.selecting) {
       ev.preventDefault();
-      if (typeof updateDragSelectionOver === 'function') updateDragSelectionOver(cell, ctx);
+      // setPointerCapture (below) retargets every pointer event to this same
+      // cell regardless of where the pointer actually is, so resolve the
+      // real cell under the pointer instead of using this listener's own
+      // `cell` closure — otherwise dragging never extends past the anchor.
+      const target = document.elementFromPoint(ev.clientX, ev.clientY)?.closest('.cell');
+      if (target && typeof updateDragSelectionOver === 'function') updateDragSelectionOver(target, ctx);
     }
   });
 
   cell.addEventListener('pointerup', () => {
     if (typeof cancelLongPress === 'function') cancelLongPress();
+    ctx.selecting = false;
   });
 
   cell.addEventListener('pointercancel', () => {
     if (typeof cancelLongPress === 'function') cancelLongPress();
   });
 
-  // Right-click hand sticking
+  // Right-click hand sticking — desktop mouse only
   cell.addEventListener('contextmenu', (ev) => {
     ev.preventDefault();
     ev.stopPropagation();
+    if (ev.button !== 2) return;
     if (isReviewing && isReviewing()) return; // BLOCK EDITING
 
     const i = parseInt(cell.dataset.index);
