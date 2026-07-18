@@ -341,6 +341,7 @@ function showPhraseContextMenu(anchorEl) {
   menu.innerHTML = '';
 
   const items = [
+    { label: 'Save phrase', action: () => document.getElementById('saveBtn')?.click() },
     { label: 'Rename phrase', action: renameCurrentPhrase },
     { label: 'New phrase', action: createNewPhrase },
     { label: 'Open Phrase', action: showOpenPhraseModal },

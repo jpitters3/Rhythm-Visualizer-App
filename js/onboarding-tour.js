@@ -108,6 +108,12 @@ const TOURS = {
         position: 'left',
       },
       {
+        target: '#gridPhraseName',
+        title: 'Phrase options ☝️',
+        body: 'Save, rename, create new, and open phrases here.',
+        position: 'bottom',
+      },
+      {
         target: '#primaryControlsWrapper',
         title: 'Studio settings ☝️',
         body: 'Clear the grid, enable compose mode, change time signature, and more.',
