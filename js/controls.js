@@ -122,6 +122,59 @@ export async function createNewPhrase() {
   return name.trim();
 }
 
+export async function renameCurrentPhrase() {
+  if (!await ensureHasSelection()) return;
+
+  const oldName = document.getElementById('currentPhraseName')?.textContent?.trim() || getSelectedPatternName();
+  const nextName = await showCustomModal({
+    title: 'Rename Pattern',
+    message: `Enter new name for "${oldName}":`,
+    mode: 'prompt',
+    defaultValue: oldName
+  });
+
+  if (!nextName) return;
+
+  const trimmed = nextName.trim();
+  if (!trimmed || trimmed === oldName) return;
+
+  try {
+    if (await isAuthed()) {
+      await dbRenamePattern(oldName, trimmed);
+      localStorage.setItem(LAST_USED_KEY, trimmed);
+      await refreshPatternSelect(trimmed);
+      updateCurrentPhraseName(trimmed);
+    } else {
+      // local
+      const saved = getSavedPatterns();
+      if (!saved[oldName]) return;
+
+      if (saved[trimmed]) {
+        const ok = await showCustomModal({
+          title: 'Overwrite?',
+          message: 'A pattern with that name already exists. Overwrite it?',
+          mode: 'confirm'
+        });
+        if (!ok) return;
+      }
+
+      saved[trimmed] = saved[oldName];
+      delete saved[oldName];
+      localStorage.setItem(LAST_USED_KEY, trimmed);
+      setSavedPatterns(saved);
+      await refreshPatternSelect(trimmed);
+      updateCurrentPhraseName(trimmed);
+    }
+  } catch (err) {
+    console.error(err);
+    await showCustomModal({
+      title: 'Rename Failed',
+      message: err.message || err,
+      mode: 'alert'
+    });
+  }
+}
+
 /**
  * Main Save Logic with Gating
  */
@@ -257,6 +310,68 @@ function closeAccountDropdown() {
 
 export function updateCurrentPhraseName(name) {
   syncPhraseNameDisplay(name);
+}
+
+// ── Phrase name context menu ────────────────────────────────────────────────
+// Reuses the same .lib-context-menu/.lib-context-item look as the Library's
+// card menus (css/library.css) so small dropdown menus stay visually
+// consistent across the app.
+
+let phraseContextMenuEl = null;
+
+function getOrCreatePhraseContextMenu() {
+  if (!phraseContextMenuEl) {
+    phraseContextMenuEl = document.createElement('div');
+    phraseContextMenuEl.id = 'gridPhraseContextMenu';
+    phraseContextMenuEl.className = 'lib-context-menu';
+    document.body.appendChild(phraseContextMenuEl);
+  }
+  return phraseContextMenuEl;
+}
+
+function hidePhraseContextMenu() {
+  if (phraseContextMenuEl) {
+    phraseContextMenuEl.style.display = 'none';
+    phraseContextMenuEl.innerHTML = '';
+  }
+}
+
+function showPhraseContextMenu(anchorEl) {
+  const menu = getOrCreatePhraseContextMenu();
+  menu.innerHTML = '';
+
+  const items = [
+    { label: 'Rename phrase', action: renameCurrentPhrase },
+    { label: 'New phrase', action: createNewPhrase },
+    { label: 'Open Phrase', action: showOpenPhraseModal },
+  ];
+
+  items.forEach(({ label, action }) => {
+    const btn = document.createElement('button');
+    btn.className = 'lib-context-item';
+    btn.textContent = label;
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      hidePhraseContextMenu();
+      await action();
+    });
+    menu.appendChild(btn);
+  });
+
+  menu.style.display = 'block';
+  menu.style.visibility = 'hidden';
+  const rect = anchorEl.getBoundingClientRect();
+  const menuRect = menu.getBoundingClientRect();
+  menu.style.visibility = '';
+
+  let top = rect.bottom + 6;
+  let left = rect.left;
+  if (left + menuRect.width > window.innerWidth - 8) left = window.innerWidth - menuRect.width - 8;
+  if (top + menuRect.height > window.innerHeight - 8) top = rect.top - menuRect.height - 6;
+
+  menu.style.position = 'fixed';
+  menu.style.top = `${top}px`;
+  menu.style.left = `${left}px`;
 }
 
 async function showOpenPhraseModal() {
@@ -533,8 +648,23 @@ export function initControls() {
     await showOpenPhraseModal();
   });
 
-  document.getElementById('gridPhraseName')?.addEventListener('click', async () => {
-    await showOpenPhraseModal();
+  document.getElementById('gridPhraseNameBtn')?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const isOpen = phraseContextMenuEl?.style.display === 'block';
+    hidePhraseContextMenu();
+    if (!isOpen) showPhraseContextMenu(e.currentTarget);
+  });
+
+  // Dismiss the phrase name context menu on outside click
+  document.addEventListener('click', (e) => {
+    if (
+      phraseContextMenuEl &&
+      phraseContextMenuEl.style.display === 'block' &&
+      !e.target.closest('#gridPhraseContextMenu') &&
+      !e.target.closest('#gridPhraseNameBtn')
+    ) {
+      hidePhraseContextMenu();
+    }
   });
 
   // Close submenus when account dropdown is closed (outside click)
@@ -552,57 +682,7 @@ export function initControls() {
 
   renameBtn?.addEventListener('click', async (e) => {
     if (e) e.stopPropagation();
-
-    if (!await ensureHasSelection()) return;
-
-    const oldName = document.getElementById('currentPhraseName')?.textContent?.trim() || getSelectedPatternName();
-    const nextName = await showCustomModal({
-      title: 'Rename Pattern',
-      message: `Enter new name for "${oldName}":`,
-      mode: 'prompt',
-      defaultValue: oldName
-    });
-
-    if (!nextName) return;
-
-    const trimmed = nextName.trim();
-    if (!trimmed || trimmed === oldName) return;
-
-    try {
-      if (await isAuthed()) {
-        await dbRenamePattern(oldName, trimmed);
-        localStorage.setItem(LAST_USED_KEY, trimmed);
-        await refreshPatternSelect(trimmed);
-        updateCurrentPhraseName(trimmed);
-      } else {
-        // local
-        const saved = getSavedPatterns();
-        if (!saved[oldName]) return;
-
-        if (saved[trimmed]) {
-          const ok = await showCustomModal({
-            title: 'Overwrite?',
-            message: 'A pattern with that name already exists. Overwrite it?',
-            mode: 'confirm'
-          });
-          if (!ok) return;
-        }
-
-        saved[trimmed] = saved[oldName];
-        delete saved[oldName];
-        localStorage.setItem(LAST_USED_KEY, trimmed);
-        setSavedPatterns(saved);
-        await refreshPatternSelect(trimmed);
-        updateCurrentPhraseName(trimmed);
-      }
-    } catch (err) {
-      console.error(err);
-      await showCustomModal({
-        title: 'Rename Failed',
-        message: err.message || err,
-        mode: 'alert'
-      });
-    }
+    await renameCurrentPhrase();
   });
 
   deleteBtn?.addEventListener('click', async (e) => {

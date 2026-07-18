@@ -423,7 +423,12 @@
       <div id="main" class="main">
         <div class="left">
           <div class="grid-phrase-name-row">
-            <div id="gridPhraseName" class="grid-phrase-name">Untitled</div>
+            <button type="button" id="gridPhraseNameBtn" class="grid-phrase-name-btn" title="Open or create a phrase" aria-label="Open or create a phrase">
+              <span id="gridPhraseName" class="grid-phrase-name">Untitled</span>
+              <svg class="grid-phrase-name-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polyline points="6 9 12 15 18 9"/>
+              </svg>
+            </button>
             <button id="quickSaveBtn" class="quick-save-btn" title="Save phrase" aria-label="Quick save">Save</button>
             <span id="composerSaveStatus" class="composer-save-status"></span>
           </div>
