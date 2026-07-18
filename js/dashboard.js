@@ -148,6 +148,92 @@ async function loadDashboard() {
   renderGoals(goalsRow);
   renderPractice(practiceRes.data || []);
   await renderCourses((courseIdsRes.data || []).map(r => r.course_id));
+  renderDailyQuote();
+}
+
+// ── Daily quote ───────────────────────────────────────────────────────────────
+
+const DAILY_QUOTES = [
+  { text: "Rhythm is the soul of life. The whole universe revolves in rhythm.", author: "Babatunde Olatunji" },
+  { text: "Music is the space between the notes.", author: "Claude Debussy" },
+  { text: "Practice isn't the thing you do once you're good. It's the thing you do that makes you good.", author: "Malcolm Gladwell" },
+  { text: "The instrument is only as vast as the person playing it.", author: "Anonymous" },
+  { text: "Silence is the canvas rhythm is painted on.", author: "Anonymous" },
+  { text: "You don't have to be great to start, but you have to start to be great.", author: "Zig Ziglar" },
+  { text: "In every walk with nature, one receives far more than he seeks.", author: "John Muir" },
+  { text: "Slow is smooth, and smooth is fast.", author: "Anonymous" },
+  { text: "A musician must make music, an artist must paint, a poet must write, if he is to be ultimately at peace with himself.", author: "Abraham Maslow" },
+  { text: "The groove is a conversation between what you play and what you leave out.", author: "Anonymous" },
+  { text: "Where words fail, music speaks.", author: "Hans Christian Andersen" },
+  { text: "Small daily improvements are the key to staggering long-term results.", author: "Anonymous" },
+  { text: "Listening is the beginning of playing.", author: "Anonymous" },
+];
+
+// QuoteSlate ANDs multiple comma-separated tags (needs a quote matching all of
+// them at once), which usually matches nothing — so request a single tag,
+// rotated daily, rather than a combined list.
+const QUOTE_TAGS = ['creativity', 'wisdom', 'motivation', 'perseverance', 'inspiration'];
+const QUOTE_CACHE_KEY = 'gp_daily_quote';
+
+function dayOfYear() {
+  return Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 0)) / 86400000);
+}
+
+/** Local fallback pick — deterministic, same quote for everyone, all day. */
+function localDailyQuote() {
+  return DAILY_QUOTES[dayOfYear() % DAILY_QUOTES.length];
+}
+
+function paintQuote(text, author) {
+  const textEl = document.getElementById('dashQuoteText');
+  const authorEl = document.getElementById('dashQuoteAuthor');
+  if (!textEl || !authorEl) return;
+  textEl.textContent = `“${text}”`;
+  authorEl.textContent = `— ${author}`;
+}
+
+/**
+ * Real quote fetched from a maintained third-party API (QuoteSlate), cached for
+ * the day so it's stable across reloads. Falls back to the local hand-picked
+ * list — silently — if the network is unavailable or the API is down.
+ */
+async function renderDailyQuote() {
+  const today = new Date().toISOString().slice(0, 10);
+
+  let cached = null;
+  try {
+    cached = JSON.parse(localStorage.getItem(QUOTE_CACHE_KEY) || 'null');
+  } catch {
+    // Malformed cache value — ignore and re-fetch below.
+  }
+  if (cached?.date === today && cached.text && cached.author) {
+    paintQuote(cached.text, cached.author);
+    return;
+  }
+
+  // Paint the local fallback immediately so the section never sits empty,
+  // then swap it out if the live fetch succeeds.
+  const fallback = localDailyQuote();
+  paintQuote(fallback.text, fallback.author);
+
+  try {
+    const tag = QUOTE_TAGS[dayOfYear() % QUOTE_TAGS.length];
+    const url = `https://quoteslate.vercel.app/api/quotes/random?tags=${tag}&maxLength=180`;
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5000);
+    const res = await fetch(url, { signal: controller.signal });
+    clearTimeout(timeout);
+    if (!res.ok) return;
+
+    const data = await res.json();
+    const { quote, author } = Array.isArray(data) ? data[0] : data;
+    if (!quote || !author) return;
+
+    localStorage.setItem(QUOTE_CACHE_KEY, JSON.stringify({ date: today, text: quote, author }));
+    paintQuote(quote, author);
+  } catch {
+    // Network error, timeout, or bad response — the local fallback already rendered.
+  }
 }
 
 // ── Data fetchers ─────────────────────────────────────────────────────────────

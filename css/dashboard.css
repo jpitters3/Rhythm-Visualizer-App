@@ -437,3 +437,27 @@
   font-weight: 600;
   cursor: pointer;
 }
+
+/* ── Daily quote ──────────────────────────────────────── */
+.dash-quote {
+  text-align: center;
+  padding: 28px 20px 4px;
+  border-top: 1px solid var(--panel-border);
+}
+.dash-quote-text {
+  margin: 0 auto 8px;
+  max-width: 560px;
+  font-family: 'Fraunces', Georgia, serif;
+  font-style: italic;
+  font-size: 18px;
+  line-height: 1.5;
+  color: var(--text);
+  opacity: 0.85;
+}
+.dash-quote-author {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  color: var(--text-secondary);
+}
