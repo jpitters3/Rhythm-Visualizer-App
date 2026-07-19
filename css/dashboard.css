@@ -180,6 +180,59 @@
   opacity: 1;
 }
 
+/* ── Section colour themes ────────────────────────────────
+   Each section gets its own hue (tinted card background,
+   border, title colour) so the dashboard reads as distinct
+   coloured blocks rather than one grey wall of text. */
+.dash-section--assignment .dash-section-title {
+  color: var(--accent);
+}
+
+.dash-section--goals,
+.dash-section--practice,
+.dash-section--courses {
+  --dash-hue-rgb: var(--accent-rgb);
+  border-radius: 16px;
+  padding: 16px 18px 18px;
+  border: 1px solid rgba(var(--dash-hue-rgb), 0.25);
+  background: linear-gradient(160deg, rgba(var(--dash-hue-rgb), 0.12) 0%, rgba(var(--dash-hue-rgb), 0.03) 100%);
+}
+
+.dash-section--goals .dash-section-title,
+.dash-section--goals .dash-section-edit-btn {
+  color: rgb(var(--dash-hue-rgb));
+}
+.dash-section--practice .dash-section-title,
+.dash-section--practice .dash-section-link {
+  color: rgb(var(--dash-hue-rgb));
+}
+.dash-section--courses .dash-section-title {
+  color: rgb(var(--dash-hue-rgb));
+}
+
+.dash-section--goals .dash-goal-card:hover {
+  border-color: rgb(var(--dash-hue-rgb));
+}
+.dash-section--goals .dash-goal-label {
+  color: rgb(var(--dash-hue-rgb));
+}
+
+.dash-section--practice .dash-list-item:hover,
+.dash-section--courses .dash-list-item:hover {
+  border-color: rgb(var(--dash-hue-rgb));
+}
+.dash-section--practice .dash-list-icon,
+.dash-section--courses .dash-list-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  background: rgba(var(--dash-hue-rgb), 0.15);
+  flex-shrink: 0;
+}
+
 /* ── Assignment Hero ──────────────────────────────────── */
 .dash-assignment-hero {
   background: linear-gradient(135deg, rgba(var(--accent-rgb),0.12) 0%, rgba(var(--accent-rgb),0.04) 100%);

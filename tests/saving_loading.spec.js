@@ -1,11 +1,12 @@
 const { test, expect } = require('@playwright/test');
+const { gotoStudio } = require('./helpers');
 const { createTestUser, deleteTestUser, loginAsTestUser } = require('./utils/auth-helper');
 
 test.describe('Pattern Management', () => {
   let testUser;
 
   test.beforeEach(async ({ page }) => {
-    await page.goto('/');
+    await gotoStudio(page);
     testUser = await createTestUser();
     await loginAsTestUser(page, testUser);
   });

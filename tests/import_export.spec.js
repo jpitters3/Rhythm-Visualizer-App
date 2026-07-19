@@ -1,5 +1,6 @@
 // @ts-check
 const { test, expect } = require('@playwright/test');
+const { gotoStudio } = require('./helpers');
 
 async function openPhraseMenu(page) {
   // Open mobile menu if needed
@@ -24,7 +25,7 @@ async function openPhraseMenu(page) {
 test.describe('Import / Export Features', () => {
 
   test.beforeEach(async ({ page }) => {
-    await page.goto('/');
+    await gotoStudio(page);
     await page.waitForSelector('.measure-row');
   });
 

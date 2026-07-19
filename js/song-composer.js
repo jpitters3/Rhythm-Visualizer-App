@@ -369,7 +369,8 @@ async function saveAsPhrase(id) {
 // Print
 // ============================================================
 
-const PRINT_CSS = `
+function getPrintCss() {
+  return `
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: 'Georgia', serif; padding: 32px; background: #fff; color: #000; font-size: 13px; }
   h1 { font-size: 20px; font-weight: bold; margin-bottom: 24px; }
@@ -389,6 +390,7 @@ const PRINT_CSS = `
   .section + .section { border-top: 1px dashed #ccc; padding-top: 24px; }
   @media print { body { padding: 16px; } .section + .section { border-top: none; } }
 `;
+}
 
 function _pEsc(s) {
   return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -496,7 +498,7 @@ function _buildPrintHTML(title, sectionData) {
   return `<!DOCTYPE html>
 <html lang="en">
 <head><meta charset="UTF-8"><title>${_pEsc(title)}</title>
-<style>${PRINT_CSS}</style>
+<style>${getPrintCss()}</style>
 </head>
 <body>
 <h1>${_pEsc(title)}</h1>

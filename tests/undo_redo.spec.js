@@ -1,5 +1,6 @@
 // @ts-check
 const { test, expect } = require('@playwright/test');
+const { gotoStudio } = require('./helpers');
 
 async function openPhraseMenu(page) {
   if (await page.locator('#mobileMenuBtn').isVisible()) {
@@ -21,7 +22,7 @@ async function openPhraseMenu(page) {
 test.describe('Undo/Redo Features', () => {
 
   test.beforeEach(async ({ page }) => {
-    await page.goto('/');
+    await gotoStudio(page);
     await page.waitForSelector('.measure-row');
   });
 

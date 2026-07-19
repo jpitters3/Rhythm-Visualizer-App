@@ -139,6 +139,10 @@ export function restorePrefs() {
     document.body.classList.add('dark');
   }
 
+  if (localStorage.getItem('accentColor') === 'purple') {
+    document.body.classList.add('accent-purple');
+  }
+
   const handOn = localStorage.getItem('handSplit') === 'on';
   document.body.classList.toggle('handSplit', handOn);
   const handBtn = document.getElementById('handBtn');

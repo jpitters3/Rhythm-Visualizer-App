@@ -1,10 +1,11 @@
 // @ts-check
 const { test, expect } = require('@playwright/test');
+const { gotoStudio } = require('./helpers');
 
 test.describe('Playback & Controls', () => {
 
   test.beforeEach(async ({ page }) => {
-    await page.goto('/');
+    await gotoStudio(page);
     await page.waitForSelector('.measure-row');
   });
 

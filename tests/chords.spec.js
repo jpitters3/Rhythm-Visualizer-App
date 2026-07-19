@@ -1,10 +1,11 @@
 // @ts-check
 const { test, expect } = require('@playwright/test');
+const { gotoStudio } = require('./helpers');
 
 test.describe('Chords & Chords', () => {
 
   test.beforeEach(async ({ page }) => {
-    await page.goto('/');
+    await gotoStudio(page);
     await page.waitForSelector('.measure-row');
   });
 
@@ -21,7 +22,7 @@ test.describe('Chords & Chords', () => {
   }
 
   test.beforeEach(async ({ page }) => {
-    await page.goto('/');
+    await gotoStudio(page);
     await ensureMenuClosed(page);
     await page.click('#clearBtn-A');
     await page.locator('#confirmModal.open').waitFor({ timeout: 5000 });

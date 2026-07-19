@@ -1,9 +1,10 @@
 const { test, expect } = require('@playwright/test');
+const { gotoStudio } = require('./helpers');
 
 test.describe('Presentation Mode', () => {
   test.beforeEach(async ({ page }) => {
     // Navigate
-    await page.goto('/');
+    await gotoStudio(page);
     await page.evaluate(() => localStorage.clear());
     await page.reload();
 

@@ -105,7 +105,7 @@ const TOURS = {
         target: '#measures',
         title: 'Compose a phrase ☝️',
         body: 'Select a cell, then play the handpan to record notes into it.',
-        position: 'left',
+        position: 'bottom',
       },
       {
         target: '#gridPhraseName',

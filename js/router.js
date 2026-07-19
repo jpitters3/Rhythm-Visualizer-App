@@ -4,8 +4,10 @@
 import { stop } from './noteplayer.js';
 import { gridA } from './grid-context.js';
 import { Sidepanel } from './sidepanel.js';
+import { currentUser } from './state.js';
 
 const validRoutes = ['studio', 'home', 'dashboard', 'compose', 'community', 'library', 'method', 'method-welcome', 'practice'];
+const LAST_ROUTE_KEY = 'gp_last_route';
 let currentRoute = '';
 
 export function initRouter() {
@@ -25,13 +27,21 @@ function handleHashChange() {
 
   if (isAuthCallback) {
     hash = 'dashboard';
-  } else if (!hash || !validRoutes.includes(hash)) {
+  } else if (!hash) {
+    // Cold load, no hash: signed-in users resume wherever they left off;
+    // everyone else lands on 'dashboard', which itself redirects to 'home'
+    // if they're not authenticated (see dashboard.js's routeChanged guard).
+    const lastRoute = localStorage.getItem(LAST_ROUTE_KEY);
+    hash = (currentUser && validRoutes.includes(lastRoute)) ? lastRoute : 'dashboard';
+    history.replaceState(null, null, `#${hash}`);
+  } else if (!validRoutes.includes(hash)) {
     hash = 'dashboard';
     history.replaceState(null, null, `#${hash}`);
   }
 
   const prev = currentRoute;
   currentRoute = hash;
+  localStorage.setItem(LAST_ROUTE_KEY, hash);
 
   // Leaving freeplay: stop playback and close all panels (clears panel nav highlights)
   if (prev === 'studio' && hash !== 'studio') {

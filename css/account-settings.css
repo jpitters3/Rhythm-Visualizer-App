@@ -132,6 +132,48 @@ body.dark .acct-settings-sidebar {
 
 .acct-signout-btn:hover { background: rgba(231,76,60,0.08); }
 
+/* ===== ACCENT COLOUR SWATCHES ===== */
+
+.acct-accent-swatches {
+  display: flex;
+  gap: 14px;
+}
+
+.acct-accent-swatch {
+  box-sizing: border-box;
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  cursor: pointer;
+  padding: 0;
+  border: none;
+  box-shadow: inset 0 0 0 2px rgba(0,0,0,0.06);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.acct-accent-swatch:hover {
+  transform: scale(1.08);
+}
+
+.acct-accent-swatch--active {
+  box-shadow: 0 0 0 2px #fff, 0 0 0 4px currentColor;
+}
+
+body.dark .acct-accent-swatch--active {
+  box-shadow: 0 0 0 2px rgba(20, 20, 28, 0.99), 0 0 0 4px currentColor;
+}
+
+.acct-accent-swatch--blue {
+  background: #024496;
+  color: #024496;
+}
+.acct-accent-swatch--purple {
+  background: #4a2e8c;
+  color: #4a2e8c;
+}
+
 /* ===== NOTIFICATION TOGGLES ===== */
 
 .acct-notif-header-row,

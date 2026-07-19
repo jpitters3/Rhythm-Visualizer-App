@@ -78,6 +78,7 @@
     (function () {
       if (localStorage.getItem('theme') === 'dark') document.body.classList.add('dark');
       if (localStorage.getItem('handSplit') === 'on') document.body.classList.add('handSplit');
+      if (localStorage.getItem('accentColor') === 'purple') document.body.classList.add('accent-purple');
     })();
   </script>
   <template id="transport-template">
@@ -640,7 +641,7 @@
         </div>
 
         <!-- Current Assignment (hero) -->
-        <section class="dash-section">
+        <section class="dash-section dash-section--assignment">
           <div class="dash-section-header">
             <h2 class="dash-section-title">Current Assignment</h2>
           </div>
@@ -648,7 +649,7 @@
         </section>
 
         <!-- Goals -->
-        <section class="dash-section">
+        <section class="dash-section dash-section--goals">
           <div class="dash-section-header">
             <h2 class="dash-section-title">Your Goals</h2>
             <button class="dash-section-edit-btn" id="dashGoalsEditBtn">Edit</button>
@@ -658,7 +659,7 @@
 
         <!-- Practice Plan + Active Courses -->
         <div class="dash-columns">
-          <section class="dash-section">
+          <section class="dash-section dash-section--practice">
             <div class="dash-section-header">
               <h2 class="dash-section-title">Practice Plan</h2>
               <button class="dash-section-link" id="dashPracticeLink">View all</button>
@@ -666,7 +667,7 @@
             <div id="dashPracticeContent" class="dash-practice-list"></div>
           </section>
 
-          <section class="dash-section">
+          <section class="dash-section dash-section--courses">
             <div class="dash-section-header">
               <h2 class="dash-section-title">Active Courses</h2>
             </div>

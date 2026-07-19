@@ -1,9 +1,10 @@
 const { test, expect } = require('@playwright/test');
+const { gotoStudio } = require('./helpers');
 
 test.describe('Handpan Pulse Animations', () => {
 
   test.beforeEach(async ({ page }) => {
-    await page.goto('/');
+    await gotoStudio(page);
     await page.waitForSelector('.cell');
     await page.click('#clearBtn-A');
     await page.locator('#confirmModal.open').waitFor({ timeout: 5000 });

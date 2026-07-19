@@ -1,8 +1,9 @@
 const { test, expect } = require('@playwright/test');
+const { gotoStudio } = require('./helpers');
 
 test.describe('Virtual Handpan Synchronization', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/');
+    await gotoStudio(page);
     await page.waitForSelector('.cell');
   });
 

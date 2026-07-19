@@ -1,8 +1,9 @@
 import { test, expect } from '@playwright/test';
+import { gotoStudio } from './helpers.js';
 
 test.describe('Keyboard Shortcuts', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/');
+    await gotoStudio(page);
     await page.waitForSelector('.measure-row');
     // Clear any existing pattern
     await page.click('#clearBtn-A');

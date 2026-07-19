@@ -1,5 +1,6 @@
 // @ts-check
 const { test, expect } = require('@playwright/test');
+const { gotoStudio } = require('./helpers');
 
 test.describe('Grid Mechanics', () => {
 
@@ -16,7 +17,7 @@ test.describe('Grid Mechanics', () => {
   }
 
   test.beforeEach(async ({ page }) => {
-    await page.goto('/');
+    await gotoStudio(page);
     await page.waitForSelector('.measure-row');
     await ensureMenuClosed(page);
     await page.click('#clearBtn-A');

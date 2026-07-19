@@ -10,6 +10,12 @@ import { Bus, BUS_EVENT } from './bus.js';
 import { renderNotifSettings } from './notification-settings.js';
 import { openAuthModal } from './auth.js';
 import { startTour, resetTour } from './onboarding-tour.js';
+import { currentProfile, updateUserAccentColor } from './profile.js';
+
+const ACCENT_CHOICES = [
+  { id: 'blue',   label: 'Blue' },
+  { id: 'purple', label: 'Purple' },
+];
 
 let sidebarEl = null;
 let backdropEl = null;
@@ -67,6 +73,15 @@ function renderSidebar() {
     </div>
 
     <div class="acct-section">
+      <div class="acct-section-title">Appearance</div>
+      <div class="acct-accent-swatches">
+        ${ACCENT_CHOICES.map(c => `
+          <button class="acct-accent-swatch acct-accent-swatch--${c.id}" data-accent="${c.id}" title="${c.label}" aria-label="${c.label} accent colour"></button>
+        `).join('')}
+      </div>
+    </div>
+
+    <div class="acct-section">
       <div class="acct-section-title">Notifications</div>
       <div id="acctNotifSettingsContainer"></div>
     </div>
@@ -82,6 +97,17 @@ function renderSidebar() {
   `;
 
   renderNotifSettings(body.querySelector('#acctNotifSettingsContainer'));
+
+  const activeAccent = currentProfile?.accent_color || 'blue';
+  const swatches = body.querySelectorAll('.acct-accent-swatch');
+  swatches.forEach(btn => {
+    btn.classList.toggle('acct-accent-swatch--active', btn.dataset.accent === activeAccent);
+    btn.addEventListener('click', () => {
+      swatches.forEach(b => b.classList.remove('acct-accent-swatch--active'));
+      btn.classList.add('acct-accent-swatch--active');
+      updateUserAccentColor(btn.dataset.accent);
+    });
+  });
 
   body.querySelector('#acctChangeEmailBtn')?.addEventListener('click', () => {
     close();

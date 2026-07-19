@@ -3,6 +3,7 @@ import { Modal } from './modal.js';
 import { supabase } from './supabase-client.js';
 import { renderAllMeasures } from './notegrid.js';
 import { Bus, BUS_EVENT } from './bus.js';
+import { setAccentPreset } from './brand.js';
 
 // ===== USER PROFILES =====
 // Handles fetching, updating, and caching user profiles
@@ -67,6 +68,9 @@ export async function loadCurrentProfile() {
         }
         renderAllMeasures();
       }
+
+      // Sync Accent Colour Preference
+      applyAccentColor(currentProfile.accent_color || 'blue');
     } else {
       console.log('No profile found, creating default...');
       await createDefaultProfile();
@@ -109,6 +113,30 @@ export async function updateUserGridLabelNotation(newNotation) {
       .eq('user_id', currentUser.id);
   } catch (e) {
     console.warn('Failed to save grid label notation preference:', e);
+  }
+}
+
+// Apply an accent colour preset to the document + canvas/print contexts,
+// and remember it locally so it survives reload without a flash of blue.
+function applyAccentColor(color) {
+  localStorage.setItem('accentColor', color);
+  document.body.classList.toggle('accent-purple', color === 'purple');
+  setAccentPreset(color);
+}
+
+// Save accent colour preference to DB
+export async function updateUserAccentColor(newColor) {
+  applyAccentColor(newColor);
+  if (!currentUser) return;
+  if (currentProfile) currentProfile.accent_color = newColor;
+
+  try {
+    await supabase
+      .from('profiles')
+      .update({ accent_color: newColor, updated_at: new Date() })
+      .eq('user_id', currentUser.id);
+  } catch (e) {
+    console.warn('Failed to save accent colour preference:', e);
   }
 }
 

@@ -1,8 +1,9 @@
 const { test, expect } = require('@playwright/test');
+const { gotoStudio } = require('./helpers');
 
 test.describe('Dual Grid Persistence', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/');
+    await gotoStudio(page);
     await page.evaluate(() => localStorage.clear());
     await page.reload();
     await page.waitForSelector('.cell');

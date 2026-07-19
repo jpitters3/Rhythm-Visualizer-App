@@ -1,10 +1,11 @@
 // @ts-check
 const { test, expect } = require('@playwright/test');
+const { gotoStudio } = require('./helpers');
 
 test.describe('Dual Grid Functionality', () => {
 
   test.beforeEach(async ({ page }) => {
-    await page.goto('/');
+    await gotoStudio(page);
     // Wait for deferred initialization (safeInit) to finish rendering the grid
     await page.waitForSelector('.measure-row');
   });

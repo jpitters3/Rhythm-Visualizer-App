@@ -100,6 +100,16 @@ body.dark {
   --btn-active: #5b8cff;
 }
 
+/* ── Accent colour presets ──
+   User-selectable in Account Settings > Appearance. Default (no class) is
+   the brand blue defined in :root above. */
+body.accent-purple {
+  --accent:       #4a2e8c;
+  --accent-dark:  #341f66;
+  --accent-light: #7c5cff;
+  --accent-rgb:   74, 46, 140;
+}
+
 /* Mobile Background: Fill vertically */
 @media (max-width: 768px) {
   body::after {
