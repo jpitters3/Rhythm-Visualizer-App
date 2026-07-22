@@ -8,8 +8,10 @@
   /* Let clicks pass through to map */
   z-index: 20;
   /* Above dots (z=1) and labels (z=10) */
-  overflow: hidden;
-  /* Keep hands inside container */
+  overflow: visible;
+  /* Hands near edge notes are wider than the inset margin and would
+     otherwise get clipped instead of just overlapping the surrounding
+     page a little — positions/coords are untouched either way. */
 }
 
 .v-hand {
