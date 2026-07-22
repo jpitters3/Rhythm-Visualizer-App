@@ -96,9 +96,9 @@ const TOURS = {
     steps: [
       {
         target: '#handpanWrap',
-        title: 'Play the virtual handpan ☝️',
+        title: 'Play the virtual handpan 👇',
         body: 'Click or tap the notes on the handpan to play it!',
-        position: 'bottom',
+        position: 'top',
       },
       {
         target: '.handpan-tabs',

@@ -130,6 +130,10 @@
   opacity: 0;
 }
 
+.panel-resize-handle {
+  display: none;
+}
+
 /* Mobile: stack */
 @media (max-width: 900px) {
   .main {
@@ -144,7 +148,57 @@
     max-width: 100%;
     transform: translateZ(0);
     /* GPU stability */
+    /* Same shrink-to-fit trick the desktop rule above uses: contain the
+       panel's own box (container-type: size) and cap the wrap off a %
+       of THIS panel's height (cqh), so dragging #panelResizeHandle to a
+       shorter height scales the pan down instead of clipping it. */
+    min-height: 160px;
+    overflow: hidden;
+    container-type: size;
     backface-visibility: hidden;
+    padding-bottom: 60px;
+  }
+
+  .handpan-wrap {
+    /* --hp-chrome is measured live by panel-resize.js (actual height of the
+       tabs row + ghost-note row, not a guess) — a mismatched guess here is
+       exactly what leaves a gap below the ghost row or clips it. */
+    max-width: min(100%, calc(100cqh - var(--hp-chrome, 140px)));
+    margin: 0 auto;
+  }
+
+  /* Draggable divider between .left and .handpan-panel */
+  .panel-resize-handle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    height: 22px;
+    margin: -6px 0;
+    /* claims a real hit-area without adding visual gap */
+    cursor: row-resize;
+    touch-action: none;
+    z-index: 5;
+    position: relative;
+  }
+
+  .panel-resize-grip {
+    width: 40px;
+    height: 4px;
+    border-radius: 3px;
+    background: var(--panel-border, rgba(128, 128, 128, 0.4));
+    transition: background 0.15s ease;
+  }
+
+  .panel-resize-handle:hover .panel-resize-grip,
+  .panel-resize-handle:focus-visible .panel-resize-grip,
+  .panel-resize-handle.dragging .panel-resize-grip {
+    background: var(--accent);
+  }
+
+  .panel-resize-handle:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
   }
 }
 
@@ -485,7 +539,14 @@ div.lock-btn {
   }
 
   .handpan-wrap {
-    max-width: 260px;
+    /* Used to have a flat 260px ceiling here regardless of available
+       height — that predates #panelResizeHandle and directly fights its
+       "full size by default, drag down to shrink" behavior. The user now
+       controls the size directly, so just match the max-width:900px
+       block's version (this rule wins below 768px purely because it's
+       later in source at equal specificity, so it still needs repeating
+       here rather than being deleted outright). */
+    max-width: min(100%, calc(100cqh - var(--hp-chrome, 140px)));
     margin: 0 auto;
     padding: 0 8px;
     transform: translateZ(0);

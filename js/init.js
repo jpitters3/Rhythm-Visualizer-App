@@ -22,6 +22,7 @@ import { initCourses } from './courses.js';
 import { initMobileMenu } from './mobile-menu.js';
 import { initShortcuts } from './keyboard-shortcuts.js';
 import { initMeasureActions } from './measure-actions.js';
+import { initPanelResize } from './panel-resize.js';
 import { HistoryManager } from './history.js';
 import ChordUI from './chord-ui.js';
 import { initPOTW } from './pattern-of-the-week.js';
@@ -76,6 +77,7 @@ async function init() {
     await initScale();
     initMobileMenu();
     initMeasureActions();
+    initPanelResize();
     initPresentation();
     initGridAutoscroll();
     initGridZoom();
