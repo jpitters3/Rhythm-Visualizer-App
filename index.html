@@ -649,7 +649,7 @@
         </section>
 
         <!-- Goals -->
-        <section class="dash-section dash-section--goals">
+        <section id="dashGoals" class="dash-section dash-section--goals">
           <div class="dash-section-header">
             <h2 class="dash-section-title">Your Goals</h2>
             <button class="dash-section-edit-btn" id="dashGoalsEditBtn">Edit</button>
@@ -657,9 +657,8 @@
           <div id="dashGoalsContent" class="dash-goals-grid"></div>
         </section>
 
-        <!-- Practice Plan + Active Courses -->
-        <div class="dash-columns">
-          <section class="dash-section dash-section--practice">
+        <!-- Practice Plan -->
+          <section id="dashPracticePlan" class="dash-section dash-section--practice">
             <div class="dash-section-header">
               <h2 class="dash-section-title">Practice Plan</h2>
               <button class="dash-section-link" id="dashPracticeLink">View all</button>
@@ -667,13 +666,13 @@
             <div id="dashPracticeContent" class="dash-practice-list"></div>
           </section>
 
-          <section class="dash-section dash-section--courses">
+          <!-- Active Courses -->
+          <section id="dashCourses" class="dash-section dash-section--courses">
             <div class="dash-section-header">
               <h2 class="dash-section-title">Active Courses</h2>
             </div>
             <div id="dashCoursesContent" class="dash-courses-list"></div>
           </section>
-        </div>
 
         <!-- Daily Quote -->
         <div class="dash-quote">
@@ -2073,6 +2072,14 @@
         <div class="setting-row" style="flex-direction: row; align-items: center; justify-content: start;">
           <label>Show ghost hands:</label>
           <input type="checkbox" id="vHandsToggle" checked style="width:auto;">
+        </div>
+
+        <div class="setting-row" style="flex-direction: row; align-items: center; justify-content: start;">
+          <label>Ghost hands style:</label>
+          <select id="vHandsStyleSelect" title="Orb markers or illustrated hands">
+            <option value="orbs">Orbs</option>
+            <option value="hands">Hands</option>
+          </select>
         </div>
       </div>
     </div>

@@ -717,15 +717,24 @@ function attachCellListeners(cell, ctx = activeGrid) {
       return;
     }
 
-    // Plain tap: just move the caret so the user can write into the cell as
-    // normal. Deliberately does NOT set a range — that's what triggers the
-    // selection toolbar/mobile selection-mode UI, which should only appear
-    // from a long-press (see startLongPress below), not a quick tap. Clear
-    // any leftover range/highlight from a previous long-press too.
+    // Plain tap on a touchscreen: just move the caret so the user can write
+    // into the cell as normal. Deliberately does NOT set a range — that's
+    // what triggers the selection toolbar/mobile selection-mode UI, which on
+    // a touch device should only appear from a long-press (see startLongPress
+    // below), not a quick tap — otherwise every tap-to-write hides the
+    // handpan. On desktop (fine/mouse pointer) a plain click has always
+    // opened the selection menu directly; there's no long-press gesture to
+    // fall back on there, so keep that behaviour.
     ctx.selecting = false;
-    clearRange(ctx);
-    ctx.anchorIndex = i;
-    setCaret(i, ctx);
+    if (window.matchMedia('(pointer: coarse)').matches) {
+      clearRange(ctx);
+      ctx.anchorIndex = i;
+      setCaret(i, ctx);
+    } else {
+      ctx.anchorIndex = i;
+      setCaret(i, ctx);
+      setRange(i, i, ctx);
+    }
   });
 
   cell.addEventListener('dblclick', (ev) => {

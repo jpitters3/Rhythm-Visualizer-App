@@ -4,6 +4,33 @@ import { HANDPAN_MAP } from './handpanmap.js';
 import { resolveHand, addTickObserver } from './noteplayer.js';
 import { checkCellIsMultiMode } from './notegrid.js';
 
+// Simplified back-of-hand silhouette (drawn as a right hand; the left hand
+// mirrors it via CSS `transform: scaleX(-1)`). Two small circles sit at the
+// index and thumb tips — normally invisible, they flash via the
+// `finger-light lit` animation when that specific finger strikes a chord
+// slot (see `triggerStrike`).
+const HAND_ICON_SVG = `
+  <svg class="hand-icon" viewBox="0 0 40 52" aria-hidden="true">
+    <path class="hand-palm" d="
+      M 10 22
+      C 10 10, 12 3, 15 3
+      C 18 3, 19 9, 19 16
+      L 19 20
+      C 19 15, 20 8, 23 8
+      C 26 8, 27 14, 27 20
+      C 28 15, 29 11, 31 11
+      C 33 11, 34 16, 33 22
+      L 33 30
+      C 33 42, 27 49, 20 49
+      C 13 49, 9 43, 8 35
+      C 6 32, 3 27, 5 23
+      C 6 20, 9 21, 10 24
+      Z" />
+    <circle class="finger-light finger-light-index" cx="16" cy="7" r="4" />
+    <circle class="finger-light finger-light-thumb" cx="6" cy="27" r="4" />
+  </svg>
+`;
+
 class VirtualHands {
   constructor() {
     // FIX: Append to 'handpanWrap' instead of 'handpanOverlay'
@@ -34,6 +61,15 @@ class VirtualHands {
       this.toggleBtn.checked = this.enabled;
       this.toggleBtn.addEventListener('change', (e) => this.setEnabled(e.target.checked));
     }
+
+    // Style: orb markers (default) or illustrated hands
+    this.style = localStorage.getItem('vHandsStyle') === 'hands' ? 'hands' : 'orbs';
+    this.styleSelect = document.getElementById('vHandsStyleSelect');
+    if (this.styleSelect) {
+      this.styleSelect.value = this.style;
+      this.styleSelect.addEventListener('change', (e) => this.setStyle(e.target.value));
+    }
+    this.updateStyle();
 
     this.updateVisibility();
 
@@ -94,10 +130,28 @@ class VirtualHands {
     this.layer.style.display = this.enabled ? 'block' : 'none';
   }
 
+  setStyle(val) {
+    this.style = val === 'hands' ? 'hands' : 'orbs';
+    localStorage.setItem('vHandsStyle', this.style);
+    this.updateStyle();
+  }
+
+  updateStyle() {
+    if (!this.layer) return;
+    this.layer.classList.toggle('hand-style-graphic', this.style === 'hands');
+  }
+
   createHand(type, label) {
     const el = document.createElement('div');
     el.className = `v-hand ${type}`;
-    el.textContent = label;
+
+    const orb = document.createElement('span');
+    orb.className = 'v-hand-orb';
+    orb.textContent = label;
+    el.appendChild(orb);
+
+    el.insertAdjacentHTML('beforeend', HAND_ICON_SVG);
+
     this.layer.appendChild(el);
     return el;
   }
@@ -140,7 +194,26 @@ class VirtualHands {
       });
     }
 
-    this.update(stepNotes, stepHands, nextL, nextR);
+    // Which finger (thumb/index) struck, if that detail is available.
+    // Only chord/multi-note cells track individual finger slots today —
+    // lh-index/rh-index are the even slots, lh-thumb/rh-thumb the odd ones
+    // (see notegrid.js's sub-dot dataset.idx assignment). A plain single
+    // note has no slot at all, so both stay null and the whole hand just
+    // pulses instead of a specific fingertip lighting up.
+    let fingerL = null;
+    let fingerR = null;
+    const currentData = ctx.innerLabels[ctx.step];
+    if (Array.isArray(currentData)) {
+      const currentHandsData = ctx.innerHands[ctx.step];
+      currentData.forEach((label, subIdx) => {
+        if (!label) return;
+        const hand = resolveHand(ctx.step, currentHandsData, subIdx, true, ctx.subdivision);
+        const finger = (subIdx % 2 === 0) ? 'index' : 'thumb';
+        if (hand === 'L') fingerL = finger; else fingerR = finger;
+      });
+    }
+
+    this.update(stepNotes, stepHands, nextL, nextR, fingerL, fingerR);
   }
 
   /**
@@ -149,8 +222,10 @@ class VirtualHands {
    * @param {Array} hands - Hand assignments for active notes
    * @param {string} nextL - Next target note for Left hand (anticipation)
    * @param {string} nextR - Next target note for Right hand (anticipation)
+   * @param {string|null} fingerL - 'index' | 'thumb' | null for the Left hand's strike
+   * @param {string|null} fingerR - 'index' | 'thumb' | null for the Right hand's strike
    */
-  update(notes, hands, nextL, nextR) {
+  update(notes, hands, nextL, nextR, fingerL = null, fingerR = null) {
     if (!this.overlay || !this.enabled) return;
 
     // Reset strike states
@@ -177,7 +252,7 @@ class VirtualHands {
     // LEFT HAND
     if (activeL) {
       this.moveHand(this.leftHand, activeL);
-      this.triggerStrike(this.leftHand);
+      this.triggerStrike(this.leftHand, fingerL);
       this.lastL = activeL; // Update memory
     } else if (nextL) {
       // Anticipate
@@ -188,7 +263,7 @@ class VirtualHands {
     // RIGHT HAND
     if (activeR) {
       this.moveHand(this.rightHand, activeR);
-      this.triggerStrike(this.rightHand);
+      this.triggerStrike(this.rightHand, fingerR);
       this.lastR = activeR;
     } else if (nextR) {
       this.moveHand(this.rightHand, nextR);
@@ -205,12 +280,21 @@ class VirtualHands {
     }
   }
 
-  triggerStrike(el) {
+  triggerStrike(el, finger = null) {
     el.animate([
       { transform: 'translate(-50%, -50%) scale(1)',   opacity: 1   },
       { transform: 'translate(-50%, -50%) scale(1.3)', opacity: 0.8 },
       { transform: 'translate(-50%, -50%) scale(1)',   opacity: 1   }
     ], { duration: 150, easing: 'ease-out' });
+
+    if (finger) {
+      const light = el.querySelector(`.finger-light-${finger}`);
+      if (light) {
+        light.classList.remove('lit');
+        light.getBoundingClientRect(); // force reflow so the animation restarts on repeats
+        light.classList.add('lit');
+      }
+    }
   }
 
   reset() {

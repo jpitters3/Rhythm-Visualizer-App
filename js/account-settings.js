@@ -11,6 +11,8 @@ import { renderNotifSettings } from './notification-settings.js';
 import { openAuthModal } from './auth.js';
 import { startTour, resetTour } from './onboarding-tour.js';
 import { currentProfile, updateUserAccentColor } from './profile.js';
+import { navigate } from './router.js';
+import { loadDashboard } from './dashboard.js';
 
 const ACCENT_CHOICES = [
   { id: 'blue',   label: 'Blue' },
@@ -119,9 +121,11 @@ function renderSidebar() {
     openAuthModal();
   });
 
-  body.querySelector('#acctReplayTourBtn')?.addEventListener('click', () => {
+  body.querySelector('#acctReplayTourBtn')?.addEventListener('click', async () => {
     close();
     resetTour(); // resets all sections
+    navigate('dashboard');
+    await loadDashboard();
     startTour('dashboard');
   });
 

@@ -97,7 +97,7 @@ export function viewStudentDashboard(studentId, displayName) {
 
 // ── Load & render ─────────────────────────────────────────────────────────────
 
-async function loadDashboard() {
+export async function loadDashboard() {
   const userId = viewingAsUserId ?? currentUser?.id;
   if (!userId) return;
 

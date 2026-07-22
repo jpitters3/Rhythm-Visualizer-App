@@ -7,6 +7,10 @@
  *
  * Step fields:
  *   target       CSS selector | null (null = centered card, no spotlight)
+ *   mobileTarget (optional) CSS selector used instead of `target` when the
+ *                    viewport is mobile-width — e.g. the main nav links live
+ *                    inside a hidden `.app-nav` on mobile, so steps that point
+ *                    at them should point at `#mobileMenuBtn` instead.
  *   title        Tooltip heading
  *   body         Tooltip body text
  *   position     'bottom' | 'top' | 'left' | 'right' | 'center'
@@ -58,25 +62,26 @@ const TOURS = {
         position: 'bottom',
       },
       {
-        target: '#dashGoalsContent',
+        target: '#dashGoals',
         title: 'Your goals ☝️',
         body: 'Set your dream goal and a short-term focus. If you have a teacher they will be able to see these — it helps them tailor your lessons to where you want to go.',
         position: 'bottom',
       },
       {
-        target: '#dashPracticeContent',
+        target: '#dashPracticePlan',
         title: 'Your practice plan ☝️',
         body: "The exercises you're currently working on every day.",
         position: 'bottom',
       },
       {
-        target: '#dashCoursesContent',
+        target: '#dashCourses',
         title: 'Active courses ☝️',
         body: "The courses you're currently working through.",
         position: 'bottom',
       },
       {
         target: 'a[data-route="studio"]',
+        mobileTarget: '#mobileMenuBtn',
         title: 'Next: the Studio ☝️',
         body: "This is where you'll play and compose. Click Studio in the nav to explore it.",
         position: 'bottom',
@@ -115,6 +120,7 @@ const TOURS = {
       },
       {
         target: '#primaryControlsWrapper',
+        mobileTarget: '#mobileControlsBtn',
         title: 'Studio settings ☝️',
         body: 'Clear the grid, enable compose mode, change time signature, and more.',
         position: 'bottom',
@@ -127,6 +133,7 @@ const TOURS = {
       },
       {
         target: 'a[data-route="library"]',
+        mobileTarget: '#mobileMenuBtn',
         title: 'Next: your Library ☝️',
         body: 'Phrases you save in the Studio live here. Click Library to explore it.',
         position: 'bottom',
@@ -147,6 +154,7 @@ const TOURS = {
       },
       {
         target: '#toggleComposerBtn',
+        mobileTarget: '#mobileMenuBtn',
         title: 'Next: the Composer',
         body: 'Stack multiple phrases into a full song. Click Composer to check it out.',
         position: 'bottom',
@@ -181,9 +189,9 @@ const TOURS = {
     steps: [
       {
         target: '#practiceSidebar',
-        title: '👈 Your practice plan',
+        title: 'Your practice plan ☝️',
         body: "These are the exercises you're working on every day. Tap one to load it into the Studio.",
-        position: 'center',
+        position: 'bottom',
       },
       {
         target: '#browseExercisesBtn',
@@ -234,6 +242,7 @@ const TOURS = {
       },
       {
         target: 'a[data-route="community"]',
+        mobileTarget: '#mobileMenuBtn',
         title: 'Next: Community',
         body: 'Connect with other handpan players. Click Community to check it out.',
         position: 'bottom',
@@ -277,10 +286,25 @@ export function startTour(sectionKey = 'dashboard') {
   activeCta = tour.cta ?? null;
   active = true;
   currentStep = 0;
-  activeSteps = tour.steps.filter(s => !s.target || document.querySelector(s.target));
+  activeSteps = tour.steps.filter(s => {
+    const sel = resolveTarget(s);
+    return !sel || document.querySelector(sel);
+  });
   if (activeSteps.length === 0) { markSeen(sectionKey); return; }
   buildDOM();
   showStep(0);
+}
+
+// Same mobile breakpoint used by .app-nav / .hamburger-btn in layout.css.
+function isMobile() {
+  return window.innerWidth <= 768;
+}
+
+// A step's mobileTarget takes over on mobile — e.g. nav links live inside a
+// hidden .app-nav there, so steps that spotlight them should spotlight the
+// hamburger button instead.
+function resolveTarget(step) {
+  return (isMobile() && step.mobileTarget) ? step.mobileTarget : step.target;
 }
 
 export function resetTour(sectionKey) {
@@ -304,6 +328,7 @@ let active = false;
 let pendingRingRaf = null;
 let pendingTooltipRaf = null;
 let advanceCleanup = null;
+let pendingScrollCleanup = null;
 
 // ── DOM construction ──────────────────────────────────────────────────────────
 
@@ -331,18 +356,19 @@ function showStep(index) {
   const isLast = index === activeSteps.length - 1;
   const total = activeSteps.length;
 
-  // Clean up any previous clickToAdvance listener
+  // Clean up any previous clickToAdvance listener / pending scroll wait
   if (advanceCleanup) { advanceCleanup(); advanceCleanup = null; }
+  if (pendingScrollCleanup) { pendingScrollCleanup(); pendingScrollCleanup = null; }
 
-  const targetEl = step.target ? document.querySelector(step.target) : null;
+  const targetSel = resolveTarget(step);
+  const targetEl = targetSel ? document.querySelector(targetSel) : null;
 
-  // Overlay + ring
+  // Overlay + ring visibility (geometry is positioned below, once any scroll settles)
   if (step.clickToAdvance && targetEl) {
     // Passthrough overlay so the user can actually click the target
     overlayEl.classList.remove('tour-overlay--dim');
     overlayEl.classList.add('tour-overlay--passthrough');
     ringEl.hidden = false;
-    positionRing(targetEl);
     // Complete this section's tour when they click the highlighted element
     const handler = () => completeTour();
     targetEl.addEventListener('click', handler, { once: true });
@@ -350,7 +376,6 @@ function showStep(index) {
   } else if (targetEl) {
     overlayEl.classList.remove('tour-overlay--dim', 'tour-overlay--passthrough');
     ringEl.hidden = false;
-    positionRing(targetEl);
   } else {
     overlayEl.classList.add('tour-overlay--dim');
     overlayEl.classList.remove('tour-overlay--passthrough');
@@ -400,7 +425,19 @@ function showStep(index) {
     `;
   }
 
-  positionTooltip(targetEl, step.position);
+  // Scroll the target into view first, then position the ring + tooltip once
+  // that scroll (if any) has actually settled — scrollIntoView({smooth}) has
+  // no completion callback, so measuring geometry right away (even a frame
+  // later) captures the pre-scroll position and puts both off-target.
+  if (targetEl) {
+    targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    pendingScrollCleanup = afterScrollSettles(() => {
+      if (ringEl && !ringEl.hidden) positionRing(targetEl);
+      positionTooltip(targetEl, step.position);
+    });
+  } else {
+    positionTooltip(targetEl, step.position);
+  }
 
   document.getElementById('tourNextBtn')?.addEventListener('click', () => {
     isLast ? completeTour() : showStep(index + 1);
@@ -414,8 +451,32 @@ function showStep(index) {
 
 // ── Positioning ───────────────────────────────────────────────────────────────
 
+// Waits for a just-triggered scroll to actually finish before calling `cb`,
+// so callers don't measure geometry mid-animation. Debounces on 'scroll'
+// (captured at window so it also catches scrollable ancestors like
+// #view-dashboard, which don't bubble) with a timeout fallback for the case
+// where the target was already in view and no scroll event fires at all.
+// Returns a cleanup function to cancel if a new step starts first.
+function afterScrollSettles(cb) {
+  let timer = null;
+  const finish = () => {
+    window.removeEventListener('scroll', onScroll, true);
+    clearTimeout(timer);
+    cb();
+  };
+  const onScroll = () => {
+    clearTimeout(timer);
+    timer = setTimeout(finish, 120);
+  };
+  window.addEventListener('scroll', onScroll, true);
+  timer = setTimeout(finish, 120);
+  return () => {
+    window.removeEventListener('scroll', onScroll, true);
+    clearTimeout(timer);
+  };
+}
+
 function positionRing(el) {
-  el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   pendingRingRaf = scheduleRaf(pendingRingRaf, () => {
     const rect = el.getBoundingClientRect();
     const pad = 10;
@@ -484,6 +545,7 @@ function completeTour() {
   activeSectionKey = null;
   activeCta = null;
   if (advanceCleanup) { advanceCleanup(); advanceCleanup = null; }
+  if (pendingScrollCleanup) { pendingScrollCleanup(); pendingScrollCleanup = null; }
   if (pendingRingRaf) { cancelAnimationFrame(pendingRingRaf); pendingRingRaf = null; }
   if (pendingTooltipRaf) { cancelAnimationFrame(pendingTooltipRaf); pendingTooltipRaf = null; }
   overlayEl?.remove();

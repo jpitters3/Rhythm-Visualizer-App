@@ -1,4 +1,4 @@
-/* Virtual Hand Cursors (Glassmorphism) */
+/* Virtual Hand Cursors (Ghost Hands) — orb markers or illustrated hands */
 
 .v-hand-layer {
   position: absolute;
@@ -16,14 +16,6 @@
   position: absolute;
   width: 40px;
   height: 40px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.15);
-  /* backdrop-filter: blur(4px); */
-  /* -webkit-backdrop-filter: blur(4px); */
-  /* Performance Fix: Removed blur to prevent crash in Chrome/Brave */
-  
-  border: 1px solid rgba(255, 255, 255, 0.4);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2), inset 0 0 10px rgba(255, 255, 255, 0.1);
   transform: translate(-50%, -50%);
   will-change: transform, left, top;
   transition: top 0.15s cubic-bezier(0.25, 0.46, 0.45, 0.94),
@@ -32,25 +24,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: white;
-  font-family: var(--font-main, sans-serif);
-  font-weight: 700;
-  font-size: 14px;
   opacity: 0;
   /* Hidden by default until active */
-}
-
-/* Hand Modifiers */
-.v-hand.h-left {
-  background: rgba(100, 200, 255, 0.2);
-  border-color: rgba(100, 200, 255, 0.5);
-  box-shadow: 0 0 15px rgba(100, 200, 255, 0.3);
-}
-
-.v-hand.h-right {
-  background: rgba(255, 100, 100, 0.2);
-  border-color: rgba(255, 100, 100, 0.5);
-  box-shadow: 0 0 15px rgba(255, 100, 100, 0.3);
 }
 
 /* Active State (Visible) */
@@ -61,6 +36,99 @@
 /* Strike Animation (Pulse) */
 .v-hand.striking {
   transform: translate(-50%, -50%) scale(1.3);
-  background: rgba(255, 255, 255, 0.4);
   z-index: 100 !important;
+}
+
+/* ===== Orb style (default) ===== */
+.v-hand-orb {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2), inset 0 0 10px rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-family: var(--font-main, sans-serif);
+  font-weight: 700;
+  font-size: 14px;
+  transition: background 0.15s ease;
+}
+
+.v-hand.h-left .v-hand-orb {
+  background: rgba(100, 200, 255, 0.2);
+  border-color: rgba(100, 200, 255, 0.5);
+  box-shadow: 0 0 15px rgba(100, 200, 255, 0.3);
+}
+
+.v-hand.h-right .v-hand-orb {
+  background: rgba(255, 100, 100, 0.2);
+  border-color: rgba(255, 100, 100, 0.5);
+  box-shadow: 0 0 15px rgba(255, 100, 100, 0.3);
+}
+
+.v-hand.striking .v-hand-orb {
+  background: rgba(255, 255, 255, 0.4);
+}
+
+/* ===== Hand-graphic style ===== */
+.hand-icon {
+  display: none;
+  width: 46px;
+  height: 56px;
+  overflow: visible;
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.3));
+}
+
+.v-hand-layer.hand-style-graphic .v-hand-orb {
+  display: none;
+}
+
+.v-hand-layer.hand-style-graphic .hand-icon {
+  display: block;
+}
+
+/* Back-of-left-hand is just the right-hand icon mirrored */
+.v-hand.h-left .hand-icon {
+  transform: scaleX(-1);
+}
+
+.hand-icon .hand-palm {
+  fill: rgba(255, 255, 255, 0.5);
+  stroke: rgba(255, 255, 255, 0.85);
+  stroke-width: 1.5;
+  transition: fill 0.15s ease;
+}
+
+.v-hand.h-left .hand-palm {
+  fill: rgba(100, 200, 255, 0.4);
+  stroke: rgba(100, 200, 255, 0.95);
+}
+
+.v-hand.h-right .hand-palm {
+  fill: rgba(255, 100, 100, 0.4);
+  stroke: rgba(255, 100, 100, 0.95);
+}
+
+.v-hand.striking .hand-palm {
+  fill: rgba(255, 255, 255, 0.9);
+}
+
+/* Fingertip "light" — lands on whichever finger (index/thumb) actually
+   struck. Only chord cells carry that detail today; a plain single note
+   just pulses the whole hand via .striking above. */
+.finger-light {
+  opacity: 0;
+  fill: #fff;
+}
+
+.finger-light.lit {
+  animation: fingerLightPulse 0.4s ease-out;
+}
+
+@keyframes fingerLightPulse {
+  0%   { opacity: 1; r: 3.5px; }
+  100% { opacity: 0; r: 6.5px; }
 }
