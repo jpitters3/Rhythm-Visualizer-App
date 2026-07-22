@@ -164,6 +164,15 @@ class VirtualHands {
     let nextL = null;
     let nextR = null;
 
+    // True only when nextL and nextR both turned out to be the SAME future
+    // step — i.e. the two hands' next notes are genuinely a shared/joint
+    // event (a chord split across both hands), not just two independent
+    // notes that happen to fall at different, unrelated times. This is what
+    // anticipate() uses to decide whether hand-crossing avoidance even
+    // applies — see update() and the comment on anticipate() for why plain
+    // back-and-forth alternation must NOT go through that logic.
+    let sharedNext = false;
+
     // Limit lookahead to ~2 beats (8 sub-steps in 16th mode)
     const maxLookahead = 8;
     const all = ctx.cells;
@@ -200,8 +209,16 @@ class VirtualHands {
         (h === 'L' ? stepHitsL : stepHitsR).push({ note: lbl, finger });
       });
 
-      if (!nextL && stepHitsL.length) nextL = stepHitsL;
-      if (!nextR && stepHitsR.length) nextR = stepHitsR;
+      if (!nextL && !nextR && stepHitsL.length && stepHitsR.length) {
+        // Neither hand has found anything closer yet, and this step has
+        // both — a genuine joint event.
+        nextL = stepHitsL;
+        nextR = stepHitsR;
+        sharedNext = true;
+      } else {
+        if (!nextL && stepHitsL.length) nextL = stepHitsL;
+        if (!nextR && stepHitsR.length) nextR = stepHitsR;
+      }
     }
 
     // Which note(s) + finger(s) struck this step, per hand. Only chord/
@@ -227,7 +244,7 @@ class VirtualHands {
       (hand === 'L' ? hitsL : hitsR).push({ note: currentData, finger: null });
     }
 
-    this.update(hitsL, hitsR, nextL, nextR);
+    this.update(hitsL, hitsR, nextL, nextR, sharedNext);
   }
 
   /**
@@ -236,8 +253,9 @@ class VirtualHands {
    * @param {Array<{note:string, finger:string|null}>} hitsR - Right hand's active note(s) this step
    * @param {Array<{note:string, finger:string|null}>|null} nextL - Left hand's upcoming note(s) (anticipation)
    * @param {Array<{note:string, finger:string|null}>|null} nextR - Right hand's upcoming note(s) (anticipation)
+   * @param {boolean} sharedNext - true when nextL/nextR are the SAME upcoming step (a joint chord)
    */
-  update(hitsL, hitsR, nextL, nextR) {
+  update(hitsL, hitsR, nextL, nextR, sharedNext) {
     if (!this.overlay || !this.enabled) return;
 
     // Reset strike states
@@ -250,13 +268,21 @@ class VirtualHands {
     // *merged* spot ahead of time when that's a same-hand chord, so there's
     // no extra jump when it actually strikes.
     // If no next note, stay at last known position (or center?) -> Stay at last active is usually best.
+    //
+    // Crossing avoidance (anticipate()) only ever applies when sharedNext
+    // is true — i.e. both hands' next notes are the SAME upcoming chord.
+    // Plain back-and-forth alternation (R, L, R, L, ...) has each hand on
+    // its own independent schedule; there's nothing to synchronize with,
+    // so a hand must never wait on the other there — it just moves.
 
     // LEFT HAND
     if (hitsL.length > 0) {
       this.strikeHand(this.leftHand, hitsL);
       this.lastL = hitsL[hitsL.length - 1].note; // Update memory
-    } else if (nextL) {
+    } else if (nextL && sharedNext) {
       this.anticipate(this.leftHand, nextL, this.rightHand, nextR, hitsR.length > 0, 'L');
+    } else if (nextL) {
+      this.positionHand(this.leftHand, this.resolveTargetPosition(this.leftHand, nextL));
     }
     // else: stay put
 
@@ -264,16 +290,21 @@ class VirtualHands {
     if (hitsR.length > 0) {
       this.strikeHand(this.rightHand, hitsR);
       this.lastR = hitsR[hitsR.length - 1].note;
-    } else if (nextR) {
+    } else if (nextR && sharedNext) {
       this.anticipate(this.rightHand, nextR, this.leftHand, nextL, hitsL.length > 0, 'R');
+    } else if (nextR) {
+      this.positionHand(this.rightHand, this.resolveTargetPosition(this.rightHand, nextR));
     }
   }
 
   /**
    * Moves a hand toward its upcoming note(s) during anticipation, but never
    * lets it slide past the OTHER hand's current position — a real player's
-   * arms can't cross. If the target would put this hand on the wrong side
-   * (left ending up right of right, or right ending up left of left):
+   * arms can't cross. Only called when sharedNext is true (see update()) —
+   * i.e. this hand's next note and the other hand's next note are the same
+   * joint chord, so synchronizing them actually makes sense. If the target
+   * would put this hand on the wrong side (left ending up right of right,
+   * or right ending up left of left):
    *
    * - If the other hand is CURRENTLY striking a real note this exact tick,
    *   it can't be preemptively yanked off it — that note needs to visually
