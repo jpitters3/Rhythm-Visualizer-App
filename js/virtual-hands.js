@@ -69,7 +69,7 @@ class VirtualHands {
     this.updateVisibility();
 
     // Register with NotePlayer
-    addTickObserver((ctx, notes, hands) => this.onTick(ctx, notes, hands));
+    addTickObserver((ctx) => this.onTick(ctx));
 
     // Performance Observer: Hide hands when heavy modals are open
     this.initVisibilityObserver();
@@ -151,11 +151,17 @@ class VirtualHands {
     return el;
   }
 
-  onTick(ctx, stepNotes, stepHands) {
+  onTick(ctx) {
     // Only visualize for Grid A
     if (ctx.id !== 'A' || !this.enabled) return;
 
     // --- LOOKAHEAD LOGIC ---
+    // Each is a list of the upcoming note(s) for that hand — usually just
+    // one, but two when the next hit is a same-hand chord (index + thumb
+    // together). Capturing both (not just the first slot found) means the
+    // anticipation position below can already park the hand at the correct
+    // *merged* spot ahead of time, instead of committing to one note and
+    // then visibly jumping to the merged spot the instant the chord plays.
     let nextL = null;
     let nextR = null;
 
@@ -181,115 +187,191 @@ class VirtualHands {
       const labels = Array.isArray(futureData) ? futureData : [futureData];
       const isChord = checkCellIsMultiMode(futureData);
 
+      // Group hits within THIS step only — two notes only count as a pair
+      // to anticipate together if they're actually simultaneous (same
+      // future step), never notes from two different upcoming steps. Same
+      // {note, finger} shape as the current-step hits below, so both can
+      // go through the same resolveTargetPosition() math.
+      const stepHitsL = [];
+      const stepHitsR = [];
       labels.forEach((lbl, sIdx) => {
         if (!lbl) return;
         const h = resolveHand(futureStep, futureHands, sIdx, isChord, ctx.subdivision);
-        if (h === 'L' && !nextL) nextL = lbl;
-        if (h === 'R' && !nextR) nextR = lbl;
+        const finger = isChord ? (sIdx % 2 === 0 ? 'index' : 'thumb') : null;
+        (h === 'L' ? stepHitsL : stepHitsR).push({ note: lbl, finger });
       });
+
+      if (!nextL && stepHitsL.length) nextL = stepHitsL;
+      if (!nextR && stepHitsR.length) nextR = stepHitsR;
     }
 
-    // Which finger (thumb/index) struck, if that detail is available.
-    // Only chord/multi-note cells track individual finger slots today —
-    // lh-index/rh-index are the even slots, lh-thumb/rh-thumb the odd ones
-    // (see notegrid.js's sub-dot dataset.idx assignment). A plain single
-    // note has no slot at all, so both stay null and the whole hand just
-    // pulses instead of a specific fingertip lighting up.
-    let fingerL = null;
-    let fingerR = null;
+    // Which note(s) + finger(s) struck this step, per hand. Only chord/
+    // multi-note cells track individual finger slots — lh-index/rh-index
+    // are the even slots, lh-thumb/rh-thumb the odd ones (see notegrid.js's
+    // sub-dot dataset.idx assignment) — so a hand can have up to 2 entries
+    // here (index + thumb fired together, e.g. two adjacent notes played as
+    // one chord) or a single entry with finger:null for a plain note.
+    const hitsL = [];
+    const hitsR = [];
     const currentData = ctx.innerLabels[ctx.step];
+    const currentHandsData = ctx.innerHands[ctx.step];
+
     if (Array.isArray(currentData)) {
-      const currentHandsData = ctx.innerHands[ctx.step];
       currentData.forEach((label, subIdx) => {
         if (!label) return;
         const hand = resolveHand(ctx.step, currentHandsData, subIdx, true, ctx.subdivision);
         const finger = (subIdx % 2 === 0) ? 'index' : 'thumb';
-        if (hand === 'L') fingerL = finger; else fingerR = finger;
+        (hand === 'L' ? hitsL : hitsR).push({ note: label, finger });
       });
+    } else if (currentData) {
+      const hand = resolveHand(ctx.step, currentHandsData, 0, false, ctx.subdivision);
+      (hand === 'L' ? hitsL : hitsR).push({ note: currentData, finger: null });
     }
 
-    this.update(stepNotes, stepHands, nextL, nextR, fingerL, fingerR);
+    this.update(hitsL, hitsR, nextL, nextR);
   }
 
   /**
    * Update hands for the current step.
-   * @param {Array} notes - Active notes triggering a strike
-   * @param {Array} hands - Hand assignments for active notes
-   * @param {string} nextL - Next target note for Left hand (anticipation)
-   * @param {string} nextR - Next target note for Right hand (anticipation)
-   * @param {string|null} fingerL - 'index' | 'thumb' | null for the Left hand's strike
-   * @param {string|null} fingerR - 'index' | 'thumb' | null for the Right hand's strike
+   * @param {Array<{note:string, finger:string|null}>} hitsL - Left hand's active note(s) this step
+   * @param {Array<{note:string, finger:string|null}>} hitsR - Right hand's active note(s) this step
+   * @param {Array<{note:string, finger:string|null}>|null} nextL - Left hand's upcoming note(s) (anticipation)
+   * @param {Array<{note:string, finger:string|null}>|null} nextR - Right hand's upcoming note(s) (anticipation)
    */
-  update(notes, hands, nextL, nextR, fingerL = null, fingerR = null) {
+  update(hitsL, hitsR, nextL, nextR) {
     if (!this.overlay || !this.enabled) return;
 
     // Reset strike states
     this.leftHand.classList.remove('striking');
     this.rightHand.classList.remove('striking');
 
-    // Determine current active notes for each hand
-    let activeL = null;
-    let activeR = null;
-
-    if (notes && notes.length > 0) {
-      notes.forEach((note, idx) => {
-        const hand = hands[idx] || 'R';
-        if (hand === 'L') activeL = note;
-        else activeR = note; // Default 'R'
-      });
-    }
-
     // TARGET LOGIC:
-    // If active, go to active note. 
-    // If idle, go to next note (anticipation).
+    // If active, go to active note(s).
+    // If idle, go to next note (anticipation) — already at the correct
+    // *merged* spot ahead of time when that's a same-hand chord, so there's
+    // no extra jump when it actually strikes.
     // If no next note, stay at last known position (or center?) -> Stay at last active is usually best.
 
     // LEFT HAND
-    if (activeL) {
-      this.moveHand(this.leftHand, activeL);
-      this.triggerStrike(this.leftHand, fingerL);
-      this.lastL = activeL; // Update memory
+    if (hitsL.length > 0) {
+      this.strikeHand(this.leftHand, hitsL);
+      this.lastL = hitsL[hitsL.length - 1].note; // Update memory
     } else if (nextL) {
-      // Anticipate
-      this.moveHand(this.leftHand, nextL);
+      this.positionHand(this.leftHand, this.resolveTargetPosition(this.leftHand, nextL));
     }
     // else: stay put
 
     // RIGHT HAND
-    if (activeR) {
-      this.moveHand(this.rightHand, activeR);
-      this.triggerStrike(this.rightHand, fingerR);
-      this.lastR = activeR;
+    if (hitsR.length > 0) {
+      this.strikeHand(this.rightHand, hitsR);
+      this.lastR = hitsR[hitsR.length - 1].note;
     } else if (nextR) {
-      this.moveHand(this.rightHand, nextR);
+      this.positionHand(this.rightHand, this.resolveTargetPosition(this.rightHand, nextR));
     }
   }
 
   moveHand(el, note) {
-    // Look up position in the exported HANDPAN_MAP
-    const pos = HANDPAN_MAP[note];
-    if (pos) {
-      el.style.left = `${pos.x}%`;
-      el.style.top = `${pos.y}%`;
-      el.classList.add('active');
-    }
+    this.positionHand(el, HANDPAN_MAP[note]);
   }
 
-  triggerStrike(el, finger = null) {
+  positionHand(el, pos) {
+    if (!pos) return;
+    el.style.left = `${pos.x}%`;
+    el.style.top = `${pos.y}%`;
+    el.classList.add('active');
+  }
+
+  /**
+   * Computes the hand-anchor position for 1 or 2 simultaneous note hits.
+   * One hit: exactly that note's own position.
+   * Two hits (index + thumb of the same hand fired together — e.g. two
+   * adjacent notes played as one chord): the hand should look like it's
+   * playing both AT ONCE, not sliding between them. So instead of jumping
+   * to either note, we solve for the one hand position that puts each
+   * fingertip light as close as possible to its own note simultaneously
+   * (a least-squares midpoint — see getFingertipOffsetPct for why). Used
+   * for both the actual strike and its anticipation, so the hand is
+   * already sitting in the right spot before the chord even plays.
+   */
+  resolveTargetPosition(el, hits) {
+    if (hits.length === 1) {
+      return HANDPAN_MAP[hits[0].note] || null;
+    }
+
+    const byFinger = {};
+    hits.forEach(h => { byFinger[h.finger] = h.note; });
+    const posIndex = byFinger.index ? HANDPAN_MAP[byFinger.index] : null;
+    const posThumb = byFinger.thumb ? HANDPAN_MAP[byFinger.thumb] : null;
+
+    // The fingertip-offset math below measures the (hidden, zero-sized)
+    // finger-light elements, which only make sense in 'hands' style — in
+    // 'orbs' style there's no per-finger geometry to split the difference
+    // between, so just land on one of the two notes.
+    if (posIndex && posThumb && this.style === 'hands') {
+      const offIndex = this.getFingertipOffsetPct(el, 'index');
+      const offThumb = this.getFingertipOffsetPct(el, 'thumb');
+      // For each fingertip, "hand position that would land it exactly on
+      // its note" is (note - that finger's fixed offset from the hand's
+      // own anchor point). With two notes pulling toward two different
+      // ideal hand positions, split the difference.
+      return {
+        x: ((posIndex.x - offIndex.x) + (posThumb.x - offThumb.x)) / 2,
+        y: ((posIndex.y - offIndex.y) + (posThumb.y - offThumb.y)) / 2,
+      };
+    }
+
+    // No per-finger geometry to split between — land on whichever note we
+    // do have (shouldn't happen for a real chord, but don't do nothing).
+    return HANDPAN_MAP[hits[hits.length - 1].note] || null;
+  }
+
+  /** Positions + pulses a hand for the note(s) it struck this step. */
+  strikeHand(el, hits) {
+    this.positionHand(el, this.resolveTargetPosition(el, hits));
+    this.pulseHand(el);
+    hits.forEach(h => { if (h.finger) this.lightFinger(el, h.finger); });
+  }
+
+  /**
+   * Measures a fingertip light's current position relative to its hand
+   * element's own center-anchor, in %-of-layer — the same unit HANDPAN_MAP
+   * positions use. Measuring live (rather than recomputing from the CSS
+   * that places it) means this stays correct no matter how the hand's own
+   * size/margins get tuned in hand-cursors.css.
+   */
+  getFingertipOffsetPct(el, finger) {
+    const light = el.querySelector(`.finger-light-${finger}`);
+    if (!light || !this.layer) return { x: 0, y: 0 };
+
+    const layerRect = this.layer.getBoundingClientRect();
+    const handRect = el.getBoundingClientRect();
+    const lightRect = light.getBoundingClientRect();
+
+    const handCenterX = handRect.left + handRect.width / 2;
+    const handCenterY = handRect.top + handRect.height / 2;
+    const lightCenterX = lightRect.left + lightRect.width / 2;
+    const lightCenterY = lightRect.top + lightRect.height / 2;
+
+    return {
+      x: ((lightCenterX - handCenterX) / layerRect.width) * 100,
+      y: ((lightCenterY - handCenterY) / layerRect.height) * 100,
+    };
+  }
+
+  pulseHand(el) {
     el.animate([
       { transform: 'translate(-50%, -50%) scale(1)',   opacity: 1   },
       { transform: 'translate(-50%, -50%) scale(1.3)', opacity: 0.8 },
       { transform: 'translate(-50%, -50%) scale(1)',   opacity: 1   }
     ], { duration: 150, easing: 'ease-out' });
+  }
 
-    if (finger) {
-      const light = el.querySelector(`.finger-light-${finger}`);
-      if (light) {
-        light.classList.remove('lit');
-        light.getBoundingClientRect(); // force reflow so the animation restarts on repeats
-        light.classList.add('lit');
-      }
-    }
+  lightFinger(el, finger) {
+    const light = el.querySelector(`.finger-light-${finger}`);
+    if (!light) return;
+    light.classList.remove('lit');
+    light.getBoundingClientRect(); // force reflow so the animation restarts on repeats
+    light.classList.add('lit');
   }
 
   reset() {
