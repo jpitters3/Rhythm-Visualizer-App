@@ -4,16 +4,15 @@ import { HANDPAN_MAP } from './handpanmap.js';
 import { resolveHand, addTickObserver } from './noteplayer.js';
 import { checkCellIsMultiMode } from './notegrid.js';
 
-// Real illustrated hand art (the same back-of-hand images already used for
-// Split Mode's per-cell icons — see css/hand-icons.css) instead of a
-// hand-authored SVG silhouette. The index/thumb fingertip coordinates below
-// were measured directly off each 200x200 image (as % of width/height) so
-// the finger-light overlay lands precisely on the right digit; the two
-// images aren't a perfect mirror of each other, so each gets its own pair.
 const HAND_ICON_ART = {
   'h-left':  { src: './public/assets/images/hand-left.webp',  index: { x: 81, y: 8 },  thumb: { x: 94, y: 54 } },
   'h-right': { src: './public/assets/images/hand-right.webp', index: { x: 21, y: 8 },  thumb: { x: 8,  y: 58 } },
 };
+
+// Parking spots used to get a hand out of the other's way during a
+// crossing (see anticipate()) — each hand's own side's edge.
+const EDGE_X_LEFT = 8;
+const EDGE_X_RIGHT = 92;
 
 function handIconHtml(type) {
   const art = HAND_ICON_ART[type];
@@ -257,7 +256,7 @@ class VirtualHands {
       this.strikeHand(this.leftHand, hitsL);
       this.lastL = hitsL[hitsL.length - 1].note; // Update memory
     } else if (nextL) {
-      this.positionHand(this.leftHand, this.resolveTargetPosition(this.leftHand, nextL));
+      this.anticipate(this.leftHand, nextL, this.rightHand, nextR, hitsR.length > 0, 'L');
     }
     // else: stay put
 
@@ -266,8 +265,57 @@ class VirtualHands {
       this.strikeHand(this.rightHand, hitsR);
       this.lastR = hitsR[hitsR.length - 1].note;
     } else if (nextR) {
-      this.positionHand(this.rightHand, this.resolveTargetPosition(this.rightHand, nextR));
+      this.anticipate(this.rightHand, nextR, this.leftHand, nextL, hitsL.length > 0, 'R');
     }
+  }
+
+  /**
+   * Moves a hand toward its upcoming note(s) during anticipation, but never
+   * lets it slide past the OTHER hand's current position — a real player's
+   * arms can't cross. If the target would put this hand on the wrong side
+   * (left ending up right of right, or right ending up left of left):
+   *
+   * - If the other hand is CURRENTLY striking a real note this exact tick,
+   *   it can't be preemptively yanked off it — that note needs to visually
+   *   be played where it actually is. So we just wait: neither hand moves
+   *   yet. Once that strike finishes and the other hand is idle too, this
+   *   gets re-evaluated next tick and they proceed together (below).
+   * - Otherwise (other hand is idle), if we already know its own next
+   *   target (otherNextHits — e.g. it's part of the very same upcoming
+   *   chord), send it straight there instead of a placeholder.
+   * - Only fall back to the edge when the other hand has nothing of its
+   *   own coming up at all.
+   */
+  anticipate(el, hits, otherEl, otherNextHits, otherIsStriking, side) {
+    const target = this.resolveTargetPosition(el, hits);
+    if (!target) return;
+
+    const otherX = this.getCurrentX(otherEl);
+    const crosses = side === 'L' ? target.x > otherX : target.x < otherX;
+
+    if (crosses) {
+      if (otherIsStriking) return; // let its real note finish first
+
+      const otherTarget = otherNextHits ? this.resolveTargetPosition(otherEl, otherNextHits) : null;
+      if (otherTarget) {
+        this.positionHand(otherEl, otherTarget);
+      } else {
+        const edgeX = side === 'L' ? EDGE_X_RIGHT : EDGE_X_LEFT;
+        this.positionHand(otherEl, { x: edgeX, y: this.getCurrentY(otherEl) });
+      }
+    }
+
+    this.positionHand(el, target);
+  }
+
+  getCurrentX(el) {
+    const x = parseFloat(el.style.left);
+    return Number.isFinite(x) ? x : 50;
+  }
+
+  getCurrentY(el) {
+    const y = parseFloat(el.style.top);
+    return Number.isFinite(y) ? y : 50;
   }
 
   moveHand(el, note) {
