@@ -1,6 +1,6 @@
 // virtual-hands.js
 // Visualizes hand movements on the virtual handpan
-import { HANDPAN_MAP } from './handpanmap.js';
+import { getDisplayPosition, resolveTakSlapNote } from './handpanmap.js';
 import { resolveHand, addTickObserver } from './noteplayer.js';
 import { checkCellIsMultiMode } from './notegrid.js';
 
@@ -208,7 +208,7 @@ class VirtualHands {
         if (!lbl) return;
         const h = resolveHand(futureStep, futureHands, sIdx, isChord, ctx.subdivision);
         const finger = isChord ? (sIdx % 2 === 0 ? 'index' : 'thumb') : null;
-        (h === 'L' ? stepHitsL : stepHitsR).push({ note: lbl, finger });
+        (h === 'L' ? stepHitsL : stepHitsR).push({ note: resolveTakSlapNote(lbl, h), finger });
       });
 
       if (!nextL && !nextR && stepHitsL.length && stepHitsR.length) {
@@ -239,11 +239,11 @@ class VirtualHands {
         if (!label) return;
         const hand = resolveHand(ctx.step, currentHandsData, subIdx, true, ctx.subdivision);
         const finger = (subIdx % 2 === 0) ? 'index' : 'thumb';
-        (hand === 'L' ? hitsL : hitsR).push({ note: label, finger });
+        (hand === 'L' ? hitsL : hitsR).push({ note: resolveTakSlapNote(label, hand), finger });
       });
     } else if (currentData) {
       const hand = resolveHand(ctx.step, currentHandsData, 0, false, ctx.subdivision);
-      (hand === 'L' ? hitsL : hitsR).push({ note: currentData, finger: null });
+      (hand === 'L' ? hitsL : hitsR).push({ note: resolveTakSlapNote(currentData, hand), finger: null });
     }
 
     this.update(hitsL, hitsR, nextL, nextR, sharedNext);
@@ -352,7 +352,7 @@ class VirtualHands {
   }
 
   moveHand(el, note) {
-    this.positionHand(el, HANDPAN_MAP[note]);
+    this.positionHand(el, getDisplayPosition(note));
   }
 
   positionHand(el, pos) {
@@ -376,13 +376,13 @@ class VirtualHands {
    */
   resolveTargetPosition(el, hits) {
     if (hits.length === 1) {
-      return HANDPAN_MAP[hits[0].note] || null;
+      return getDisplayPosition(hits[0].note) || null;
     }
 
     const byFinger = {};
     hits.forEach(h => { byFinger[h.finger] = h.note; });
-    const posIndex = byFinger.index ? HANDPAN_MAP[byFinger.index] : null;
-    const posThumb = byFinger.thumb ? HANDPAN_MAP[byFinger.thumb] : null;
+    const posIndex = byFinger.index ? getDisplayPosition(byFinger.index) : null;
+    const posThumb = byFinger.thumb ? getDisplayPosition(byFinger.thumb) : null;
 
     // The fingertip-offset math below measures the (hidden, zero-sized)
     // finger-light elements, which only make sense in 'hands' style — in
@@ -403,7 +403,7 @@ class VirtualHands {
 
     // No per-finger geometry to split between — land on whichever note we
     // do have (shouldn't happen for a real chord, but don't do nothing).
-    return HANDPAN_MAP[hits[hits.length - 1].note] || null;
+    return getDisplayPosition(hits[hits.length - 1].note) || null;
   }
 
   /** Positions + pulses a hand for the note(s) it struck this step. */

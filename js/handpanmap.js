@@ -63,6 +63,20 @@ const HANDPAN_IMG_BRONZE = 'handpan-for-groovepan.png';
 const handpanDots = new Map();
 let perimSvgEl = null; // reference to the active perimeter SVG for arc calibration
 
+// Bottom notes rendered as perimeter arcs (currentHandpanSide === 'perimeter')
+// sit at a computed point on the rim, not at their raw HANDPAN_MAP x/y — see
+// buildPerimeterSvg(). Consumers outside this file (e.g. the virtual hands
+// overlay) that need a note's actual ON-SCREEN position, not just its
+// calibrated one, should go through getDisplayPosition() below rather than
+// reading HANDPAN_MAP directly.
+const perimeterPositions = new Map();
+
+/** A note's current on-screen position — the perimeter-arc projection for a
+ *  bottom note shown as a puck, or its plain HANDPAN_MAP x/y otherwise. */
+export function getDisplayPosition(note) {
+  return perimeterPositions.get(note) || HANDPAN_MAP[note];
+}
+
 let chordTestMode = false;
 export function isChordTestMode() { return chordTestMode; }
 
@@ -708,6 +722,7 @@ export function buildHandpanOverlay() {
 
   handpanOverlay.innerHTML = '';
   handpanDots.clear();
+  perimeterPositions.clear();
 
   if (handpanOverlayBottom) handpanOverlayBottom.innerHTML = '';
 
@@ -827,6 +842,7 @@ function buildPerimeterSvg(perimeterNotes) {
     // Label at arc midpoint
     const lx = cx + arcR * Math.cos(toRad(midAngle));
     const ly = cy + arcR * Math.sin(toRad(midAngle));
+    perimeterPositions.set(note, { x: lx, y: ly });
     const text = document.createElementNS(NS, 'text');
     text.setAttribute('x', lx.toFixed(2));
     text.setAttribute('y', ly.toFixed(2));
@@ -963,12 +979,20 @@ function pulseDot(el, shadowColor, duration, latency) {
   });
 }
 
+/** Taks/slaps are stored in the grid as the generic label "T" / "S" — there's
+ *  a dot (and a HANDPAN_MAP key) per side, "T_L"/"T_R"/"S_L"/"S_R", chosen by
+ *  which hand actually plays it. Anything that needs the note's real
+ *  HANDPAN_MAP/handpanDots key (not just its display label) must resolve
+ *  through here first. */
+export function resolveTakSlapNote(note, hand) {
+  if (note === 'T') return hand === 'L' ? 'T_L' : 'T_R';
+  if (note === 'S') return hand === 'L' ? 'S_L' : 'S_R';
+  return note;
+}
+
 export function highlightHandpan(note, stepIndex, forceHand = null, latency = 0) {
   const sticking = forceHand || (activeGrid.innerHands && activeGrid.innerHands[stepIndex]);
-
-  // Resolve "T"/"S" to the side-appropriate dot based on sticking
-  if (note === 'T') note = (sticking === 'L') ? 'T_L' : 'T_R';
-  if (note === 'S') note = (sticking === 'L') ? 'S_L' : 'S_R';
+  note = resolveTakSlapNote(note, sticking);
 
   let key = String(note || '').toUpperCase();
   let el = handpanDots.get(key);
