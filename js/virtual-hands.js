@@ -3,10 +3,16 @@
 import { getDisplayPosition, resolveTakSlapNote } from './handpanmap.js';
 import { resolveHand, addTickObserver } from './noteplayer.js';
 import { checkCellIsMultiMode } from './notegrid.js';
+import { BASE_PATH } from './config.js';
 
+// BASE_PATH (Vite's import.meta.env.BASE_URL), not a literal './public/...'
+// path — public/ is copied to the site root at build time (its own prefix is
+// stripped), so a hard-coded 'public/' segment 404s in production even
+// though Vite's dev server happens to serve it anyway. Same convention the
+// handpan image and audio samples already use (see handpanmap.js, noteplayer.js).
 const HAND_ICON_ART = {
-  'h-left':  { src: './public/assets/images/hand-left.webp',  index: { x: 81, y: 8 },  thumb: { x: 94, y: 54 } },
-  'h-right': { src: './public/assets/images/hand-right.webp', index: { x: 21, y: 8 },  thumb: { x: 8,  y: 58 } },
+  'h-left':  { src: `${BASE_PATH}assets/images/hand-left.webp`,  index: { x: 81, y: 8 },  thumb: { x: 94, y: 54 } },
+  'h-right': { src: `${BASE_PATH}assets/images/hand-right.webp`, index: { x: 21, y: 8 },  thumb: { x: 8,  y: 58 } },
 };
 
 // Parking spots used to get a hand out of the other's way during a
