@@ -521,7 +521,7 @@ export function initControls() {
       shown = true;
       const wantsToSignIn = await confirmCustom(
         "You can keep creating, but to save your creations, you'll need to create a free account otherwise it'll be lost when you leave.",
-        "Let's make sure your creation is saved",
+        "Let's make sure your creation isn't lost",
         'Sign Up / Sign In 👤',
         'Got it 👍'
       );
