@@ -14,8 +14,8 @@
 
 .v-hand {
   position: absolute;
-  width: 40px;
-  height: 40px;
+  width: 20%;
+  height: 20%;
   transform: translate(-50%, -50%);
   will-change: transform, left, top;
   transition: top 0.15s cubic-bezier(0.25, 0.46, 0.45, 0.94),
@@ -74,12 +74,12 @@
 }
 
 /* ===== Hand-graphic style ===== */
+/* Real illustrated hand art (same images as Split Mode's per-cell icons —
+   see css/hand-icons.css) rather than a hand-authored shape. */
 .hand-icon {
   display: none;
-  width: 46px;
-  height: 56px;
-  overflow: visible;
-  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.3));
+  position: relative;
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.35));
 }
 
 .v-hand-layer.hand-style-graphic .v-hand-orb {
@@ -90,38 +90,40 @@
   display: block;
 }
 
-/* Back-of-left-hand is just the right-hand icon mirrored */
-.v-hand.h-left .hand-icon {
-  transform: scaleX(-1);
+.hand-icon-img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  transition: filter 0.15s ease;
+
 }
 
-.hand-icon .hand-palm {
-  fill: rgba(255, 255, 255, 0.5);
-  stroke: rgba(255, 255, 255, 0.85);
-  stroke-width: 1.5;
-  transition: fill 0.15s ease;
-}
+.v-hand.h-left {
+  margin: 20px 0 0 -30px;
+} 
 
-.v-hand.h-left .hand-palm {
-  fill: rgba(100, 200, 255, 0.4);
-  stroke: rgba(100, 200, 255, 0.95);
-}
+.v-hand.h-right {
+  margin: 20px 0 0 30px;
+} 
 
-.v-hand.h-right .hand-palm {
-  fill: rgba(255, 100, 100, 0.4);
-  stroke: rgba(255, 100, 100, 0.95);
-}
-
-.v-hand.striking .hand-palm {
-  fill: rgba(255, 255, 255, 0.9);
+.v-hand.striking .hand-icon-img {
+  filter: brightness(1.3);
 }
 
 /* Fingertip "light" — lands on whichever finger (index/thumb) actually
-   struck. Only chord cells carry that detail today; a plain single note
-   just pulses the whole hand via .striking above. */
+   struck (positioned inline per-hand from measured art coordinates, see
+   HAND_ICON_ART in virtual-hands.js). Only chord cells carry that detail
+   today; a plain single note just pulses the whole hand via .striking above. */
 .finger-light {
+  position: absolute;
+  width: 28px;
+  height: 28px;
+  margin: -14px 0 0 -14px;
+  border: dashed 2px black;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0) 92%);
   opacity: 0;
-  fill: #fff;
+  pointer-events: none;
 }
 
 .finger-light.lit {
@@ -129,6 +131,6 @@
 }
 
 @keyframes fingerLightPulse {
-  0%   { opacity: 1; r: 3.5px; }
-  100% { opacity: 0; r: 6.5px; }
+  0%   { opacity: 1; transform: scale(0.6); }
+  100% { opacity: 0; transform: scale(1.7); }
 }

@@ -4,32 +4,27 @@ import { HANDPAN_MAP } from './handpanmap.js';
 import { resolveHand, addTickObserver } from './noteplayer.js';
 import { checkCellIsMultiMode } from './notegrid.js';
 
-// Simplified back-of-hand silhouette (drawn as a right hand; the left hand
-// mirrors it via CSS `transform: scaleX(-1)`). Two small circles sit at the
-// index and thumb tips — normally invisible, they flash via the
-// `finger-light lit` animation when that specific finger strikes a chord
-// slot (see `triggerStrike`).
-const HAND_ICON_SVG = `
-  <svg class="hand-icon" viewBox="0 0 40 52" aria-hidden="true">
-    <path class="hand-palm" d="
-      M 10 22
-      C 10 10, 12 3, 15 3
-      C 18 3, 19 9, 19 16
-      L 19 20
-      C 19 15, 20 8, 23 8
-      C 26 8, 27 14, 27 20
-      C 28 15, 29 11, 31 11
-      C 33 11, 34 16, 33 22
-      L 33 30
-      C 33 42, 27 49, 20 49
-      C 13 49, 9 43, 8 35
-      C 6 32, 3 27, 5 23
-      C 6 20, 9 21, 10 24
-      Z" />
-    <circle class="finger-light finger-light-index" cx="16" cy="7" r="4" />
-    <circle class="finger-light finger-light-thumb" cx="6" cy="27" r="4" />
-  </svg>
-`;
+// Real illustrated hand art (the same back-of-hand images already used for
+// Split Mode's per-cell icons — see css/hand-icons.css) instead of a
+// hand-authored SVG silhouette. The index/thumb fingertip coordinates below
+// were measured directly off each 200x200 image (as % of width/height) so
+// the finger-light overlay lands precisely on the right digit; the two
+// images aren't a perfect mirror of each other, so each gets its own pair.
+const HAND_ICON_ART = {
+  'h-left':  { src: './public/assets/images/hand-left.webp',  index: { x: 81, y: 8 },  thumb: { x: 94, y: 54 } },
+  'h-right': { src: './public/assets/images/hand-right.webp', index: { x: 21, y: 8 },  thumb: { x: 8,  y: 58 } },
+};
+
+function handIconHtml(type) {
+  const art = HAND_ICON_ART[type];
+  return `
+    <div class="hand-icon">
+      <img class="hand-icon-img" src="${art.src}" alt="" draggable="false" />
+      <span class="finger-light finger-light-index" style="left:${art.index.x}%; top:${art.index.y}%;"></span>
+      <span class="finger-light finger-light-thumb" style="left:${art.thumb.x}%; top:${art.thumb.y}%;"></span>
+    </div>
+  `;
+}
 
 class VirtualHands {
   constructor() {
@@ -150,7 +145,7 @@ class VirtualHands {
     orb.textContent = label;
     el.appendChild(orb);
 
-    el.insertAdjacentHTML('beforeend', HAND_ICON_SVG);
+    el.insertAdjacentHTML('beforeend', handIconHtml(type));
 
     this.layer.appendChild(el);
     return el;
