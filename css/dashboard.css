@@ -321,12 +321,14 @@
   grid-template-columns: 1fr 1fr;
   gap: 12px;
 }
-@media (max-width: 600px) {
+@media (max-width: 768px) {
   .dash-goals-grid {
     grid-template-columns: 1fr;
   }
 }
 .dash-goal-card {
+  max-width: 100%;
+  overflow-wrap: anywhere;
   background: var(--panel);
   border: 1px solid var(--panel-border);
   border-radius: 12px;
