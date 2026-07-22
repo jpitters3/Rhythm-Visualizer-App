@@ -56,8 +56,10 @@ class VirtualHands {
       this.toggleBtn.addEventListener('change', (e) => this.setEnabled(e.target.checked));
     }
 
-    // Style: orb markers (default) or illustrated hands
-    this.style = localStorage.getItem('vHandsStyle') === 'hands' ? 'hands' : 'orbs';
+    // Style: illustrated hands (default) or orb markers. Anyone who never
+    // touched this setting gets 'hands'; an explicit past choice of 'orbs'
+    // is still respected.
+    this.style = localStorage.getItem('vHandsStyle') === 'orbs' ? 'orbs' : 'hands';
     this.styleSelect = document.getElementById('vHandsStyleSelect');
     if (this.styleSelect) {
       this.styleSelect.value = this.style;
