@@ -2,7 +2,7 @@ import { setCaret } from './range-selection.js';
 import { spellNote } from './utils.js';
 import { Modal } from './modal.js';
 import { updateUserLabelPreference } from './profile.js';
-import { writeToSession, clampIndex, getComposeOn } from './compose-mode.js';
+import { writeToSession, clampIndex, getComposeOn, advanceSelection } from './compose-mode.js';
 import { preloadScaleSamples, noteForLabel, isDownbeatStep, registerHighlighter, playNoteByLabel, intervalMs } from './noteplayer.js';
 import { SCALES, SCALE_KEY_LOCAL, BASE_PATH } from './config.js';
 import { currentUser, getScale, getSelectedScaleName, setSelectedScaleName, setCurrentScale } from './state.js';
@@ -11,7 +11,7 @@ import { enterCalibrationMode } from './calibration.js';
 import { startGuidedCalibration } from './guided-calibration.js';
 import { activeGrid } from './grid-context.js';
 import { Bus, BUS_EVENT } from './bus.js';
-import { setBeatToGhost, renderAllMeasures, updateGridLabels } from './notegrid.js';
+import { setBeatToGhost, renderAllMeasures, updateGridLabels, assignChordToSelectedCell } from './notegrid.js';
 import { isAuthed } from './auth.js';
 import { canAccess, FEATURE } from './gated-feature.js';
 import { alert, confirm } from './alert.js';
@@ -1559,6 +1559,36 @@ export function initHandpanMap() {
   handpanOverlay?.addEventListener('click', handleHandpanTap);
   handpanOverlayBottom?.addEventListener('click', handleHandpanTap);
 
+  // Real multi-finger taps often land a few ms apart rather than inside the
+  // exact same touchstart event, so notes are buffered for a short window
+  // and written as one chord (via assignChordToSelectedCell, which already
+  // implements the lower-note→thumb / higher-note→index / third-note→
+  // opposite-index assignment) if more than one arrived together —
+  // otherwise it falls back to the normal single-note write + advance.
+  const CHORD_TAP_WINDOW_MS = 70;
+  let chordTapBuffer = [];
+  let chordTapTimer = null;
+
+  function flushChordTapBuffer() {
+    chordTapTimer = null;
+    const notes = chordTapBuffer;
+    chordTapBuffer = [];
+    if (notes.length === 0 || activeGrid.caretIndex === null) return;
+
+    if (notes.length === 1) {
+      writeToSession(notes[0], { advance: true });
+    } else {
+      assignChordToSelectedCell(notes);
+      if (getComposeOn()) advanceSelection(1, activeGrid);
+    }
+  }
+
+  function queueChordTap(note) {
+    chordTapBuffer.push(note);
+    if (chordTapTimer) clearTimeout(chordTapTimer);
+    chordTapTimer = setTimeout(flushChordTapBuffer, CHORD_TAP_WINDOW_MS);
+  }
+
   function handleHandpanTouch(e) {
     if (calibrating) return;
     e.preventDefault(); // suppress follow-up click so single taps don't double-fire
@@ -1573,7 +1603,7 @@ export function initHandpanMap() {
                  : rawNote;
       playNoteByLabel(note, null);
       highlightHandpan(rawNote, null);
-      if (activeGrid.caretIndex !== null) writeToSession(note, { advance: true });
+      if (activeGrid.caretIndex !== null) queueChordTap(note);
     }
   }
 
