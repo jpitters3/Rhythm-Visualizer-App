@@ -11,6 +11,7 @@ import { isReviewing, getFeedbackForStep, showFeedbackTooltip, copyLogsForStep, 
 import { Bus, BUS_EVENT } from './bus.js';
 import { checkExportVisibility } from './controls.js';
 import { confirm } from './alert.js';
+import { getNoteX } from './handpanmap.js';
 
 export const cells = (ctx) => (ctx || activeGrid).cells;
 export let activeSubIndex = null;
@@ -836,6 +837,22 @@ export function assignChordToSelectedCell(labels, ctx = activeGrid) {
 
   // Slots: 0=LI, 1=LT, 2=RI, 3=RT
   const slots = ['', '', '', ''];
+
+  // Exactly two notes played together: no same-hand assumption — the
+  // physically further-left note goes to the left index, the further-right
+  // note goes to the right index. Only 3+ simultaneous notes imply one hand
+  // is covering two of them (thumb + index) via the pairing logic below.
+  if (labels.length === 2) {
+    const xs = labels.map(l => getNoteX(l));
+    if (xs[0] !== null && xs[1] !== null) {
+      const [a, b] = labels;
+      if (xs[0] <= xs[1]) { slots[0] = String(a); slots[2] = String(b); }
+      else { slots[0] = String(b); slots[2] = String(a); }
+      ctx.innerLabels[selIdx] = slots;
+      renderAllMeasures(ctx);
+      return true;
+    }
+  }
 
   // Filter for Numbers (1-9) vs Others
   const numericLabels = [];

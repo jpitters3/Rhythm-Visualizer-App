@@ -77,6 +77,14 @@ export function getDisplayPosition(note) {
   return perimeterPositions.get(note) || HANDPAN_MAP[note];
 }
 
+/** A note's raw x position (0-100, left→right), or null if unknown — used
+ *  to order exactly-two-note chords by physical left/right rather than
+ *  assuming they share a hand. */
+export function getNoteX(note) {
+  const pos = HANDPAN_MAP[note];
+  return pos ? pos.x : null;
+}
+
 let chordTestMode = false;
 export function isChordTestMode() { return chordTestMode; }
 
