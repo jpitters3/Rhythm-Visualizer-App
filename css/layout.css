@@ -1,6 +1,15 @@
 /* ===== APP HEADER / NAV ===== */
+/* Grid, not flex: a 3-zone header (fixed-width logo | flexible centered nav |
+   fixed-width account/bell) where the center is genuinely centered against
+   the whole header regardless of the two sides' widths is the textbook case
+   for grid-template-columns: 1fr auto 1fr. The two 1fr side columns keep
+   their default min-content floor (no minmax(0, 1fr) here), so the logo and
+   account/bell cluster can never get squeezed below their own natural size —
+   only the nav (the auto column, explicitly given min-width: 0 below) is
+   allowed to shrink if space genuinely runs out. */
 .app-header {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
   gap: 24px;
   padding: 0 24px;
@@ -19,7 +28,7 @@ body.dark .app-header {
 .app-logo {
   display: flex;
   align-items: center;
-  flex-shrink: 0;
+  justify-self: start;
 }
 
 .app-logo .logo-img {
@@ -27,13 +36,19 @@ body.dark .app-header {
   width: auto;
 }
 
+/* Was position:absolute + left:50% — centered purely on the header's own
+   box, blind to how wide .app-logo/.header-actions actually are. Fine on
+   wide desktop screens where there's slack either side, but on tablet-
+   portrait widths (~768-834px — just above the 768px breakpoint where this
+   collapses to a hamburger dropdown instead) the nav's right edge could
+   overlap .header-actions, since being out of flow meant it never yielded
+   space to its "siblings" in the first place. */
 .app-nav {
   display: flex;
   align-items: center;
+  justify-self: center;
   gap: 4px;
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
+  min-width: 0;
   z-index: 4000;
 }
 
@@ -106,9 +121,8 @@ body.dark .app-header {
 .header-actions {
   display: flex;
   align-items: center;
+  justify-self: end;
   gap: 8px;
-  margin-left: auto;
-  flex-shrink: 0;
 }
 
 /* Account button sits at the right end */
@@ -118,6 +132,7 @@ body.dark .app-header {
 
 .nav-account-btn {
   opacity: 1;
+  justify-content: center;
   font-weight: 600;
   background: var(--accent);
   color: #fff !important;
@@ -142,6 +157,18 @@ body.dark .app-header {
   flex-direction: column;
   height: 100%;
   min-height: 0;
+}
+
+/* Tablet-portrait */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .app-nav {
+    gap: 2px;
+  }
+
+  .nav-link {
+    padding: 6px 8px;
+    font-size: 13px;
+  }
 }
 
 /* Mobile */
