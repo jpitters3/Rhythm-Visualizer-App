@@ -287,25 +287,6 @@ const setAppHeight = () =>
 window.addEventListener('resize', setAppHeight);
 setAppHeight();
 
-// ── Transport bar vs. mobile browser chrome 
-function syncTransportBarToVisualViewport() {
-  const bar = document.querySelector('.controls-transport');
-  const vv = window.visualViewport;
-  if (!bar || !vv) return;
-  if (!window.matchMedia('(max-width: 768px)').matches) {
-    bar.style.bottom = '';
-    return;
-  }
-  const chromeCoveringBottom = window.innerHeight - (vv.height + vv.offsetTop);
-  bar.style.bottom = `${Math.max(0, chromeCoveringBottom)}px`;
-}
-if (window.visualViewport) {
-  window.visualViewport.addEventListener('resize', syncTransportBarToVisualViewport);
-  window.visualViewport.addEventListener('scroll', syncTransportBarToVisualViewport);
-}
-window.addEventListener('resize', syncTransportBarToVisualViewport);
-syncTransportBarToVisualViewport();
-
 // Global error handlers
 window.addEventListener('error', (e) => {
   if (document.getElementById('__fatal_panel__')) return;
