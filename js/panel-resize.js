@@ -153,6 +153,11 @@ export function initPanelResize() {
     applyHeight(Number.isFinite(saved) ? saved : maxContent + transportBarHeight());
   }
 
+  // Restore saved panel height when studio is opened
+  window.addEventListener('routeChanged', (e) => {
+    if (e.detail.route === 'studio') restoreSavedHeight();
+  });
+
   // Leaving mobile: drop the inline sizing so the desktop CSS (flex/stretch,
   // its own cqh rule) takes back over instead of being pinned to a stale
   // mobile value.

@@ -605,7 +605,19 @@ export function setInnerFlam(i, value, ctx = activeGrid) {
   }
 }
 
+function activateMultiMode(cell, ctx) {
+  setIsEditMulti(true);
+  cell.classList.add('multi-selected');
+  const allSubs = Array.from(cell.querySelectorAll('.sub-dot'));
+  allSubs.forEach(s => s.classList.add('active'));
+  updateMultiCursor(ctx);
+}
+
+const DOUBLE_TAP_MS = 350;
+
 function attachCellListeners(cell, ctx = activeGrid) {
+  let lastTapTime = 0;
+
   // Pointer selection
   cell.addEventListener('click', async (ev) => {
     ev.stopPropagation();
@@ -658,6 +670,22 @@ function attachCellListeners(cell, ctx = activeGrid) {
 
     const i = parseInt(cell.dataset.index);
     if (isNaN(i)) return;
+
+    // iOS Safari's `dblclick` is synthesized from the double-tap-to-zoom
+    // gesture recognizer, which .cell's `touch-action: none` (needed so the
+    // long-press/drag-select handling below gets raw touch input) disables
+    // entirely — so a real double-tap there never produces a dblclick.
+    // Detect it manually from click timing instead; mouse input already gets
+    // a native dblclick, so this only needs to run for touch/coarse pointers.
+    if (window.matchMedia('(pointer: coarse)').matches) {
+      const now = Date.now();
+      if (now - lastTapTime < DOUBLE_TAP_MS) {
+        lastTapTime = 0;
+        activateMultiMode(cell, ctx);
+      } else {
+        lastTapTime = now;
+      }
+    }
 
     // CHECK EDIT HANDS MODE
     if (editHandsMode) {
@@ -741,11 +769,7 @@ function attachCellListeners(cell, ctx = activeGrid) {
   cell.addEventListener('dblclick', (ev) => {
     ev.stopPropagation();
     if (isReviewing && isReviewing()) return; // BLOCK EDITING
-    setIsEditMulti(true);
-    cell.classList.add('multi-selected');
-    const allSubs = Array.from(cell.querySelectorAll('.sub-dot'));
-    allSubs.forEach(s => s.classList.add('active'));
-    updateMultiCursor(ctx);
+    activateMultiMode(cell, ctx);
   });
 
   cell.addEventListener('pointerdown', (ev) => {
