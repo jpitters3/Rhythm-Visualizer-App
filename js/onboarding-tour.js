@@ -23,6 +23,8 @@
  * skipped until you replace it with the real selector.
  */
 
+import { isRunningStandalone, isIOS, canPromptInstall, triggerInstallPrompt } from './install-prompt.js';
+
 // ── Tour keys ─────────────────────────────────────────────────────────────────
 
 export const TOUR_KEYS = {
@@ -49,6 +51,12 @@ const TOURS = {
   dashboard: {
     cta: { label: 'Explore the Studio ☝️' },
     steps: [
+      {
+        target: null,
+        position: 'center',
+        installStep: true,
+        title: 'Install Panafide',
+      },
       {
         target: null,
         title: 'Welcome to Panafide!',
@@ -287,6 +295,7 @@ export function startTour(sectionKey = 'dashboard') {
   active = true;
   currentStep = 0;
   activeSteps = tour.steps.filter(s => {
+    if (s.installStep) return !isRunningStandalone();
     const sel = resolveTarget(s);
     return !sel || document.querySelector(sel);
   });
@@ -388,7 +397,28 @@ function showStep(index) {
     : `<button class="tour-btn-skip" id="tourSkipBtn">${step.clickToAdvance ? 'Skip tour' : 'Skip'}</button>`;
 
   // Tooltip content
-  if (step.clickToAdvance) {
+  if (step.installStep) {
+    const ios = isIOS();
+    const canInstall = canPromptInstall();
+    const body = ios
+      ? 'Add Panafide to your Home Screen for the best experience: tap the Share icon, then "Add to Home Screen".'
+      : canInstall
+        ? 'Install Panafide for the best experience — a proper full-screen app, with nothing from the browser covering your controls.'
+        : 'For the best experience, install Panafide from your browser menu (Add to Home Screen / Install App) — nothing from the browser will cover your controls.';
+    const primaryLabel = (ios || !canInstall) ? 'Got it →' : 'Install 📲';
+    tooltipEl.innerHTML = `
+      <div class="tour-step-count">${index + 1} / ${total}</div>
+      <h3 class="tour-title">${step.title}</h3>
+      <p class="tour-body">${body}</p>
+      <div class="tour-actions">
+        <div></div>
+        <div class="tour-actions-right">
+          <button class="tour-btn-skip" id="tourSkipInstallBtn">Maybe later</button>
+          <button class="tour-btn-next" id="tourInstallBtn">${primaryLabel}</button>
+        </div>
+      </div>
+    `;
+  } else if (step.clickToAdvance) {
     tooltipEl.innerHTML = `
       <div class="tour-step-count">${index + 1} / ${total}</div>
       <h3 class="tour-title">${step.title}</h3>
@@ -447,6 +477,11 @@ function showStep(index) {
   });
   document.getElementById('tourSkipBtn')?.addEventListener('click', completeTour);
   document.getElementById('tourCtaBtn')?.addEventListener('click', completeTour);
+  document.getElementById('tourSkipInstallBtn')?.addEventListener('click', () => showStep(index + 1));
+  document.getElementById('tourInstallBtn')?.addEventListener('click', async () => {
+    if (!isIOS() && canPromptInstall()) await triggerInstallPrompt();
+    showStep(index + 1);
+  });
 }
 
 // ── Positioning ───────────────────────────────────────────────────────────────

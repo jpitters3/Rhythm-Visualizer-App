@@ -54,8 +54,6 @@ import { initMethod, wireMethodEvents } from './method.js';
 import { initExercises } from './exercises.js';
 import { initFlashCards } from './technique-flash-cards.js';
 
-
-
 /**
  * Main application initializer
  */
