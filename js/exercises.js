@@ -582,12 +582,14 @@ async function openInStudio() {
   }
 
   try {
-    const { applyPattern } = await import('./pattern-crud.js');
+    const { applyPattern, syncPhraseNameDisplay } = await import('./pattern-crud.js');
     const bpm = bpmMap[activeExercise.id] ?? 90;
     const state = { ...activeExercise.studio_pattern_json, bpm };
-    closeModal();
+    const name = activeExercise.name;
+    closeModal(); // clears activeExercise — capture name above first
     window.location.hash = '#studio';
     await applyPattern(state);
+    syncPhraseNameDisplay(name);
   } catch (err) {
     console.error('[Exercises] openInStudio error:', err);
     alert('Failed to open in Studio. Check the console for details.');

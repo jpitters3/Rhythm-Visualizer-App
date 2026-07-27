@@ -246,10 +246,11 @@ async function openDetail(sa) {
       `;
       phraseRefEl.querySelector('[data-action="load-ref-phrase"]')
         ?.addEventListener('click', async () => {
-          const { applyPattern } = await import('./pattern-crud.js');
+          const { applyPattern, syncPhraseNameDisplay } = await import('./pattern-crud.js');
           inboxPanel?.close();
           window.location.hash = '#studio';
           await applyPattern(sa.phrase_json);
+          syncPhraseNameDisplay(sa.phrase_name);
         });
     } else {
       phraseRefEl.style.display = 'none';
@@ -518,10 +519,11 @@ async function loadPhraseInStudio(item) {
   const patternJson = item.config?.pattern_json;
   if (!patternJson) return;
 
-  const { applyPattern } = await import('./pattern-crud.js');
+  const { applyPattern, syncPhraseNameDisplay } = await import('./pattern-crud.js');
   inboxPanel?.close();
   window.location.hash = '#studio';
   await applyPattern(patternJson);
+  syncPhraseNameDisplay(item.title);
 }
 
 function handleItemsChange(e) {

@@ -1,7 +1,7 @@
 import { Bus, BUS_EVENT } from './bus.js';
 import { currentUser } from './state.js';
 import { supabase } from './supabase-client.js';
-import { applyPattern } from './pattern-crud.js';
+import { applyPattern, syncPhraseNameDisplay } from './pattern-crud.js';
 import { openLessonSidebar, closeSidebar } from './courses.js';
 import { Sidepanel, updateBodySidebarClass, setLastSidebarType, registerPanelOpener } from './sidepanel.js';
 import { navigate } from './router.js';
@@ -297,6 +297,7 @@ async function loadPracticeItem(type, id) {
 
     if (data && data.pattern_json) {
       await applyPattern(data.pattern_json);
+      syncPhraseNameDisplay(data.name);
 
       // Show in player panel
       const titleEl = document.getElementById('activeLessonTitle');
