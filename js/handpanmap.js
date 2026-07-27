@@ -1346,8 +1346,23 @@ function attachCreationListeners() {
 
     // Read file buffers immediately — before any awaits — because some browsers
     // invalidate File objects after the event loop yields (especially on mobile).
-    const topFileBuffer    = topImageFile    ? await topImageFile.arrayBuffer()    : null;
-    const bottomFileBuffer = bottomImageFile ? await bottomImageFile.arrayBuffer() : null;
+    // Wrapped in its own try/catch: a stale/still-syncing (e.g. cloud photo
+    // library) file throws NotReadableError here, which must not surface as
+    // an uncaught rejection — that trips the app's fatal-error screen instead
+    // of a recoverable "please try again" message.
+    let topFileBuffer, bottomFileBuffer;
+    try {
+      topFileBuffer    = topImageFile    ? await topImageFile.arrayBuffer()    : null;
+      bottomFileBuffer = bottomImageFile ? await bottomImageFile.arrayBuffer() : null;
+    } catch (err) {
+      console.error('Error reading selected image:', err);
+      await alert(
+        err.name === 'NotReadableError'
+          ? "Couldn't read the selected image — this can happen right after picking a photo from cloud storage on mobile. Please try selecting it again."
+          : 'Error reading the selected image: ' + err.message
+      );
+      return;
+    }
 
     // Validation:
     // If creating new (no ID), need Top Image.
