@@ -13,9 +13,11 @@
 // natural full size; dragging down is the only way to shrink it and reveal
 // more of the grid.
 
+import { Bus, BUS_EVENT } from './bus.js';
+
 const MOBILE_QUERY = '(max-width: 900px)';
 const MIN_PANEL_HEIGHT = 160; // matches .handpan-panel's min-height in CSS
-const MIN_LEFT_HEIGHT = 160;  // leave the grid at least this much room
+const MIN_LEFT_HEIGHT = 160;  // absolute floor if a measure row can't be measured yet
 const STORAGE_KEY = 'gp_handpanPanelHeight';
 const KEYBOARD_STEP = 24;
 
@@ -23,12 +25,46 @@ export function initPanelResize() {
   const handle = document.getElementById('panelResizeHandle');
   const panel = document.querySelector('.handpan-panel');
   const main = document.getElementById('main');
+  const left = document.querySelector('.left');
+  const measuresEl = document.getElementById('measures');
   const wrap = document.getElementById('handpanWrap');
   const img = document.getElementById('handpanImg');
   if (!handle || !panel || !main || !wrap) return;
 
   const mq = window.matchMedia(MOBILE_QUERY);
   let cachedMaxHeight = null;
+
+  // Everything in .left OTHER than #measures (phrase name row, etc.) — same
+  // "measure what's actually there" approach as measureChromeHeight() below.
+  function measureLeftChromeHeight() {
+    if (!left || !measuresEl) return 0;
+    let h = 0;
+    Array.from(left.children).forEach(child => {
+      if (child === measuresEl) return;
+      if (getComputedStyle(child).display === 'none') return;
+      h += child.getBoundingClientRect().height;
+    });
+    return h;
+  }
+
+  // One measure-row's real rendered height, including its own margin — this
+  // varies with subdivision (four-beats rows are taller, sixteen-beats
+  // narrower), so it's measured live rather than assumed.
+  function measureOneRowHeight() {
+    const row = measuresEl?.querySelector('.measure-row');
+    if (!row) return 0;
+    const cs = getComputedStyle(row);
+    return row.getBoundingClientRect().height + parseFloat(cs.marginTop || 0) + parseFloat(cs.marginBottom || 0);
+  }
+
+  // The grid needs at least enough room for its own chrome plus one measure
+  // row — falls back to MIN_LEFT_HEIGHT before the grid has rendered a row
+  // to measure (e.g. very first paint).
+  function minLeftHeightNeeded() {
+    const rowH = measureOneRowHeight();
+    if (!rowH) return MIN_LEFT_HEIGHT;
+    return measureLeftChromeHeight() + rowH;
+  }
 
   // Actual height of everything in .handpan-panel OTHER than .handpan-wrap
   // (tabs row, ghost-note row, etc.) — measured live rather than guessed,
@@ -137,7 +173,7 @@ export function initPanelResize() {
     const floorTotal = Math.max(MIN_PANEL_HEIGHT, chrome + padV) + reserve;
     const ceilingTotal = Math.max(floorTotal, Math.min(
       (cachedMaxHeight ?? refreshMaxHeight()) + reserve,
-      main.getBoundingClientRect().height - MIN_LEFT_HEIGHT,
+      main.getBoundingClientRect().height - minLeftHeightNeeded(),
     ));
     const clampedTotal = Math.min(ceilingTotal, Math.max(floorTotal, desiredTotalPx));
     panel.style.height = `${clampedTotal}px`;
@@ -156,6 +192,14 @@ export function initPanelResize() {
   // Restore saved panel height when studio is opened
   window.addEventListener('routeChanged', (e) => {
     if (e.detail.route === 'studio') restoreSavedHeight();
+  });
+
+  // #measures has no rows yet when this module first runs (grid renders
+  // later), so minLeftHeightNeeded() can't measure one until now — re-clamp
+  // once it can. Also keeps the cap correct whenever subdivision/measure
+  // count changes row height afterward.
+  Bus.on(BUS_EVENT.GRID_RENDERED, () => {
+    if (mq.matches) applyHeight(panel.getBoundingClientRect().height);
   });
 
   // Leaving mobile: drop the inline sizing so the desktop CSS (flex/stretch,
