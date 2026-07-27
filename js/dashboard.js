@@ -2,7 +2,7 @@ import { supabase } from './supabase-client.js';
 import { currentUser } from './state.js';
 import { currentProfile } from './profile.js';
 import { openAuthModal } from './auth.js';
-import { navigate } from './router.js';
+import { navigate, getCurrentRoute } from './router.js';
 import { escapeHtml } from './utils.js';
 import { Bus, BUS_EVENT } from './bus.js';
 import { startTour, TOUR_KEY } from './onboarding-tour.js';
@@ -55,10 +55,14 @@ export function initDashboard() {
     navigate('home');
   });
 
-  // Dashboard nav link: route based on auth state
+  // Dashboard nav link: route based on auth state, always back to your own dashboard
   document.getElementById('navDashboardBtn')?.addEventListener('click', e => {
     e.preventDefault();
+    const wasViewingAs = !!viewingAsUserId;
+    viewingAsUserId = null;
+    viewingAsName = null;
     navigate(currentUser ? 'dashboard' : 'home');
+    if (wasViewingAs && getCurrentRoute() === 'dashboard') loadDashboard();
   });
 
   // Home view CTA buttons
@@ -93,6 +97,7 @@ export function viewStudentDashboard(studentId, displayName) {
   viewingAsUserId = studentId;
   viewingAsName = displayName;
   navigate('dashboard');
+  if (getCurrentRoute() === 'dashboard') loadDashboard();
 }
 
 // ── Load & render ─────────────────────────────────────────────────────────────
