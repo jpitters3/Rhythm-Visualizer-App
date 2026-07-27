@@ -403,8 +403,8 @@ function showStep(index) {
     const body = ios
       ? 'Add Panafide to your Home Screen for the best experience: tap the Share icon, then "Add to Home Screen".'
       : canInstall
-        ? 'Install Panafide for the best experience — a proper full-screen app, with nothing from the browser covering your controls.'
-        : 'For the best experience, install Panafide from your browser menu (Add to Home Screen / Install App) — nothing from the browser will cover your controls.';
+        ? 'Install Panafide for the best experience.'
+        : 'For the best experience, install Panafide from your browser menu (Add to Home Screen / Install App).';
     const primaryLabel = (ios || !canInstall) ? 'Got it →' : 'Install 📲';
     tooltipEl.innerHTML = `
       <div class="tour-step-count">${index + 1} / ${total}</div>
