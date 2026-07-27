@@ -403,7 +403,7 @@ function showStep(index) {
     const body = ios
       ? 'Add Panafide to your Home Screen for the best experience: tap the Share icon, then "Add to Home Screen".'
       : canInstall
-        ? 'Install Panafide for the best experience.'
+        ? 'For the best experience, install Panafide so it appears as an app on your homescreen.'
         : 'For the best experience, install Panafide from your browser menu (Add to Home Screen / Install App).';
     const primaryLabel = (ios || !canInstall) ? 'Got it →' : 'Install 📲';
     tooltipEl.innerHTML = `
