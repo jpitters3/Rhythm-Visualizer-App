@@ -96,6 +96,7 @@ export async function fetchPracticeItems() {
 
   practiceItems = data || [];
   renderPracticeItems();
+  Bus.emit(BUS_EVENT.PRACTICE_ITEMS_CHANGED);
 }
 
 function practiceItemHTML(item) {
@@ -154,7 +155,9 @@ if (container) {
     }
     const removeBtn = e.target.closest('.remove-practice-btn');
     if (removeBtn) {
-      removeFromPractice(removeBtn.dataset.id);
+      if (await confirm('Remove from practice plan?')) {
+        await removeFromPractice(removeBtn.dataset.id);
+      }
     }
   });
 }
@@ -272,11 +275,9 @@ export async function addToPractice(type, id, title) {
 }
 
 export async function removeFromPractice(recordId) {
-  if (!await confirm("Remove from practice plan?")) return;
-
   const { error } = await supabase.from('practice_items').delete().eq('id', recordId);
   if (!error) {
-    fetchPracticeItems();
+    await fetchPracticeItems();
   }
 }
 

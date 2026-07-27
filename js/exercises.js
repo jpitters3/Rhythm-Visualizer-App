@@ -3,6 +3,7 @@ import { currentUser } from './state.js';
 import { currentProfile } from './profile.js';
 import { extractYouTubeId, escapeHtml } from './utils.js';
 import { togglePracticeItem, isItemInPractice, fetchPracticeItems } from './practice.js';
+import { Bus, BUS_EVENT } from './bus.js';
 
 let exercises = [];
 let categoryOrder = [];      // [{name, sort_order}] from exercise_categories
@@ -96,6 +97,10 @@ export function initExercises() {
   document.getElementById('addExerciseBtn')?.addEventListener('click', () => openEditor(null));
   document.getElementById('exerciseModalAddToPlanBtn')?.addEventListener('click', handleAddToPlan);
 
+  // Practice plan can change from elsewhere (e.g. the Practice sidebar's own
+  // remove button) — keep this page's plan buttons in sync either way.
+  Bus.on(BUS_EVENT.PRACTICE_ITEMS_CHANGED, syncPlanButtons);
+
   window.addEventListener('routeChanged', ({ detail }) => {
     if (detail.route === 'practice') loadPracticeView();
     else { closeModal(); closeEditor(); }
@@ -106,10 +111,8 @@ export function initExercises() {
 
 async function handleAddToPlan() {
   if (!activeExercise) return;
-  const btn = document.getElementById('exerciseModalAddToPlanBtn');
-  const inPlan = isItemInPractice('exercise', activeExercise.id);
-  await togglePracticeItem('exercise', activeExercise.id, activeExercise.name);
-  syncAddToPlanBtn(!inPlan);
+  const nowInPlan = await togglePracticeItem('exercise', activeExercise.id, activeExercise.name);
+  syncAddToPlanBtn(nowInPlan);
 }
 
 function syncAddToPlanBtn(inPlan) {
@@ -117,6 +120,19 @@ function syncAddToPlanBtn(inPlan) {
   if (!btn) return;
   btn.textContent = inPlan ? '✓ In Plan' : '+ Add to Plan';
   btn.classList.toggle('active', inPlan);
+}
+
+// Re-reads plan membership for every visible plan button — called whenever
+// practiceItems changes anywhere (this page's own toggle, or the Practice
+// sidebar's remove button) so this page never shows stale checkmarks.
+function syncPlanButtons() {
+  document.querySelectorAll('.exercise-plan-btn').forEach(btn => {
+    const inPlan = isItemInPractice('exercise', btn.dataset.id);
+    btn.textContent = inPlan ? '✓' : '+';
+    btn.title = inPlan ? 'Remove from plan' : 'Add to plan';
+    btn.classList.toggle('in-plan', inPlan);
+  });
+  if (activeExercise) syncAddToPlanBtn(isItemInPractice('exercise', activeExercise.id));
 }
 
 export async function openExerciseById(id) {
@@ -227,10 +243,6 @@ function renderExercises(list) {
       const ex = exercises.find(e => e.id === btn.dataset.id);
       if (!ex) return;
       await togglePracticeItem('exercise', ex.id, ex.name);
-      const inPlan = isItemInPractice('exercise', ex.id);
-      btn.textContent = inPlan ? '✓' : '+';
-      btn.title = inPlan ? 'Remove from plan' : 'Add to plan';
-      btn.classList.toggle('in-plan', inPlan);
     });
   });
 
