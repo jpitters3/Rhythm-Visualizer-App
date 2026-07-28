@@ -1,4 +1,5 @@
 // ==== EVENTS FOR BUTTONS / CONTROLS ====
+import { supabase } from './supabase-client.js';
 import { gridA, gridB, activeGrid } from './grid-context.js';
 import { isAuthed, openAuthModal } from './auth.js';
 import { start, stop, addTickObserver } from './noteplayer.js';
@@ -175,6 +176,23 @@ export async function renameCurrentPhrase() {
   }
 }
 
+export async function moveCurrentPhrase() {
+  if (!await ensureHasSelection()) return;
+
+  const name = document.getElementById('currentPhraseName')?.textContent?.trim() || getSelectedPatternName();
+  if (!name) return;
+
+  const { showFolderPicker } = await import('./library.js');
+  await showFolderPicker('phrases', async (folderId) => {
+    const { error } = await supabase
+      .from('patterns')
+      .update({ folder_id: folderId })
+      .eq('name', name)
+      .eq('user_id', currentUser.id);
+    if (error) await alert('Could not move phrase.');
+  });
+}
+
 /**
  * Main Save Logic with Gating
  */
@@ -343,11 +361,20 @@ function showPhraseContextMenu(anchorEl) {
   const items = [
     { label: 'Save phrase', action: () => document.getElementById('saveBtn')?.click() },
     { label: 'Rename phrase', action: renameCurrentPhrase },
+    { label: 'Share phrase', action: () => document.getElementById('shareBtn')?.click() },
+    { label: 'Move phrase', action: moveCurrentPhrase },
+    { divider: true },
     { label: 'New phrase', action: createNewPhrase },
     { label: 'Open Phrase', action: showOpenPhraseModal },
   ];
 
-  items.forEach(({ label, action }) => {
+  items.forEach(({ label, action, divider }) => {
+    if (divider) {
+      const hr = document.createElement('div');
+      hr.className = 'lib-context-divider';
+      menu.appendChild(hr);
+      return;
+    }
     const btn = document.createElement('button');
     btn.className = 'lib-context-item';
     btn.textContent = label;

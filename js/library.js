@@ -162,18 +162,29 @@ function hideFolderPicker() {
   if (folderPickerEl) folderPickerEl.style.display = 'none';
 }
 
-async function showFolderPicker(tab, onSelect) {
+export async function showFolderPicker(tab, onSelect) {
   const picker = getOrCreateFolderPicker();
   const list = picker.querySelector('.lib-picker-list');
   list.innerHTML = '<p class="lib-picker-empty">Loading…</p>';
   picker.style.display = 'flex';
 
-  const { data: folders } = await supabase
-    .from('library_folders')
-    .select('id, name')
-    .eq('tab', tab)
-    .is('parent_id', null)
-    .order('name');
+  let folders = [];
+  try {
+    // A stuck/failed fetch must not leave the modal on "Loading…" forever —
+    // race it against a timeout so there's always a terminal state.
+    const query = supabase
+      .from('library_folders')
+      .select('id, name')
+      .eq('tab', tab)
+      .is('parent_id', null)
+      .order('name');
+    const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 8000));
+    const { data, error } = await Promise.race([query, timeout]);
+    if (error) throw error;
+    folders = data || [];
+  } catch (err) {
+    console.error('[Library] Failed to load folders:', err);
+  }
 
   list.innerHTML = '';
 
@@ -186,12 +197,12 @@ async function showFolderPicker(tab, onSelect) {
   };
 
   makeItem('📂', 'No folder (root)', () => onSelect(null));
-  (folders || []).forEach(f => makeItem('📁', f.name, () => onSelect(f.id)));
+  folders.forEach(f => makeItem('📁', f.name, () => onSelect(f.id)));
 
-  if (!folders?.length) {
+  if (!folders.length) {
     const p = document.createElement('p');
     p.className = 'lib-picker-empty';
-    p.textContent = 'No folders yet — create one with "+ New Folder".';
+    p.textContent = 'No folders found';
     list.appendChild(p);
   }
 }

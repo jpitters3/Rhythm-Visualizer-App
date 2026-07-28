@@ -320,6 +320,12 @@ body.dark .lib-context-menu {
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
 }
 
+.lib-context-divider {
+  height: 1px;
+  background: var(--panel-border);
+  margin: 6px 4px;
+}
+
 .lib-context-item {
   display: block;
   width: 100%;
