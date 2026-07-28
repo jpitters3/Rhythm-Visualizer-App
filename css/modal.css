@@ -100,6 +100,30 @@
   border-radius: 16px 16px 0 0;
 }
 
+/* Draggable handpan-tab drawers (Settings/Chords/Customize) — the header
+   doubles as the drag handle, so it can be moved off the handpan. */
+.modal-header.draggable {
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
+}
+
+.modal-header.draggable.dragging {
+  cursor: grabbing;
+}
+
+.drawer-drag-handle {
+  font-size: 15px;
+  opacity: 0.4;
+  line-height: 1;
+  margin-right: 2px;
+  flex-shrink: 0;
+}
+
+.modal-header.draggable:hover .drawer-drag-handle {
+  opacity: 0.9;
+}
+
 /* ===== MODAL TYPOGRAPHY ===== */
 .modal-title {
   margin: 0;
