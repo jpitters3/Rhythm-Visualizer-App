@@ -44,7 +44,7 @@ import { initNotificationSettings } from './notification-settings.js';
 import { initAccountSettings } from './account-settings.js';
 import { initStudentAssignments } from './student-assignments.js';
 import { initStudentManagement } from './student-management.js';
-import { initRouter } from './router.js';
+import { initRouter, navigate } from './router.js';
 import { initComposeWizard } from './compose-wizard.js';
 import { initGlossary } from './glossary.js';
 import { initGridAutoscroll } from './grid-autoscroll.js';
@@ -321,6 +321,7 @@ function safeInit() {
 
     (async () => {
       const loadedShared = await loadSharedFromURL();
+      if (loadedShared) navigate('studio');
       await loadSharedCompositionFromURL();
 
       // After login, open any composition the user was trying to view before auth
