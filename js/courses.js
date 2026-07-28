@@ -1083,12 +1083,6 @@ export function initCourses() {
     }
   });
 
-  Bus.on(BUS_EVENT.REQUEST_LOAD_LESSON, (e) => {
-    if (e.detail?.lessonId) {
-      loadLesson(e.detail.lessonId);
-    }
-  });
-
   Bus.on(BUS_EVENT.OPEN_COURSE, (e) => {
     if (e.detail?.courseId) {
       setActiveCourse(e.detail.courseId);
