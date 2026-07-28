@@ -5,8 +5,8 @@
  * 20260728_practice_reminders_scheduler.sql). Finds every enabled
  * practice_reminders row that is due *right now* in its own timezone —
  * accounting for daily/weekly frequency, days_of_week, and lead_minutes —
- * and sends an email via the existing send-notification-email function.
- * Push isn't implemented yet; notify_push rows are simply skipped.
+ * and sends via email (send-notification-email) and/or Web Push, per each
+ * reminder's own notify_email/notify_push flags.
  *
  * Exact-minute matching (not a "due within the last 15 min" window) still
  * works at this cadence because time_of_day is constrained to the :00/:15/
@@ -14,8 +14,11 @@
  * 15 — so a due reminder's target minute always lands exactly on a tick.
  *
  * Required env vars (set in Supabase dashboard → Edge Functions → Secrets):
- *   CRON_SECRET — shared secret; must match the `app.cron_secret` Postgres
- *                 setting the cron job sends as the x-cron-secret header.
+ *   CRON_SECRET        — shared secret; must match the `app.cron_secret`
+ *                         Postgres setting the cron job sends as the
+ *                         x-cron-secret header.
+ *   VAPID_PUBLIC_KEY    — must match js/push-notifications.js's constant.
+ *   VAPID_PRIVATE_KEY   — keep server-side only.
  *
  * Auto-injected by Supabase (no manual setup needed):
  *   SUPABASE_URL
@@ -26,6 +29,13 @@
  */
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import webpush from 'https://esm.sh/web-push@3.6.7'
+
+const vapidPublicKey = Deno.env.get('VAPID_PUBLIC_KEY')
+const vapidPrivateKey = Deno.env.get('VAPID_PRIVATE_KEY')
+if (vapidPublicKey && vapidPrivateKey) {
+  webpush.setVapidDetails('mailto:justin@panafide.com', vapidPublicKey, vapidPrivateKey)
+}
 
 const WEEKDAY_INDEX: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 }
 
@@ -73,6 +83,36 @@ function isDueNow(r: Reminder, now: Date): { due: boolean; localDateStr: string 
   return { due, localDateStr }
 }
 
+// Sends to every device the user has push-subscribed. A subscription that
+// the push service reports as gone (404/410 — user revoked permission,
+// uninstalled, etc.) is deleted so it stops being retried forever.
+async function sendPushToUser(
+  supabaseAdmin: ReturnType<typeof createClient>,
+  userId: string,
+  payload: { title: string; body: string; url: string }
+) {
+  const { data: subs } = await supabaseAdmin
+    .from('push_subscriptions')
+    .select('id, endpoint, p256dh, auth')
+    .eq('user_id', userId)
+
+  for (const sub of subs ?? []) {
+    try {
+      await webpush.sendNotification(
+        { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
+        JSON.stringify(payload)
+      )
+    } catch (err: any) {
+      const statusCode = err?.statusCode
+      if (statusCode === 404 || statusCode === 410) {
+        await supabaseAdmin.from('push_subscriptions').delete().eq('id', sub.id)
+      } else {
+        console.error('[send-practice-reminders] push send error:', err?.message ?? err)
+      }
+    }
+  }
+}
+
 Deno.serve(async (req) => {
   const cronSecret = Deno.env.get('CRON_SECRET')
   if (cronSecret && req.headers.get('x-cron-secret') !== cronSecret) {
@@ -114,7 +154,14 @@ Deno.serve(async (req) => {
       })
       if (emailError) console.error('[send-practice-reminders] email send error:', emailError.message)
     }
-    // notify_push: not implemented yet — intentionally skipped.
+
+    if (r.notify_push && vapidPublicKey && vapidPrivateKey) {
+      await sendPushToUser(supabaseAdmin, r.user_id, {
+        title: 'Time to practice! 🥁',
+        body: "It's time for your scheduled handpan practice — even five minutes keeps the streak alive.",
+        url: 'https://panafide.com/#practice',
+      })
+    }
 
     await supabaseAdmin
       .from('practice_reminders')

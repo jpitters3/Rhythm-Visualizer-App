@@ -1,12 +1,14 @@
 // Dashboard "Set/Manage Reminders" — recurring practice reminders, configured
 // like a recurring calendar event (frequency, days, time, lead time).
-// This module only saves the configuration; actual sending (email/push) is
-// a separate, later piece.
+// Sending is handled server-side (send-practice-reminders edge function,
+// on a cron schedule) — this module only saves the configuration and, for
+// push, subscribes this device.
 
 import { supabase } from './supabase-client.js';
 import { currentUser } from './state.js';
 import { alert, confirm } from './alert.js';
 import { Modal } from './modal.js';
+import { subscribeToPush, isPushSupported } from './push-notifications.js';
 
 const DAY_LABELS = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
 const DAY_NAMES  = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -225,6 +227,27 @@ export function initPracticeReminders() {
   });
 
   document.getElementById('reminderFrequency')?.addEventListener('change', syncFrequencyUI);
+
+  const pushCheck = document.getElementById('reminderNotifyPush');
+  pushCheck?.addEventListener('change', async (e) => {
+    if (!e.target.checked) return;
+    if (!isPushSupported()) {
+      await alert("Push notifications aren't supported in this browser.");
+      e.target.checked = false;
+      return;
+    }
+    e.target.disabled = true;
+    const ok = await subscribeToPush();
+    e.target.disabled = false;
+    if (!ok) {
+      await alert(
+        Notification.permission === 'denied'
+          ? 'Notifications are blocked for this site. Enable them in your browser settings to use push reminders.'
+          : "Couldn't enable push notifications. Please try again."
+      );
+      e.target.checked = false;
+    }
+  });
 
   document.querySelectorAll('.reminder-day-pill').forEach(btn => {
     btn.addEventListener('click', () => {
