@@ -670,6 +670,7 @@
               <h2 class="dash-section-title">Practice Plan</h2>
               <button class="dash-section-link" id="dashPracticeLink">View all</button>
             </div>
+            <button type="button" id="dashRemindersBtn" class="reminders-cta-btn">Set Reminders</button>
             <div id="dashPracticeContent" class="dash-practice-list"></div>
           </section>
 
@@ -2103,6 +2104,100 @@
       </div>
       <div class="drawer-meta" style="text-align:center; font-size:12px; margin-top:8px; opacity:0.7">
         <span id="chordCount">0</span> chords available
+      </div>
+    </div>
+  </div>
+
+  <!-- PRACTICE REMINDERS -->
+  <div id="remindersModal" class="modal-overlay" aria-hidden="true">
+    <div class="modal-content reminders-modal">
+      <div class="modal-header">
+        <h3 class="modal-title">Practice Reminders</h3>
+        <button class="close-modal-btn">&times;</button>
+      </div>
+
+      <div id="remindersListView">
+        <div id="remindersList" class="reminders-list"></div>
+        <button type="button" id="addReminderBtn" class="primary-btn small-btn" style="width:100%; margin-top:12px;">+ Add Reminder</button>
+      </div>
+
+      <div id="reminderEditorView" style="display:none;">
+        <div class="setting-row">
+          <label>Repeat</label>
+          <select id="reminderFrequency">
+            <option value="daily">Every day</option>
+            <option value="weekly">Specific days</option>
+          </select>
+        </div>
+
+        <div class="setting-row" id="reminderDaysRow">
+          <label>On these days</label>
+          <div class="reminder-days-picker">
+            <button type="button" class="reminder-day-pill" data-day="0">Su</button>
+            <button type="button" class="reminder-day-pill" data-day="1">Mo</button>
+            <button type="button" class="reminder-day-pill" data-day="2">Tu</button>
+            <button type="button" class="reminder-day-pill" data-day="3">We</button>
+            <button type="button" class="reminder-day-pill" data-day="4">Th</button>
+            <button type="button" class="reminder-day-pill" data-day="5">Fr</button>
+            <button type="button" class="reminder-day-pill" data-day="6">Sa</button>
+          </div>
+        </div>
+
+        <div class="setting-row">
+          <label>Time</label>
+          <div class="reminder-time-picker">
+            <select id="reminderHour" aria-label="Hour">
+              <option value="1">1</option>
+              <option value="2">2</option>
+              <option value="3">3</option>
+              <option value="4">4</option>
+              <option value="5">5</option>
+              <option value="6">6</option>
+              <option value="7">7</option>
+              <option value="8">8</option>
+              <option value="9">9</option>
+              <option value="10">10</option>
+              <option value="11">11</option>
+              <option value="12">12</option>
+            </select>
+            <span class="reminder-time-colon">:</span>
+            <select id="reminderMinute" aria-label="Minute">
+              <option value="00">00</option>
+              <option value="15">15</option>
+              <option value="30">30</option>
+              <option value="45">45</option>
+            </select>
+            <select id="reminderAmPm" aria-label="AM or PM">
+              <option value="AM">AM</option>
+              <option value="PM">PM</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="setting-row">
+          <label>Notify me</label>
+          <select id="reminderLead">
+            <option value="0">At the scheduled time</option>
+            <option value="15">15 minutes before</option>
+            <option value="30">30 minutes before</option>
+            <option value="60">1 hour before</option>
+          </select>
+        </div>
+
+        <div class="setting-row" style="flex-direction: row; align-items: center; justify-content: start;">
+          <label>Email</label>
+          <input type="checkbox" id="reminderNotifyEmail" checked style="width:auto;" />
+        </div>
+        <div class="setting-row" style="flex-direction: row; align-items: center; justify-content: start;">
+          <label title="Coming soon">Push notification <span style="opacity:.6; font-size:11px;">(coming soon)</span></label>
+          <input type="checkbox" id="reminderNotifyPush" style="width:auto;" disabled title="Coming soon" />
+        </div>
+
+        <div class="setting-row" style="flex-direction: row; gap: 8px; margin-top: 6px;">
+          <button type="button" id="reminderDeleteInEditorBtn" class="secondary-btn small-btn" style="width:100%; color:var(--danger, #c0392b);">Delete</button>
+          <button type="button" id="reminderCancelBtn" class="secondary-btn small-btn" style="width:100%">Cancel</button>
+          <button type="button" id="reminderSaveBtn" class="primary-btn small-btn" style="width:100%">Save</button>
+        </div>
       </div>
     </div>
   </div>

@@ -38,6 +38,7 @@ import { Bus, BUS_EVENT } from './bus.js';
 import { initCoachingMode } from './coaching-mode.js';
 import { initCalProfiles } from './cal-profiles.js';
 import { initGames } from './games.js';
+import { initPracticeReminders } from './practice-reminders.js';
 import { initAdmin } from './admin.js';
 import { initNotifications } from './notifications.js';
 import { initNotificationSettings } from './notification-settings.js';
@@ -94,6 +95,7 @@ async function init() {
     initFeed();
     initLibrary();
     initGames();
+    initPracticeReminders();
     initCourseMarketplace();
     initCourseCreator();
     initCourses();

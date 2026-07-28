@@ -409,6 +409,172 @@
   padding: 4px 0;
 }
 
+/* ── Practice reminders ───────────────────────────────── */
+.reminders-cta-btn {
+  width: 100%;
+  margin-bottom: 10px;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: rgb(var(--accent-rgb));
+  background: rgba(var(--accent-rgb), 0.1);
+  border: 1px solid rgba(var(--accent-rgb), 0.3);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+.reminders-cta-btn:hover {
+  background: rgba(var(--accent-rgb), 0.18);
+  border-color: rgb(var(--accent-rgb));
+}
+
+.reminders-modal {
+  max-width: 420px;
+  padding: 12px;
+}
+
+.reminders-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 16px 0;
+}
+
+.reminder-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--panel-2, var(--panel));
+  border: 1px solid var(--panel-border);
+  border-radius: 10px;
+  padding: 9px 10px;
+}
+.reminder-row--disabled {
+  opacity: 0.5;
+}
+.reminder-summary {
+  flex: 1;
+  font-size: 13px;
+  color: var(--text);
+  line-height: 1.35;
+}
+.reminder-edit-btn,
+.reminder-delete-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  opacity: 0.7;
+  padding: 2px 4px;
+  flex-shrink: 0;
+}
+.reminder-edit-btn:hover,
+.reminder-delete-btn:hover {
+  opacity: 1;
+}
+
+/* Toggle switch */
+.reminder-toggle {
+  position: relative;
+  display: inline-block;
+  width: 34px;
+  height: 20px;
+  flex-shrink: 0;
+}
+.reminder-toggle input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+.reminder-toggle-slider {
+  position: absolute;
+  inset: 0;
+  background: var(--panel-border);
+  border-radius: 20px;
+  transition: background 0.15s;
+}
+.reminder-toggle-slider::before {
+  content: "";
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  left: 2px;
+  top: 2px;
+  background: white;
+  border-radius: 50%;
+  transition: transform 0.15s;
+}
+.reminder-toggle input:checked + .reminder-toggle-slider {
+  background: rgb(var(--accent-rgb));
+}
+.reminder-toggle input:checked + .reminder-toggle-slider::before {
+  transform: translateX(14px);
+}
+
+/* Time picker — three plain <select>s (hour / 15-min steps / AM-PM) styled
+   as one seamless pill instead of the browser's native time-input chrome,
+   which looks inconsistent across browsers and doesn't let us cap the
+   minute options to the 15-minute grid the cron job relies on. */
+.reminder-time-picker {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  border: 1px solid var(--panel-border);
+  border-radius: 999px;
+  background: var(--panel);
+  padding: 2px;
+}
+.reminder-time-picker select {
+  border: none;
+  background: transparent;
+  height: 32px;
+  padding: 0 6px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+  cursor: pointer;
+  text-align: center;
+  text-align-last: center;
+}
+.reminder-time-picker select:hover,
+.reminder-time-picker select:focus {
+  background-color: rgba(var(--accent-rgb), 0.12);
+  outline: none;
+}
+.reminder-time-picker select#reminderHour { width: 46px; }
+.reminder-time-picker select#reminderMinute { width: 54px; }
+.reminder-time-picker select#reminderAmPm { width: 62px; }
+.reminder-time-colon {
+  font-weight: 700;
+  opacity: 0.45;
+}
+
+/* Day-of-week picker */
+.reminder-days-picker {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.reminder-day-pill {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 1px solid var(--panel-border);
+  background: var(--panel);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+.reminder-day-pill.active {
+  background: rgb(var(--accent-rgb));
+  border-color: rgb(var(--accent-rgb));
+  color: white;
+}
+
 /* ── Goals Edit Modal ─────────────────────────────────── */
 .dash-goals-modal {
   inset: 0;

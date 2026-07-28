@@ -7,6 +7,7 @@ import { escapeHtml } from './utils.js';
 import { Bus, BUS_EVENT } from './bus.js';
 import { startTour, TOUR_KEY } from './onboarding-tour.js';
 import { togglePracticeSidebar } from './practice.js';
+import { refreshRemindersButton } from './practice-reminders.js';
 
 // ── Module state ──────────────────────────────────────────────────────────────
 
@@ -118,6 +119,7 @@ export async function loadDashboard() {
     banner?.setAttribute('hidden', '');
     editBtn?.removeAttribute('hidden');
   }
+  refreshRemindersButton(!!viewingAsUserId);
 
   // Greeting
   const greetEl = document.getElementById('dashGreetName');

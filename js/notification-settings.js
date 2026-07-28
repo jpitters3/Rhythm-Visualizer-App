@@ -22,6 +22,7 @@ export const NOTIF_TYPES = [
   { type: 'assignment_feedback',  label: 'Assignment sent back', roles: ['student'] },
   { type: 'assignment_complete',  label: 'Assignment complete',  roles: ['student'] },
   { type: 'assignment_submitted', label: 'Student submitted',    roles: ['teacher', 'admin'] },
+  { type: 'practice_reminder',    label: 'Practice reminders',   roles: ['student'] },
 ];
 
 // prefs: canonical type → { in_app: bool, email: bool }
