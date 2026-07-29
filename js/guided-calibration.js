@@ -21,7 +21,11 @@ let rafId         = null;
 // Detection stability
 let stableKey   = null;
 let stableStart = null;
-const STABLE_MS = 1200; // ms of same note before confirming
+let lastSeenAt  = null; // last frame stableKey was actually read (even a frame late)
+const STABLE_MS = 700;  // total ms of (mostly) the same note before confirming
+const GRACE_MS  = 220;  // brief dropouts/blips shorter than this don't reset the streak —
+                         // a real note's natural volume decay and harmonic wobble means a
+                         // perfectly unbroken reading is unrealistic to ever require
 
 // DOM refs
 let overlay, imageEl, dotsLayer, statusEl, pitchEl, actionsEl, canvasContainer, closeBtn;
@@ -353,34 +357,48 @@ function startDetection() {
   stopDetection();
   stableKey   = null;
   stableStart = null;
+  lastSeenAt  = null;
 
   const freqBuf = new Float32Array(analyser.frequencyBinCount);
 
   function frame() {
     analyser.getFloatFrequencyData(freqBuf);
     const freq = detectDominantFreq(freqBuf, audioCtx.sampleRate, analyser.fftSize);
+    const now = Date.now();
+    const withinGrace = stableKey && lastSeenAt && (now - lastSeenAt) <= GRACE_MS;
 
     if (freq) {
       const { note, octave } = freqToNote(freq);
       const key = `${note}${octave}`;
 
-      if (key !== stableKey) {
+      if (key === stableKey) {
+        lastSeenAt = now;
+        if (now - stableStart >= STABLE_MS) {
+          stopDetection();
+          currentDetected = { freq, note, octave };
+          onNoteDetected();
+          return;
+        }
+      } else if (withinGrace) {
+        // Brief blip to a different reading — most likely a harmonic/
+        // octave misread, not a real note change. Ignore this frame and
+        // keep the existing streak going rather than resetting it.
+      } else {
+        // Either the first reading, or the mismatch has lasted longer than
+        // the grace window — treat it as a genuine new note and start over.
         stableKey   = key;
-        stableStart = Date.now();
+        stableStart = now;
+        lastSeenAt  = now;
         pitchEl.innerHTML = `<span class="gcal-note-live">${key}</span>`;
-      } else if (Date.now() - stableStart >= STABLE_MS) {
-        stopDetection();
-        currentDetected = { freq, note, octave };
-        onNoteDetected();
-        return;
       }
-    } else {
-      if (stableKey) {
-        stableKey   = null;
-        stableStart = null;
-        pitchEl.innerHTML = `<span class="gcal-listening">Listening…</span>`;
-      }
+    } else if (!withinGrace) {
+      // Too quiet for longer than the grace window — actually gone silent.
+      stableKey   = null;
+      stableStart = null;
+      lastSeenAt  = null;
+      pitchEl.innerHTML = `<span class="gcal-listening">Listening…</span>`;
     }
+    // else: a brief quiet frame within grace — wait it out without resetting.
 
     rafId = requestAnimationFrame(frame);
   }
