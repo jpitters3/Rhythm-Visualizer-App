@@ -39,14 +39,17 @@
   object-fit: cover;
 }
 
-/* Camera Guide (Circular) */
+/* Camera Guide (Circular) — shutterBtn measures this element's rendered
+   size directly, so it stays correct at any width including the mobile clamp below */
 .camera-guide {
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: 280px;
-  height: 280px;
+  width: 340px;
+  height: 340px;
+  max-width: 85vw;
+  max-height: 85vw;
   border: 2px dashed rgba(255, 255, 255, 0.5);
   border-radius: 50%;
   pointer-events: none;

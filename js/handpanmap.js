@@ -2136,17 +2136,27 @@ function initCameraUI() {
   });
 
   shutterBtn?.addEventListener('click', async () => {
-    // 1. Capture and Crop to the UI Guide (280px)
+    // 1. Capture and Crop to the UI Guide (340px — must match .camera-guide in css/camera-crop.css)
     const canvas = document.createElement('canvas');
 
-    // Calculate crop matching the 280px guide
     const videoWidth = video.videoWidth;
     const videoHeight = video.videoHeight;
     const viewWidth = video.clientWidth;
     const viewHeight = video.clientHeight;
 
-    const guideSizeUI = 280;
-    const ratio = videoWidth / viewWidth;
+    // #cameraVideo uses object-fit:cover, which scales by whichever of
+    // width/height is the binding dimension and crops the other — using
+    // only the width ratio here (as before) is wrong whenever height is
+    // actually the binding one (common on tall phone viewports), which
+    // silently inflates the crop well past what the guide circle shows.
+    // The true raw-pixels-per-displayed-pixel ratio is always the smaller
+    // of the two.
+    //
+    // Measured live (not a hardcoded constant) since .camera-guide clamps
+    // to max-width:85vw on narrow screens — a fixed guess would drift out
+    // of sync with the actual rendered circle exactly like before.
+    const guideSizeUI = document.querySelector('.camera-guide')?.getBoundingClientRect().width || 340;
+    const ratio = Math.min(videoWidth / viewWidth, videoHeight / viewHeight);
     const cropSize = guideSizeUI * ratio;
 
     // Center of the video
