@@ -22,12 +22,22 @@ test.describe('Tap vs long-press cell selection', () => {
     }
   }
 
-  test('Quick tap selects the cell without opening the selection menu', async ({ page }) => {
+  test('Quick tap/click selects the cell', async ({ page, isMobile }) => {
     const cell0 = page.locator('.cell').nth(0);
     await cell0.click();
 
     await expect(cell0).toHaveClass(/selected/);
-    await expect(page.locator('#selectionTools')).not.toHaveClass(/visible/);
+
+    if (isMobile) {
+      // Touch: a quick tap must NOT open the selection menu — only a
+      // long-press does. Otherwise every tap-to-write hides the handpan.
+      await expect(page.locator('#selectionTools')).not.toHaveClass(/visible/);
+    } else {
+      // Desktop: a mouse click has always opened the selection menu
+      // directly — there's no long-press gesture to fall back on there.
+      await expect(page.locator('#selectionTools')).toHaveClass(/visible/);
+      await expect(page.locator('#selBarText')).toHaveText('1 selected');
+    }
 
     // Playing a handpan note should still write into the tapped cell.
     await page.locator('.hp-dot[data-note="1"]').click({ force: true });
@@ -59,7 +69,7 @@ test.describe('Tap vs long-press cell selection', () => {
     await expect(page.locator('#selBarText')).toHaveText('3 selected');
   });
 
-  test('Tapping a different cell after a drag selection clears it (does not extend it)', async ({ page, isMobile }) => {
+  test('Clicking a different cell after a drag selection replaces it (does not extend it)', async ({ page, isMobile }) => {
     test.skip(isMobile, 'Uses page.mouse — see mobile-specific coverage separately if needed');
 
     const cellA = page.locator('.cell').nth(3);
@@ -79,8 +89,12 @@ test.describe('Tap vs long-press cell selection', () => {
 
     await cellC.click();
 
-    await expect(page.locator('#selectionTools')).not.toHaveClass(/visible/);
-    await expect(page.locator('.cell.range')).toHaveCount(0);
+    // A plain desktop click opens/replaces the selection with just the
+    // clicked cell — it doesn't extend the previous drag range, but the
+    // menu stays visible since a real (1-cell) selection now exists.
+    await expect(page.locator('#selectionTools')).toHaveClass(/visible/);
+    await expect(page.locator('#selBarText')).toHaveText('1 selected');
+    await expect(page.locator('.cell.range')).toHaveCount(1);
     await expect(cellC).toHaveClass(/selected/);
   });
 

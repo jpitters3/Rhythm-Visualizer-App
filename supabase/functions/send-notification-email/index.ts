@@ -96,24 +96,33 @@ Deno.serve(async (req) => {
     const recipients = resolvedUsers.map(u => u.email)
     const html = buildHtml(title, body, cta_url, cta_text)
 
-    // Resend requires a visible To address; use a no-reply placeholder
-    const res = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${resendKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ from, to: adminEmail, bcc: recipients, subject: title, html }),
-    })
+    // One call per recipient, each as the real `to` address — bcc-only
+    // recipients are much more likely to get silently dropped (sandbox/
+    // test-mode restrictions, spam heuristics), which is exactly why only
+    // the hardcoded `to` address was ever reliably receiving these before.
+    const results = await Promise.all(recipients.map(async (email) => {
+      const res = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${resendKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ from, to: email, bcc: adminEmail, subject: title, html }),
+      })
+      if (!res.ok) {
+        const err = await res.text()
+        console.error('[send-notification-email] Resend error for', email, ':', err)
+        return { email, ok: false, error: err }
+      }
+      const data = await res.json()
+      return { email, ok: true, id: data.id }
+    }))
 
-    if (!res.ok) {
-      const err = await res.text()
-      console.error('[send-notification-email] Resend error:', err)
-      return jsonResponse({ error: err }, 500)
+    const failed = results.filter(r => !r.ok)
+    if (failed.length === results.length) {
+      return jsonResponse({ error: 'All sends failed', results }, 500)
     }
-
-    const data = await res.json()
-    return jsonResponse({ id: data.id })
+    return jsonResponse({ sent: results.length - failed.length, failed: failed.length, results })
 
   } catch (err: any) {
     console.error('[send-notification-email] Exception:', err.message)
