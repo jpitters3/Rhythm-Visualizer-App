@@ -7,6 +7,7 @@ import { supabase } from './supabase-client.js';
 // ── State ──────────────────────────────────────────────────────────────────────
 let handpanData    = null;
 let onComplete     = null;
+let onCancel       = null;
 let placedNotes    = [];   // [{ freq, note, octave, x, y, isDing }]
 let currentDetected = null;
 let isListeningForDing = true;
@@ -23,13 +24,14 @@ let stableStart = null;
 const STABLE_MS = 1200; // ms of same note before confirming
 
 // DOM refs
-let overlay, imageEl, dotsLayer, statusEl, pitchEl, actionsEl, imageWrap;
+let overlay, imageEl, dotsLayer, statusEl, pitchEl, actionsEl, imageWrap, closeBtn;
 
 // ── Public API ─────────────────────────────────────────────────────────────────
 
-export function startGuidedCalibration(data, onCompleteCallback) {
+export function startGuidedCalibration(data, onCompleteCallback, onCancelCallback) {
   handpanData   = data;
   onComplete    = onCompleteCallback;
+  onCancel      = onCancelCallback;
   placedNotes   = [];
   isListeningForDing = true;
   currentDetected    = null;
@@ -38,6 +40,13 @@ export function startGuidedCalibration(data, onCompleteCallback) {
   imageEl.src = data.top_image_url;
   overlay.style.display = 'flex';
   overlay.setAttribute('aria-hidden', 'false');
+
+  // Direct assignment (not addEventListener) so re-starting calibration
+  // doesn't stack duplicate handlers on this persistent button.
+  closeBtn.onclick = () => {
+    closeOverlay();
+    onCancel?.();
+  };
 
   showWelcome();
 }
@@ -52,6 +61,7 @@ function grabDOM() {
   pitchEl    = document.getElementById('guidedCalPitchDisplay');
   actionsEl  = document.getElementById('guidedCalActions');
   imageWrap  = document.getElementById('guidedCalImageWrap');
+  closeBtn   = document.getElementById('guidedCalCloseBtn');
 }
 
 function closeOverlay() {
@@ -85,7 +95,7 @@ function promptDing() {
      <p>This is the big center note — the deepest, richest note on your handpan.</p>`
   );
   pitchEl.innerHTML = `<span class="gcal-listening">Listening…</span>`;
-  setActions('');
+  renderManualEntry();
   startDetection();
 }
 
@@ -96,9 +106,40 @@ function promptNextNote() {
      <p>${count === 0 ? 'Play any other note on your handpan.' : `${count} note${count > 1 ? 's' : ''} added — keep going!`}</p>`
   );
   pitchEl.innerHTML = `<span class="gcal-listening">Listening…</span>`;
-  setActions(`<button class="gcal-btn-secondary" id="gcalDoneBtn">All done →</button>`);
+  renderManualEntry(`<button class="gcal-btn-secondary" id="gcalDoneBtn">All done →</button>`);
   document.getElementById('gcalDoneBtn').addEventListener('click', showSummary);
   startDetection();
+}
+
+// Fallback for when the mic can't get a stable read (background noise,
+// sustain/decay confusing the detector, etc.) — lets the user pick the note
+// they know they just played instead of being stuck re-playing it forever.
+function renderManualEntry(extraActionsHtml = '') {
+  const noteOptions = NOTE_NAMES.map(n => `<option value="${n}">${n}</option>`).join('');
+  const octaveOptions = [1, 2, 3, 4, 5, 6].map(o => `<option value="${o}" ${o === 3 ? 'selected' : ''}>${o}</option>`).join('');
+
+  setActions(`
+    <button type="button" class="gcal-manual-toggle" id="gcalManualToggle">Can't hear it? Enter manually</button>
+    <div class="gcal-manual-entry" id="gcalManualEntry" hidden>
+      <select id="gcalManualNote" aria-label="Note">${noteOptions}</select>
+      <select id="gcalManualOctave" aria-label="Octave">${octaveOptions}</select>
+      <button type="button" class="gcal-btn-primary" id="gcalManualUseBtn">Use this note</button>
+    </div>
+    ${extraActionsHtml}
+  `);
+
+  document.getElementById('gcalManualToggle').addEventListener('click', () => {
+    document.getElementById('gcalManualEntry').hidden = false;
+    document.getElementById('gcalManualToggle').hidden = true;
+  });
+
+  document.getElementById('gcalManualUseBtn').addEventListener('click', () => {
+    const note = document.getElementById('gcalManualNote').value;
+    const octave = Number(document.getElementById('gcalManualOctave').value);
+    stopDetection();
+    currentDetected = { freq: noteToFreq(note, octave), note, octave };
+    onNoteDetected();
+  });
 }
 
 function onNoteDetected() {
@@ -367,6 +408,13 @@ function freqToNote(freq) {
     note:   NOTE_NAMES[((midi % 12) + 12) % 12],
     octave: Math.floor(midi / 12) - 1,
   };
+}
+
+// Inverse of freqToNote — used for manually-entered notes, so they still
+// sort correctly alongside mic-detected ones (showSummary sorts by freq).
+function noteToFreq(note, octave) {
+  const midi = NOTE_NAMES.indexOf(note) + (octave + 1) * 12;
+  return 440 * Math.pow(2, (midi - 69) / 12);
 }
 
 function detectDominantFreq(freqData, sampleRate, fftSize) {

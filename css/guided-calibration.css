@@ -10,6 +10,27 @@
   align-items: stretch;
 }
 
+.guided-cal-close-btn {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 10;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255,255,255,0.1);
+  color: #fff;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.18s;
+}
+.guided-cal-close-btn:hover { background: rgba(255,255,255,0.2); }
+
 .guided-cal-body {
   display: flex;
   flex-direction: column;
@@ -202,3 +223,32 @@
   color: rgba(255,255,255,0.75);
 }
 .gcal-btn-secondary:hover { background: rgba(255,255,255,0.16); }
+
+/* ── Manual pitch entry fallback ── */
+.gcal-manual-toggle {
+  background: none;
+  border: none;
+  color: rgba(255,255,255,0.45);
+  font-size: 12px;
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 0;
+  align-self: flex-start;
+}
+.gcal-manual-toggle:hover { color: rgba(255,255,255,0.7); }
+
+.gcal-manual-entry {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.gcal-manual-entry select {
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid rgba(255,255,255,0.15);
+  background: #1a1a1a;
+  color: #fff;
+  font-size: 14px;
+}

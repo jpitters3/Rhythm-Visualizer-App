@@ -1479,6 +1479,9 @@ function attachCreationListeners() {
         closeMyScalesModal();
         startGuidedCalibration(insertData, (updatedData) => {
           enterCalibrationMode(updatedData);
+        }, () => {
+          openMyScalesModal('list');
+          loadAllUserCustomHandpans().then(renderMyScalesList);
         });
       }
 
