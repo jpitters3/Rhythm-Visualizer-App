@@ -6,6 +6,9 @@ self.addEventListener('install', (event) => {
 
 self.addEventListener('activate', (event) => {
   console.log('[Panafide SW] Activated');
+  // Take control of already-open pages/PWA instances immediately, instead
+  // of leaving them on the previous service worker until fully closed.
+  event.waitUntil(self.clients.claim());
 });
 
 self.addEventListener('fetch', (event) => {
