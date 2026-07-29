@@ -2314,18 +2314,27 @@
 
   <!-- HANDPAN CALIBRATION OVERLAY -->
   <!-- Guided Calibration Wizard -->
-  <div id="guidedCalOverlay" class="guided-cal-overlay" style="display:none;" aria-hidden="true">
-    <button type="button" id="guidedCalCloseBtn" class="guided-cal-close-btn" aria-label="Close calibration" title="Close">&times;</button>
-    <div class="guided-cal-body">
-      <div class="guided-cal-image-wrap" id="guidedCalImageWrap">
-        <img id="guidedCalImage" alt="Your handpan" draggable="false">
-        <div class="guided-cal-dots-layer" id="guidedCalDotsLayer"></div>
+  <div id="guidedCalOverlay" class="cal-overlay" style="display:none;" aria-hidden="true">
+    <div class="cal-header">
+      <div class="cal-title-group">
+        <h2>Calibrating your Handpan</h2>
       </div>
-      <div class="guided-cal-panel">
-        <div class="guided-cal-status" id="guidedCalStatus"></div>
-        <div class="guided-cal-pitch-display" id="guidedCalPitchDisplay"></div>
-        <div class="guided-cal-actions" id="guidedCalActions"></div>
+      <div class="cal-actions">
+        <button type="button" id="guidedCalCloseBtn" class="cal-btn cal-btn-secondary">Close</button>
       </div>
+    </div>
+
+    <div class="cal-workspace">
+      <div class="cal-canvas-container" id="guidedCalCanvasContainer">
+        <img id="guidedCalImage" class="cal-bg-img" alt="Your handpan" draggable="false">
+        <div class="cal-layer" id="guidedCalDotsLayer"></div>
+      </div>
+    </div>
+
+    <div class="cal-properties guided-cal-panel">
+      <div class="guided-cal-status" id="guidedCalStatus"></div>
+      <div class="guided-cal-pitch-display" id="guidedCalPitchDisplay"></div>
+      <div class="guided-cal-actions" id="guidedCalActions"></div>
     </div>
   </div>
 

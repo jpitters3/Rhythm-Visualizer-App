@@ -24,7 +24,7 @@ let stableStart = null;
 const STABLE_MS = 1200; // ms of same note before confirming
 
 // DOM refs
-let overlay, imageEl, dotsLayer, statusEl, pitchEl, actionsEl, imageWrap, closeBtn;
+let overlay, imageEl, dotsLayer, statusEl, pitchEl, actionsEl, canvasContainer, closeBtn;
 
 // ── Public API ─────────────────────────────────────────────────────────────────
 
@@ -37,7 +37,18 @@ export function startGuidedCalibration(data, onCompleteCallback, onCancelCallbac
   currentDetected    = null;
 
   grabDOM();
+
+  // Lock the container to the image's own aspect ratio — identical technique
+  // to calibration.js's loadCalibrationImage(), so this is the same fixed
+  // box (not a stretch-to-fill area) as the Save & Fine-tune screen, and
+  // tap coordinates never need letterbox-offset correction.
+  imageEl.onload = () => {
+    if (imageEl.naturalWidth) {
+      canvasContainer.style.aspectRatio = `${imageEl.naturalWidth} / ${imageEl.naturalHeight}`;
+    }
+  };
   imageEl.src = data.top_image_url;
+
   overlay.style.display = 'flex';
   overlay.setAttribute('aria-hidden', 'false');
 
@@ -54,14 +65,14 @@ export function startGuidedCalibration(data, onCompleteCallback, onCancelCallbac
 // ── DOM ────────────────────────────────────────────────────────────────────────
 
 function grabDOM() {
-  overlay    = document.getElementById('guidedCalOverlay');
-  imageEl    = document.getElementById('guidedCalImage');
-  dotsLayer  = document.getElementById('guidedCalDotsLayer');
-  statusEl   = document.getElementById('guidedCalStatus');
-  pitchEl    = document.getElementById('guidedCalPitchDisplay');
-  actionsEl  = document.getElementById('guidedCalActions');
-  imageWrap  = document.getElementById('guidedCalImageWrap');
-  closeBtn   = document.getElementById('guidedCalCloseBtn');
+  overlay         = document.getElementById('guidedCalOverlay');
+  imageEl         = document.getElementById('guidedCalImage');
+  dotsLayer       = document.getElementById('guidedCalDotsLayer');
+  statusEl        = document.getElementById('guidedCalStatus');
+  pitchEl         = document.getElementById('guidedCalPitchDisplay');
+  actionsEl       = document.getElementById('guidedCalActions');
+  canvasContainer = document.getElementById('guidedCalCanvasContainer');
+  closeBtn        = document.getElementById('guidedCalCloseBtn');
 }
 
 function closeOverlay() {
@@ -157,9 +168,9 @@ function onNoteDetected() {
     if (isListeningForDing) promptDing(); else promptNextNote();
   });
 
-  // Enable tap on image
-  imageWrap.classList.add('gcal-tappable');
-  imageWrap.addEventListener('pointerup', handleTap, { once: true });
+  // Enable tap on the canvas container
+  canvasContainer.classList.add('gcal-tappable');
+  canvasContainer.addEventListener('pointerup', handleTap, { once: true });
 }
 
 function onNotePlaced(x, y) {
@@ -167,7 +178,7 @@ function onNotePlaced(x, y) {
   placedNotes.push(note);
   renderDot(note, placedNotes.length - 1);
 
-  imageWrap.classList.remove('gcal-tappable');
+  canvasContainer.classList.remove('gcal-tappable');
 
   const label = isListeningForDing ? 'Ding' : `${note.note}${note.octave}`;
   setStatus(`<h2>${isListeningForDing ? 'Ding placed! 🥁' : `${label} placed! ✅`}</h2><p>Nice one!</p>`);
@@ -274,42 +285,26 @@ function buildNoteMap(ding, rest) {
 
 function handleTap(e) {
   e.preventDefault();
-  const coords = tapToImagePercent(e, imageEl);
+  const coords = tapToContainerPercent(e, canvasContainer);
   if (!coords) {
-    // Tapped outside image bounds — re-attach listener
-    imageWrap.addEventListener('pointerup', handleTap, { once: true });
+    // Tapped outside container bounds — re-attach listener
+    canvasContainer.addEventListener('pointerup', handleTap, { once: true });
     return;
   }
   onNotePlaced(coords.x, coords.y);
 }
 
-function tapToImagePercent(e, img) {
-  const rect = img.getBoundingClientRect();
+// canvasContainer's aspect-ratio is locked to the image's natural size (see
+// startGuidedCalibration), so the container *is* the image's content box —
+// no object-fit:contain letterboxing to correct for, unlike before. Same
+// simple math the fine-tune screen's own tonefield placement relies on.
+function tapToContainerPercent(e, container) {
+  const rect = container.getBoundingClientRect();
   const clientX = e.changedTouches ? e.changedTouches[0].clientX : e.clientX;
   const clientY = e.changedTouches ? e.changedTouches[0].clientY : e.clientY;
-  const tapX = clientX - rect.left;
-  const tapY = clientY - rect.top;
 
-  const containerW = rect.width;
-  const containerH = rect.height;
-  const imgRatio   = img.naturalWidth / img.naturalHeight;
-  const conRatio   = containerW / containerH;
-
-  let renderedW, renderedH, offsetX, offsetY;
-  if (imgRatio > conRatio) {
-    renderedW = containerW;
-    renderedH = containerW / imgRatio;
-    offsetX   = 0;
-    offsetY   = (containerH - renderedH) / 2;
-  } else {
-    renderedH = containerH;
-    renderedW = containerH * imgRatio;
-    offsetX   = (containerW - renderedW) / 2;
-    offsetY   = 0;
-  }
-
-  const x = ((tapX - offsetX) / renderedW) * 100;
-  const y = ((tapY - offsetY) / renderedH) * 100;
+  const x = ((clientX - rect.left) / rect.width) * 100;
+  const y = ((clientY - rect.top) / rect.height) * 100;
 
   if (x < 0 || x > 100 || y < 0 || y > 100) return null;
   return { x, y };
