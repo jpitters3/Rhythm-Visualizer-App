@@ -127,54 +127,8 @@ button#saveProfileBtn:disabled {
   }
 }
 
-/* My Scales Layout */
-.my-scales-list {
-  max-height: 350px;
-  overflow-y: auto;
-}
-
-.scale-list-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px 0;
-  border-bottom: 1px solid var(--panel-border);
-  gap: 12px;
-}
-
-.scale-info {
-  flex: 1;
-  min-width: 0;
-  /* allows text truncation */
-}
-
-.scale-name-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 2px;
-}
-
-.scale-name-text {
-  font-weight: 600;
-  color: var(--text);
-  font-size: 15px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.scale-meta {
-  font-size: 12px;
-  color: var(--text-secondary);
-}
-
-.scale-actions {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  flex-shrink: 0;
-}
+/* Scale list, creation form, and rename styles moved to css/handpanmap.css —
+   they're about the "My Handpans" scale library, not the profile modal. */
 
 .icon-btn {
   background: none;
@@ -206,59 +160,3 @@ button#saveProfileBtn:disabled {
   color: #ef4444;
 }
 
-/* Edit Map Button */
-.edit-map-btn {
-  background: rgba(var(--accent-rgb), 0.15);
-  color: var(--accent-light);
-  border: 1px solid rgba(var(--accent-rgb), 0.3);
-  padding: 4px 10px;
-  font-size: 11px;
-  border-radius: 6px;
-  cursor: pointer;
-  white-space: nowrap;
-  margin: 0 4px;
-}
-
-.edit-map-btn:hover {
-  background: rgba(var(--accent-rgb), 0.3);
-  color: #fff;
-}
-
-/* Rename Inputs */
-.edit-mode-container {
-  padding-right: 8px;
-}
-
-.rename-input {
-  width: 100%;
-  padding: 6px 10px;
-  border-radius: 6px;
-  border: 1px solid var(--panel-border);
-  background: var(--bg);
-  color: var(--text);
-  font-size: 14px;
-  margin-bottom: 6px;
-}
-
-.rename-actions {
-  display: flex;
-  gap: 6px;
-}
-
-.small-action-btn {
-  padding: 4px 10px;
-  font-size: 11px;
-  border-radius: 4px;
-  border: none;
-  cursor: pointer;
-}
-
-.save-btn-styles {
-  background: var(--btn-active);
-  color: var(--btn-active-text);
-}
-
-.cancel-btn-styles {
-  background: var(--panel-border);
-  color: var(--text);
-}

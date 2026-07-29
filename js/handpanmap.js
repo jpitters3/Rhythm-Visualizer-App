@@ -628,9 +628,10 @@ function renderMyScalesList() {
 
     // Edit Details Button
     const editBtn = document.createElement('button');
-    editBtn.textContent = 'Edit Details'; // or icon
-    editBtn.className = 'edit-map-btn'; // Reuse style or new 'edit-details-btn'
-    editBtn.style.marginRight = '5px';
+    editBtn.innerHTML = '✏️';
+    editBtn.className = 'icon-btn';
+    editBtn.title = 'Edit Details';
+    editBtn.setAttribute('aria-label', 'Edit Details');
     editBtn.onclick = () => {
       openHandpanForm(hp);
     };
@@ -653,7 +654,7 @@ function renderMyScalesList() {
 
     // Edit Map Button (Calibration)
     const mapBtn = document.createElement('button');
-    mapBtn.textContent = 'Edit Map';
+    mapBtn.textContent = 'Map';
     mapBtn.className = 'edit-map-btn';
     mapBtn.onclick = () => {
       if (!canAccess(FEATURE.CUSTOM_SCALES)) {
@@ -2103,6 +2104,10 @@ function initCameraUI() {
       };
       cameraStream = await navigator.mediaDevices.getUserMedia(constraints);
       video.srcObject = cameraStream;
+      // Camera renders below the modal overlay stack (z-index 5000 vs
+      // 10000) — hide the modal underneath rather than fight z-index, so
+      // the camera view is fully unobstructed while it's open.
+      if (myScalesModal) myScalesModal.style.visibility = 'hidden';
       cameraModal.classList.add('active');
     } catch (err) {
       console.error('Camera error:', err);
@@ -2116,6 +2121,7 @@ function initCameraUI() {
       cameraStream = null;
     }
     cameraModal.classList.remove('active');
+    if (myScalesModal) myScalesModal.style.visibility = '';
   }
 
   closeCameraBtn?.addEventListener('click', stopCamera);

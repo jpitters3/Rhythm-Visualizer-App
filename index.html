@@ -1772,70 +1772,67 @@
 
   <!-- My Scales Management Modal -->
   <div id="myScalesModal" class="modal-overlay" aria-hidden="true">
-    <div class="modal">
+    <div class="modal-content hp-drawer-modal">
       <div class="modal-header">
         <h3 class="modal-title">My Handpans</h3>
         <button id="closeMyScalesBtn" class="close-btn">&times;</button>
       </div>
-      <div class="modal-content">
-        <div id="myScalesList" class="my-scales-list">
-          <!-- Dynamically populated -->
+      <div id="myScalesList" class="my-scales-list drawer-content">
+        <!-- Dynamically populated -->
+      </div>
+
+      <!-- Creation Form Mode (Moved from settings) -->
+      <div id="hpCreationForm" style="display:none; flex-direction:column; gap:14px; padding: 20px;">
+        <div style="display:flex; align-items:center; margin-bottom:5px;">
+          <button id="cancelBuildBtn" class="icon-btn" style="font-size:16px; padding:0; margin-right:8px;">←</button>
+          <h4 id="hpCreationTitle" style="margin:0; font-size:14px;">Review & Upload</h4>
         </div>
 
-        <!-- Creation Form Mode (Moved from settings) -->
-        <div id="hpCreationForm" style="display:none; flex-direction:column; gap:10px; justify-self: center; padding: 20px;">
-          <div style="display:flex; align-items:center; margin-bottom:5px;">
-            <button id="cancelBuildBtn" class="icon-btn" style="font-size:16px; padding:0; margin-right:8px;">←</button>
-            <h4 id="hpCreationTitle" style="margin:0; font-size:14px;">Review & Upload</h4>
-          </div>
+        <input type="text" id="hpBuilderName" placeholder="Builder (e.g. Yishama)" class="hp-input">
+        <input type="text" id="hpScaleName" placeholder="Scale Name (e.g. D Kurd 9)" class="hp-input">
 
-          <input type="text" id="hpBuilderName" placeholder="Builder (e.g. Yishama)" class="hp-input">
-          <input type="text" id="hpScaleName" placeholder="Scale Name (e.g. D Kurd 9)" class="hp-input">
-
-          <div class="file-upload-group" style="margin-bottom:10px;">
-            <label style="display:block; font-size:12px; color:var(--text-secondary); margin-bottom:4px;">Top Image
-              (Required)</label>
-            <div style="display:flex; align-items:center; gap:10px;">
-              <div class="camera-btn-wrapper">
-                <button type="button" class="secondary-btn small-btn"
-                  onclick="document.getElementById('hpTopImage').click()">Choose File</button>
-                <button type="button" class="primary-btn small-btn" data-action="take-photo" data-type="top">Take
-                  Photo</button>
-              </div>
-              <span id="hpTopFileName" style="font-size:12px; color:var(--text); opacity:0.8;">No file chosen</span>
-              <div id="hpTopCameraIndicator" class="camera-indicator">Camera Capture</div>
-              <input type="file" id="hpTopImage" accept="image/*" style="display:none"
-                onchange="document.getElementById('hpTopFileName').textContent = this.files[0]?.name || 'No file chosen'; document.getElementById('hpTopCameraIndicator').classList.remove('active')">
+        <div class="file-upload-group">
+          <label style="display:block; font-size:12px; color:var(--text-secondary); margin-bottom:4px;">Top Image
+            (Required)</label>
+          <div class="file-upload-row">
+            <div class="camera-btn-wrapper">
+              <button type="button" class="secondary-btn small-btn"
+                onclick="document.getElementById('hpTopImage').click()">Choose File</button>
+              <button type="button" class="primary-btn small-btn" data-action="take-photo" data-type="top">Take
+                Photo</button>
             </div>
-
-            <div id="hpTopCurrent"
-              style="display:none; font-size:11px; color:#2ecc71; margin-top:5px; font-style:italic;"></div>
+            <span id="hpTopFileName" class="file-upload-filename">No file chosen</span>
+            <div id="hpTopCameraIndicator" class="camera-indicator">Camera Capture</div>
+            <input type="file" id="hpTopImage" accept="image/*" style="display:none"
+              onchange="document.getElementById('hpTopFileName').textContent = this.files[0]?.name || 'No file chosen'; document.getElementById('hpTopCameraIndicator').classList.remove('active')">
           </div>
 
-          <div class="file-upload-group" style="margin-bottom:10px;">
-            <label style="display:block; font-size:12px; color:var(--text-secondary); margin-bottom:4px;">Bottom Image
-              (Optional)</label>
-            <div style="display:flex; align-items:center; gap:10px;">
-              <div class="camera-btn-wrapper">
-                <button type="button" class="secondary-btn small-btn"
-                  onclick="document.getElementById('hpBottomImage').click()">Choose File</button>
-                <button type="button" class="primary-btn small-btn" data-action="take-photo" data-type="bottom">Take
-                  Photo</button>
-              </div>
-              <span id="hpBottomFileName" style="font-size:12px; color:var(--text); opacity:0.8;">No file
-                chosen</span>
-              <div id="hpBottomCameraIndicator" class="camera-indicator">Camera Capture</div>
-              <input type="file" id="hpBottomImage" accept="image/*" style="display:none"
-                onchange="document.getElementById('hpBottomFileName').textContent = this.files[0]?.name || 'No file chosen'; document.getElementById('hpBottomCameraIndicator').classList.remove('active')">
-            </div>
-
-            <div id="hpBottomCurrent"
-              style="display:none; font-size:11px; color:#2ecc71; margin-top:5px; font-style:italic;"></div>
-          </div>
-
-          <button id="saveNewHandpanBtn" class="primary-btn small-btn" style="margin-top:5px;">Next:
-            Calibrate</button>
+          <div id="hpTopCurrent"
+            style="display:none; font-size:11px; color:#2ecc71; margin-top:5px; font-style:italic;"></div>
         </div>
+
+        <div class="file-upload-group">
+          <label style="display:block; font-size:12px; color:var(--text-secondary); margin-bottom:4px;">Bottom Image
+            (Optional)</label>
+          <div class="file-upload-row">
+            <div class="camera-btn-wrapper">
+              <button type="button" class="secondary-btn small-btn"
+                onclick="document.getElementById('hpBottomImage').click()">Choose File</button>
+              <button type="button" class="primary-btn small-btn" data-action="take-photo" data-type="bottom">Take
+                Photo</button>
+            </div>
+            <span id="hpBottomFileName" class="file-upload-filename">No file chosen</span>
+            <div id="hpBottomCameraIndicator" class="camera-indicator">Camera Capture</div>
+            <input type="file" id="hpBottomImage" accept="image/*" style="display:none"
+              onchange="document.getElementById('hpBottomFileName').textContent = this.files[0]?.name || 'No file chosen'; document.getElementById('hpBottomCameraIndicator').classList.remove('active')">
+          </div>
+
+          <div id="hpBottomCurrent"
+            style="display:none; font-size:11px; color:#2ecc71; margin-top:5px; font-style:italic;"></div>
+        </div>
+
+        <button id="saveNewHandpanBtn" class="primary-btn small-btn" style="margin-top:5px;">Next:
+          Calibrate</button>
       </div>
     </div>
   </div>
