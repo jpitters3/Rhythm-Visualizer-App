@@ -14,6 +14,7 @@ import {
   togglePublish, deleteCourse, archiveCourse, activateCourse, unlockCourse,
 } from './course-marketplace.js';
 import { mountHandpanPreview } from './handpan-pattern-preview.js';
+import { SCALES } from './config.js';
 
 let patternsModal = null;
 let patternsPanel = null;
@@ -240,10 +241,12 @@ function buildCard(course, ownedIds, archivedIds, previewByCourse, isAdmin) {
 
   card.innerHTML = `
     <div class="pattern-preview-thumb">
-      <img class="pattern-preview-img" src="./public/assets/images/handpan-for-groovepan.png" alt="">
+      <img class="pattern-preview-img" data-preview-img src="${DEFAULT_PREVIEW_IMG}" alt="">
       <div class="pattern-preview-overlay" data-preview-overlay></div>
       <div class="price-badge ${badgeClass}">${badgeText}</div>
+      <div class="pattern-scale-label" data-scale-label>Previewing: ${escapeHtml(course.intended_scale || Object.keys(SCALES)[0])}</div>
       <button class="pattern-sound-toggle" data-action="toggle-sound" title="Toggle preview sound">🔈</button>
+      <button class="pattern-myhandpan-toggle" data-action="toggle-myhandpan" title="Preview with my selected handpan">🎹 My Handpan</button>
     </div>
     <div class="card-content">
       <div class="card-meta-row">${course.category ? `<span class="card-meta-pill">${escapeHtml(course.category)}</span>` : ''}${tagsHtml}</div>
@@ -272,9 +275,41 @@ function buildCard(course, ownedIds, archivedIds, previewByCourse, isAdmin) {
         soundBtn.textContent = '🔊';
       }
     };
+
+    const myHandpanBtn = card.querySelector('[data-action="toggle-myhandpan"]');
+    const scaleLabelEl = card.querySelector('[data-scale-label]');
+    const imgEl = card.querySelector('[data-preview-img]');
+    const intendedScaleLabel = course.intended_scale || Object.keys(SCALES)[0];
+    myHandpanBtn.onclick = (e) => {
+      e.stopPropagation();
+      const usingMine = !myHandpanBtn.classList.contains('active');
+      myHandpanBtn.classList.toggle('active', usingMine);
+      controller.setScaleSource(usingMine ? 'mine' : 'intended');
+      scaleLabelEl.textContent = `Previewing: ${usingMine ? getCurrentScaleLabel() : intendedScaleLabel}`;
+      imgEl.src = usingMine ? (getCurrentHandpanImageSrc() || DEFAULT_PREVIEW_IMG) : DEFAULT_PREVIEW_IMG;
+    };
   }
 
   return card;
+}
+
+// #scaleSelect already shows the friendly name for whatever's active — a
+// system scale name, or a custom handpan's own name (see handpanmap.js's
+// renderCustomOptions) — so read it directly rather than re-deriving it.
+function getCurrentScaleLabel() {
+  const selectEl = document.getElementById('scaleSelect');
+  const selected = selectEl?.options[selectEl.selectedIndex];
+  return selected?.textContent?.trim() || 'My Handpan';
+}
+
+const DEFAULT_PREVIEW_IMG = './public/assets/images/handpan-for-groovepan.png';
+
+// #handpanImg is the actual studio <img> — its .src always reflects
+// whatever's currently mounted (default Bronze/Sketch model, or a custom
+// handpan's own uploaded photo), so it's simplest to read directly rather
+// than re-deriving which case is active.
+function getCurrentHandpanImageSrc() {
+  return document.getElementById('handpanImg')?.src || null;
 }
 
 function escapeHtml(str) {

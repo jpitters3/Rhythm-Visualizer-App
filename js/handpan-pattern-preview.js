@@ -12,7 +12,9 @@
 // mounted.
 
 import { intervalMs, resolveHand, playNoteSample, ensureNoteSampleLoaded } from './noteplayer.js';
+import { getScale } from './state.js';
 import { SCALES } from './config.js';
+import { HANDPAN_MAP } from './handpanmap.js';
 
 const SOUND_TAK = 'Tak';
 const SOUND_SLAP = 'Slap';
@@ -41,11 +43,29 @@ function noteForLabelInScale(label, scale) {
   return null;
 }
 
+// HANDPAN_MAP (live export from handpanmap.js) always reflects whatever the
+// viewer currently has mounted in the studio — system or custom handpan —
+// so it's the source of truth for "my handpan"'s actual tone field
+// positions. It uses T_R/T_L/S_R/S_L (split by hand); PREVIEW_HP_MAP only
+// has one T/S each, so the right-hand variant is used as a reasonable
+// stand-in. Any key HANDPAN_MAP doesn't have falls back to the default
+// PREVIEW_HP_MAP position rather than leaving a dot unplaced.
+function buildDotMapFromCurrentHandpan() {
+  const map = {};
+  for (const key of Object.keys(PREVIEW_HP_MAP)) {
+    const sourceKey = key === 'T' ? 'T_R' : key === 'S' ? 'S_R' : key;
+    const entry = HANDPAN_MAP[sourceKey];
+    map[key] = entry ? { x: entry.x, y: entry.y, r: entry.r || 8 } : PREVIEW_HP_MAP[key];
+  }
+  return map;
+}
+
 // Mounts a looping animated preview into `overlayEl` (an empty, positioned
 // element sized to the handpan image behind it). Returns a controller with
 // a `stop()` method and a `setSound(bool)` toggle.
 export function mountHandpanPreview(overlayEl, patternData, { scaleName, sound = false } = {}) {
-  const scale = SCALES[scaleName] || Object.values(SCALES)[0];
+  const intendedScale = SCALES[scaleName] || Object.values(SCALES)[0];
+  let scale = intendedScale;
 
   overlayEl.innerHTML = '';
   const dots = new Map();
@@ -54,17 +74,24 @@ export function mountHandpanPreview(overlayEl, patternData, { scaleName, sound =
     const dot = document.createElement('div');
     dot.className = 'pp-dot';
     dot.dataset.note = note;
-    // Width only (as % of container width) + aspect-ratio:1 on .pp-dot —
-    // the container isn't square, so equal width%/height% would map to
-    // different pixel amounts and render as an oval. aspect-ratio locks the
-    // rendered height to match the resolved pixel width instead.
-    dot.style.cssText = `left:${p.x}%;top:${p.y}%;width:${p.r * 2}%;transform:translate(-50%,-50%)`;
     const visual = document.createElement('div');
     visual.className = 'pp-visual';
     dot.appendChild(visual);
     overlayEl.appendChild(dot);
     dots.set(note, dot);
   }
+
+  // Width only (as % of container width) + aspect-ratio:1 on .pp-dot — the
+  // container isn't square, so equal width%/height% would map to different
+  // pixel amounts and render as an oval. aspect-ratio locks the rendered
+  // height to match the resolved pixel width instead.
+  function applyDotPositions(map) {
+    for (const [note, dot] of dots.entries()) {
+      const p = map[note] || PREVIEW_HP_MAP[note];
+      dot.style.cssText = `left:${p.x}%;top:${p.y}%;width:${p.r * 2}%;transform:translate(-50%,-50%)`;
+    }
+  }
+  applyDotPositions(PREVIEW_HP_MAP);
 
   const rawLabels = patternData?.labels || [];
   const rawHands = patternData?.hands || [];
@@ -138,6 +165,19 @@ export function mountHandpanPreview(overlayEl, patternData, { scaleName, sound =
     },
     setSound(on) {
       soundOn = on;
+    },
+    // 'mine' reads the viewer's currently-active scale live (system or
+    // custom handpan, whatever getScale()/HANDPAN_MAP resolve to right now)
+    // instead of the Mini-Course's intended scale/dot layout. 'intended'
+    // switches both back.
+    setScaleSource(source) {
+      if (source === 'mine') {
+        scale = getScale() || intendedScale;
+        applyDotPositions(buildDotMapFromCurrentHandpan());
+      } else {
+        scale = intendedScale;
+        applyDotPositions(PREVIEW_HP_MAP);
+      }
     },
   };
 }
