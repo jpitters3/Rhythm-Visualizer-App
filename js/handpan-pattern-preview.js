@@ -166,10 +166,16 @@ export function mountHandpanPreview(overlayEl, patternData, { scaleName, sound =
     setSound(on) {
       soundOn = on;
     },
+    // Unmutes and restarts the sequence from step 0 — used by the play button.
+    play() {
+      soundOn = true;
+      i = 0;
+    },
     // 'mine' reads the viewer's currently-active scale live (system or
     // custom handpan, whatever getScale()/HANDPAN_MAP resolve to right now)
     // instead of the Mini-Course's intended scale/dot layout. 'intended'
-    // switches both back.
+    // switches both back. Always restarts from step 0 so the phrase doesn't
+    // pick up mid-sequence with the new scale's pitches/hand assignments.
     setScaleSource(source) {
       if (source === 'mine') {
         scale = getScale() || intendedScale;
@@ -178,6 +184,7 @@ export function mountHandpanPreview(overlayEl, patternData, { scaleName, sound =
         scale = intendedScale;
         applyDotPositions(PREVIEW_HP_MAP);
       }
+      i = 0;
     },
   };
 }

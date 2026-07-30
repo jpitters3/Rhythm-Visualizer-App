@@ -75,26 +75,52 @@
   pointer-events: none;
 }
 
-.pattern-sound-toggle {
+/* Selectors scoped under .pattern-preview-thumb so specificity beats the
+   global button:hover / button:active / button.active rules in
+   css/controls.css — those otherwise override this button's centering
+   translate(-50%,-50%) with their own translateY, and button.active's
+   background: var(--btn-active) (a bright yellow) wins over an
+   undeclared background here. Renaming the state class to .playing
+   (instead of .active) sidesteps that collision entirely. */
+.pattern-preview-thumb .pattern-play-btn {
   position: absolute;
-  bottom: 8px;
-  right: 8px;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
   z-index: 2;
-  width: 28px;
-  height: 28px;
+  width: 52px;
+  height: 52px;
   border-radius: 50%;
   border: none;
-  background: rgba(0, 0, 0, 0.55);
-  color: #fff;
-  font-size: 13px;
+  background: rgba(255, 255, 255, 0.14);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  color: rgba(255, 255, 255, 0.85);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: background 0.2s, color 0.2s, transform 0.15s;
 }
 
-.pattern-sound-toggle.active {
-  background: var(--accent);
+.pattern-preview-thumb .pattern-play-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+  transform: translate(-50%, -50%) scale(1.02);
+}
+
+.pattern-preview-thumb .pattern-play-btn:active {
+  transform: translate(-50%, -50%) scale(0.96);
+}
+
+/* Brief highlight flash on click, faded back out via the transition above. */
+.pattern-preview-thumb .pattern-play-btn.flash {
+  background: rgba(255, 255, 255, 0.45);
+  color: #fff;
+}
+
+.pattern-preview-thumb .pattern-play-btn.playing {
+  color: rgba(255, 255, 255, 0.85);
 }
 
 .pattern-myhandpan-toggle {

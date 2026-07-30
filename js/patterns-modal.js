@@ -16,6 +16,17 @@ import {
 import { mountHandpanPreview } from './handpan-pattern-preview.js';
 import { SCALES } from './config.js';
 
+// Hollow (stroke-only) icons for the play/stop button — deliberately not
+// filled shapes, per design direction.
+const PLAY_ICON_SVG = `<svg viewBox="0 0 24 24" width="26" height="26" fill="none">
+  <circle cx="12" cy="12" r="10.25" stroke="currentColor" stroke-width="1.5"/>
+  <path d="M10 8.3v7.4l6.2-3.7-6.2-3.7z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+</svg>`;
+const STOP_ICON_SVG = `<svg viewBox="0 0 24 24" width="26" height="26" fill="none">
+  <circle cx="12" cy="12" r="10.25" stroke="currentColor" stroke-width="1.5"/>
+  <rect x="8.5" y="8.5" width="7" height="7" stroke="currentColor" stroke-width="1.5"/>
+</svg>`;
+
 let patternsModal = null;
 let patternsPanel = null;
 let gridEl = null;
@@ -249,7 +260,7 @@ function buildCard(course, ownedIds, archivedIds, previewByCourse, isAdmin) {
       <div class="pattern-preview-overlay" data-preview-overlay></div>
       <div class="price-badge ${badgeClass}">${badgeText}</div>
       <div class="pattern-scale-label" data-scale-label>Previewing: ${escapeHtml(course.intended_scale || Object.keys(SCALES)[0])}</div>
-      <button class="pattern-sound-toggle" data-action="toggle-sound" title="Toggle preview sound">🔈</button>
+      <button class="pattern-play-btn" data-action="play-preview" title="Play preview">${PLAY_ICON_SVG}</button>
       <button class="pattern-myhandpan-toggle" data-action="toggle-myhandpan" title="Preview with my selected handpan">🎹 My Handpan</button>
     </div>
     <div class="card-content">
@@ -267,17 +278,27 @@ function buildCard(course, ownedIds, archivedIds, previewByCourse, isAdmin) {
     const controller = mountHandpanPreview(overlayEl, patternData, { scaleName: course.intended_scale });
     activePreviews.push(controller);
 
-    const soundBtn = card.querySelector('[data-action="toggle-sound"]');
-    soundBtn.onclick = (e) => {
+    const playBtn = card.querySelector('[data-action="play-preview"]');
+    playBtn.onclick = (e) => {
       e.stopPropagation();
-      const on = !soundBtn.classList.contains('active');
+      const wasPlaying = playBtn.classList.contains('playing');
+
+      // Only one card plays at a time — stop every card first (including this one).
       for (const p of activePreviews) p.setSound(false);
-      document.querySelectorAll('.pattern-sound-toggle.active').forEach(b => { b.classList.remove('active'); b.textContent = '🔈'; });
-      if (on) {
-        controller.setSound(true);
-        soundBtn.classList.add('active');
-        soundBtn.textContent = '🔊';
-      }
+      document.querySelectorAll('.pattern-play-btn.playing').forEach(b => {
+        b.classList.remove('playing');
+        b.innerHTML = PLAY_ICON_SVG;
+      });
+
+      if (wasPlaying) return; // this button's own click just stopped it
+
+      controller.play();
+      playBtn.classList.add('playing');
+      playBtn.innerHTML = STOP_ICON_SVG;
+
+      // Brief highlight flash, then fade back to the transparent base state.
+      playBtn.classList.add('flash');
+      setTimeout(() => playBtn.classList.remove('flash'), 220);
     };
 
     const myHandpanBtn = card.querySelector('[data-action="toggle-myhandpan"]');
