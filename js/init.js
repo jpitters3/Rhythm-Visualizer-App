@@ -34,6 +34,7 @@ import { initCalibration } from './calibration.js';
 import { initFeed } from './feed.js';
 import { initLibrary } from './library.js';
 import { initCourseMarketplace } from './course-marketplace.js';
+import { initPatternsModal } from './patterns-modal.js';
 import { Bus, BUS_EVENT } from './bus.js';
 import { initCoachingMode } from './coaching-mode.js';
 import { initCalProfiles } from './cal-profiles.js';
@@ -97,6 +98,7 @@ async function init() {
     initGames();
     initPracticeReminders();
     initCourseMarketplace();
+    initPatternsModal();
     initCourseCreator();
     initCourses();
 

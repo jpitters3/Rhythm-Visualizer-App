@@ -171,10 +171,8 @@ export function renderCourseSidebar(courses) {
       </div>
     `;
 
-    // Clean header action
-    if (header.querySelector('.browse-icon-btn')) {
-      header.querySelector('.browse-icon-btn').remove();
-    }
+    // Clean header action (marketplace button only — Patterns button is static)
+    header.querySelector('.browse-icon-btn[data-action="open-marketplace"]')?.remove();
     return;
   }
 
@@ -188,26 +186,29 @@ export function renderCourseSidebar(courses) {
         <button class="browse-big-btn" data-action="open-marketplace">Browse Course Marketplace</button>
       </div>
     `;
-    // Clean header action
-    if (header.querySelector('.browse-icon-btn')) {
-      header.querySelector('.browse-icon-btn').remove();
-    }
+    // Clean header action (marketplace button only — Patterns button is static)
+    header.querySelector('.browse-icon-btn[data-action="open-marketplace"]')?.remove();
     return;
   }
 
   // If we have courses, ensure small Browse button exists in header
-  if (!header.querySelector('.browse-icon-btn')) {
+  if (!header.querySelector('.browse-icon-btn[data-action="open-marketplace"]')) {
     const btn = document.createElement('button');
     btn.className = 'browse-icon-btn';
     btn.dataset.action = 'open-marketplace';
     btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M12 8v8m-4-4h8"></path></svg> Marketplace`;
 
-    // Insert before the close button so 'X' is always on the right
-    const closeBtn = document.getElementById('closeSidebar');
-    if (closeBtn) {
-      header.insertBefore(btn, closeBtn);
+    // Group with the Patterns button so header spacing stays h3 | actions | close
+    const actionsGroup = header.querySelector('.sidebar-header-actions');
+    if (actionsGroup) {
+      actionsGroup.appendChild(btn);
     } else {
-      header.appendChild(btn); // Fallback
+      const closeBtn = document.getElementById('closeSidebar');
+      if (closeBtn) {
+        header.insertBefore(btn, closeBtn);
+      } else {
+        header.appendChild(btn); // Fallback
+      }
     }
   }
 

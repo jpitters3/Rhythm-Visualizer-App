@@ -82,6 +82,26 @@ async function loadPatternOptions() {
   }
 }
 
+async function populateCategoryDatalist() {
+  const listEl = document.getElementById('courseCategoryList');
+  if (!listEl) return;
+  const { data } = await supabase.from('courses').select('category').not('category', 'is', null);
+  const unique = [...new Set((data || []).map(r => r.category).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+  listEl.innerHTML = unique.map(c => `<option value="${escapeHtml(c)}">`).join('');
+}
+
+// Linking a course to a Progression is what makes it a "Pattern Mini-Course"
+// in the Patterns modal (js/patterns-modal.js filters on progression_id IS
+// NOT NULL) — this select lets an admin-created course opt into that
+// instead of only being settable via Progressions' "Generate Mini-Course".
+async function populateProgressionSelect() {
+  const selectEl = document.getElementById('courseProgressionSelect');
+  if (!selectEl) return;
+  const { data } = await supabase.from('progressions').select('id, name').order('name');
+  selectEl.innerHTML = '<option value="">— Not linked (regular Course) —</option>' +
+    (data || []).map(p => `<option value="${p.id}">${escapeHtml(p.name)}</option>`).join('');
+}
+
 async function loadAvailableAssignments() {
   if (!currentUser) return;
   const { data } = await supabase
@@ -765,7 +785,10 @@ const openCourseBtn = document.getElementById('openCourseModalBtn');
 const closeCourseBtn = document.getElementById('closeCourseModal');
 
 async function openCourseCreator() {
-  await Promise.all([loadPatternOptions(), loadAvailableAssignments()]);
+  await Promise.all([loadPatternOptions(), loadAvailableAssignments(), populateCategoryDatalist(), populateProgressionSelect()]);
+  // Set after populating — the select has no matching <option> until the
+  // fetch above resolves, so assigning .value any earlier is a silent no-op.
+  document.getElementById('courseProgressionSelect').value = currentCourseData.progression_id || '';
 
   courseModalPanel.open();
   // Initialize with one empty section if new
@@ -783,6 +806,9 @@ export async function loadCourseToEdit(course) {
     .map(s => ({ ...s, lessons: (s.lessons || []).sort((a, b) => a.order_index - b.order_index) }));
   document.getElementById('courseTitle').value = course.title;
   document.getElementById('courseDesc').value = course.description;
+  document.getElementById('courseLevel').value = course.level ?? '';
+  document.getElementById('courseCategory').value = course.category || '';
+  document.getElementById('courseTags').value = (course.tags || []).join(', ');
 
   const saveBtn = document.getElementById('saveCourseBtn');
   const contBtn = document.getElementById('saveAndContinueBtn');
@@ -846,9 +872,14 @@ async function handleCourseSave(shouldClose = true) {
 
   const title = document.getElementById('courseTitle').value.trim();
   const description = document.getElementById('courseDesc').value.trim();
+  const levelRaw = document.getElementById('courseLevel').value;
+  const level = levelRaw ? parseInt(levelRaw, 10) : null;
+  const category = document.getElementById('courseCategory').value.trim();
+  const tags = document.getElementById('courseTags').value.split(',').map(t => t.trim()).filter(Boolean);
+  const progressionId = document.getElementById('courseProgressionSelect').value || null;
 
   // Debug: Log what we are trying to save
-  console.log("Saving Course:", { title, description, currentCourseData });
+  console.log("Saving Course:", { title, description, level, category, tags, progressionId, currentCourseData });
 
   if (!title) {
     await alert("Please enter a course title.");
@@ -867,7 +898,7 @@ async function handleCourseSave(shouldClose = true) {
       // === UPDATE Metatdata ===
       const { error: uErr } = await supabase
         .from('courses')
-        .update({ title, description })
+        .update({ title, description, level, category, tags, progression_id: progressionId })
         .eq('id', courseId);
       if (uErr) throw uErr;
     } else {
@@ -877,6 +908,10 @@ async function handleCourseSave(shouldClose = true) {
         .insert([{
           title,
           description,
+          level,
+          category,
+          tags,
+          progression_id: progressionId,
           owner_id: currentUser.id,
           is_published: false // Explicitly draft
         }])
@@ -1008,6 +1043,10 @@ async function handleCourseSave(shouldClose = true) {
       currentCourseData = { title: "", description: "", sections: [] };
       document.getElementById('courseTitle').value = "";
       document.getElementById('courseDesc').value = "";
+      document.getElementById('courseLevel').value = "";
+      document.getElementById('courseCategory').value = "";
+      document.getElementById('courseTags').value = "";
+      document.getElementById('courseProgressionSelect').value = "";
       saveCourseBtn.textContent = "Save Course";
     } else {
       // Show flashing "Saved!" message for 3 seconds

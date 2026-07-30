@@ -68,6 +68,12 @@ body.dark .sidebar-header h3 {
   -webkit-text-fill-color: initial;
 }
 
+.sidebar-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .browse-icon-btn {
   background: #f3f4f6;
   border: 1px solid #e5e7eb;

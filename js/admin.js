@@ -12,6 +12,7 @@ import { start, stop } from './noteplayer.js';
 import { GridContext } from './grid-context.js';
 import { initCourseCopier, openCourseCopier } from './course-copier.js';
 import { initAssignments, openAssignments, prefetchAssignmentsData } from './assignments.js';
+import { initProgressions, openProgressions } from './progressions.js';
 import { Bus, BUS_EVENT } from './bus.js';
 
 let isAdmin = false;
@@ -53,6 +54,7 @@ function activateAdminIfAuthorized() {
   setupModals();
   initCourseCopier();
   initAssignments();
+  initProgressions();
   setTimeout(() => prefetchAssignmentsData(), 0);
 }
 
@@ -86,6 +88,10 @@ function injectAdminButton() {
   document.getElementById('openPatternOrgAdminBtn')?.addEventListener('click', () => {
     document.getElementById('accountDropdownMenu')?.classList.remove('show');
     openPatternOrgModal();
+  });
+
+  document.getElementById('openProgressionsBtn')?.addEventListener('click', () => {
+    openProgressions();
   });
 
   document.getElementById('openGameConfigAdminBtn')?.addEventListener('click', () => {

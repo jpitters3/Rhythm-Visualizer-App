@@ -209,6 +209,18 @@ async function loadSample(key, url) {
   samples[key] = await audioCtx.decodeAudioData(arrayBuffer);
 }
 
+// Samples are pitch-named and scale-agnostic (e.g. "Bb3.wav"), but only the
+// currently active scale's pitches get preloaded at startup — so anything
+// wanting to play a pitch outside that (e.g. a Mini-Course preview playing
+// its own intended scale rather than the viewer's) needs to lazy-load it
+// first. Safe to call repeatedly: no-ops once cached.
+export async function ensureNoteSampleLoaded(note) {
+  if (!note || samples[note]) return;
+  const file = noteToFile(note);
+  if (!file) return;
+  await loadSample(note, `${BASE_PATH}assets/audio/${file}`);
+}
+
 let currentMetroSound = localStorage.getItem('metronomeSoundPref') || 'Click';
 
 export function getMetronomeSound() {

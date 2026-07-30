@@ -41,6 +41,8 @@
   <link rel="stylesheet" href="./css/action-bar.css">
   <link rel="stylesheet" href="./css/measure-actions.css">
   <link rel="stylesheet" href="./css/course-creator.css">
+  <link rel="stylesheet" href="./css/progressions.css">
+  <link rel="stylesheet" href="./css/patterns-modal.css">
   <link rel="stylesheet" href="./css/course-copier.css">
   <link rel="stylesheet" href="./css/courses.css">
   <link rel="stylesheet" href="./css/mic-mode.css">
@@ -772,6 +774,7 @@
         <div class="library-controls">
           <button id="libraryNewFolder" class="library-new-folder-btn">+ New Folder</button>
           <button id="librarySortOrder" class="library-sort-order-btn">Newest first</button>
+          <button id="openProgressionsBtn" class="admin-only" style="display:none;">🧩 Progressions</button>
         </div>
       </div>
 
@@ -1371,6 +1374,18 @@
         <input type="text" id="courseTitle" placeholder="Course Title (e.g., Intro to D-Kurd)" class="full-width">
         <textarea id="courseDesc" placeholder="Course Description"></textarea>
 
+        <div style="display:flex; gap:16px;">
+          <input type="number" id="courseLevel" placeholder="Level (e.g., 1)" min="1" step="1" style="flex:1;">
+          <input type="text" id="courseCategory" placeholder="Category (e.g., Foundations)" list="courseCategoryList" style="flex:1;">
+          <datalist id="courseCategoryList"><!-- Populated by course-creator.js --></datalist>
+          <input type="text" id="courseTags" placeholder="Tags (comma, separated)" style="flex:1;">
+        </div>
+
+        <div style="margin-top:12px;">
+          <label class="prog-field-label" for="courseProgressionSelect">Linked Progression (makes this a Pattern Mini-Course in the Patterns modal)</label>
+          <select id="courseProgressionSelect" class="hp-input" style="width:100%;"><!-- Populated by course-creator.js --></select>
+        </div>
+
         <div class="course-structure-toolbar">
           <button id="collapseAllSectionsBtn" class="compact-sections-btn">Collapse All</button>
         </div>
@@ -1459,6 +1474,22 @@
       <div id="marketGrid" class="market-grid">
         <!-- Course Cards injected here -->
         <div class="loading-spinner">Loading courses...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Patterns Modal (browse Pattern Mini-Courses — reuses the Marketplace's
+       .market-* card/grid CSS and courses.js unlock/archive/activate flow) -->
+  <div id="patternsModal" class="modal-overlay" aria-hidden="true">
+    <div class="modal marketplace-modal">
+      <div class="market-header">
+        <h2 class="market-title">Patterns</h2>
+        <button id="closePatternsBtn" class="close-btn">&times;</button>
+      </div>
+      <div class="market-subtitle">Bite-sized pattern mini-courses, organized by category.</div>
+      <div id="patternsCategoryPills" class="patterns-category-pills"></div>
+      <div id="patternsGrid" class="market-grid">
+        <div class="loading-spinner">Loading patterns...</div>
       </div>
     </div>
   </div>
@@ -1590,6 +1621,11 @@
   <div id="courseSidebar" class="sidebar" aria-hidden="true" data-panel-type="sidepanel">
     <div class="sidebar-header">
       <h3>📚 Course Library</h3>
+      <div class="sidebar-header-actions">
+        <button class="browse-icon-btn" data-action="open-patterns">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M12 8v8m-4-4h8"></path></svg> Patterns
+        </button>
+      </div>
       <button id="closeSidebar" class="close-btn">&times;</button>
     </div>
     <div class="sidebar-search">
@@ -2529,6 +2565,72 @@
       <div class="modal-body">
         <p>Configure which tags correspond to game levels.</p>
         <!-- Implementation coming later -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Admin: Progressions Modal (v1 placeholder — bare-bones ordered phrase
+       picker to generate real Progression/Mini-Course test data. Expected
+       to be replaced wholesale when the full Progressions authoring UX is
+       built; see js/progressions.js for the same note. -->
+  <div id="progressionsModal" class="modal-overlay" aria-hidden="true">
+    <div class="modal-content" style="max-width: 640px;">
+      <div class="modal-header">
+        <h2>🧩 Progressions</h2>
+        <button class="close-modal-btn">&times;</button>
+      </div>
+      <div class="modal-body">
+
+        <!-- LIST VIEW -->
+        <div id="progressionsListView">
+          <button id="progressionsNewBtn" class="primary-btn" style="margin-bottom:14px;">+ New Progression</button>
+          <div id="progressionsList"><!-- Populated by progressions.js --></div>
+        </div>
+
+        <!-- EDITOR VIEW -->
+        <div id="progressionsEditorView" style="display:none;">
+          <button id="progressionsBackBtn" class="secondary-btn" style="margin-bottom:14px;">&larr; Back</button>
+
+          <label class="prog-field-label" for="progName">Name</label>
+          <input type="text" id="progName" class="hp-input" placeholder="e.g. Level 1: Foundations">
+
+          <div style="display:flex; gap:12px; margin-top:10px;">
+            <div style="flex:1;">
+              <label class="prog-field-label" for="progLevel">Level</label>
+              <input type="number" id="progLevel" class="hp-input" placeholder="e.g. 1" min="1" step="1">
+            </div>
+            <div style="flex:1;">
+              <label class="prog-field-label" for="progScale">Intended Scale</label>
+              <select id="progScale" class="hp-input"><!-- Populated by progressions.js --></select>
+            </div>
+          </div>
+
+          <div style="display:flex; gap:12px; margin-top:10px;">
+            <div style="flex:1;">
+              <label class="prog-field-label" for="progCategory">Category</label>
+              <input type="text" id="progCategory" class="hp-input" list="progCategoryList" placeholder="e.g. Foundations">
+              <datalist id="progCategoryList"><!-- Populated by progressions.js --></datalist>
+            </div>
+            <div style="flex:1;">
+              <label class="prog-field-label" for="progTags">Tags</label>
+              <input type="text" id="progTags" class="hp-input" placeholder="comma, separated, tags">
+            </div>
+          </div>
+
+          <label class="prog-field-label" style="margin-top:14px;">Phrases (click in order)</label>
+          <input type="search" id="progPhraseSearch" class="hp-input" placeholder="Search phrases…" style="margin-bottom:8px;">
+          <div id="progPhrasePicker" class="prog-phrase-picker"><!-- Populated by progressions.js --></div>
+
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-top:18px; gap:10px; flex-wrap:wrap;">
+            <button id="progDeleteBtn" class="danger-btn" style="display:none;">Delete Progression</button>
+            <div style="display:flex; gap:10px; margin-left:auto;">
+              <button id="progGenerateCourseBtn" class="secondary-btn" style="display:none;">Generate Mini-Course</button>
+              <button id="progSaveBtn" class="primary-btn">Save Progression</button>
+            </div>
+          </div>
+          <div id="progGenerateStatus" style="font-size:12px; color:var(--text-secondary); margin-top:6px;"></div>
+        </div>
+
       </div>
     </div>
   </div>
