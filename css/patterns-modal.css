@@ -4,6 +4,24 @@
    filter pills and the animated handpan preview mounted into each card's
    thumb area. */
 
+.patterns-scale-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.patterns-scale-row label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.patterns-scale-row select {
+  max-width: 240px;
+}
+
 .patterns-category-pills {
   display: flex;
   flex-wrap: wrap;

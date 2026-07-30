@@ -21,14 +21,17 @@ let patternsPanel = null;
 let gridEl = null;
 let pillsEl = null;
 let closeBtn = null;
+let scaleSelectEl = null;
 
 let activeCategory = 'All';
 let activePreviews = []; // controllers to stop on close/re-render
+let activeCards = []; // { myHandpanBtn, scaleLabelEl, imgEl, controller, intendedScaleLabel } — refreshed on scale change
 
 export async function openPatternsModal() {
   if (!patternsModal) return;
 
   patternsPanel.open();
+  syncScaleSelect();
   gridEl.innerHTML = '<div class="loading-spinner">Loading patterns...</div>';
 
   try {
@@ -177,6 +180,7 @@ function renderPatterns(courses, ownedIds, archivedIds, previewByCourse) {
 
   for (const p of activePreviews) p.stop();
   activePreviews = [];
+  activeCards = [];
 
   gridEl.innerHTML = '';
 
@@ -280,17 +284,34 @@ function buildCard(course, ownedIds, archivedIds, previewByCourse, isAdmin) {
     const scaleLabelEl = card.querySelector('[data-scale-label]');
     const imgEl = card.querySelector('[data-preview-img]');
     const intendedScaleLabel = course.intended_scale || Object.keys(SCALES)[0];
+    const cardRef = { myHandpanBtn, scaleLabelEl, imgEl, controller, intendedScaleLabel };
+    activeCards.push(cardRef);
+
     myHandpanBtn.onclick = (e) => {
       e.stopPropagation();
-      const usingMine = !myHandpanBtn.classList.contains('active');
-      myHandpanBtn.classList.toggle('active', usingMine);
-      controller.setScaleSource(usingMine ? 'mine' : 'intended');
-      scaleLabelEl.textContent = `Previewing: ${usingMine ? getCurrentScaleLabel() : intendedScaleLabel}`;
-      imgEl.src = usingMine ? (getCurrentHandpanImageSrc() || DEFAULT_PREVIEW_IMG) : DEFAULT_PREVIEW_IMG;
+      applyMineMode(cardRef, !myHandpanBtn.classList.contains('active'));
     };
   }
 
   return card;
+}
+
+function applyMineMode(cardRef, usingMine) {
+  const { myHandpanBtn, scaleLabelEl, imgEl, controller, intendedScaleLabel } = cardRef;
+  myHandpanBtn.classList.toggle('active', usingMine);
+  controller.setScaleSource(usingMine ? 'mine' : 'intended');
+  scaleLabelEl.textContent = `Previewing: ${usingMine ? getCurrentScaleLabel() : intendedScaleLabel}`;
+  imgEl.src = usingMine ? (getCurrentHandpanImageSrc() || DEFAULT_PREVIEW_IMG) : DEFAULT_PREVIEW_IMG;
+}
+
+// Mirrors #scaleSelect's own options (system scales + the viewer's custom
+// handpans) rather than rebuilding that list — it's already correctly
+// grouped/labeled by handpanmap.js's renderCustomOptions.
+function syncScaleSelect() {
+  const mainSelect = document.getElementById('scaleSelect');
+  if (!mainSelect || !scaleSelectEl) return;
+  scaleSelectEl.innerHTML = mainSelect.innerHTML;
+  scaleSelectEl.value = mainSelect.value;
 }
 
 // #scaleSelect already shows the friendly name for whatever's active — a
@@ -321,6 +342,7 @@ function escapeHtml(str) {
 function closePatternsModal() {
   for (const p of activePreviews) p.stop();
   activePreviews = [];
+  activeCards = [];
   patternsPanel?.close();
 }
 
@@ -331,12 +353,31 @@ export function initPatternsModal() {
   patternsPanel = new Modal(patternsModal, { onClose: () => {
     for (const p of activePreviews) p.stop();
     activePreviews = [];
+    activeCards = [];
   }});
   gridEl = document.getElementById('patternsGrid');
   pillsEl = document.getElementById('patternsCategoryPills');
   closeBtn = document.getElementById('closePatternsBtn');
+  scaleSelectEl = document.getElementById('patternsScaleSelect');
 
   closeBtn?.addEventListener('click', closePatternsModal);
+
+  scaleSelectEl?.addEventListener('change', () => {
+    const mainSelect = document.getElementById('scaleSelect');
+    if (!mainSelect) return;
+    mainSelect.value = scaleSelectEl.value;
+    mainSelect.dispatchEvent(new Event('change'));
+
+    // handpanmap.js's own change handler (custom-handpan fetch, sample
+    // preload, image swap) is async with no completion signal to hook into
+    // — a short delay before refreshing already-"mine" cards is a pragmatic
+    // stand-in rather than adding cross-module event plumbing for this.
+    setTimeout(() => {
+      for (const cardRef of activeCards) {
+        if (cardRef.myHandpanBtn.classList.contains('active')) applyMineMode(cardRef, true);
+      }
+    }, 500);
+  });
 
   gridEl.addEventListener('click', async (e) => {
     const target = e.target.closest('[data-action]');
