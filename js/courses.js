@@ -196,7 +196,7 @@ export function renderCourseSidebar(courses) {
     const btn = document.createElement('button');
     btn.className = 'browse-icon-btn';
     btn.dataset.action = 'open-marketplace';
-    btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M12 8v8m-4-4h8"></path></svg> Marketplace`;
+    btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M12 8v8m-4-4h8"></path></svg> Courses`;
 
     // Group with the Patterns button so header spacing stays h3 | actions | close
     const actionsGroup = header.querySelector('.sidebar-header-actions');

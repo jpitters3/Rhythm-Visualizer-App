@@ -14,7 +14,7 @@ import {
   togglePublish, deleteCourse, archiveCourse, activateCourse, unlockCourse,
 } from './course-marketplace.js';
 import { mountHandpanPreview } from './handpan-pattern-preview.js';
-import { SCALES } from './config.js';
+import { SCALES, BASE_PATH } from './config.js';
 
 // Hollow (stroke-only) icons for the play/stop button — deliberately not
 // filled shapes, per design direction.
@@ -348,7 +348,7 @@ function getCurrentScaleLabel() {
   return selected?.textContent?.trim() || 'My Handpan';
 }
 
-const DEFAULT_PREVIEW_IMG = './public/assets/images/handpan-for-groovepan.png';
+const DEFAULT_PREVIEW_IMG = `${BASE_PATH}assets/images/handpan-for-groovepan.png`;
 
 // #handpanImg is the actual studio <img> — its .src always reflects
 // whatever's currently mounted (default Bronze/Sketch model, or a custom
