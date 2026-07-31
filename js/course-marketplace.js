@@ -181,6 +181,7 @@ export async function togglePublish(courseId, currentStatus) {
       if (sErr) throw sErr;
     }
 
+    Bus.emit(BUS_EVENT.COURSE_DATA_CHANGED);
     openMarketplace();
   } catch (err) {
     console.error("Publish toggle failed:", err);
@@ -199,6 +200,7 @@ export async function deleteCourse(courseId) {
 
     if (error) throw error;
 
+    Bus.emit(BUS_EVENT.COURSE_DATA_CHANGED);
     await alert("Course deleted successfully.");
     openMarketplace();
 

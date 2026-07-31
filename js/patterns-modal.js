@@ -207,12 +207,14 @@ function renderPatterns(courses, ownedIds, archivedIds, previewByCourse) {
     return;
   }
 
-  for (const course of visible) {
-    gridEl.appendChild(buildCard(course, ownedIds, archivedIds, previewByCourse, isAdmin));
-  }
+  // Only the first card animates by default — many cards flashing at once
+  // is a real photosensitivity hazard. The rest stay static until played.
+  visible.forEach((course, idx) => {
+    gridEl.appendChild(buildCard(course, ownedIds, archivedIds, previewByCourse, isAdmin, idx === 0));
+  });
 }
 
-function buildCard(course, ownedIds, archivedIds, previewByCourse, isAdmin) {
+function buildCard(course, ownedIds, archivedIds, previewByCourse, isAdmin, autoplay) {
   const isOwned = ownedIds.has(course.id);
   const isArchived = archivedIds.has(course.id);
   const isPaid = course.is_paid;
@@ -259,7 +261,7 @@ function buildCard(course, ownedIds, archivedIds, previewByCourse, isAdmin) {
       <img class="pattern-preview-img" data-preview-img src="${DEFAULT_PREVIEW_IMG}" alt="">
       <div class="pattern-preview-overlay" data-preview-overlay></div>
       <div class="price-badge ${badgeClass}">${badgeText}</div>
-      <div class="pattern-scale-label" data-scale-label>Previewing: ${escapeHtml(course.intended_scale || Object.keys(SCALES)[0])}</div>
+      <div class="pattern-scale-label" data-scale-label>Made for: ${escapeHtml(course.intended_scale || Object.keys(SCALES)[0])}</div>
       <button class="pattern-play-btn" data-action="play-preview" title="Play preview">${PLAY_ICON_SVG}</button>
       <button class="pattern-myhandpan-toggle" data-action="toggle-myhandpan" title="Preview with my selected handpan">🎹 My Handpan</button>
     </div>
@@ -275,7 +277,7 @@ function buildCard(course, ownedIds, archivedIds, previewByCourse, isAdmin) {
   const overlayEl = card.querySelector('[data-preview-overlay]');
   const patternData = previewByCourse.get(course.id);
   if (overlayEl && patternData) {
-    const controller = mountHandpanPreview(overlayEl, patternData, { scaleName: course.intended_scale });
+    const controller = mountHandpanPreview(overlayEl, patternData, { scaleName: course.intended_scale, autoplay });
     activePreviews.push(controller);
 
     const playBtn = card.querySelector('[data-action="play-preview"]');
@@ -283,8 +285,10 @@ function buildCard(course, ownedIds, archivedIds, previewByCourse, isAdmin) {
       e.stopPropagation();
       const wasPlaying = playBtn.classList.contains('playing');
 
-      // Only one card plays at a time — stop every card first (including this one).
-      for (const p of activePreviews) p.setSound(false);
+      // Only one card animates/plays at a time — pause every card first
+      // (including this one, and including the default-autoplaying first
+      // card even if its own button was never clicked).
+      for (const p of activePreviews) p.pause();
       document.querySelectorAll('.pattern-play-btn.playing').forEach(b => {
         b.classList.remove('playing');
         b.innerHTML = PLAY_ICON_SVG;

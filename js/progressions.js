@@ -13,6 +13,7 @@ import { supabase } from './supabase-client.js';
 import { currentUser } from './state.js';
 import { dbListPatternNames, dbLoadPatternByName } from './pattern-crud.js';
 import { SCALES } from './config.js';
+import { Bus, BUS_EVENT } from './bus.js';
 
 let progressionsModal = null;
 let allPhraseNames = [];
@@ -431,6 +432,8 @@ async function generateMiniCourse() {
         .eq('id', course.id);
       if (pvErr) throw pvErr;
     }
+
+    Bus.emit(BUS_EVENT.COURSE_DATA_CHANGED);
 
     statusEl.textContent = `Created course "${name}" with ${selectedPhraseNames.length} lesson(s). Publish it from Manage Courses when ready.`;
   } catch (err) {

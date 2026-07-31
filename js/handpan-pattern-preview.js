@@ -60,10 +60,14 @@ function buildDotMapFromCurrentHandpan() {
   return map;
 }
 
-// Mounts a looping animated preview into `overlayEl` (an empty, positioned
-// element sized to the handpan image behind it). Returns a controller with
-// a `stop()` method and a `setSound(bool)` toggle.
-export function mountHandpanPreview(overlayEl, patternData, { scaleName, sound = false } = {}) {
+// Mounts a preview into `overlayEl` (an empty, positioned element sized to
+// the handpan image behind it). Dots are positioned immediately, but the
+// looping flash animation only actually runs while playing (autoplay:true
+// at mount, or after play() is called) — many cards flashing at once is a
+// real photosensitivity hazard, so only one card should ever animate at a
+// time (see js/patterns-modal.js, which enforces that + autoplays only the
+// first card by default).
+export function mountHandpanPreview(overlayEl, patternData, { scaleName, sound = false, autoplay = false } = {}) {
   const intendedScale = SCALES[scaleName] || Object.values(SCALES)[0];
   let scale = intendedScale;
 
@@ -121,7 +125,9 @@ export function mountHandpanPreview(overlayEl, patternData, { scaleName, sound =
 
   let soundOn = sound;
   let i = 0;
-  const intervalId = setInterval(() => {
+  let intervalId = null;
+
+  function tick() {
     const { note, rawLabel, stepIndex } = playSequence[i % playSequence.length];
     i++;
 
@@ -156,20 +162,43 @@ export function mountHandpanPreview(overlayEl, patternData, { scaleName, sound =
         { transform: 'scale(1.5)', backgroundColor: 'transparent', boxShadow: '0 0 0 0 transparent', opacity: 0 },
       ], { duration: animDuration, easing: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)' });
     }
-  }, ms);
+  }
+
+  function startAnimating() {
+    if (intervalId) return; // already running
+    intervalId = setInterval(tick, ms);
+  }
+
+  function stopAnimating() {
+    clearInterval(intervalId);
+    intervalId = null;
+  }
+
+  if (autoplay) startAnimating();
 
   return {
+    // Fully tears down — stops animating and clears the DOM. Used when a
+    // card leaves the grid (re-render/close), not for a regular pause.
     stop() {
-      clearInterval(intervalId);
+      stopAnimating();
       overlayEl.innerHTML = '';
+    },
+    // Stops animating/muting without clearing the DOM — dots stay in place,
+    // just idle. Used when another card starts playing, or the user stops
+    // this one.
+    pause() {
+      stopAnimating();
+      soundOn = false;
     },
     setSound(on) {
       soundOn = on;
     },
-    // Unmutes and restarts the sequence from step 0 — used by the play button.
+    // Unmutes, restarts from step 0, and (re)starts the animation loop if it
+    // wasn't already running — used by the play button.
     play() {
       soundOn = true;
       i = 0;
+      startAnimating();
     },
     // 'mine' reads the viewer's currently-active scale live (system or
     // custom handpan, whatever getScale()/HANDPAN_MAP resolve to right now)

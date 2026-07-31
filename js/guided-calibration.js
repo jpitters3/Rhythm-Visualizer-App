@@ -206,9 +206,12 @@ function showSummary() {
     return;
   }
 
-  // Sort non-Ding notes by frequency and assign numbers
+  // Number non-Ding notes in the order they were placed (Ding = first tap,
+  // 1/2/3/... = each subsequent tap in sequence) rather than by pitch —
+  // matches the manual "Add Tonefield" button's Ding-then-max+1 numbering
+  // in js/calibration.js, so nothing needs manual reordering afterward.
   const ding = placedNotes.find(n => n.isDing);
-  const rest = placedNotes.filter(n => !n.isDing).sort((a, b) => a.freq - b.freq);
+  const rest = placedNotes.filter(n => !n.isDing);
 
   const rows = [];
   if (ding) rows.push(`<li><strong>Ding</strong> — ${ding.note}${ding.octave}</li>`);
