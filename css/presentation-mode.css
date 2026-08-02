@@ -6,7 +6,7 @@ body.present {
   overflow: hidden;
   /* Prevent body scroll */
   /* Horizon Variable: The anchor point for the "Current Measure" */
-  --horizon: 20%;
+  --horizon: 15%;
   /* Measure stack anchor — change this one value to shift the whole stack */
   --measure-top: 144px;
 }
@@ -60,6 +60,14 @@ body.present .grid {
   gap: 16px;
 }
 
+body.present .cell {
+  padding-top: 0;
+  height: 60px;
+  width: 60px;
+  justify-self: center;
+  top: -25px;
+}
+
 body.present .cell .inner {
   font-size: 36px;
 }
@@ -90,6 +98,10 @@ body.present .present-exit {
 @media (max-width: 600px) {
   body.present .labels {
     font-size: 22px;
+  }
+
+  body.present .cell {
+    height: 44px;
   }
 
   body.present .cell .inner {
