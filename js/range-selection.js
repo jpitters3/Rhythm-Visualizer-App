@@ -93,12 +93,14 @@ export function showSelectionMenu(ctx) {
 
   // Update action bar (global for now, but linked to activeGrid)
   const selectionTools = document.getElementById('selectionTools');
+  const insertMeasureRow = document.getElementById('insertMeasureRow');
   const selBarText = document.getElementById('selBarText');
 
   if (selectionTools && c === activeGrid) {
     const count = r ? r.length : 0;
     const showBar = (count > 0);
     selectionTools.classList.toggle('visible', showBar);
+    insertMeasureRow?.classList.toggle('visible', showBar);
     document.body.classList.toggle('has-selection', showBar);
     if (selBarText) selBarText.textContent = `${count} selected`;
 

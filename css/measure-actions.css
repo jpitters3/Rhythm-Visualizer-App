@@ -48,6 +48,45 @@
   opacity: 1;
 }
 
+/* Wraps the existing horizontal-scroll selection strip + the new insert-
+   measure row so they stack vertically without disturbing #measureTools'
+   own row layout (add/delete measure buttons sit beside this column). */
+.selection-menu-column {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  min-width: 0;
+}
+
+/* Own row, separate from the other selection-tool buttons — shown/hidden
+   in sync with #selectionTools via the .visible class (see
+   showSelectionMenu() in js/range-selection.js). */
+.insert-measure-row {
+  display: none;
+  gap: 8px;
+}
+
+.insert-measure-row.visible {
+  display: flex;
+}
+
+.insert-measure-row button {
+  flex: 1 1 auto;
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 10px;
+  border: 1px solid var(--panel-border);
+  background: var(--panel);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  /* Hover/active feedback comes from the global button:hover/:active rules
+     in css/controls.css — no need to redeclare it here. */
+}
+
 .separator {
   width: 2px;
   height: 20px;
