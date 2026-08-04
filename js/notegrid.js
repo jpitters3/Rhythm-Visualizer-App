@@ -273,126 +273,128 @@ export function renderAllMeasures(ctx = activeGrid) {
     header.textContent = `Measure ${m + 1}`;
     row.appendChild(header);
 
-    const labels = document.createElement('div');
-    labels.className = 'labels';
-    labels.style.setProperty('--cols', String(cols));
+    // Print labels and cells
+    for (let chunkStart = 0; chunkStart < s; chunkStart += cols) {
+      const chunkEnd = Math.min(chunkStart + cols, s);
 
-    const grid = document.createElement('div');
-    grid.className = 'grid';
-    grid.style.setProperty('--cols', String(cols));
+      const labels = document.createElement('div');
+      labels.className = 'labels';
+      labels.style.setProperty('--cols', String(cols));
 
-    // Build labels + cells — every measure gets its own full label sequence,
-    // wrapping in lockstep with the cells via the same --cols (CSS Grid
-    // auto-wraps both identically since neither sets grid-auto-flow/row caps).
-    for (let i = 0; i < s; i++) {
-      const lab = document.createElement('div');
-      lab.textContent = labelForStep(i, ctx);
-      labels.appendChild(lab);
+      const grid = document.createElement('div');
+      grid.className = 'grid';
+      grid.style.setProperty('--cols', String(cols));
 
-      // cell
-      const cell = document.createElement('div');
-      cell.className = 'cell';
+      for (let i = chunkStart; i < chunkEnd; i++) {
+        const lab = document.createElement('div');
+        lab.textContent = labelForStep(i, ctx);
+        labels.appendChild(lab);
 
-      const inner = document.createElement('div');
-      inner.className = 'inner';
-      cell.appendChild(inner);
+        // cell
+        const cell = document.createElement('div');
+        cell.className = 'cell';
 
-      // quad circles
-      const quad = document.createElement('div');
-      quad.className = 'quad-container';
+        const inner = document.createElement('div');
+        inner.className = 'inner';
+        cell.appendChild(inner);
 
-      // Left Column
-      const leftCol = document.createElement('div');
-      leftCol.className = 'hand-column left';
-      ['lh-index', 'lh-thumb'].forEach((pos, pIdx) => {
-        const dot = document.createElement('div');
-        dot.className = `sub-dot ${pos}`;
-        dot.dataset.idx = pIdx; // 0, 1
-        leftCol.appendChild(dot);
-      });
+        // quad circles
+        const quad = document.createElement('div');
+        quad.className = 'quad-container';
 
-      // Right Column
-      const rightCol = document.createElement('div');
-      rightCol.className = 'hand-column right';
-      ['rh-index', 'rh-thumb'].forEach((pos, pIdx) => {
-        const dot = document.createElement('div');
-        dot.className = `sub-dot ${pos}`;
-        dot.dataset.idx = pIdx + 2; // 2, 3
-        rightCol.appendChild(dot);
-      });
+        // Left Column
+        const leftCol = document.createElement('div');
+        leftCol.className = 'hand-column left';
+        ['lh-index', 'lh-thumb'].forEach((pos, pIdx) => {
+          const dot = document.createElement('div');
+          dot.className = `sub-dot ${pos}`;
+          dot.dataset.idx = pIdx; // 0, 1
+          leftCol.appendChild(dot);
+        });
 
-      quad.appendChild(leftCol);
-      quad.appendChild(rightCol);
-      cell.appendChild(quad);
+        // Right Column
+        const rightCol = document.createElement('div');
+        rightCol.className = 'hand-column right';
+        ['rh-index', 'rh-thumb'].forEach((pos, pIdx) => {
+          const dot = document.createElement('div');
+          dot.className = `sub-dot ${pos}`;
+          dot.dataset.idx = pIdx + 2; // 2, 3
+          rightCol.appendChild(dot);
+        });
 
-      // Ghost note dot
-      const ghost = document.createElement('div');
-      ghost.className = 'ghost-dot';
-      cell.appendChild(ghost);
+        quad.appendChild(leftCol);
+        quad.appendChild(rightCol);
+        cell.appendChild(quad);
 
-      // Flam circle (grace note — always in DOM, shown via CSS when has-flam / flam-editing)
-      const flamCircle = document.createElement('div');
-      flamCircle.className = 'flam-circle';
-      cell.appendChild(flamCircle);
+        // Ghost note dot
+        const ghost = document.createElement('div');
+        ghost.className = 'ghost-dot';
+        cell.appendChild(ghost);
 
-      // Global index
-      const g = (m * s) + i;
-      const lbl = ctx.innerLabels[g] || '';
+        // Flam circle (grace note — always in DOM, shown via CSS when has-flam / flam-editing)
+        const flamCircle = document.createElement('div');
+        flamCircle.className = 'flam-circle';
+        cell.appendChild(flamCircle);
 
-      const isMultiCell = checkCellIsMultiMode(lbl);
+        // Global index
+        const g = (m * s) + i;
+        const lbl = ctx.innerLabels[g] || '';
 
-      if (!isMultiCell) {
-        inner.textContent = resolveLabelText(lbl, pref, false);
-        if (lbl === '0' || lbl === 'Ding') {
-          cell.classList.toggle('visual-ding', pref === 'Pitches');
+        const isMultiCell = checkCellIsMultiMode(lbl);
+
+        if (!isMultiCell) {
+          inner.textContent = resolveLabelText(lbl, pref, false);
+          if (lbl === '0' || lbl === 'Ding') {
+            cell.classList.toggle('visual-ding', pref === 'Pitches');
+          }
+        } else {
+          cell.classList.add('multi-mode');
+          const allSubs = cell.querySelectorAll('.sub-dot');
+          for (let idx = 0; idx < allSubs.length; idx++) {
+            allSubs[idx].textContent = resolveLabelText(lbl, pref, true, idx);
+            allSubs[idx].classList.toggle('active', !!lbl[idx]);
+            const isSubDing = lbl[idx] === '0' || lbl[idx] === 'Ding';
+            allSubs[idx].classList.toggle('visual-ding', isSubDing && pref === 'Pitches');
+          };
         }
-      } else {
-        cell.classList.add('multi-mode');
-        const allSubs = cell.querySelectorAll('.sub-dot');
-        for (let idx = 0; idx < allSubs.length; idx++) {
-          allSubs[idx].textContent = resolveLabelText(lbl, pref, true, idx);
-          allSubs[idx].classList.toggle('active', !!lbl[idx]);
-          const isSubDing = lbl[idx] === '0' || lbl[idx] === 'Ding';
-          allSubs[idx].classList.toggle('visual-ding', isSubDing && pref === 'Pitches');
-        };
+
+        cell.dataset.index = g;
+
+        // Flam (grace note) content
+        const flamLbl = ctx.innerFlams && ctx.innerFlams[g];
+        if (flamLbl) {
+          flamCircle.textContent = resolveLabelText(flamLbl, pref, false);
+          cell.classList.add('has-flam');
+        }
+        if (ctx.id === 'A' && g === ctx.caretIndex && isEditFlam) {
+          cell.classList.add('flam-editing');
+        }
+
+        if (lbl !== '') cell.classList.add('has-label');
+        if (lbl === 'Ding') cell.classList.add('label-ding');
+        else if (lbl === 'T') cell.classList.add('label-t');
+        else if (lbl === 'S') cell.classList.add('label-s');
+        else if (lbl === '?') cell.classList.add('label-q');
+        else if (lbl !== '') cell.classList.add('label-n');
+
+        if (ctx.id === 'A' && g === ctx.caretIndex) cell.classList.add('selected');
+
+        // Hand sticking
+        const hand = getEffectiveHand(g, ctx);
+        const isManual = !!ctx.innerHands[g];
+        if (isManual) {
+          cell.classList.add(hand === 'R' ? 'force-hand-r' : 'force-hand-l');
+          cell.classList.add('manual-hand');
+        } else {
+          cell.classList.add(hand === 'R' ? 'downbeat' : 'upbeat');
+        }
+
+        attachCellListeners(cell, ctx);
+        grid.appendChild(cell);
       }
-
-      cell.dataset.index = g;
-
-      // Flam (grace note) content
-      const flamLbl = ctx.innerFlams && ctx.innerFlams[g];
-      if (flamLbl) {
-        flamCircle.textContent = resolveLabelText(flamLbl, pref, false);
-        cell.classList.add('has-flam');
-      }
-      if (ctx.id === 'A' && g === ctx.caretIndex && isEditFlam) {
-        cell.classList.add('flam-editing');
-      }
-
-      if (lbl !== '') cell.classList.add('has-label');
-      if (lbl === 'Ding') cell.classList.add('label-ding');
-      else if (lbl === 'T') cell.classList.add('label-t');
-      else if (lbl === 'S') cell.classList.add('label-s');
-      else if (lbl === '?') cell.classList.add('label-q');
-      else if (lbl !== '') cell.classList.add('label-n');
-
-      if (ctx.id === 'A' && g === ctx.caretIndex) cell.classList.add('selected');
-
-      // Hand sticking
-      const hand = getEffectiveHand(g, ctx);
-      const isManual = !!ctx.innerHands[g];
-      if (isManual) {
-        cell.classList.add(hand === 'R' ? 'force-hand-r' : 'force-hand-l');
-        cell.classList.add('manual-hand');
-      } else {
-        cell.classList.add(hand === 'R' ? 'downbeat' : 'upbeat');
-      }
-
-      attachCellListeners(cell, ctx);
-      grid.appendChild(cell);
+      row.appendChild(labels);
+      row.appendChild(grid);
     }
-    row.appendChild(labels);
-    row.appendChild(grid);
     scroller.appendChild(row);
 
     // Horizontal divider between measures — only when each measure is on
