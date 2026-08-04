@@ -116,7 +116,100 @@ body.dark .acct-settings-sidebar {
 
 .acct-link-btn:hover { text-decoration: underline; }
 
+/* Generic label-on-left, control-on-right row (e.g. Theme colour swatches) —
+   same alignment as .acct-toggle-row, minus the pointer cursor since the
+   control here isn't a single click target (each swatch is its own). */
+.acct-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.acct-row-label {
+  font-size: 13px;
+  color: var(--text);
+}
+
+/* Pill-shaped secondary action button (e.g. Replay onboarding tour) — looks
+   like a real button, not a text link, and never underlines on hover. */
+.acct-pill-btn {
+  background: transparent;
+  border: 1px solid var(--panel-border, rgba(0,0,0,0.15));
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 8px 16px;
+  border-radius: 999px;
+  white-space: nowrap;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.acct-pill-btn:hover {
+  background: var(--panel-hover, rgba(0,0,0,0.04));
+  border-color: var(--accent);
+  text-decoration: none;
+}
+
 .acct-section-footer { padding-top: 20px; }
+
+/* Toggle row (e.g. dark mode) — same switch pattern as .reminder-toggle in
+   css/dashboard.css, kept as its own copy here rather than a cross-feature
+   dependency on the practice-reminders styling. */
+.acct-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  margin-top: 10px;
+}
+
+.acct-toggle-label {
+  font-size: 13px;
+  color: var(--text);
+}
+
+.acct-toggle {
+  position: relative;
+  display: inline-block;
+  width: 34px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+.acct-toggle input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.acct-toggle-slider {
+  position: absolute;
+  inset: 0;
+  background: var(--panel-border);
+  border-radius: 20px;
+  transition: background 0.15s;
+}
+
+.acct-toggle-slider::before {
+  content: "";
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  left: 2px;
+  top: 2px;
+  background: white;
+  border-radius: 50%;
+  transition: transform 0.15s;
+}
+
+.acct-toggle input:checked + .acct-toggle-slider {
+  background: rgb(var(--accent-rgb));
+}
+
+.acct-toggle input:checked + .acct-toggle-slider::before {
+  transform: translateX(14px);
+}
 
 .acct-signout-btn {
   background: transparent;

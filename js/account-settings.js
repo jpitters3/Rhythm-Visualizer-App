@@ -76,11 +76,21 @@ function renderSidebar() {
 
     <div class="acct-section">
       <div class="acct-section-title">Appearance</div>
-      <div class="acct-accent-swatches">
-        ${ACCENT_CHOICES.map(c => `
-          <button class="acct-accent-swatch acct-accent-swatch--${c.id}" data-accent="${c.id}" title="${c.label}" aria-label="${c.label} accent colour"></button>
-        `).join('')}
+      <div class="acct-row">
+        <span class="acct-row-label">Theme colour</span>
+        <div class="acct-accent-swatches">
+          ${ACCENT_CHOICES.map(c => `
+            <button class="acct-accent-swatch acct-accent-swatch--${c.id}" data-accent="${c.id}" title="${c.label}" aria-label="${c.label} accent colour"></button>
+          `).join('')}
+        </div>
       </div>
+      <label class="acct-toggle-row" for="acctThemeToggle">
+        <span class="acct-toggle-label">Dark mode</span>
+        <span class="acct-toggle">
+          <input type="checkbox" id="acctThemeToggle" />
+          <span class="acct-toggle-slider"></span>
+        </span>
+      </label>
     </div>
 
     <div class="acct-section">
@@ -90,7 +100,7 @@ function renderSidebar() {
 
     <div class="acct-section">
       <div class="acct-section-title">App Tour</div>
-      <button class="acct-link-btn" id="acctReplayTourBtn">Replay onboarding tour</button>
+      <button class="acct-pill-btn" id="acctReplayTourBtn">Replay onboarding tour</button>
     </div>
 
     <div class="acct-section acct-section-footer">
@@ -109,6 +119,13 @@ function renderSidebar() {
       btn.classList.add('acct-accent-swatch--active');
       updateUserAccentColor(btn.dataset.accent);
     });
+  });
+
+  const themeToggle = body.querySelector('#acctThemeToggle');
+  if (themeToggle) themeToggle.checked = document.body.classList.contains('dark');
+  themeToggle?.addEventListener('change', () => {
+    document.body.classList.toggle('dark', themeToggle.checked);
+    localStorage.setItem('theme', themeToggle.checked ? 'dark' : 'light');
   });
 
   body.querySelector('#acctChangeEmailBtn')?.addEventListener('click', () => {

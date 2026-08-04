@@ -24,7 +24,7 @@ import { Modal } from './modal.js';
 import { escapeHtml } from './utils.js';
 
 // Global references assigned in initControls
-let patternSelect, handBtn, resetBtn, themeBtn, presentBtn, exitPresent, micBtn, saveBtn, renameBtn, deleteBtn, exportBtn, navDashboardBtn, importBtn, loadBtn;
+let patternSelect, handBtn, presentBtn, exitPresent, micBtn, saveBtn, renameBtn, deleteBtn, exportBtn, navDashboardBtn, importBtn, loadBtn;
 
 /**
  * @deprecated Use alert, confirm, prompt from ./alert.js instead
@@ -503,8 +503,6 @@ export function initControls() {
   patternSelect = document.getElementById('patternSelect');
 
   handBtn = document.getElementById('handBtn');
-  resetBtn = document.getElementById('resetBtn');
-  themeBtn = document.getElementById('themeBtn');
   presentBtn = document.getElementById('presentBtn');
   exitPresent = document.getElementById('exitPresent');
   micBtn = document.getElementById('micBtn');
@@ -878,24 +876,6 @@ export function initControls() {
     localStorage.setItem('handSplit', on ? 'on' : 'off');
     handBtn.classList.toggle('active', on);
     handBtn.textContent = on ? 'Left/Right: On' : 'Left/Right: Off';
-  });
-
-  resetBtn?.addEventListener('click', async () => {
-    if (hasUnsavedChanges()) {
-      const ok = await showCustomModal({
-        title: 'Unsaved Changes',
-        message: 'Discard changes and reset?',
-        mode: 'confirm'
-      });
-      if (ok) resetGridToDefault(activeGrid);
-    } else {
-      resetGridToDefault(activeGrid);
-    }
-  });
-
-  themeBtn?.addEventListener('click', () => {
-    document.body.classList.toggle('dark');
-    localStorage.setItem('theme', document.body.classList.contains('dark') ? 'dark' : 'light');
   });
 
   presentBtn?.addEventListener('click', async () => {
