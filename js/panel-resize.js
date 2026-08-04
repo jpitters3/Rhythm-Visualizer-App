@@ -18,6 +18,7 @@ import { Bus, BUS_EVENT } from './bus.js';
 const MOBILE_QUERY = '(max-width: 900px)';
 const MIN_PANEL_HEIGHT = 160; // matches .handpan-panel's min-height in CSS
 const MIN_LEFT_HEIGHT = 160;  // absolute floor if a measure row can't be measured yet
+const MAX_ROW_HEIGHT_FOR_MIN = 220; // see measureOneRowHeight()
 const STORAGE_KEY = 'gp_handpanPanelHeight';
 const KEYBOARD_STEP = 24;
 
@@ -47,14 +48,24 @@ export function initPanelResize() {
     return h;
   }
 
-  // One measure-row's real rendered height, including its own margin — this
-  // varies with subdivision (four-beats rows are taller, sixteen-beats
-  // narrower), so it's measured live rather than assumed.
   function measureOneRowHeight() {
     const row = measuresEl?.querySelector('.measure-row');
     if (!row) return 0;
     const cs = getComputedStyle(row);
-    return row.getBoundingClientRect().height + parseFloat(cs.marginTop || 0) + parseFloat(cs.marginBottom || 0);
+    const rowMargins = parseFloat(cs.marginTop || 0) + parseFloat(cs.marginBottom || 0);
+
+    const header = row.querySelector('.measure-header');
+    const firstLabels = row.querySelector('.labels');
+    const firstGrid = row.querySelector('.grid');
+
+    const h = firstGrid
+      ? (header?.getBoundingClientRect().height || 0)
+        + (firstLabels?.getBoundingClientRect().height || 0)
+        + firstGrid.getBoundingClientRect().height
+        + rowMargins
+      : row.getBoundingClientRect().height + rowMargins;
+
+    return Math.min(h, MAX_ROW_HEIGHT_FOR_MIN);
   }
 
   // The grid needs at least enough room for its own chrome plus one measure
