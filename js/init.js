@@ -50,7 +50,7 @@ import { initRouter, navigate } from './router.js';
 import { initComposeWizard } from './compose-wizard.js';
 import { initGlossary } from './glossary.js';
 import { initGridAutoscroll } from './grid-autoscroll.js';
-import { initGridZoom } from './grid-zoom.js';
+import { initGridZoom } from './grid-zoom-controls.js';
 import { initMonetization } from './monetization.js';
 import { initScrollIndicators } from './scroll-indicators.js';
 import { initMethod, wireMethodEvents } from './method.js';

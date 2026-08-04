@@ -123,10 +123,6 @@
 }
 
 
-.sixteen-beats .cell.has-label .inner {
-  font-size: 24px;
-}
-
 /* Define the mobile-only layout to maximize density */
 @media (max-width: 768px) {
 
@@ -291,7 +287,14 @@ body.present .cell.play {
   align-items: center;
   justify-content: center;
   font-weight: 650;
-  font-size: 36px;
+  /* Scales with the cell's own rendered width (.cell is already a query
+     container via container-type:inline-size above) rather than a fixed
+     px value, so labels stay readable as zoom changes cell size — a huge
+     zoomed-in cell doesn't keep a tiny label, and a small zoomed-out one
+     doesn't keep an oversized label that no longer fits. Floor keeps text
+     legible at the smallest cells; ceiling keeps it proportionate at the
+     largest rather than growing without bound. */
+  font-size: clamp(11px, 41cqi, 40px);
   letter-spacing: 0.5px;
   opacity: 0.95;
   pointer-events: none;
@@ -299,10 +302,6 @@ body.present .cell.play {
 }
 
 @media (max-width: 768px) {
-  .cell .inner {
-    font-size: 25px
-  }
-
   .measures {
     /* box-shadow: 0 18px 18px 0px rgba(101, 101, 101, 0.35); */
     /* grey fade ☝🏽 */
@@ -376,75 +375,16 @@ body.dark .measures {
   background-color: transparent;
 }
 
+/* Flex-wrap (not block-stacked) so multiple measures can share one visual
+   line when zoomed out — each .measure-row gets an explicit width (set in
+   JS, see renderAllMeasures in js/notegrid.js) equal to 100%/measuresPerRow;
+   at the default/zoomed-in levels that's just 100%, so this is a strict
+   superset of the old always-stacked layout, not a separate code path. */
 .measures-scroller {
-  /* We no longer use transform for scrolling to allow manual interaction */
-  will-change: transform;
-  zoom: var(--grid-zoom, 100%);
-  width: calc(100% / (var(--grid-zoom-raw, 100) / 100));
-}
-
-/* One measure = (labels row + grid row) + a + button column */
-.measure {
-  display: grid;
-  grid-template-columns: repeat(var(--cols, 8), 1fr) auto;
-  grid-template-rows: auto auto;
-  gap: 12px;
-  margin-bottom: 16px;
-  align-items: center;
-
-  /* Rendering Optimization */
-  content-visibility: auto;
-  contain-intrinsic-size: 1px 200px;
-}
-
-/* We’ll render label cells + grid cells directly inside the measure grid */
-.labelCell {
-  text-align: center;
-  font-size: 24px;
-  font-weight: 500;
-  opacity: 0.8;
-}
-
-.gridCell {
-  grid-row: 2;
-  min-height: 32px;
-  min-width: 32px;
-  aspect-ratio: 1 / 1;
-}
-
-/* + button sits to the right of the last beat and spans both rows */
-.add-measure {
-  grid-column: calc(var(--cols, 8) + 1);
-  grid-row: 1 / span 2;
-  width: 46px;
-  height: 46px;
-  padding: 0;
-  border-radius: 999px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 26px;
-  line-height: 1;
-  font-weight: 700;
-  background: var(--btn-bg);
-  border: 1px solid var(--panel-border);
-}
-
-.add-measure:hover {
-  filter: brightness(1.03);
-}
-
-@media (max-width: 600px) {
-  .labelCell {
-    font-size: 14px;
-    /* shrink labels to fit » 8 cols */
-  }
-
-  .add-measure {
-    width: 32px;
-    height: 32px;
-    font-size: 20px;
-  }
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 18px 12px;
 }
 
 

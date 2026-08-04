@@ -103,8 +103,21 @@
 }
 
 .measure-row {
-  margin-bottom: 18px;
+  /* Spacing between measures now comes from .measures-scroller's flex gap
+     (needed so it applies horizontally too, once measures sit side by side
+     when zoomed out) rather than a per-row margin. */
   pointer-events: none;
+  /* Default: one full-width measure per row. A flex child's basis defaults
+     to content-size (auto), NOT 100% — without this, .measure-rows would
+     shrink to fit their content and multiple would fit side by side even
+     at the default zoom level. js/notegrid.js overrides flex-basis inline
+     only when zoomed out (measuresPerRow > 1). */
+  flex: 0 0 100%;
+  /* Flex items default to min-width:auto (their content's natural minimum),
+     not 0 — without this, a flex-basis smaller than the measure's own
+     8-cells-wide minimum would be ignored and it'd refuse to shrink,
+     defeating multi-measure-per-row at zoom-out. */
+  min-width: 0;
 }
 
 .measure-header {

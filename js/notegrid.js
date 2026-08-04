@@ -12,6 +12,7 @@ import { Bus, BUS_EVENT } from './bus.js';
 import { checkExportVisibility } from './controls.js';
 import { confirm } from './alert.js';
 import { getNoteX } from './handpanmap.js';
+import { getCurrentZoomLevel } from './grid-zoom-controls.js';
 
 export const cells = (ctx) => (ctx || activeGrid).cells;
 export let activeSubIndex = null;
@@ -70,23 +71,6 @@ export function invertRange(start, end, ctx = activeGrid) {
 export function invertFollowing(startIndex, ctx = activeGrid) {
   invertRange(startIndex, Infinity, ctx);
 };
-
-const MOBILE_MAX_COLS = 8;
-function smartMobileCols(s) {
-  if (!window.matchMedia('(max-width: 768px)').matches) return s;
-  if (s <= MOBILE_MAX_COLS) return s;
-  for (let d = MOBILE_MAX_COLS; d >= 2; d--) {
-    if (s % d === 0) return d;
-  }
-  return MOBILE_MAX_COLS;
-}
-const capCols = n => smartMobileCols(n);
-
-export function setCols(n, ctx = activeGrid) {
-  // Apply to the measures wrapper (it cascades to measure children)
-  const measuresEl = ctx.container;
-  if (measuresEl) measuresEl.style.setProperty('--cols', String(capCols(n)));
-}
 
 export function labelForStep(i, ctx = activeGrid) {
   const sub = ctx.subdivision || 2;
@@ -256,6 +240,11 @@ export function renderAllMeasures(ctx = activeGrid) {
 
   const pref = localStorage.getItem('handpanLabelPref') || 'Numbers';
 
+  // One zoom level for the whole render pass — every measure shares the
+  // same stepsPerMeasure, so cols/measuresPerRow are the same throughout.
+  const zoomLevel = getCurrentZoomLevel(ctx);
+  const cols = zoomLevel.cols;
+
   for (let m = 0; m < measureCount; m++) {
     const row = document.createElement('div');
     row.className = 'measure-row';
@@ -263,6 +252,21 @@ export function renderAllMeasures(ctx = activeGrid) {
     else if (s >= 12) row.classList.add('twelve-beats');
     if (s > 4 && s <= 6) row.classList.add('fewer-beats');
     if (s <= 4) row.classList.add('four-beats');
+    // Zoom-out: several whole measures share one visual line, each taking
+    // an equal fraction of the row (flex-wrap on .measures-scroller packs
+    // as many as actually fit). Overrides the CSS default of flex:0 0 100%
+    // (one full-width measure per row) — zoom-in never touches this; a
+    // zoomed-in measure just wraps internally via --cols below, it never
+    // adds columns.
+    // Subtracts this row's share of the column-gap (12px, matching
+    // .measures-scroller's gap) — plain `100%/N` ignores the (N-1) gaps
+    // between items, so N items at exactly 100%/N width overflow by
+    // (N-1)*gap and one wraps to its own line instead of sharing it.
+    // The extra 1px is slack for calc()/layout subpixel rounding — sizing
+    // to the exact available width left zero margin and could round up
+    // just enough to force an unwanted extra wrap.
+    const n = zoomLevel.measuresPerRow;
+    row.style.flexBasis = n > 1 ? `calc((100% - ${(n - 1) * 12 + 1}px) / ${n})` : '';
 
     const header = document.createElement('div');
     header.className = 'measure-header';
@@ -271,22 +275,19 @@ export function renderAllMeasures(ctx = activeGrid) {
 
     const labels = document.createElement('div');
     labels.className = 'labels';
-    labels.style.setProperty('--cols', String(capCols(s)));
+    labels.style.setProperty('--cols', String(cols));
 
     const grid = document.createElement('div');
     grid.className = 'grid';
-    grid.style.setProperty('--cols', String(capCols(s)));
+    grid.style.setProperty('--cols', String(cols));
 
-    const labelCols = capCols(s);
-
-    // Build labels + cells
+    // Build labels + cells — every measure gets its own full label sequence,
+    // wrapping in lockstep with the cells via the same --cols (CSS Grid
+    // auto-wraps both identically since neither sets grid-auto-flow/row caps).
     for (let i = 0; i < s; i++) {
-      // label — on mobile, only render labels for the first row
-      if (m % 4 == 0 && i < labelCols) {
-        const lab = document.createElement('div');
-        lab.textContent = labelForStep(i, ctx);
-        labels.appendChild(lab);
-      }
+      const lab = document.createElement('div');
+      lab.textContent = labelForStep(i, ctx);
+      labels.appendChild(lab);
 
       // cell
       const cell = document.createElement('div');
@@ -394,9 +395,14 @@ export function renderAllMeasures(ctx = activeGrid) {
     row.appendChild(grid);
     scroller.appendChild(row);
 
-    // Horizontal line
-    const hr = document.createElement('hr');
-    scroller.appendChild(hr);
+    // Horizontal divider between measures — only when each measure is on
+    // its own line (default/zoomed-in). At zoom-out, multiple measures
+    // share one visual row via flex-wrap; a full-width <hr> after every
+    // one of them would force a line break between each, defeating that.
+    if (zoomLevel.measuresPerRow === 1) {
+      const hr = document.createElement('hr');
+      scroller.appendChild(hr);
+    }
   }
 
   // Notify listeners (e.g. Presentation Mode) that DOM was rebuilt
@@ -990,6 +996,13 @@ if (typeof window !== 'undefined') {
     }
   });
 }
+
+// Re-render whenever the zoom level changes (js/grid-zoom-controls.js emits
+// this rather than calling renderAllMeasures directly, to avoid a circular
+// import — this file needs getCurrentZoomLevel from that one to render at all).
+Bus.on(BUS_EVENT.GRID_ZOOM_CHANGED, ({ detail } = {}) => {
+  renderAllMeasures(detail?.ctx || activeGrid);
+});
 
 // Click outside to clear selection (caret and range)
 window.addEventListener('click', (e) => {

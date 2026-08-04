@@ -27,6 +27,7 @@ export const BUS_EVENT = {
   OPEN_STUDENT_ASSIGNMENTS: 'assignments:open-student',
   OPEN_ASSIGNMENTS: 'assignments:open',
   PRACTICE_ITEMS_CHANGED: 'practice:items-changed',
+  GRID_ZOOM_CHANGED: 'grid:zoom-changed',
 };
 
 /**
