@@ -1509,10 +1509,12 @@ async function handleSave() {
     await supabase.from('assignment_items').delete().in('id', removedIds);
   }
 
-  // Upsert all items
+  // Save all submission items
   if (currentItems.length > 0) {
     const itemsPayload = currentItems.map((item, i) => {
-      const row = {
+      if (!item.id) item.id = crypto.randomUUID();
+      return {
+        id: item.id,
         assignment_id: assignmentId,
         item_type: item.item_type,
         title: item.title,
@@ -1521,8 +1523,6 @@ async function handleSave() {
         required: item.required,
         config: item.config,
       };
-      if (item.id) row.id = item.id;
-      return row;
     });
 
     const { data: savedItems, error: itemsErr } = await supabase
@@ -1532,6 +1532,7 @@ async function handleSave() {
 
     if (itemsErr) {
       console.error('[Assignments] items save error:', itemsErr);
+      await alert('Some submission items failed to save: ' + itemsErr.message);
     } else {
       // Update local ids
       savedItems?.forEach((si, i) => {
