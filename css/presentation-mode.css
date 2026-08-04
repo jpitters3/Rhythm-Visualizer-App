@@ -1,4 +1,13 @@
 /* ===== PRESENTATION MODE ===== */
+
+/* Hide the toggle on mobile for now — presentation mode isn't a good fit
+   for small screens yet. */
+@media (max-width: 900px) {
+  #presentBtn {
+    display: none;
+  }
+}
+
 body.present {
   height: 100dvh;
   height: var(--app-height, 100dvh);
