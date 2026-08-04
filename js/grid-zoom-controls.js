@@ -19,6 +19,7 @@ import { Bus, BUS_EVENT } from './bus.js';
 
 const STORAGE_KEY = 'groovepan_zoom_cellsAcross';
 const TARGET_DEFAULT_ACROSS = 8; // "comfortably fit 8 across" on first load
+const MIN_SAFE_CELL_PX = 28; // below this, cells/labels start visually colliding
 
 // Builds the full ordered set of valid cellsAcross values for a given
 // stepsPerMeasure, from most zoomed-in (smallest cellsAcross) to most
@@ -116,7 +117,52 @@ function stepZoom(ctx, direction) {
 export function zoomIn(ctx) { stepZoom(ctx, -1); }
 export function zoomOut(ctx) { stepZoom(ctx, 1); }
 
+// Disables +/- at the natural ends of the levels array (nothing left to
+// step to), and additionally disables zoom-out early if the NEXT level
+// would shrink cells below a safe minimum — projected from the actual
+// currently-rendered cell width rather than assumed container math, so it
+// stays correct regardless of viewport size, gaps, or measuresPerRow. This
+// is what keeps the zoom-out button from ever landing the user on a level
+// where cells/labels visually collide (see css/grid-and-labels.css for the
+// matching responsive label/cell font-size fixes that raise how far zoom-out
+// can safely go before hitting this floor).
+function syncZoomButtonStates(ctx) {
+  const zoomInBtn = document.getElementById('zoomInBtn');
+  const zoomOutBtn = document.getElementById('zoomOutBtn');
+  if (!zoomInBtn && !zoomOutBtn) return;
+
+  const c = ctx || activeGrid;
+  const s = c.stepsPerMeasure;
+  const { levels } = buildZoomLevels(s);
+  const current = getCurrentZoomLevel(c);
+  const currentIndex = levels.findIndex(l => l.cellsAcross === current.cellsAcross);
+
+  if (zoomInBtn) zoomInBtn.disabled = currentIndex <= 0;
+
+  if (zoomOutBtn) {
+    const nextIndex = currentIndex + 1;
+    if (nextIndex >= levels.length) {
+      zoomOutBtn.disabled = true;
+    } else {
+      const currentCellWidth = document.querySelector('#measures .cell')?.getBoundingClientRect().width;
+      if (!currentCellWidth) {
+        zoomOutBtn.disabled = false; // nothing rendered yet to measure — don't block on a guess
+      } else {
+        const nextCellsAcross = levels[nextIndex].cellsAcross;
+        const projectedNextWidth = currentCellWidth * (current.cellsAcross / nextCellsAcross);
+        zoomOutBtn.disabled = projectedNextWidth < MIN_SAFE_CELL_PX;
+      }
+    }
+  }
+}
+
 export function initGridZoom() {
   document.getElementById('zoomInBtn')?.addEventListener('click', () => zoomIn(activeGrid));
   document.getElementById('zoomOutBtn')?.addEventListener('click', () => zoomOut(activeGrid));
+
+  // Re-check after every render (zoom change, note edit, measure add/remove
+  // — anything that could change cell size) and on resize (container width
+  // changing shifts the safe/unsafe boundary independent of zoom level).
+  Bus.on(BUS_EVENT.GRID_RENDERED, () => syncZoomButtonStates(activeGrid));
+  window.addEventListener('resize', () => syncZoomButtonStates(activeGrid));
 }

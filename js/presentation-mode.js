@@ -1,7 +1,7 @@
 /* ===== PRESENTATION MODE ===== */
 import { gridA, activeGrid } from './grid-context.js';
 import { ACCENT, DOWN } from './brand.js';
-import { labelForStep } from './notegrid.js';
+import { labelForStep, renderAllMeasures } from './notegrid.js';
 import { addTickObserver, getPlaybackPosition, intervalMs } from './noteplayer.js';
 import { TransportRegistry } from './transport-ui.js';
 import { Bus, BUS_EVENT } from './bus.js';
@@ -147,6 +147,13 @@ export async function setPresentation(on) {
   if (on) {
     await enterFullscreenIfPossible();
     lastMeasureIndex = -1; // Reset cache
+    // The grid was almost certainly already rendered in studio mode before
+    // this toggle — .present just got added to <body>, but nothing rebuilds
+    // the existing .measure-row DOM on its own. Re-render now so it picks
+    // up the presentation-mode cols override in renderAllMeasures (see
+    // js/notegrid.js) instead of carrying over whatever studio zoom level
+    // (possibly wrapped across multiple rows) was active a moment ago.
+    renderAllMeasures(gridA);
     updatePresentationView(0, gridA); // Initialize view
     updatePresentationControlsVisibility(gridA);
     animatePresentation(); // Start Loop
@@ -163,6 +170,12 @@ export async function setPresentation(on) {
     if (measuresEl) measuresEl.style.display = 'block';
 
     document.body.classList.remove('mode-stream', 'mode-measure', 'mode-gravity');
+
+    // .present is already off by this point (toggled at the top of this
+    // function) — re-render to restore the studio's actual zoom level,
+    // since the DOM currently reflects presentation mode's forced
+    // one-row-per-measure layout instead.
+    renderAllMeasures(gridA);
 
     updateQuickSettingsDefaults();
   }

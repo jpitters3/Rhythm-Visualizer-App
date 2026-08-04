@@ -12,6 +12,15 @@
   pointer-events: none;
 }
 
+/* Scales with each label's own column width, same reasoning as .cell .inner
+   below — without this, label text stays a fixed 24px regardless of zoom
+   and is the first thing to visually overlap its neighbor when zoomed out
+   far enough, since (unlike .cell .inner) nothing was shrinking it. */
+.labels > div {
+  container-type: inline-size;
+  font-size: clamp(9px, 45cqi, 24px);
+}
+
 .grid {
   display: grid;
   grid-template-columns: repeat(var(--cols, 8), 1fr);

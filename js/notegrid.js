@@ -242,7 +242,16 @@ export function renderAllMeasures(ctx = activeGrid) {
 
   // One zoom level for the whole render pass — every measure shares the
   // same stepsPerMeasure, so cols/measuresPerRow are the same throughout.
-  const zoomLevel = getCurrentZoomLevel(ctx);
+  // Presentation mode reuses these exact .measure-row elements directly
+  // (see updateMeasureView in js/presentation-mode.js, which just toggles
+  // current-measure/next-measure classes on them rather than building its
+  // own DOM) — its CSS assumes exactly one .labels/.grid pair per row, so
+  // zoom must never wrap a measure while it's active, regardless of the
+  // studio zoom level. Zoom is a studio-only feature; it must not affect
+  // presentation mode.
+  const zoomLevel = document.body.classList.contains('present')
+    ? { cols: s, measuresPerRow: 1, uneven: false }
+    : getCurrentZoomLevel(ctx);
   const cols = zoomLevel.cols;
 
   for (let m = 0; m < measureCount; m++) {
