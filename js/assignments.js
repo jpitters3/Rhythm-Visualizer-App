@@ -1649,6 +1649,27 @@ async function handleAssign() {
     return;
   }
 
+  // Copy any 'phrase' items into each newly-assigned student's own Library so
+  // the phrase is still there for them after they submit/complete the
+  // assignment — not just borrowed for the duration of it. Non-blocking:
+  // the assignment itself already succeeded, so a copy failure here shouldn't
+  // undo the "Assigned!" feedback, just get logged for follow-up.
+  const phraseItems = currentItems.filter(
+    it => it.item_type === 'phrase' && it.config?.pattern_name && it.config?.pattern_json
+  );
+  if (phraseItems.length) {
+    const results = await Promise.all(
+      rows.flatMap(row => phraseItems.map(item =>
+        supabase.rpc('copy_pattern_to_student', {
+          p_student_id: row.student_id,
+          p_name: item.config.pattern_name,
+          p_data: item.config.pattern_json,
+        })
+      ))
+    );
+    results.forEach(r => { if (r.error) console.error('[Assignments] copy_pattern_to_student:', r.error); });
+  }
+
   const assignBtn = document.getElementById('asgnAssignBtn');
   if (assignBtn) {
     const orig = assignBtn.textContent;
