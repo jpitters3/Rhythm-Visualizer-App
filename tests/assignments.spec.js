@@ -271,4 +271,72 @@ test.describe('Assignment Workflow', () => {
       await studentCtx.close();
     }
   });
+
+  test('assigning a phrase item copies it into the student\'s own Library', async ({ browser }) => {
+    test.setTimeout(60_000);
+    const ts = Date.now();
+    const assignmentTitle = `E2E Phrase Assignment ${ts}`;
+    const phraseName = `E2E Test Phrase ${ts}`;
+
+    // Seed a phrase in the teacher's own Library so it's pickable in the item's dropdown.
+    const { error: patternErr } = await supabaseAdmin.from('patterns').insert({
+      user_id: teacherUser.user.id,
+      name: phraseName,
+      data: { on: [true, false, true, false], bpm: 90, mode: '8', steps: 4, labels: ['1', '2', '3', '4'], measures: 1, handSplit: false },
+    });
+    if (patternErr) throw new Error(`Failed to seed teacher phrase: ${patternErr.message}`);
+
+    const teacherCtx = await browser.newContext();
+    const tPage = await teacherCtx.newPage();
+    tPage.on('console', msg => console.log(`[TEACHER] ${msg.text()}`));
+
+    try {
+      await waitForPageReady(tPage);
+      await loginAsTestUser(tPage, teacherUser);
+      await tPage.waitForTimeout(1500); // let prefetchAssignmentsData fire
+
+      await openAccountDropdown(tPage);
+      await tPage.locator('#assignmentsBtn').click();
+      await expect(tPage.locator('#assignmentsModal')).toHaveClass(/open/, { timeout: 5000 });
+
+      await tPage.locator('#asgnNewBtn').click();
+      await expect(tPage.locator('#asgnEditor')).toBeVisible({ timeout: 5000 });
+      await tPage.fill('#asgnTitle', assignmentTitle);
+
+      // ── Item: Phrase ────────────────────────────────────────────────────
+      await tPage.selectOption('#asgnAddItemType', 'phrase');
+      await tPage.locator('#asgnAddItemBtn').click();
+      const phraseCard = tPage.locator('.asgn-item-card').last();
+      await phraseCard.locator('[data-action="item-toggle"]').click(); // expand
+      await phraseCard.locator('[data-field="phrase-select"]').selectOption(phraseName);
+
+      // ── Save ────────────────────────────────────────────────────────────
+      await tPage.locator('#asgnSaveBtn').click();
+      await expect(tPage.locator('#asgnSaveStatus')).toContainText('Saved', { timeout: 8000 });
+
+      // ── Assign student ──────────────────────────────────────────────────
+      const studentCheckbox = tPage.locator(`[data-student-id="${studentUser.user.id}"]`);
+      await expect(studentCheckbox).toBeVisible({ timeout: 5000 });
+      await studentCheckbox.check();
+      await tPage.locator('#asgnAssignBtn').click();
+      await expect(tPage.locator('#asgnAssignBtn')).toContainText('Assigned', { timeout: 5000 });
+
+      // ── Verify: the phrase now exists in the student's own Library ─────────
+      // copy_pattern_to_student runs as part of handleAssign — give it a moment.
+      await expect(async () => {
+        const { data, error } = await supabaseAdmin
+          .from('patterns')
+          .select('id, user_id, name, source, data')
+          .eq('user_id', studentUser.user.id)
+          .eq('name', phraseName);
+        if (error) throw error;
+        expect(data).toHaveLength(1);
+        expect(data[0].source).toBe('assignment');
+      }).toPass({ timeout: 8000 });
+
+    } finally {
+      await teacherCtx.close();
+      await supabaseAdmin.from('patterns').delete().eq('name', phraseName);
+    }
+  });
 });

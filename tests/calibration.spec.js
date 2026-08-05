@@ -23,12 +23,6 @@ test.describe('Calibration Feature', () => {
     // 0. Create unique test user (admin to bypass CUSTOM_SCALES feature gate)
     testUser = await createTestUser(true);
 
-    // Navigate to context first to allow localStorage access
-    await page.goto('/');
-    await page.evaluate(() => localStorage.clear());
-    await page.reload(); // Reload to ensure clean state
-
-
     // Mock image request to ensure it loads (and triggers onload)
     await page.route('https://placehold.co/600x400', async route => {
       // Return a simple 1x1 pixel image or just 200 OK with minimal body
@@ -143,8 +137,8 @@ test.describe('Calibration Feature', () => {
     const scaleItem = page.locator('.scale-list-item').filter({ hasText: 'Test Handpan For Calibration' });
     await expect(scaleItem).toBeVisible();
 
-    // 3. Click "Edit Map"
-    await page.getByRole('button', { name: 'Edit Map' }).first().click();
+    // 3. Click "Map"
+    await page.getByRole('button', { name: 'Map' }).first().click();
 
     // 4. Verify Calibration Overlay
     const overlay = page.locator('#calibrationOverlay');

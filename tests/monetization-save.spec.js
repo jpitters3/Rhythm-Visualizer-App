@@ -1,6 +1,7 @@
 // @ts-check
 const { test, expect } = require('@playwright/test');
 const { createTestUser, deleteTestUser, loginAsTestUser } = require('./utils/auth-helper');
+const { gotoStudio } = require('./helpers');
 
 
 /**
@@ -40,8 +41,8 @@ test.describe('Monetization Save Gating', () => {
     // 0. Create unique test user
     testUser = await createTestUser();
 
-    // 1. Initial Load as Guest (suppress welcome modal — not under test here)
-    await page.goto('/?noWelcome');
+    // 1. Initial Load as Guest, straight to Studio
+    await gotoStudio(page);
   });
 
   test.afterEach(async ({ page }) => {

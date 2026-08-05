@@ -1,6 +1,7 @@
 // @ts-check
 const { test, expect } = require('@playwright/test');
 const { createTestUser, deleteTestUser, supabaseAdmin } = require('./utils/auth-helper');
+const { gotoStudio } = require('./helpers');
 
 /**
  * Sets subscription fields directly on the profile row.
@@ -20,6 +21,18 @@ async function setSubscription(userId, { tier, expiresAt, source = 'mentorship' 
   if (error) throw new Error(`Failed to set subscription: ${error.message}`);
 }
 
+/**
+ * Reloads and lands back on Studio. js/dashboard.js's initDashboard() force-
+ * navigates any already-authenticated page load to #dashboard regardless of
+ * the URL hash, so a plain reload while signed in always bounces there first
+ * — an explicit second navigation back to #studio is required afterward.
+ */
+async function reloadOnStudio(page) {
+  await page.reload({ waitUntil: 'networkidle' });
+  await page.goto('/#studio');
+  await page.waitForSelector('.measure-row');
+}
+
 async function signIn(page, user) {
   await page.locator('#authEmail').fill(user.email);
   await page.click('#authContinueBtn');
@@ -35,7 +48,7 @@ test.describe('Subscription Expiry', () => {
 
   test.beforeEach(async ({ page }) => {
     testUser = await createTestUser();
-    await page.goto('/?noWelcome');
+    await gotoStudio(page);
     await page.waitForSelector('.measure-row');
 
     // Sign in first so the profile row is created
@@ -45,6 +58,12 @@ test.describe('Subscription Expiry', () => {
 
     // Wait for profile to be created (app logs "No profile found, creating default...")
     await page.waitForTimeout(1000);
+
+    // A successful login redirects to #dashboard (js/controls.js) — each test
+    // then reloads and expects the studio grid, so head back to studio now
+    // that we're authenticated (subsequent reloads preserve the #studio hash).
+    await page.goto('/#studio');
+    await page.waitForSelector('.measure-row');
   });
 
   test.afterEach(async () => {
@@ -54,8 +73,7 @@ test.describe('Subscription Expiry', () => {
   test('active subscription: no banner, gated features accessible', async ({ page }) => {
     const future = new Date(Date.now() + 30 * 86400000); // 30 days out
     await setSubscription(testUser.user.id, { tier: 'player_plus', expiresAt: future });
-    await page.reload({ waitUntil: 'networkidle' });
-    await page.waitForSelector('.measure-row');
+    await reloadOnStudio(page);
 
     // No subscription banner (30 days > 14 day threshold)
     await expect(page.locator('#subscriptionBanner')).toBeHidden();
@@ -69,8 +87,7 @@ test.describe('Subscription Expiry', () => {
   test('expiring soon: warning banner visible with correct text and renew button', async ({ page }) => {
     const soon = new Date(Date.now() + 5 * 86400000); // 5 days out
     await setSubscription(testUser.user.id, { tier: 'player_plus', expiresAt: soon });
-    await page.reload({ waitUntil: 'networkidle' });
-    await page.waitForSelector('.measure-row');
+    await reloadOnStudio(page);
 
     const banner = page.locator('#subscriptionBanner');
     await expect(banner).toBeVisible({ timeout: 5000 });
@@ -91,8 +108,7 @@ test.describe('Subscription Expiry', () => {
   test('expired subscription: expired banner visible and gated features blocked', async ({ page }) => {
     const past = new Date(Date.now() - 86400000); // 1 day ago
     await setSubscription(testUser.user.id, { tier: 'player_plus', expiresAt: past });
-    await page.reload({ waitUntil: 'networkidle' });
-    await page.waitForSelector('.measure-row');
+    await reloadOnStudio(page);
 
     // Expired banner shown in red state
     const banner = page.locator('#subscriptionBanner');
@@ -117,8 +133,7 @@ test.describe('Subscription Expiry', () => {
   test('no banner shown when expiry is more than 14 days away', async ({ page }) => {
     const future = new Date(Date.now() + 20 * 86400000); // 20 days out
     await setSubscription(testUser.user.id, { tier: 'player_plus', expiresAt: future });
-    await page.reload({ waitUntil: 'networkidle' });
-    await page.waitForSelector('.measure-row');
+    await reloadOnStudio(page);
 
     await expect(page.locator('#subscriptionBanner')).toBeHidden();
   });

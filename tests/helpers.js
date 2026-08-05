@@ -16,13 +16,24 @@ async function clearGrid(page, gridId = 'A') {
 
 /**
  * Navigates to the Studio grid. A fresh browser context has no "tour seen"
- * flags, so the Studio onboarding tour overlay (js/onboarding-tour.js) opens
- * on arrival and intercepts clicks on everything underneath it. Seeding the
- * flag via addInitScript (runs before the app's own scripts) skips it.
+ * flags, so whichever onboarding tour belongs to the current route
+ * (js/onboarding-tour.js — one flag per route) opens on arrival and
+ * intercepts clicks on everything underneath it. All seven are seeded, not
+ * just Studio's, because js/dashboard.js's initDashboard() unconditionally
+ * force-navigates to #dashboard on any page load with an already-active
+ * session — so any test that logs in (or reloads while logged in) will
+ * detour through Dashboard at least once, even if it only cares about
+ * Studio. Seeding via addInitScript (runs before the app's own scripts)
+ * skips all of them regardless of which route is landed on.
  */
 async function gotoStudio(page) {
   await page.addInitScript(() => {
-    localStorage.setItem('panafide_tour_studio', '1');
+    const tourFlags = [
+      'panafide_tour_dashboard', 'panafide_tour_studio', 'panafide_tour_library',
+      'panafide_tour_composer', 'panafide_tour_practice', 'panafide_tour_courses',
+      'panafide_tour_community',
+    ];
+    tourFlags.forEach(flag => localStorage.setItem(flag, '1'));
   });
 
   // Writing the first note as a guest opens a "save your creation" nudge

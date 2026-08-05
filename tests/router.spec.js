@@ -1,59 +1,58 @@
-import { test, expect } from '@playwright/test';
+const { test, expect } = require('@playwright/test');
+const { createTestUser, deleteTestUser, loginAsTestUser } = require('./utils/auth-helper');
+const { gotoStudio } = require('./helpers');
 
 test.describe('SPA Routing', () => {
-  test.beforeEach(async ({ page }) => {
-    // Start at the root (should default to studio)
-    await page.goto('/');
-    await page.waitForTimeout(500); // Give init scripts a moment to run
+  test.describe('guest', () => {
+    test.beforeEach(async ({ page }) => {
+      await page.goto('/');
+      await page.waitForTimeout(500); // Give init scripts a moment to run
+    });
+
+    test('should default to home view for guests when no hash is provided', async ({ page }) => {
+      // dashboard.js redirects unauthenticated cold loads from 'dashboard' to 'home'
+      // (see js/router.js's handleHashChange + js/dashboard.js's routeChanged guard)
+      await expect(page).toHaveURL(/.*#home/);
+      await expect(page.locator('#view-home')).toBeVisible();
+      await expect(page.locator('#view-studio')).not.toBeVisible();
+    });
   });
 
-  test('should default to studio view if no hash is provided', async ({ page }) => {
-    // Verify hash was updated
-    await expect(page).toHaveURL(/.*#studio/);
+  test.describe('authenticated', () => {
+    let testUser;
 
-    // Check view visibility
-    await expect(page.locator('#view-studio')).toBeVisible();
-    await expect(page.locator('#view-dashboard')).not.toBeVisible();
-  });
+    test.beforeEach(async ({ page }) => {
+      testUser = await createTestUser();
+      await gotoStudio(page);
+      await loginAsTestUser(page, testUser);
+    });
 
-  test('should switch to dashboard view when hash changes', async ({ page }) => {
-    // Navigate via the new Dashboard button
-    const mobileMenu = page.locator('#mobileMenuBtn');
-    if (await mobileMenu.isVisible()) {
-      await mobileMenu.click();
-    }
-    // Hover or click account dropdown container to reveal contents
-    const accountDropdown = page.locator('.account-dropdown');
-    await accountDropdown.hover();
-    await page.waitForTimeout(200);
+    test.afterEach(async () => {
+      if (testUser) await deleteTestUser(testUser.user.id);
+    });
 
-    // Dashboard btn inside account dropdown (evaluate click to bypass CSS hover display:none issues in headless)
-    await page.evaluate(() => document.getElementById('navDashboardBtn').click());
+    test('should switch to dashboard view when hash changes', async ({ page }) => {
+      // #navDashboardBtn is a plain top-level nav link, not inside the account
+      // dropdown — no need to open anything first.
+      await page.locator('#navDashboardBtn').click();
 
-    // Verify hash changed to #dashboard
-    await expect(page).toHaveURL(/.*#dashboard/);
+      await expect(page).toHaveURL(/.*#dashboard/);
+      await expect(page.locator('#view-studio')).not.toBeVisible();
+      await expect(page.locator('#view-dashboard')).toBeVisible();
+    });
 
-    // Verify views updated
-    await expect(page.locator('#view-studio')).not.toBeVisible();
-    await expect(page.locator('#view-dashboard')).toBeVisible();
-  });
+    test('should switch back to studio from dashboard', async ({ page }) => {
+      await page.goto('/#dashboard');
+      await page.waitForTimeout(500);
+      await expect(page.locator('#view-dashboard')).toBeVisible();
 
-  test('should switch back to studio from dashboard', async ({ page }) => {
-    // Go directly to dashboard first
-    await page.goto('/#dashboard');
-    await page.waitForTimeout(500);
+      // Navigate back to Studio via the real nav link (the old "Free Play
+      // Engine" dashboard card this test used to click no longer exists).
+      await page.locator('a[data-route="studio"]').click();
 
-    // Verify dashboard is active
-    await expect(page.locator('#view-dashboard')).toBeVisible();
-
-    // Click the Free Play Card on the dashboard
-    await page.locator('text=Free Play Engine').click();
-
-    // Verify hash changed to #studio
-    await expect(page).toHaveURL(/.*#studio/);
-
-    // Verify studio is visible again
-    await expect(page.locator('#view-studio')).toBeVisible();
-    await expect(page.locator('#view-dashboard')).not.toBeVisible();
+      await expect(page).toHaveURL(/.*#studio/);
+      await expect(page.locator('#view-studio')).toBeVisible();
+      await expect(page.locator('#view-dashboard')).not.toBeVisible();
+    });
   });
 });
