@@ -9,7 +9,6 @@ import { editHandsMode, isEditMulti, multiEditSessionSlot, longPressFired, setLo
 import { TransportRegistry } from './transport-ui.js';
 import { isReviewing, getFeedbackForStep, showFeedbackTooltip, copyLogsForStep, getExpectedNoteForStep } from './coaching-mode.js';
 import { Bus, BUS_EVENT } from './bus.js';
-import { checkExportVisibility } from './controls.js';
 import { confirm } from './alert.js';
 import { getNoteX } from './handpanmap.js';
 import { getCurrentZoomLevel } from './grid-zoom-controls.js';
@@ -418,10 +417,6 @@ export function renderAllMeasures(ctx = activeGrid) {
 
   // Notify listeners (e.g. Presentation Mode) that DOM was rebuilt
   Bus.emit(BUS_EVENT.GRID_RENDERED, { gridId: ctx.id });
-
-  if (ctx.id === 'A') {
-    checkExportVisibility();
-  }
 }
 
 export function clearGrid(ctx = activeGrid) {
@@ -591,10 +586,6 @@ export function setInnerLabel(i, value, ctx = activeGrid) {
       const isSubDing = label === '0' || label === 'Ding';
       subs[idx].classList.toggle('visual-ding', isSubDing && pref === 'Pitches');
     });
-  }
-
-  if (ctx.id === 'A') {
-    checkExportVisibility();
   }
 }
 
@@ -1025,7 +1016,8 @@ window.addEventListener('click', (e) => {
     !e.target.closest('.hp-dot') &&
     !e.target.closest('.hp-overlay') &&
     !e.target.closest('.handpan-tabs') &&
-    !e.target.closest('#ghostBtn')
+    !e.target.closest('#ghostBtn') &&
+    !e.target.closest('.modal-overlay')
   ) {
     clearSelection(activeGrid);
   }

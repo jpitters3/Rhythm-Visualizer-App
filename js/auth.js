@@ -100,6 +100,8 @@ export function closeAuthModal() {
 export function updateAccountUI() {
   if (!accountStatus) return;
   if (currentUser) {
+    const isAdmin = isAdminUser(currentUser);
+
     if (accountStatus) accountStatus.textContent = ''; // Clear "Not signed in"
     // Set button text to first letter of email
     if (accountBtn) accountBtn.textContent = currentUser.email.charAt(0).toUpperCase();
@@ -121,6 +123,12 @@ export function updateAccountUI() {
 
     const myScalesBtn = document.getElementById('myScalesBtn');
     if (myScalesBtn) myScalesBtn.style.display = 'block';
+
+    const coachModeBtn = document.getElementById('coachModeBtn');
+    if (coachModeBtn && isAdmin) coachModeBtn.style.display = 'block';
+
+    const freeRecordBtn = document.getElementById('freeRecordBtn');
+    if (freeRecordBtn && isAdmin) freeRecordBtn.style.display = 'block';
 
     const signOutBtn = document.getElementById('signOutBtn') || document.getElementById('authLogoutDropdown');
     if (signOutBtn) signOutBtn.style.display = 'block';
@@ -162,6 +170,8 @@ export function updateAccountUI() {
     }
 
   } else {
+    // Signed Out
+
     accountStatus.textContent = '';
     // Reset button text
     if (accountBtn) accountBtn.textContent = 'Sign In / Register';
@@ -175,6 +185,9 @@ export function updateAccountUI() {
 
     const myScalesBtn = document.getElementById('myScalesBtn');
     if (myScalesBtn) myScalesBtn.style.display = 'none';
+
+    const coachModeBtn = document.getElementById('coachModeBtn');
+    if (coachModeBtn) coachModeBtn.style.display = 'none';
 
     const signOutBtn = document.getElementById('signOutBtn') || document.getElementById('authLogoutDropdown');
     if (signOutBtn) signOutBtn.style.display = 'none';

@@ -24,6 +24,10 @@ test.describe('Coaching Mode', () => {
 
     await waitForPageReady(page);
     await loginAsTestUser(page, testUser);
+    // A successful login redirects to #dashboard (js/controls.js) regardless
+    // of the page it was triggered from — head back to Studio afterward.
+    await page.goto('/#studio');
+    await page.waitForSelector('.measure-row');
   });
 
   test.afterEach(async ({ page }) => {

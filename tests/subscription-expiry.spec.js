@@ -116,14 +116,6 @@ test.describe('Subscription Expiry', () => {
     await expect(banner).toHaveClass(/subscription-banner--expired/);
     await expect(page.locator('#subscriptionBannerTitle')).toContainText('expired');
 
-    // Gated feature (WAV export) should fire upgrade modal — subscription is expired
-    await page.evaluate(() => {
-      const wrapper = document.getElementById('exportAudioWrapper');
-      if (wrapper) wrapper.style.display = 'block';
-      document.getElementById('exportAudioBtn')?.click();
-    });
-    await expect(page.locator('#upgradeModal')).toHaveClass(/open/, { timeout: 5000 });
-
     // Renew button also opens upgrade modal
     await page.evaluate(() => document.getElementById('upgradeModal')?.classList.remove('open'));
     await page.locator('#subscriptionBannerBtn').click();

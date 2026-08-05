@@ -88,6 +88,10 @@ test.describe('Practice Plan', () => {
 
     await clickAccountBtn(page);
 
+    // #openCourseModalBtn lives inside the collapsible "Admin Tools" submenu
+    // (js/admin.js's adminMenuBtn/adminSubmenu toggle) — expand it first.
+    await page.locator('#adminMenuBtn').click();
+
     const createBtn = page.locator('#openCourseModalBtn');
     await expect(createBtn).toBeVisible();
     await createBtn.click();

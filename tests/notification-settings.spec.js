@@ -65,15 +65,16 @@ test.describe('Notification settings', () => {
 
     const body = page.locator('#accountSettingsBody');
 
-    // Student should see these three notification types
+    // Student should see these four notification types
     await expect(body.locator('.acct-notif-row-label', { hasText: 'New assignment' })).toBeVisible();
     await expect(body.locator('.acct-notif-row-label', { hasText: 'Assignment sent back' })).toBeVisible();
     await expect(body.locator('.acct-notif-row-label', { hasText: 'Assignment complete' })).toBeVisible();
+    await expect(body.locator('.acct-notif-row-label', { hasText: 'Practice reminders' })).toBeVisible();
 
     // Each row has two toggles (in-app + email), all on by default
     const toggles = body.locator('.notif-toggle input[type="checkbox"]');
     const count = await toggles.count();
-    expect(count).toBe(6); // 3 types × 2 channels
+    expect(count).toBe(8); // 4 types × 2 channels (js/notification-settings.js's NOTIF_TYPES, student-role rows)
 
     for (let i = 0; i < count; i++) {
       await expect(toggles.nth(i)).toBeChecked();
@@ -124,10 +125,19 @@ test.describe('Notification settings', () => {
     await expect(inAppToggle).not.toBeChecked();
     await page.waitForTimeout(1500);
 
-    // Refresh and log back in
+    // Refresh. The Supabase session persists across reload, so no re-login
+    // is needed — but js/dashboard.js's initDashboard() force-navigates any
+    // already-authenticated page load to #dashboard regardless of hash, and
+    // that races with how quickly the session itself restores. Neither
+    // waitForPageReady() nor loginAsTestUser() survive this race reliably
+    // (both can time out waiting on a #studio that a still-settling reload
+    // hasn't landed on yet), so retry the navigation directly instead of
+    // trusting a single attempt.
     await page.reload();
-    await waitForPageReady(page);
-    await loginAsTestUser(page, studentUser);
+    await expect(async () => {
+      await page.goto('/#studio');
+      await page.waitForSelector('.measure-row', { timeout: 3000 });
+    }).toPass({ timeout: 20000, intervals: [500, 1000, 2000] });
     await page.waitForTimeout(1500);
     await openAccountSettings(page);
 

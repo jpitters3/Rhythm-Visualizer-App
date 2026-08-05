@@ -9,6 +9,10 @@ test.describe('Pattern Management', () => {
     await gotoStudio(page);
     testUser = await createTestUser();
     await loginAsTestUser(page, testUser);
+    // A successful login redirects to #dashboard (js/controls.js) regardless
+    // of the page it was triggered from — head back to Studio afterward.
+    await page.goto('/#studio');
+    await page.waitForSelector('.measure-row');
   });
 
   test.afterEach(async () => {
@@ -93,14 +97,22 @@ test.describe('Pattern Management', () => {
     await expect(clearModal).not.toHaveClass(/open/);
     await expect(cell0.locator('.inner')).toBeEmpty();
 
-    // 4. Load Pattern
+    // 4. Load Pattern. #loadBtn is a permanently display:none legacy element
+    // with no click handler at all — the real "load" entry point is
+    // #openPhraseBtn's modal (js/controls.js's showOpenPhraseModal()),
+    // listing saved patterns to pick from by name.
     await openPhraseMenu(page);
-    await page.click('#loadBtn');
+    await page.click('#openPhraseBtn');
 
-    // Handle "Unsaved Changes" confirm modal (since we cleared the grid)
+    const openModal = page.locator('#openPhraseModal');
+    await expect(openModal).toHaveClass(/open/);
+    await page.locator('.phrase-list-item', { hasText: uniqueName }).click();
+
+    // Handle "unsaved changes" confirm (since we cleared the grid) — this
+    // flow's confirm() call omits a title, so it uses the default 'Panafide'.
     const loadConfirmModal = page.locator('#confirmModal');
     await expect(loadConfirmModal).toHaveClass(/open/);
-    await expect(page.locator('#confirmTitle')).toHaveText('Unsaved Changes');
+    await expect(page.locator('#confirmMessage')).toContainText('unsaved changes');
     await page.click('#confirmOkBtn');
     await expect(loadConfirmModal).not.toHaveClass(/open/);
 

@@ -84,6 +84,10 @@ test.describe('Course CRUD (Clean)', () => {
       await ensureMenuOpen(page);
     }
 
+    // #openCourseModalBtn lives inside the collapsible "Admin Tools" submenu
+    // (js/admin.js's adminMenuBtn/adminSubmenu toggle) — expand it first.
+    await page.locator('#adminMenuBtn').click();
+
     // Check if "Create Course" is visible (Admin check)
     const createBtn = page.locator('#openCourseModalBtn');
     if (!await createBtn.isVisible()) {
@@ -169,10 +173,14 @@ test.describe('Course CRUD (Clean)', () => {
     }
 
     try {
-      // 2. Refresh Page (to load new course list), then re-login to restore auth state
+      // 2. Refresh Page (to load new course list), then re-login to restore auth state.
+      // js/dashboard.js's initDashboard() force-navigates any already-authenticated
+      // page load to #dashboard regardless of hash, so the reload alone always lands
+      // there — loginAsTestUser() (which itself re-navigates to #studio internally)
+      // must run before waiting for the studio grid, not after.
       await page.reload({ waitUntil: 'networkidle' });
-      await page.waitForSelector('.measure-row', { timeout: 10000 });
       await loginAsTestUser(page, testUser);
+      await page.waitForSelector('.measure-row', { timeout: 10000 });
 
       // 3. Open Courses Sidebar
       const sidebar = await openCoursesSidebar(page);

@@ -1,0 +1,85 @@
+/* ===== PROCESS STATUS STRIP (js/process-status.js) ===== */
+.process-strip {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 10600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 9px 16px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--panel-border);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+  transform: translateY(-100%);
+  opacity: 0;
+  pointer-events: none;
+  transition: transform 0.25s ease, opacity 0.25s ease;
+}
+
+.process-strip.visible {
+  transform: translateY(0);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.process-strip-spinner {
+  display: none;
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  border: 2px solid rgba(var(--accent-rgb), 0.25);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: process-strip-spin 0.7s linear infinite;
+}
+
+.process-strip.busy .process-strip-spinner {
+  display: inline-block;
+}
+
+.process-strip-icon {
+  display: none;
+  font-size: 14px;
+  line-height: 1;
+}
+
+.process-strip.success .process-strip-icon,
+.process-strip.fail .process-strip-icon {
+  display: inline-block;
+}
+
+.process-strip.success .process-strip-icon::before {
+  content: '✓';
+  color: #22c55e;
+}
+
+.process-strip.fail .process-strip-icon::before {
+  content: '✕';
+  color: #e53e3e;
+}
+
+@keyframes process-strip-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .process-strip {
+    transition: opacity 0.25s ease;
+  }
+  .process-strip-spinner {
+    animation: none;
+  }
+}
+
+@media (max-width: 600px) {
+  .process-strip {
+    font-size: 12px;
+    padding: 8px 12px;
+  }
+}

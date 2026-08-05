@@ -22,6 +22,7 @@ import { alert, confirm, prompt, confirmCustom } from './alert.js';
 import { Bus, BUS_EVENT } from './bus.js';
 import { Modal } from './modal.js';
 import { escapeHtml } from './utils.js';
+import { showProcess } from './process-status.js';
 
 // Global references assigned in initControls
 let patternSelect, handBtn, presentBtn, exitPresent, micBtn, saveBtn, renameBtn, deleteBtn, exportBtn, navDashboardBtn, importBtn, loadBtn;
@@ -291,25 +292,6 @@ export async function loadPatternByName(pattern) {
 }
 
 /**
- * Checks if the grid has notes and shows/hides the export wrapper
- */
-export function checkExportVisibility() {
-  const container = document.getElementById('exportAudioWrapper');
-  if (!container || !activeGrid || !activeGrid.innerLabels) return;
-
-  const hasNotes = activeGrid.innerLabels.some(l => {
-    if (Array.isArray(l)) return l.some(sub => sub !== '');
-    return l !== '';
-  });
-
-  if (hasNotes) {
-    container.style.display = 'block';
-  } else {
-    container.style.display = 'none';
-  }
-}
-
-/**
  * Sync function (Legacy compatibility or triggered broadcast)
  */
 export function syncVirtualHandpanControls() {
@@ -366,6 +348,13 @@ function showPhraseContextMenu(anchorEl) {
     { divider: true },
     { label: 'New phrase', action: createNewPhrase },
     { label: 'Open Phrase', action: showOpenPhraseModal },
+    { label: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                      stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                      <polyline points="7 10 12 15 17 10"></polyline>
+                      <line x1="12" y1="15" x2="12" y2="3"></line>
+                    </svg>&nbsp;` + 'Download', action: exportAudio, 
+    }
   ];
 
   items.forEach(({ label, action, divider }) => {
@@ -377,7 +366,7 @@ function showPhraseContextMenu(anchorEl) {
     }
     const btn = document.createElement('button');
     btn.className = 'lib-context-item';
-    btn.textContent = label;
+    btn.innerHTML = label;
     btn.addEventListener('click', async (e) => {
       e.stopPropagation();
       hidePhraseContextMenu();
@@ -493,6 +482,40 @@ async function showOpenPhraseModal() {
   } catch (err) {
     listEl.innerHTML = `<div class="phrase-list-empty" style="color:var(--danger,#e74c3c);">Failed to load: ${escapeHtml(err.message)}</div>`;
   }
+}
+
+async function exportAudio() {
+  if (!canAccess(FEATURE.DOWNLOAD_WAV)) {
+      Bus.emit(BUS_EVENT.SHOW_UPGRADE_MODAL, {
+        feature: FEATURE.DOWNLOAD_WAV,
+        featureId: 'feat-audio'
+      });
+      return;
+    }
+    const status = showProcess('Rendering audio…');
+    try {
+      const blob = await exportAudioWav();
+      if (blob) {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        const name = patternSelect?.value || 'Pattern';
+        a.download = `${name}.wav`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }
+      status.done('Downloaded');
+    } catch (err) {
+      console.error(err);
+      status.fail('Export failed');
+      await showCustomModal({
+        title: 'Export Error',
+        message: err.message || err,
+        mode: 'alert'
+      });
+    }
 }
 
 /**
@@ -969,45 +992,6 @@ export function initControls() {
   document.addEventListener('playbackStateChange', (e) => {
     const ctx = e.detail?.grid || gridA;
     TransportRegistry.updateAll(ctx);
-  });
-
-  // 9. Export Audio
-  const exportAudioBtn = document.getElementById('exportAudioBtn');
-  exportAudioBtn?.addEventListener('click', async () => {
-    if (!canAccess(FEATURE.DOWNLOAD_WAV)) {
-      Bus.emit(BUS_EVENT.SHOW_UPGRADE_MODAL, {
-        feature: FEATURE.DOWNLOAD_WAV,
-        featureId: 'feat-audio'
-      });
-      return;
-    }
-    const originalHtml = exportAudioBtn.innerHTML;
-    exportAudioBtn.disabled = true;
-    exportAudioBtn.innerHTML = '⏳ Rendering...';
-    try {
-      const blob = await exportAudioWav();
-      if (blob) {
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        const name = patternSelect?.value || 'Pattern';
-        a.download = `${name}.wav`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-      }
-    } catch (err) {
-      console.error(err);
-      await showCustomModal({
-        title: 'Export Error',
-        message: err.message || err,
-        mode: 'alert'
-      });
-    } finally {
-      exportAudioBtn.disabled = false;
-      exportAudioBtn.innerHTML = originalHtml;
-    }
   });
 
   updateNotationUI();

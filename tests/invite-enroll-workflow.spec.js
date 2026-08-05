@@ -209,7 +209,10 @@ test.describe('Invite → Enroll → Dashboard Workflow', () => {
       // Confirm course_ids was stored correctly
       expect(invitation.course_ids).toContain(seed.course.id);
 
-      const inviteUrl = `http://localhost:3000/?invite=${invitation.token}`;
+      // Relative so it resolves against playwright.config.js's baseURL
+      // (this dev server is HTTPS-only when .certs/ is present — a hardcoded
+      // http://localhost:3000 gets a connection-level ERR_EMPTY_RESPONSE).
+      const inviteUrl = `/?invite=${invitation.token}`;
 
       // ════════════════════════════════════════════════════════════════════
       // PHASE 3 — Student: log in, then navigate to the invite URL
@@ -264,13 +267,15 @@ test.describe('Invite → Enroll → Dashboard Workflow', () => {
       // ════════════════════════════════════════════════════════════════════
       // PHASE 5 — Student: Dashboard shows assignment in hero, course in sidebar
       // ════════════════════════════════════════════════════════════════════
-      await sPage.goto('http://localhost:3000/#dashboard', { waitUntil: 'networkidle' });
-      await sPage.waitForTimeout(2000); // allow loadDashboard() async fetches to complete
-
-      // Hero card shows the assignment
+      // Hero card shows the assignment. A reload right after the invite RPC
+      // can outrace loadDashboard()'s own fetch seeing the just-created row —
+      // reload and retry a few times instead of trusting a single fixed wait.
       const heroCard = sPage.locator('#dashAssignmentCard');
-      await expect(heroCard).toBeVisible({ timeout: 8000 });
-      await expect(heroCard).toContainText(seed.assignment.title);
+      await expect(async () => {
+        await sPage.goto('/#dashboard', { waitUntil: 'networkidle' });
+        await expect(heroCard).toBeVisible({ timeout: 3000 });
+        await expect(heroCard).toContainText(seed.assignment.title, { timeout: 3000 });
+      }).toPass({ timeout: 20000, intervals: [1000, 2000, 3000] });
       await expect(heroCard).toContainText('New'); // status = 'assigned'
 
       // Active courses section lists the enrolled course

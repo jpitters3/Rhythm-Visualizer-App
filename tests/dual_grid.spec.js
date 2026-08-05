@@ -53,26 +53,30 @@ test.describe('Dual Grid Functionality', () => {
     await page.click('#dualModeBtn');
 
     const bpmInputA = page.locator('#mainTransport-A .t-bpm-input');
-    const bpmValA = page.locator('#mainTransport-A .t-bpm-val');
+    const bpmValA = page.locator('#mainTransport-A .t-bpm-num');
     const bpmInputB = page.locator('#mainTransport-B .t-bpm-input');
-    const bpmValB = page.locator('#mainTransport-B .t-bpm-val');
+    const bpmValB = page.locator('#mainTransport-B .t-bpm-num');
 
     // Change A to 120
     await bpmInputA.fill('120');
-    await expect(bpmValA).toHaveText('120');
-    await expect(bpmValB).toHaveText('90'); // B should remain at default
+    await expect(bpmValA).toHaveValue('120');
+    await expect(bpmValB).toHaveValue('90'); // B should remain at default
 
     // Change B to 150
     await bpmInputB.fill('150');
-    await expect(bpmValA).toHaveText('120');
-    await expect(bpmValB).toHaveText('150');
+    await expect(bpmValA).toHaveValue('120');
+    await expect(bpmValB).toHaveValue('150');
   });
 
   test('Focus Management (activeGrid)', async ({ page }) => {
     await page.click('#dualModeBtn');
 
-    // Click inside Grid B to focus it
-    await page.locator('#measures-B .cell').first().click();
+    // Click inside Grid B to focus it. Grid A's measure-tools bar can
+    // overlap Grid B's first row at standard viewport heights — scroll the
+    // target into clear view before clicking.
+    const firstCellB = page.locator('#measures-B .cell').first();
+    await firstCellB.scrollIntoViewIfNeeded();
+    await firstCellB.evaluate(el => el.click());
 
     // Verify Focus by Action: Typing '1' should affect Grid B, not A
     await page.keyboard.press('1');

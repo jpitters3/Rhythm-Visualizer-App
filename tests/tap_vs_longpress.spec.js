@@ -12,16 +12,6 @@ test.describe('Tap vs long-press cell selection', () => {
     await page.click('#confirmOkBtn');
   });
 
-  // Writing the first note while signed out triggers a one-time "you're not
-  // signed in" confirm dialog (same #confirmModal used by clearBtn above).
-  // Dismiss it if it shows up so it doesn't block subsequent interactions.
-  async function dismissGuestNoticeIfShown(page) {
-    const cancelBtn = page.locator('#confirmCancelBtn');
-    if (await cancelBtn.isVisible().catch(() => false)) {
-      await cancelBtn.click();
-    }
-  }
-
   test('Quick tap/click selects the cell', async ({ page, isMobile }) => {
     const cell0 = page.locator('.cell').nth(0);
     await cell0.click();
@@ -39,9 +29,10 @@ test.describe('Tap vs long-press cell selection', () => {
       await expect(page.locator('#selBarText')).toHaveText('1 selected');
     }
 
-    // Playing a handpan note should still write into the tapped cell.
+    // Playing a handpan note should still write into the tapped cell. This
+    // can trigger the one-time guest "sign in to save" nudge, which
+    // gotoStudio()'s addLocatorHandler auto-dismisses before the next action.
     await page.locator('.hp-dot[data-note="1"]').click({ force: true });
-    await dismissGuestNoticeIfShown(page);
     await expect(cell0.locator('.inner')).toHaveText('1');
   });
 

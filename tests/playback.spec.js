@@ -33,12 +33,12 @@ test.describe('Playback & Controls', () => {
 
   test('BPM Adjustment', async ({ page }) => {
     const bpmInput = page.locator('#mainTransport-A .t-bpm-input');
-    const bpmVal = page.locator('#mainTransport-A .t-bpm-val');
+    const bpmVal = page.locator('#mainTransport-A .t-bpm-num');
 
     // 1. Change BPM via Input
     await bpmInput.fill('120');
     // 2. Verify Display
-    await expect(bpmVal).toHaveText('120');
+    await expect(bpmVal).toHaveValue('120');
 
     // 3. Verify System State (User-Like: check that input holds value)
     await expect(bpmInput).toHaveValue('120');

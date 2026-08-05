@@ -39,6 +39,7 @@
   <link rel="stylesheet" href="css/handpan-overlays.css">
   <link rel="stylesheet" href="css/hand-cursors.css"> <!-- Virtual Hands -->
   <link rel="stylesheet" href="./css/shared-pattern-banner.css">
+  <link rel="stylesheet" href="./css/process-status.css">
   <link rel="stylesheet" href="./css/action-bar.css">
   <link rel="stylesheet" href="./css/measure-actions.css">
   <link rel="stylesheet" href="./css/course-creator.css">
@@ -178,20 +179,7 @@
                 <button id="renameBtn" title="Rename current phrase" disabled>Rename</button>
                 <button id="deleteBtn" title="Delete current phrase" disabled>Delete</button>
                 <button id="shareBtn" title="Create a share link (public)">Share</button>
-                <button id="exportBtn" title="Copy phrase JSON to clipboard">Export JSON</button>
-                <button id="importBtn" title="Paste JSON to load a phrase">Import JSON</button>
-                <div id="exportAudioWrapper" style="display:none;">
-                  <button id="exportAudioBtn" title="Download current phrase as WAV"
-                    style="display: flex; align-items: center; gap: 8px;">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
-                      stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                      <polyline points="7 10 12 15 17 10"></polyline>
-                      <line x1="12" y1="15" x2="12" y2="3"></line>
-                    </svg>
-                    Download Audio
-                  </button>
-                </div>
+                
                 <button id="songLibraryBtn" style="display:none;">Song Library</button>
                 <button id="importMidiBtn" style="display:none;">Import MIDI</button>
                 <input type="file" id="midiFileInput" style="display:none;" accept=".mid,.midi,.kar">
@@ -208,8 +196,11 @@
               <button id="adminMenuBtn" class="admin-menu-btn" style="color:var(--accent-glow);">⚙️ Admin Tools ▾</button>
               <div id="adminSubmenu" class="admin-submenu">
                 <div class="admin-submenu-inner">
-                  <button id="openCourseModalBtn" class="admin-only" style="display:none;">➕ Create Course</button>
+                  <button id="openCourseModalBtn">➕ Create Course</button>
                   <button id="openCourseCopierAdminBtn">📋 Manage Courses</button>
+                  <button id="exportBtn" title="Copy phrase JSON to clipboard">Export JSON</button>
+                  <button id="importBtn" title="Paste JSON to load a phrase">Import JSON</button>
+                  <button id="freeRecordBtn">🎙 Free Record</button>
                   <button id="openPatternOrgAdminBtn">🔍 Pattern Recognition</button>
                   <button id="openGameConfigAdminBtn">⚄ Game Configuration</button>
                   <button id="openGlossaryModalBtn">📖 Glossary Editor</button>
@@ -218,8 +209,6 @@
               </div>
               <div class="dropdown-divider"></div>
             </div>
-            <button id="freeRecordBtn">🎙 Free Record</button>
-            <div class="dropdown-divider"></div>
             <button id="openProfileBtn">👤 Edit Profile</button>
             <button id="openAccountAuthBtn">⚙️ Account Settings</button>
             <button id="authLogoutDropdown">🚪 Sign out</button>

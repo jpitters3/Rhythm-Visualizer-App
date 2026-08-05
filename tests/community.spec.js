@@ -30,21 +30,25 @@ test.describe('Community Features', () => {
     await waitForPageReady(page);
 
     // 3. Login
-    // Check Desktop vs Mobile login button
+    // Check Desktop vs Mobile login button. #accountBtn only becomes visible
+    // once already signed in — a fresh guest sees #authBtn instead (desktop)
+    // or the flattened hamburger menu (mobile).
     const accountBtn = page.locator('#accountBtn');
+    const authBtn = page.locator('#authBtn');
     const mobileMenuBtn = page.locator('#mobileMenuBtn');
 
     if (await accountBtn.isVisible()) {
-      // Desktop/Tablet: Button is visible. Clicking it opens Modal (if logged out)
+      // Desktop/Tablet, already signed in: clicking opens the dropdown.
       await accountBtn.click();
-    } else {
-      // Mobile: Button hidden. Open menu first.
-      if (await mobileMenuBtn.isVisible()) {
-        await mobileMenuBtn.click();
-        await page.waitForTimeout(500); // Wait for menu animation
-        // Now #authBtn inside the menu should be visible and clickable
-        await page.click('#authBtn');
-      }
+    } else if (await authBtn.isVisible()) {
+      // Desktop/Tablet guest: #authBtn opens the auth modal directly.
+      await authBtn.click();
+    } else if (await mobileMenuBtn.isVisible()) {
+      // Mobile: nav is hidden behind the hamburger menu — open it first.
+      await mobileMenuBtn.click();
+      await page.waitForTimeout(500); // Wait for menu animation
+      // Now #authBtn inside the menu should be visible and clickable
+      await page.click('#authBtn');
     }
 
     await expect(page.locator('#authModal')).toHaveClass(/open/);
@@ -87,21 +91,11 @@ test.describe('Community Features', () => {
   test('Create and Delete a Community Post', async ({ page }) => {
     // 1. Open Community Modal
     // Wait for JS initialization
-    const commBtn = page.locator('#communityBtn');
-    await expect(commBtn).toHaveAttribute('data-js-ready', 'true', { timeout: 10000 });
-
-    // Mobile: Be robust about menu state. If button hidden, try opening menu.
-    if (!await commBtn.isVisible()) {
-      const mobileMenu = page.locator('#mobileMenuBtn');
-      if (await mobileMenu.isVisible()) {
-        await mobileMenu.click();
-        await page.waitForTimeout(500);
-      }
-    }
-
-    await commBtn.click();
-    const modal = page.locator('#feedModal');
-    await expect(modal).toHaveClass(/open/);
+    // Community is a route (#view-community), not a modal — #communityBtn
+    // and #feedModal never existed in the app. Navigate directly, matching
+    // how every other route-based test in this suite gets to a view.
+    await page.goto('/#community');
+    await expect(page.locator('#view-community')).toBeVisible({ timeout: 10000 });
 
     // 2. Switch to Discussion Tab
     await page.click('#navDiscussionBtn'); // Ensure tab is active
@@ -154,21 +148,11 @@ test.describe('Community Features', () => {
 
     // 2. Open Community
     // Wait for JS initialization
-    const commBtn = page.locator('#communityBtn');
-    await expect(commBtn).toHaveAttribute('data-js-ready', 'true', { timeout: 10000 });
-
-    // Mobile: Be robust about menu state. If button hidden, try opening menu.
-    if (!await commBtn.isVisible()) {
-      const mobileMenu = page.locator('#mobileMenuBtn');
-      if (await mobileMenu.isVisible()) {
-        await mobileMenu.click();
-        await page.waitForTimeout(500);
-      }
-    }
-
-    await commBtn.click();
-    const modal = page.locator('#feedModal');
-    await expect(modal).toHaveClass(/open/);
+    // Community is a route (#view-community), not a modal — #communityBtn
+    // and #feedModal never existed in the app. Navigate directly, matching
+    // how every other route-based test in this suite gets to a view.
+    await page.goto('/#community');
+    await expect(page.locator('#view-community')).toBeVisible({ timeout: 10000 });
     await page.click('#navDiscussionBtn');
 
     // 3. Verify it appears

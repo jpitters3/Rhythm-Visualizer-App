@@ -68,6 +68,14 @@ test.describe('Monetization Save Gating', () => {
     await cell0.click();
     await page.keyboard.type('D');
 
+    // Writing a note as a guest triggers the "sign in to save your work" nudge
+    // (gotoStudio()'s addLocatorHandler auto-dismisses it) and the very next
+    // step below deliberately opens a *different* modal on the same reused
+    // #confirmModal singleton — if that happens before the nudge's dismiss
+    // finishes, the two overlap and the auto-dismiss can end up clicking
+    // Cancel on the wrong (alert-mode, cancel-hidden) modal. Let it settle.
+    await page.waitForTimeout(500);
+
     // 4. Attempt to save as Guest
     // #saveBtn is inside the nav (hidden for guests) — trigger it directly
     console.log('[TEST] Checking guest save blocking...');

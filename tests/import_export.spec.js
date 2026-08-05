@@ -1,7 +1,12 @@
 // @ts-check
 const { test, expect } = require('@playwright/test');
 const { gotoStudio } = require('./helpers');
+const { createTestUser, deleteTestUser, loginAsTestUser } = require('./utils/auth-helper');
 
+// #phraseMenuBtn/#phraseSubmenu (Save/Import/Export/Share) live inside
+// #navAccountWrapper, which is display:none until signed in — this has been
+// true since the app's original routing redesign, not a recent regression.
+// Reaching this menu at all requires being authenticated first.
 async function openPhraseMenu(page) {
   // Open mobile menu if needed
   if (await page.locator('#mobileMenuBtn').isVisible()) {
@@ -23,10 +28,21 @@ async function openPhraseMenu(page) {
 }
 
 test.describe('Import / Export Features', () => {
+  let testUser;
 
   test.beforeEach(async ({ page }) => {
     await gotoStudio(page);
     await page.waitForSelector('.measure-row');
+    testUser = await createTestUser();
+    await loginAsTestUser(page, testUser);
+    // A successful login redirects to #dashboard (js/controls.js) — head
+    // back to Studio since this test edits the grid.
+    await page.goto('/#studio');
+    await page.waitForSelector('.measure-row');
+  });
+
+  test.afterEach(async () => {
+    if (testUser) await deleteTestUser(testUser.user.id);
   });
 
   /*
