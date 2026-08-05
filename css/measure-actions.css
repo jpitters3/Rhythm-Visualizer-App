@@ -22,6 +22,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
+  padding: 6px;
 
   /* Animation: Start hidden and collapsed */
   max-width: 0;
@@ -39,6 +40,7 @@
   height: 40px;
   /* Slightly more compact for selection tools */
   padding: 0 16px;
+  margin-top: 6px;
 }
 
 
