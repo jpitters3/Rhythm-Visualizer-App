@@ -389,7 +389,7 @@ div.container {
 }
 
 #view-studio > #main {
-  padding-top: 24px;
+  padding-top: 0px;
 }
 
 .route-view.active {

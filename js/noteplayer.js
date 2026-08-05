@@ -5,7 +5,7 @@ import { supabase } from './supabase-client.js';
 import { currentUser, activeGrid, setActiveGrid } from './state.js';
 import { HistoryManager } from './history.js';
 import { TransportRegistry } from './transport-ui.js';
-import { isListening, getSelectedScaleName, setSelectedScaleName, getScale, setCurrentScale } from './state.js';
+import { isListening, getSelectedScaleName, setSelectedScaleName, getScale, setCurrentScale, playGhostNotes, ghostHandsShown } from './state.js';
 import { SCALE_KEY_LOCAL, SCALE_KEY_REMOTE, AUDIO_DELAY, VISUAL_HEADSTART, BASE_PATH } from './config.js';
 import { renderAllMeasures } from './notegrid.js';
 import { coachingSession, isCoaching, isReviewing } from './coaching-mode.js';
@@ -14,6 +14,13 @@ import { confirm } from './alert.js';
 
 const SOUND_TAK = 'Tak';
 const SOUND_SLAP = 'Slap';
+const SOUND_GHOST = 'Ghost';
+
+// Ghost notes only make sense on the grid the ghost hands themselves
+// visualize (Grid A) — see js/virtual-hands.js.
+function ghostNotesActive(c) {
+  return c.id === 'A' && ghostHandsShown && playGhostNotes;
+}
 
 // highlighterFn and observers stay here as they are logic-bound
 let highlighterFn = null;
@@ -194,6 +201,7 @@ export async function preloadAudioSamples() {
     const loads = [
       loadSample(SOUND_TAK, `${BASE_PATH}assets/audio/dkurd_tak.wav`),
       loadSample(SOUND_SLAP, `${BASE_PATH}assets/audio/dkurd_slap.wav`),
+      loadSample(SOUND_GHOST, `${BASE_PATH}assets/audio/Ghost2.wav`),
       preloadScaleSamples()
     ];
     return Promise.all(loads);
@@ -423,6 +431,9 @@ function scheduleAudio(c, step, time) {
     });
   } else if (currentData) {
     playNoteByLabel(currentData, realStep, delay);
+  } else if (ghostNotesActive(c)) {
+    // Ghost note: empty step, soft touch sound instead of a real note.
+    playNoteSample(SOUND_GHOST, delay);
   }
 
   // Flam: play grace note 30ms before the primary note
@@ -543,6 +554,9 @@ export function tick(ctx, overrideStep = null, audioTime = null, audioStartTime 
     stepNotes.push(currentData);
     stepHands.push(hand);
   }
+  // Ghost notes (empty step, ghostNotesActive(c)) intentionally don't
+  // highlight the T tonefield here — see scheduleAudio() below for the
+  // sound, and virtual-hands.js for the hand still touching T visually.
 
   // Notify Observers (e.g. Virtual Hands, Presentation Mode, Transcription)
   if (tickObservers.length > 0) {

@@ -53,6 +53,21 @@ export function setLabelNotation(v) {
 export let isListening = false;
 export function setIsListening(v) { isListening = v; }
 
+// Sub-option of ghost hands (see virtual-hands.js) — off by default so
+// existing users don't suddenly hear new sounds on empty steps.
+export let playGhostNotes = localStorage.getItem('playGhostNotes') === 'true';
+export function setPlayGhostNotes(v) {
+  playGhostNotes = v;
+  localStorage.setItem('playGhostNotes', v);
+}
+
+// Mirrors virtual-hands.js's own `enabled` flag (source of truth, owns the
+// 'vHandsEnabled' persistence) so noteplayer.js can gate ghost-note playback
+// on it without importing virtual-hands.js, which would be circular
+// (virtual-hands.js already imports from noteplayer.js).
+export let ghostHandsShown = true;
+export function setGhostHandsShown(v) { ghostHandsShown = v; }
+
 export let isCalibrationMode = false;
 export function setIsCalibrationMode(v) { isCalibrationMode = v; }
 

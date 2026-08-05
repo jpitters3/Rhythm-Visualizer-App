@@ -4,6 +4,7 @@ import { getDisplayPosition, resolveTakSlapNote } from './handpanmap.js';
 import { resolveHand, addTickObserver } from './noteplayer.js';
 import { checkCellIsMultiMode } from './notegrid.js';
 import { BASE_PATH } from './config.js';
+import { playGhostNotes, setPlayGhostNotes, setGhostHandsShown } from './state.js';
 
 // BASE_PATH (Vite's import.meta.env.BASE_URL), not a literal './public/...'
 // path — public/ is copied to the site root at build time (its own prefix is
@@ -54,6 +55,7 @@ class VirtualHands {
     // Persistence
     const saved = localStorage.getItem('vHandsEnabled');
     this.enabled = saved === null ? true : (saved === 'true'); // Default ON
+    setGhostHandsShown(this.enabled);
 
     // UI Toggle
     this.toggleBtn = document.getElementById('vHandsToggle');
@@ -67,11 +69,21 @@ class VirtualHands {
     // is still respected.
     this.style = localStorage.getItem('vHandsStyle') === 'orbs' ? 'orbs' : 'hands';
     this.styleSelect = document.getElementById('vHandsStyleSelect');
+    this.styleRow = document.getElementById('vHandsStyleRow');
     if (this.styleSelect) {
       this.styleSelect.value = this.style;
       this.styleSelect.addEventListener('change', (e) => this.setStyle(e.target.value));
     }
     this.updateStyle();
+
+    // Play ghost notes: a sub-option of ghost hands, only shown while ghost
+    // hands themselves are shown (see updateVisibility()).
+    this.ghostNotesRow = document.getElementById('ghostNotesRow');
+    this.ghostNotesToggle = document.getElementById('ghostNotesToggle');
+    if (this.ghostNotesToggle) {
+      this.ghostNotesToggle.checked = playGhostNotes;
+      this.ghostNotesToggle.addEventListener('change', (e) => setPlayGhostNotes(e.target.checked));
+    }
 
     this.updateVisibility();
 
@@ -123,6 +135,7 @@ class VirtualHands {
   setEnabled(val) {
     this.enabled = val;
     localStorage.setItem('vHandsEnabled', val);
+    setGhostHandsShown(val);
     this.updateVisibility();
   }
 
@@ -130,6 +143,10 @@ class VirtualHands {
     if (!this.layer) return;
     // Respect the manual toggle, but Observer will override if modal is open
     this.layer.style.display = this.enabled ? 'block' : 'none';
+    // "Ghost hands style" and "Play ghost notes" only make sense (and are
+    // only shown) while ghost hands themselves are visible.
+    if (this.styleRow) this.styleRow.style.display = this.enabled ? '' : 'none';
+    if (this.ghostNotesRow) this.ghostNotesRow.style.display = this.enabled ? '' : 'none';
   }
 
   setStyle(val) {
@@ -181,51 +198,61 @@ class VirtualHands {
     // back-and-forth alternation must NOT go through that logic.
     let sharedNext = false;
 
-    // Limit lookahead to ~2 beats (8 sub-steps in 16th mode)
-    const maxLookahead = 8;
-    const all = ctx.cells;
-    const totalSteps = all.length;
+    // With ghost notes on, every step produces a hit for one hand or the
+    // other (real or ghost) — there's no gap left for a hand to fill by
+    // anticipating a future REAL note, and this lookahead only ever looks
+    // for real notes (ghost steps aren't visible to it below). Left on, it
+    // pulls the idle hand ahead toward the next real note instead of
+    // landing on the ghost hits in between, reading as "eager"/jumpy. So
+    // skip anticipation entirely here; each hand just responds to its own
+    // current-step hit (see hitsL/hitsR below).
+    if (!playGhostNotes) {
+      // Limit lookahead to ~2 beats (8 sub-steps in 16th mode)
+      const maxLookahead = 8;
+      const all = ctx.cells;
+      const totalSteps = all.length;
 
-    for (let i = 1; i <= maxLookahead; i++) {
-      if (nextL && nextR) break;
+      for (let i = 1; i <= maxLookahead; i++) {
+        if (nextL && nextR) break;
 
-      const futureStep = (ctx.step + i) % totalSteps;
-      const futureData = ctx.innerLabels[futureStep];
-      const futureHands = ctx.innerHands[futureStep];
+        const futureStep = (ctx.step + i) % totalSteps;
+        const futureData = ctx.innerLabels[futureStep];
+        const futureHands = ctx.innerHands[futureStep];
 
-      // Note: We use ctx.step of the current tick, but ctx.step is incremented at end of tick.
-      // noteplayer.js tick calls observers BEFORE incrementing step.
-      // So ctx.step is the CURRENT playing step.
-      // So lookahead starts at step + 1. Correct.
+        // Note: We use ctx.step of the current tick, but ctx.step is incremented at end of tick.
+        // noteplayer.js tick calls observers BEFORE incrementing step.
+        // So ctx.step is the CURRENT playing step.
+        // So lookahead starts at step + 1. Correct.
 
-      if (!futureData) continue;
+        if (!futureData) continue;
 
-      const labels = Array.isArray(futureData) ? futureData : [futureData];
-      const isChord = checkCellIsMultiMode(futureData);
+        const labels = Array.isArray(futureData) ? futureData : [futureData];
+        const isChord = checkCellIsMultiMode(futureData);
 
-      // Group hits within THIS step only — two notes only count as a pair
-      // to anticipate together if they're actually simultaneous (same
-      // future step), never notes from two different upcoming steps. Same
-      // {note, finger} shape as the current-step hits below, so both can
-      // go through the same resolveTargetPosition() math.
-      const stepHitsL = [];
-      const stepHitsR = [];
-      labels.forEach((lbl, sIdx) => {
-        if (!lbl) return;
-        const h = resolveHand(futureStep, futureHands, sIdx, isChord, ctx.subdivision);
-        const finger = isChord ? (sIdx % 2 === 0 ? 'index' : 'thumb') : null;
-        (h === 'L' ? stepHitsL : stepHitsR).push({ note: resolveTakSlapNote(lbl, h), finger });
-      });
+        // Group hits within THIS step only — two notes only count as a pair
+        // to anticipate together if they're actually simultaneous (same
+        // future step), never notes from two different upcoming steps. Same
+        // {note, finger} shape as the current-step hits below, so both can
+        // go through the same resolveTargetPosition() math.
+        const stepHitsL = [];
+        const stepHitsR = [];
+        labels.forEach((lbl, sIdx) => {
+          if (!lbl) return;
+          const h = resolveHand(futureStep, futureHands, sIdx, isChord, ctx.subdivision);
+          const finger = isChord ? (sIdx % 2 === 0 ? 'index' : 'thumb') : null;
+          (h === 'L' ? stepHitsL : stepHitsR).push({ note: resolveTakSlapNote(lbl, h), finger });
+        });
 
-      if (!nextL && !nextR && stepHitsL.length && stepHitsR.length) {
-        // Neither hand has found anything closer yet, and this step has
-        // both — a genuine joint event.
-        nextL = stepHitsL;
-        nextR = stepHitsR;
-        sharedNext = true;
-      } else {
-        if (!nextL && stepHitsL.length) nextL = stepHitsL;
-        if (!nextR && stepHitsR.length) nextR = stepHitsR;
+        if (!nextL && !nextR && stepHitsL.length && stepHitsR.length) {
+          // Neither hand has found anything closer yet, and this step has
+          // both — a genuine joint event.
+          nextL = stepHitsL;
+          nextR = stepHitsR;
+          sharedNext = true;
+        } else {
+          if (!nextL && stepHitsL.length) nextL = stepHitsL;
+          if (!nextR && stepHitsR.length) nextR = stepHitsR;
+        }
       }
     }
 
@@ -250,6 +277,11 @@ class VirtualHands {
     } else if (currentData) {
       const hand = resolveHand(ctx.step, currentHandsData, 0, false, ctx.subdivision);
       (hand === 'L' ? hitsL : hitsR).push({ note: resolveTakSlapNote(currentData, hand), finger: null });
+    } else if (playGhostNotes) {
+      // Ghost note: an empty step, treated just like a Tak touch so the
+      // hand keeps moving to the rim between real notes.
+      const hand = resolveHand(ctx.step, currentHandsData, 0, false, ctx.subdivision);
+      (hand === 'L' ? hitsL : hitsR).push({ note: resolveTakSlapNote('T', hand), finger: null });
     }
 
     this.update(hitsL, hitsR, nextL, nextR, sharedNext);
