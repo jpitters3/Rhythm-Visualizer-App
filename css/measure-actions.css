@@ -212,10 +212,6 @@
     display: none;
   }
 
-  .handpan-panel.controls-mode {
-    top: -180px;
-  }
-
   .handpan-panel.selection-mode #panelControlsSlot,
   .handpan-panel.controls-mode #panelControlsSlot {
     display: flex;
