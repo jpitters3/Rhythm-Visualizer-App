@@ -1,6 +1,15 @@
 // @ts-check
 require('dotenv').config();
+const fs = require('fs');
 const { defineConfig, devices } = require('@playwright/test');
+
+// Mirrors vite.config.js's own check: the dev server serves HTTPS whenever
+// local certs are present (needed for camera access on mobile), plain HTTP
+// otherwise (e.g. CI, where certs aren't generated). Deriving the protocol
+// here instead of hardcoding one keeps this in sync with whichever mode the
+// webServer command below actually starts.
+const hasCerts = fs.existsSync('.certs/localhost-key.pem') && fs.existsSync('.certs/localhost.pem');
+const baseURL = `${hasCerts ? 'https' : 'http'}://localhost:3000`;
 
 module.exports = defineConfig({
   testDir: './tests',
@@ -10,7 +19,8 @@ module.exports = defineConfig({
   workers: process.env.CI ? 1 : 4,
   reporter: 'html',
   use: {
-    baseURL: 'http://localhost:3000',
+    baseURL,
+    ignoreHTTPSErrors: true,
     trace: 'on-first-retry',
   },
 
@@ -48,7 +58,8 @@ module.exports = defineConfig({
   /* Run your local dev server before starting the tests */
   webServer: {
     command: 'npm run dev',
-    url: 'http://localhost:3000',
+    url: baseURL,
+    ignoreHTTPSErrors: true,
     reuseExistingServer: !process.env.CI,
     timeout: 120 * 1000,
   },
