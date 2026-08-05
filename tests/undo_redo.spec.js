@@ -24,6 +24,26 @@ async function openPhraseMenu(page) {
   }
 }
 
+// #importBtn now lives inside the "Admin Tools" submenu (js/admin.js's
+// adminMenuBtn/adminSubmenu toggle) rather than the Phrase submenu —
+// Import JSON is admin-only.
+async function openAdminSubmenu(page) {
+  if (await page.locator('#mobileMenuBtn').isVisible()) {
+    const menu = page.locator('#headerMenu');
+    if (!await menu.evaluate(el => el.classList.contains('open'))) {
+      await page.click('#mobileMenuBtn');
+    }
+  }
+  const accountDropdown = page.locator('#accountDropdownMenu');
+  if (!await accountDropdown.evaluate(el => el.classList.contains('show'))) {
+    await page.click('#accountBtn');
+  }
+  const adminSubmenu = page.locator('#adminSubmenu');
+  if (!await adminSubmenu.evaluate(el => el.classList.contains('open'))) {
+    await page.click('#adminMenuBtn');
+  }
+}
+
 test.describe('Undo/Redo Features', () => {
 
   test.beforeEach(async ({ page }) => {
@@ -63,7 +83,7 @@ test.describe('Undo/Redo Features', () => {
     let testUser;
 
     test.beforeEach(async ({ page }) => {
-      testUser = await createTestUser();
+      testUser = await createTestUser(true); // Import JSON is now admin-only
       await loginAsTestUser(page, testUser);
       // A successful login redirects to #dashboard (js/controls.js) — head
       // back to Studio since these tests edit the grid.
@@ -87,7 +107,7 @@ test.describe('Undo/Redo Features', () => {
 
       // 3. Verify Dirty State via Import Prompt
       // App uses custom #confirmModal (not native browser dialog)
-      await openPhraseMenu(page);
+      await openAdminSubmenu(page);
       await page.click('#importBtn');
 
       // Should show "Unsaved Changes" custom confirm modal
@@ -101,7 +121,7 @@ test.describe('Undo/Redo Features', () => {
       await page.keyboard.press('Meta+z');
 
       // Now clicking Import should show "Import Pattern" prompt directly
-      await openPhraseMenu(page);
+      await openAdminSubmenu(page);
       await page.click('#importBtn');
 
       // Should go straight to "Import Pattern" prompt (no unsaved changes warning)

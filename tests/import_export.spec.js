@@ -3,11 +3,11 @@ const { test, expect } = require('@playwright/test');
 const { gotoStudio } = require('./helpers');
 const { createTestUser, deleteTestUser, loginAsTestUser } = require('./utils/auth-helper');
 
-// #phraseMenuBtn/#phraseSubmenu (Save/Import/Export/Share) live inside
-// #navAccountWrapper, which is display:none until signed in — this has been
-// true since the app's original routing redesign, not a recent regression.
-// Reaching this menu at all requires being authenticated first.
-async function openPhraseMenu(page) {
+// #exportBtn/#importBtn now live inside the "Admin Tools" submenu
+// (js/admin.js's adminMenuBtn/adminSubmenu toggle) rather than the Phrase
+// submenu — Export/Import JSON is admin-only. Reaching them requires being
+// signed in as an admin first.
+async function openAdminSubmenu(page) {
   // Open mobile menu if needed
   if (await page.locator('#mobileMenuBtn').isVisible()) {
     const menu = page.locator('#headerMenu');
@@ -20,10 +20,10 @@ async function openPhraseMenu(page) {
   if (!await accountDropdown.evaluate(el => el.classList.contains('show'))) {
     await page.click('#accountBtn');
   }
-  // Expand phrase submenu
-  const phraseSubmenu = page.locator('#phraseSubmenu');
-  if (!await phraseSubmenu.evaluate(el => el.classList.contains('open'))) {
-    await page.click('#phraseMenuBtn');
+  // Expand admin submenu
+  const adminSubmenu = page.locator('#adminSubmenu');
+  if (!await adminSubmenu.evaluate(el => el.classList.contains('open'))) {
+    await page.click('#adminMenuBtn');
   }
 }
 
@@ -33,7 +33,7 @@ test.describe('Import / Export Features', () => {
   test.beforeEach(async ({ page }) => {
     await gotoStudio(page);
     await page.waitForSelector('.measure-row');
-    testUser = await createTestUser();
+    testUser = await createTestUser(true); // Export/Import JSON is now admin-only
     await loginAsTestUser(page, testUser);
     // A successful login redirects to #dashboard (js/controls.js) — head
     // back to Studio since this test edits the grid.
@@ -65,8 +65,8 @@ test.describe('Import / Export Features', () => {
     await cell0.click();
     await page.keyboard.press('1');
 
-    // Open phrase menu (account dropdown → phrase submenu)
-    await openPhraseMenu(page);
+    // Open admin submenu (account dropdown → Admin Tools)
+    await openAdminSubmenu(page);
 
     // 2. EXPORT
     await page.click('#exportBtn');
@@ -90,7 +90,7 @@ test.describe('Import / Export Features', () => {
     await expect(cell0.locator('.inner')).toBeEmpty();
 
     // 4. IMPORT
-    await openPhraseMenu(page);
+    await openAdminSubmenu(page);
 
     await page.click('#importBtn');
 

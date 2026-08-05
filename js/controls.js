@@ -382,7 +382,7 @@ function showPhraseContextMenu(anchorEl) {
   menu.style.visibility = '';
 
   let top = rect.bottom + 6;
-  let left = rect.left;
+  let left = rect.left + menu.offsetWidth;
   if (left + menuRect.width > window.innerWidth - 8) left = window.innerWidth - menuRect.width - 8;
   if (top + menuRect.height > window.innerHeight - 8) top = rect.top - menuRect.height - 6;
 

@@ -17,7 +17,7 @@ test.describe('Coaching Mode', () => {
       dialog.accept().catch(() => { });
     });
 
-    testUser = await createTestUser();
+    testUser = await createTestUser(true); // Coach Mode is now admin-only (js/auth.js updateAccountUI)
 
     // Grant microphone permission
     await page.context().grantPermissions(['microphone']);
