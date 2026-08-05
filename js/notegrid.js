@@ -404,15 +404,6 @@ export function renderAllMeasures(ctx = activeGrid) {
       row.appendChild(grid);
     }
     scroller.appendChild(row);
-
-    // Horizontal divider between measures — only when each measure is on
-    // its own line (default/zoomed-in). At zoom-out, multiple measures
-    // share one visual row via flex-wrap; a full-width <hr> after every
-    // one of them would force a line break between each, defeating that.
-    if (zoomLevel.measuresPerRow === 1) {
-      const hr = document.createElement('hr');
-      scroller.appendChild(hr);
-    }
   }
 
   // Notify listeners (e.g. Presentation Mode) that DOM was rebuilt
