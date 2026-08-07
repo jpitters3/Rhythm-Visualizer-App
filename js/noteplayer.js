@@ -116,6 +116,7 @@ export async function unlockAudio() {
   console.log('[Audio] unlockAudio called');
   audioUnlocked = true;
   await ensureAudio();
+  startAudioHardwareKeepAlive();
   return preloadAudioSamples();
 }
 
@@ -165,11 +166,10 @@ export async function ensureAudio() {
   return Promise.resolve();
 }
 
-// Safari's audio hardware can take 500–800ms to initialize after AudioContext.resume()
-// resolves. Playing a silent single-sample buffer forces the hardware to start up
-// immediately, so by the time the scheduler runs, audio output is already live.
-async function warmUpAudioHardware() {
-  if (audioHardwareReady || !audioCtx || audioCtx.state !== 'running') return;
+// Plays an inaudible single-sample buffer just to keep the actual output
+// hardware alive — silent, near-zero cost either way.
+function pingAudioHardware() {
+  if (!audioCtx || audioCtx.state !== 'running') return;
   try {
     const buf = audioCtx.createBuffer(1, 1, audioCtx.sampleRate);
     const src = audioCtx.createBufferSource();
@@ -177,9 +177,29 @@ async function warmUpAudioHardware() {
     src.connect(audioCtx.destination);
     src.start(0);
   } catch (_) {}
+}
+
+// Safari's audio hardware can take 500–800ms to initialize after AudioContext.resume()
+// resolves. Pinging it forces the hardware to start up immediately, so by the time
+// the scheduler runs, audio output is already live.
+async function warmUpAudioHardware() {
+  if (audioHardwareReady || !audioCtx || audioCtx.state !== 'running') return;
+  pingAudioHardware();
   // Give the hardware time to come up before the real scheduler starts.
   await new Promise(r => setTimeout(r, 100));
   audioHardwareReady = true;
+}
+
+// For Safari: Never let the hardware go cold. 
+// Ping it on a steady cadence for the whole session once audio is unlocked. 
+// Cheap (a near-zero-length silent buffer a few times a minute) 
+// and removes the need for per-call-site warm-up logic altogether.
+let keepAliveIntervalId = null;
+const KEEP_ALIVE_INTERVAL_MS = 1500;
+
+function startAudioHardwareKeepAlive() {
+  if (keepAliveIntervalId) return;
+  keepAliveIntervalId = setInterval(pingAudioHardware, KEEP_ALIVE_INTERVAL_MS);
 }
 
 // Preload note samples once audio is unlocked
