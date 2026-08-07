@@ -18,22 +18,11 @@ let viewingAsName = null;
 // ── Public API ────────────────────────────────────────────────────────────────
 
 export function initDashboard() {
-  // If auth already resolved before this ran (page refresh with active session),
-  // AUTH_LOGIN was emitted before our listener below was registered — catch up now.
-  // setTimeout(0) defers until after initRouter() and the rest of init() have run.
-  if (currentUser) {
-    setTimeout(async () => {
-      navigate('dashboard');
-      await loadDashboard();
-      if (!localStorage.getItem(TOUR_KEY)) startTour('dashboard');
-    }, 0);
-  }
-
-  // Route listener — guard: redirect to home if not logged in
   window.addEventListener('routeChanged', e => {
     if (e.detail.route === 'dashboard') {
       if (!currentUser) { navigate('home'); return; }
       loadDashboard();
+      if (!localStorage.getItem(TOUR_KEY)) startTour('dashboard');
     }
   });
 
