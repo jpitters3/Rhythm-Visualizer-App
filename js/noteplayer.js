@@ -6,7 +6,7 @@ import { currentUser, activeGrid, setActiveGrid } from './state.js';
 import { HistoryManager } from './history.js';
 import { TransportRegistry } from './transport-ui.js';
 import { isListening, getSelectedScaleName, setSelectedScaleName, getScale, setCurrentScale, playGhostNotes, ghostHandsShown } from './state.js';
-import { SCALE_KEY_LOCAL, SCALE_KEY_REMOTE, AUDIO_DELAY, VISUAL_HEADSTART, BASE_PATH } from './config.js';
+import { SCALE_KEY_LOCAL, SCALE_KEY_REMOTE, AUDIO_DELAY, VISUAL_HEADSTART, BASE_PATH, SCALES } from './config.js';
 import { renderAllMeasures } from './notegrid.js';
 import { coachingSession, isCoaching, isReviewing } from './coaching-mode.js';
 import { turnOffMic } from './transcription.js';
@@ -190,9 +190,23 @@ export async function preloadScaleSamples() {
     let note = noteToFile(n); // includes .wav extension
     try { await loadSample(n, `${BASE_PATH}assets/audio/${note}`); }
     catch (e) {
-      // console.log(`Error loading sample [${note}]: ${e}`); 
+      // console.log(`Error loading sample [${note}]: ${e}`);
     }
   }
+}
+
+// Every distinct note across every built-in scale — a small, fixed set
+// (~22 notes as of writing). Loading all of it once at startup
+async function preloadAllScaleSamples() {
+  const notes = new Set();
+  for (const s of Object.values(SCALES)) {
+    notes.add((s.ding || 'D3') + '_ding');
+    Object.values(s.map).forEach(n => notes.add(n));
+  }
+  await Promise.all([...notes].map(n => {
+    const file = noteToFile(n);
+    return loadSample(n, `${BASE_PATH}assets/audio/${file}`).catch(() => {});
+  }));
 }
 
 export async function preloadAudioSamples() {
@@ -202,6 +216,7 @@ export async function preloadAudioSamples() {
       loadSample(SOUND_TAK, `${BASE_PATH}assets/audio/dkurd_tak.wav`),
       loadSample(SOUND_SLAP, `${BASE_PATH}assets/audio/dkurd_slap.wav`),
       loadSample(SOUND_GHOST, `${BASE_PATH}assets/audio/Ghost2.wav`),
+      preloadAllScaleSamples(),
       preloadScaleSamples()
     ];
     return Promise.all(loads);
@@ -457,24 +472,48 @@ function scheduleAudio(c, step, time) {
   }
 }
 
-function scheduler(c) {
-  if (!c.playing) return;
+// Audio scheduling and visual-queue processing used to both run inside the
+// same requestAnimationFrame callback below. That coupling meant any slow
+// tick observer (e.g. grid-autoscroll.js's per-measure layout/scroll work)
+// could delay the NEXT rAF frame, which delayed the next round of audio
+// scheduling — and since scheduleAheadTime is only 100ms, a long-enough
+// frame could drain that lookahead buffer and make upcoming notes play
+// late or bunched. Splitting them so audio scheduling runs on its own
+// dedicated setInterval — decoupled from rendering entirely — means a slow
+// visual frame can now only ever make visuals lag briefly; it can no
+// longer make sound late. This is the standard "two clocks" pattern for
+// precise Web Audio scheduling (setInterval for the lookahead loop, rAF
+// only for anything visual).
+const LOOKAHEAD_INTERVAL_MS = 25;
 
-  // Schedule Audio
+function audioSchedulerTick(c) {
+  if (!c.playing) return;
   while (nextNoteTime < audioCtx.currentTime + scheduleAheadTime) {
     scheduleAudio(c, c.audioStep, nextNoteTime);
     nextNote(c);
   }
+}
 
-  // Visual Queue Processing
+function visualLoop(c) {
+  if (!c.playing) return;
+
   const currentTime = audioCtx.currentTime;
-
   while (visualQueue.length > 0 && visualQueue[0].time <= currentTime) {
     const job = visualQueue.shift();
     tick(job.ctx, job.step, job.time, job.audioStartTime);
   }
 
-  c.timerID = requestAnimationFrame(() => scheduler(c));
+  c.timerID = requestAnimationFrame(() => visualLoop(c));
+}
+
+function scheduler(c) {
+  if (!c.playing) return;
+
+  audioSchedulerTick(c);
+  if (c.audioSchedulerIntervalId) clearInterval(c.audioSchedulerIntervalId);
+  c.audioSchedulerIntervalId = setInterval(() => audioSchedulerTick(c), LOOKAHEAD_INTERVAL_MS);
+
+  visualLoop(c);
 }
 
 export function tick(ctx, overrideStep = null, audioTime = null, audioStartTime = null) {
@@ -897,6 +936,8 @@ export function stop(ctx, isSync = true) {
   c.outputLatency = undefined;
   if (c.timerID) cancelAnimationFrame(c.timerID);
   c.timerID = null;
+  if (c.audioSchedulerIntervalId) clearInterval(c.audioSchedulerIntervalId);
+  c.audioSchedulerIntervalId = null;
   visualQueue.length = 0;
 
   c.step = 0;
