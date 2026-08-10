@@ -279,6 +279,7 @@ function applyCustomHandpan(handpanData) {
   // Update Map
   const newMap = {};
   const musicalMap = {};
+  const audioOverrides = {}; // { [label]: audio_url } — user-recorded notes (guided calibration's "record my own" mode) take priority over the shared built-in pitch samples, see noteplayer.js's resolveSampleKey()
   let dingPitch = "D3"; // Default
 
   handpanData.note_map.forEach(tf => {
@@ -317,8 +318,13 @@ function applyCustomHandpan(handpanData) {
     // Musical Map (Label -> Pitch) -- INCLUDE ALL
     if (label === 'Ding' || label === 'D') {
       dingPitch = key;
+      if (tf.audio_url) {
+        audioOverrides['Ding'] = tf.audio_url;
+        audioOverrides['D'] = tf.audio_url;
+      }
     } else {
       musicalMap[label] = key;
+      if (tf.audio_url) audioOverrides[label] = tf.audio_url;
     }
   });
 
@@ -335,7 +341,8 @@ function applyCustomHandpan(handpanData) {
   // Update Global Current Scale
   setCurrentScale({
     ding: dingPitch,
-    map: musicalMap
+    map: musicalMap,
+    audioOverrides
   });
 
   setSelectedScaleName(`custom:${handpanData.id}`);

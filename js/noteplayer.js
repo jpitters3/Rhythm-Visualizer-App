@@ -5,7 +5,7 @@ import { supabase } from './supabase-client.js';
 import { currentUser, activeGrid, setActiveGrid } from './state.js';
 import { HistoryManager } from './history.js';
 import { TransportRegistry } from './transport-ui.js';
-import { isListening, getSelectedScaleName, setSelectedScaleName, getScale, setCurrentScale, playGhostNotes, ghostHandsShown } from './state.js';
+import { isListening, getSelectedScaleName, setSelectedScaleName, getScale, setCurrentScale, getCurrentScaleId, playGhostNotes, ghostHandsShown } from './state.js';
 import { SCALE_KEY_LOCAL, SCALE_KEY_REMOTE, AUDIO_DELAY, VISUAL_HEADSTART, BASE_PATH, SCALES } from './config.js';
 import { renderAllMeasures } from './notegrid.js';
 import { coachingSession, isCoaching, isReviewing } from './coaching-mode.js';
@@ -55,6 +55,20 @@ export function noteForLabel(label) {
   }
 
   return null;
+}
+
+// Custom handpans can override a label with the user's own recorded audio
+// (see js/handpanmap.js's audioOverrides, built from note_map's audio_url
+// fields) instead of the shared, pitch-named built-in samples. `url` is
+// only set when there's a real override to fetch; otherwise `key` is just
+// the usual resolved pitch name, for the existing static-asset path.
+function resolveSampleKey(label) {
+  const scale = getScale();
+  const overrideUrl = scale?.audioOverrides?.[label];
+  if (overrideUrl) {
+    return { key: `custom:${getCurrentScaleId()}:${label}`, url: overrideUrl };
+  }
+  return { key: noteForLabel(label), url: null };
 }
 
 // Build note → filename map from all .wav files in the audio folder.
@@ -202,15 +216,20 @@ function startAudioHardwareKeepAlive() {
   keepAliveIntervalId = setInterval(pingAudioHardware, KEEP_ALIVE_INTERVAL_MS);
 }
 
-// Preload note samples once audio is unlocked
+// Preload note samples once audio is unlocked. Iterates LABELS (not raw
+// pitch values) so each one can be checked against the current scale's
+// audioOverrides — a custom handpan's own recorded note, when present,
+// loads from its real URL instead of the shared built-in pitch sample.
 export async function preloadScaleSamples() {
   const s = getScale();
-  const notes = new Set([(s.ding || 'D3') + '_ding', ...Object.values(s.map)]);
-  for (const n of notes) {
-    let note = noteToFile(n); // includes .wav extension
-    try { await loadSample(n, `${BASE_PATH}assets/audio/${note}`); }
-    catch (e) {
-      // console.log(`Error loading sample [${note}]: ${e}`);
+  const labels = new Set(['Ding', ...Object.keys(s.map || {})]);
+  for (const label of labels) {
+    const { key, url } = resolveSampleKey(label);
+    if (!key) continue;
+    try {
+      await loadSample(key, url || `${BASE_PATH}assets/audio/${noteToFile(key)}`);
+    } catch (e) {
+      // console.log(`Error loading sample [${key}]: ${e}`);
     }
   }
 }
@@ -662,7 +681,8 @@ function getMetroClickKind(ctx) {
 }
 
 export function playNoteByLabel(label, step, delay = 0) {
-  let note = noteForLabel(label); // e.g. "C#", "D3_ding"
+  const resolved = resolveSampleKey(label);
+  let note = resolved.key; // e.g. "C#", "D3_ding", or "custom:<scaleId>:<label>"
 
   // Simon Fallback: If label doesn't exist in current scale, try handpan defaults
   if (!note && (label === 'Ding' || label.match(/^[1-8]$/))) {
@@ -672,6 +692,15 @@ export function playNoteByLabel(label, step, delay = 0) {
     };
     note = handpanDefaults[label];
     console.log(`[Audio] Simon Fallback applied for "${label}" -> Note: "${note}"`);
+  }
+
+  // Safety net: an override should already be preloaded by
+  // preloadScaleSamples() whenever its handpan is selected, but if it
+  // somehow isn't cached yet, kick off the load now so at least the NEXT
+  // hit on this note has it (this hit stays silent — matches
+  // playNoteSample's existing "not loaded yet" behavior).
+  if (resolved.url && !samples[note]) {
+    loadSample(note, resolved.url).catch(() => {});
   }
 
   console.log(`[Audio] playNoteByLabel: "${label}" -> Note: "${note}" (Step: ${step})`);
