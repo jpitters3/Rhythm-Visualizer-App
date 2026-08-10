@@ -150,10 +150,11 @@ body.present .measure-row {
 
 /* ==== PRESENTATION MODE MEASURE STACK ==== */
 
-/* Static labels — below current measure, above next */
+/* Static labels — now the top of the stack; current measure sits directly
+   under it, next measure below that. */
 body.present .static-labels {
   position: fixed;
-  top: calc(var(--measure-top) + 70px);
+  top: var(--measure-top);
   left: 50%;
   transform: translateX(-50%);
   width: 600px;
@@ -172,22 +173,23 @@ body.present .static-labels div {
   text-align: center;
 }
 
-/* Current measure */
+/* Current measure — directly under the labels */
 body.present .measure-row.current-measure {
-  transform: translateX(-50%) translateY(0);
+  transform: translateX(-50%) translateY(70px);
   opacity: 1;
   pointer-events: auto;
   z-index: 10;
   width: 600px;
 }
 
-/* Next measure — on-deck, no animation into current position */
+/* Next measure — on-deck, below current. Same width as current-measure so
+   it's centered on the same axis, not just narrower-and-technically-centered. */
 body.present .measure-row.next-measure {
-  transform: translateX(-50%) translateY(116px);
+  transform: translateX(-50%) translateY(156px);
   opacity: 0.4;
   pointer-events: none;
   z-index: 5;
-  width: 520px;
+  width: 600px;
 }
 
 /* n+2 — hidden */
@@ -391,8 +393,8 @@ body.present div.present-controls {
   }
 
   body.present .measure-row.next-measure {
-    width: 78vw !important;
-    max-width: 78vw !important;
+    width: 90vw !important;
+    max-width: 90vw !important;
   }
 
   /* Tighter Grid Gaps */
