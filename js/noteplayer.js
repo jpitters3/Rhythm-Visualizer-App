@@ -59,16 +59,18 @@ export function noteForLabel(label) {
 
 // Custom handpans can override a label with the user's own recorded audio
 // (see js/handpanmap.js's audioOverrides, built from note_map's audio_url
-// fields) instead of the shared, pitch-named built-in samples. `url` is
-// only set when there's a real override to fetch; otherwise `key` is just
-// the usual resolved pitch name, for the existing static-asset path.
+// fields) instead of the shared, pitch-named built-in samples.
+// storagePath is only set when there's a real override — it's a path in
+// the private handpan-audio bucket (not a fetchable URL; the bucket has no
+// public access), downloaded via an authenticated request. Otherwise key
+// is just the usual resolved pitch name, for the existing static-asset path.
 function resolveSampleKey(label) {
   const scale = getScale();
-  const overrideUrl = scale?.audioOverrides?.[label];
-  if (overrideUrl) {
-    return { key: `custom:${getCurrentScaleId()}:${label}`, url: overrideUrl };
+  const overridePath = scale?.audioOverrides?.[label];
+  if (overridePath) {
+    return { key: `custom:${getCurrentScaleId()}:${label}`, storagePath: overridePath };
   }
-  return { key: noteForLabel(label), url: null };
+  return { key: noteForLabel(label), storagePath: null };
 }
 
 // Build note → filename map from all .wav files in the audio folder.
@@ -224,10 +226,14 @@ export async function preloadScaleSamples() {
   const s = getScale();
   const labels = new Set(['Ding', ...Object.keys(s.map || {})]);
   for (const label of labels) {
-    const { key, url } = resolveSampleKey(label);
+    const { key, storagePath } = resolveSampleKey(label);
     if (!key) continue;
     try {
-      await loadSample(key, url || `${BASE_PATH}assets/audio/${noteToFile(key)}`);
+      if (storagePath) {
+        await loadCustomSample(key, storagePath);
+      } else {
+        await loadSample(key, `${BASE_PATH}assets/audio/${noteToFile(key)}`);
+      }
     } catch (e) {
       // console.log(`Error loading sample [${key}]: ${e}`);
     }
@@ -268,6 +274,22 @@ async function loadSample(key, url) {
 
   const res = await fetch(url);
   const arrayBuffer = await res.arrayBuffer();
+  samples[key] = await audioCtx.decodeAudioData(arrayBuffer);
+}
+
+// handpan-audio is a private bucket — no fetchable public URL. Storage's
+// own download() authenticates with the caller's live session and is
+// checked against RLS (owner, or the handpan was shared) on every call;
+// unlike a signed URL, nothing here ever expires, since there's no
+// time-limited token embedded anywhere — just a normal authenticated
+// request, same as any other Supabase call the app already makes.
+async function loadCustomSample(key, storagePath) {
+  ensureAudio();
+  if (!audioCtx) return;
+
+  const { data: blob, error } = await supabase.storage.from('handpan-audio').download(storagePath);
+  if (error) throw error;
+  const arrayBuffer = await blob.arrayBuffer();
   samples[key] = await audioCtx.decodeAudioData(arrayBuffer);
 }
 
@@ -699,8 +721,8 @@ export function playNoteByLabel(label, step, delay = 0) {
   // somehow isn't cached yet, kick off the load now so at least the NEXT
   // hit on this note has it (this hit stays silent — matches
   // playNoteSample's existing "not loaded yet" behavior).
-  if (resolved.url && !samples[note]) {
-    loadSample(note, resolved.url).catch(() => {});
+  if (resolved.storagePath && !samples[note]) {
+    loadCustomSample(note, resolved.storagePath).catch(() => {});
   }
 
   console.log(`[Audio] playNoteByLabel: "${label}" -> Note: "${note}" (Step: ${step})`);

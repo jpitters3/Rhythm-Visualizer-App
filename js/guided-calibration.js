@@ -520,19 +520,29 @@ function slugify(str) {
 async function uploadNoteAudio(note) {
   const pitch = `${note.note}${note.octave}`.replace('#', 's');
   const scaleSlug = slugify(handpanData.scale_name || handpanData.name) || 'handpan';
-  const seqKey = `${pitch}_${scaleSlug}`;
+  const handpanIdShort = String(handpanData.id).replace(/-/g, '').slice(0, 8);
+  const seqKey = `${pitch}_${scaleSlug}_${handpanIdShort}`;
 
   const { data: seq, error: seqError } = await supabase.rpc('next_handpan_audio_seq', { p_seq_key: seqKey });
   if (seqError) throw seqError;
 
-  const fileName = `${pitch}_${scaleSlug}_${String(seq).padStart(5, '0')}.wav`;
+  const fileName = `${pitch}_${scaleSlug}_${handpanIdShort}_${String(seq).padStart(5, '0')}.wav`;
   const { error: uploadError } = await supabase.storage
     .from('handpan-audio')
     .upload(fileName, note.audioBlob, { contentType: 'audio/wav' });
   if (uploadError) throw uploadError;
 
-  const { data: { publicUrl } } = supabase.storage.from('handpan-audio').getPublicUrl(fileName);
-  return publicUrl;
+  // handpan-audio is a private bucket — there's no public URL to fetch.
+  // Link the file to this handpan so storage RLS knows who's allowed to
+  // read it (owner always; everyone else only if is_audio_shared is true),
+  // then hand back the storage PATH — noteplayer.js downloads it via an
+  // authenticated request, not a plain fetch(url).
+  const { error: linkError } = await supabase
+    .from('handpan_audio_recordings')
+    .insert({ user_handpan_id: handpanData.id, storage_path: fileName });
+  if (linkError) throw linkError;
+
+  return fileName;
 }
 
 // ── Tap handling ───────────────────────────────────────────────────────────────
