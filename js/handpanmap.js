@@ -807,6 +807,38 @@ export function buildHandpanOverlay() {
 
   if (overlayPitches || overlayNumbers)
     overlayNumberPitchNotes(); else removeNoteLabels();
+
+  updateDotFontSizes();
+  ensureDotSizeObserver();
+}
+
+// Tonefield labels used to be a fixed 24px regardless of how big the
+// handpan itself was rendering — fine at the default size, but visibly
+// wrong once the mobile panel-resize divider (js/panel-resize.js) shrinks
+// or grows the pan, since the dots themselves already scale (their
+// width/height are set as percentages) while the text stayed put. Ratio
+// calibrated from the previous fixed-size look: 24px on a ~90.8px dot.
+const DOT_FONT_RATIO = 24 / 90.8;
+let dotSizeObserver = null;
+
+function updateDotFontSizes() {
+  handpanDots.forEach(dot => {
+    if (dot.isArc) return; // perimeter arcs carry their own SVG text sizing
+    const width = dot.getBoundingClientRect().width;
+    if (width > 0) dot.style.fontSize = `${width * DOT_FONT_RATIO}px`;
+  });
+}
+
+// Dots resize whenever #handpanWrap does (mobile divider drag, window
+// resize, orientation change) — a live pixel measurement each time is what
+// actually keeps the text proportional, rather than trying to express it
+// as a single static CSS rule. Set up once; safe to call repeatedly.
+function ensureDotSizeObserver() {
+  if (dotSizeObserver || !('ResizeObserver' in window)) return;
+  const wrap = document.getElementById('handpanWrap');
+  if (!wrap) return;
+  dotSizeObserver = new ResizeObserver(() => updateDotFontSizes());
+  dotSizeObserver.observe(wrap);
 }
 
 function buildPerimeterSvg(perimeterNotes) {
