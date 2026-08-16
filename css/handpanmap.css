@@ -1020,6 +1020,7 @@ body.dark .hp-loader {
   border-radius: 50%;
   width: 36px;
   height: 36px;
+  min-width: 36px;
   display: flex;
   align-items: center;
   justify-content: center;
