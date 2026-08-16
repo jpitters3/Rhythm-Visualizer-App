@@ -87,8 +87,15 @@ export function initPanelResize() {
     let h = 0;
     Array.from(panel.children).forEach(child => {
       if (child === wrap) return; // this is what the reserve is FOR, not part of it
-      if (getComputedStyle(child).display === 'none') return;
-      h += child.getBoundingClientRect().height;
+      const cs = getComputedStyle(child);
+      if (cs.display === 'none') return;
+      // Flex items don't collapse margins, so each child's own margin box
+      // (not just its border box) is real, rendered vertical space between
+      // panel children — omitting it here previously left the panel a few
+      // px taller than its content needed, and that slack turns into a
+      // visible gap above the transport reserve once it adds up.
+      h += child.getBoundingClientRect().height
+        + parseFloat(cs.marginTop) + parseFloat(cs.marginBottom);
     });
     return h;
   }
@@ -103,23 +110,39 @@ export function initPanelResize() {
     return parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
   }
 
+  function wrapHorizontalPadding() {
+    const cs = getComputedStyle(wrap);
+    return parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight);
+  }
+
   // Sets .handpan-wrap's own max-width directly from the panel's CURRENT
   // height, so the pan scales down as the panel shrinks (dragging down)
   // instead of just getting clipped by the panel's overflow: hidden.
   function syncWrapSize(panelHeight, chrome, padV, aspect) {
     const panelWidth = panel.getBoundingClientRect().width;
     const availableForContentHeight = Math.max(0, panelHeight - chrome - padV);
-    const widthFromHeight = availableForContentHeight / aspect;
-    wrap.style.maxWidth = `${Math.min(panelWidth, widthFromHeight)}px`;
+    // availableForContentHeight budgets the IMAGE's height, not the wrap's
+    // own (border-box) width — the image renders at wrap-width-minus-padH,
+    // so the wrap's max-width needs padH added back on top, or the wrap (and
+    // the pan) renders smaller than the available space actually allows.
+    const imageWidthFromHeight = availableForContentHeight / aspect;
+    const wrapWidthFromHeight = imageWidthFromHeight + wrapHorizontalPadding();
+    wrap.style.maxWidth = `${Math.min(panelWidth, wrapWidthFromHeight)}px`;
   }
 
   // The pan's natural, fully-expanded height: chrome + however tall the
   // wrap renders at full panel width, computed directly from the handpan
-  // image's real (decoded) aspect ratio.
+  // image's real (decoded) aspect ratio. The image itself renders at the
+  // wrap's width MINUS its horizontal padding (.handpan-img is width: 100%
+  // of the wrap's content box, not its border box) — skipping that
+  // subtraction overstates the image's height by however much horizontal
+  // padding the wrap has, which was negligible when that padding was a few
+  // px but became a visible gap above the transport bar once it grew.
   function computeNaturalMaxHeight() {
     const chrome = measureChromeHeight();
     const width = panel.getBoundingClientRect().width || main.getBoundingClientRect().width;
-    return chrome + width * imageAspect() + wrapVerticalPadding();
+    const imageWidth = Math.max(0, width - wrapHorizontalPadding());
+    return chrome + imageWidth * imageAspect() + wrapVerticalPadding();
   }
 
   // Recomputes the cached ceiling — call whenever the panel's width could

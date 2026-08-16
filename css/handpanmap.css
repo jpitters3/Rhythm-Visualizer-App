@@ -80,7 +80,7 @@
 .handpan-wrap {
   position: relative;
   width: 100%;
-  padding: 14px;
+  padding: 22px;
   animation: handpanBreathe 5s ease-in-out infinite alternate;
   will-change: transform;
   transform-origin: center center;
@@ -126,7 +126,7 @@
 .handpan-overlay {
   /* match padding so overlay sits on top of image area */
   position: absolute;
-  inset: 14px;
+  inset: 22px;
   pointer-events: none;
   opacity: 1;
   transition: opacity 0.4s ease;
@@ -470,7 +470,13 @@ div.under-handpan {
   z-index: 10;
 }
 
-div.under-handpan.pill-group button {
+/* :not(.flip-btn) — the flip button lives in this row for layout purposes
+   (see .flip-btn below) but isn't part of the ◂ ghost ▸ pill itself, so it's
+   excluded from the pill's shared button styling (which would otherwise
+   force it static-positioned and rectangular). Uses the class rather than
+   :not(#flipSideBtn) so the exclusion doesn't drag ID-level specificity into
+   this selector (that would then outrank #ghostBackBtn's own rule below). */
+div.under-handpan.pill-group button:not(.flip-btn) {
   height: 100%;
   margin: 0;
   border-radius: 0;
@@ -492,7 +498,11 @@ div.under-handpan.pill-group button:last-child {
   border-right: none;
 }
 
-div.under-handpan.pill-group button:first-child {
+/* #ghostBackBtn rather than :first-child — the flip button is the actual
+   first DOM child now (see .flip-btn below), but it's not part of the pill,
+   so the pill's rounded left edge belongs to the leftmost pill button by
+   name instead of by position. */
+#ghostBackBtn {
   border-top-left-radius: 999px;
   border-bottom-left-radius: 999px;
   padding-left: 25px;
@@ -554,7 +564,11 @@ div.lock-btn {
        here rather than being deleted outright). */
     max-width: min(100%, calc(100cqh - var(--hp-chrome, 140px)));
     margin: 0 auto;
-    padding: 0 8px;
+    /* Was "0 8px" — too tight for the bottom-note pucks (S/T) to clear the
+       rim with a comfortable tap target on phones. Matches the base
+       .handpan-wrap padding so mobile gets the same relative gap as desktop
+       instead of being overridden back down to nearly nothing. */
+    padding: 22px;
     transform: translateZ(0);
     /* GPU stability */
     backface-visibility: hidden;
@@ -932,7 +946,7 @@ body.dark .chord-chip.minor .chord-root {
 /* Loading Overlay */
 .hp-loading-overlay {
   position: absolute;
-  inset: 14px;
+  inset: 22px;
   background: rgba(255, 255, 255, 0.1);
 
 
@@ -988,10 +1002,17 @@ body.dark .hp-loader {
   }
 }
 
+/* Lives in the ghost-note row (#ghostNoteSection), mirroring #aiFabMobile's
+   position on the row's right edge — pinned to the row rather than the
+   handpan image means it stays put when the mobile divider resizes the pan,
+   instead of scaling/moving with it (and risking getting clipped by
+   .handpan-panel's overflow: hidden along the way). */
 .flip-btn {
   position: absolute;
-  top: 10px;
-  left: 10px;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  margin-left: 10px;
   z-index: 100;
   background: rgba(255, 255, 255, 0.2);
 
@@ -1021,6 +1042,14 @@ body.dark .hp-loader {
 
 .flip-btn:hover {
   background: rgba(255, 255, 255, 0.4);
+}
+
+.flip-btn:hover:not(:disabled) {
+  transform: translateY(-50%) translateY(-1px);
+}
+
+.flip-btn:active:not(:disabled) {
+  transform: translateY(-50%) scale(0.96);
 }
 
 #myScalesModal .modal {

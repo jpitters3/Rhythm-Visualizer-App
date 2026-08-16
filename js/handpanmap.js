@@ -70,6 +70,11 @@ let perimSvgEl = null; // reference to the active perimeter SVG for arc calibrat
 // calibrated one, should go through getDisplayPosition() below rather than
 // reading HANDPAN_MAP directly.
 const perimeterPositions = new Map();
+// Radius (in the 0-100 perimeter SVG viewBox) at which bottom-note arcs are
+// drawn. Pushed out past the handpan image edge so the pucks have room to
+// sit clear of the rim and stay easy to tap — see .handpan-wrap padding in
+// css/handpanmap.css, which was widened to match.
+const PERIMETER_ARC_R = 48.5;
 
 /** A note's current on-screen position — the perimeter-arc projection for a
  *  bottom note shown as a puck, or its plain HANDPAN_MAP x/y otherwise. */
@@ -266,13 +271,11 @@ function applyCustomHandpan(handpanData) {
     handpanImg.style.transform = `rotate(${rot}deg)`;
   });
 
-  // Show/Hide Flip Button
+  // Show/Hide Flip Button — position is fixed via CSS (.flip-btn, in the
+  // ghost-note row) now, so this only toggles visibility.
   const flipBtn = document.getElementById('flipSideBtn');
   if (flipBtn) {
     flipBtn.style.display = handpanData.bottom_image_url ? '' : 'none';
-    flipBtn.style.marginLeft = handpanData.bottom_image_url ? 'auto' : '0';
-    flipBtn.style.position = handpanData.bottom_image_url ? 'relative' : '';
-    flipBtn.style.height = handpanData.bottom_image_url ? '50px' : '';
     flipBtn.onclick = () => toggleHandpanSide();
   }
 
@@ -849,7 +852,7 @@ function buildPerimeterSvg(perimeterNotes) {
   svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
 
   const cx = 50, cy = 50;
-  const arcR = 47; // radius of arc path, just outside handpan edge
+  const arcR = PERIMETER_ARC_R;
   const toRad = d => d * Math.PI / 180;
 
   perimeterNotes.forEach(({ note, p }, i) => {
@@ -966,7 +969,7 @@ function updateArcPath(note) {
   const p = HANDPAN_MAP[note];
   if (!p) return;
 
-  const cx = 50, cy = 50, arcR = 47;
+  const cx = 50, cy = 50, arcR = PERIMETER_ARC_R;
   const toRad = d => d * Math.PI / 180;
   const dx = (100 - p.x) - 50;
   const dy = p.y - 50;
