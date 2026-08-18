@@ -1867,6 +1867,7 @@ export function initHandpanMap() {
       const customHp = customHandpansCache.find(hp => hp.id === id);
       if (customHp) {
         applyCustomHandpan(customHp);
+        updateGridLabels();
         if (currentUser) {
           await supabase.from('user_handpans').update({ is_active: false }).eq('user_id', currentUser.id);
           await supabase.from('user_handpans').update({ is_active: true }).eq('id', id);
@@ -1912,6 +1913,7 @@ export function initHandpanMap() {
     }
 
     if (setCurrentScale && SCALES) setCurrentScale(SCALES[val]);
+    updateGridLabels();
     await preloadScaleSamples();
   });
 
