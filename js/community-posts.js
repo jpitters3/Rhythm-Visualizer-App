@@ -4,6 +4,9 @@ import { currentUser } from './state.js';
 import { supabase } from './supabase-client.js';
 import { serializePattern } from './pattern-crud.js';
 import { alert, confirm, prompt } from './alert.js';
+import { showToast } from './toast.js';
+import { uploadFileWithProgress } from './storage-upload.js';
+import { playSuccessChime, warmAudioContext } from './ui-sound.js';
 
 /**
  * Community Posts (Discussion)
@@ -45,7 +48,11 @@ export async function initCommunityPosts() {
       if (payload.eventType === 'INSERT') {
         fetchPosts(); // Simplest strategy: Refresh. optimize later if needed.
       } else if (payload.eventType === 'UPDATE') {
-        fetchPosts();
+        // Updates here are almost always the likes_count trigger firing after a
+        // like/unlike. Patch just that post's count in place instead of
+        // refetching + re-rendering the whole feed (was causing a jitter/flicker
+        // on every like, including other users' likes).
+        patchPostLikeCount(payload.new);
       }
     })
     .subscribe();
@@ -98,6 +105,84 @@ function setupCommunityEventListeners() {
     // 7. Clear Attachment
     if (e.target.matches('[data-action="clear-attachment"]')) {
       clearDraftAttachment();
+      return;
+    }
+
+    // 8. Retry a failed background post
+    if (e.target.matches('[data-action="retry-pending"]')) {
+      const tempId = e.target.dataset.tempId;
+      const pending = pendingUploads.get(tempId);
+      if (pending) processPostUpload(tempId, pending.content, pending.attachment);
+      return;
+    }
+
+    // 9. Discard a failed background post
+    if (e.target.matches('[data-action="discard-pending"]')) {
+      const tempId = e.target.dataset.tempId;
+      pendingUploads.delete(tempId);
+      document.getElementById(tempId)?.remove();
+      maybeShowEmptyState();
+      return;
+    }
+
+    // 10. Toggle a reply-to-comment input
+    if (e.target.matches('[data-action="toggle-reply"]')) {
+      const commentId = e.target.dataset.commentId;
+      const area = document.getElementById(`reply-input-${commentId}`);
+      if (area) {
+        const showing = area.style.display !== 'none';
+        area.style.display = showing ? 'none' : 'flex';
+        if (!showing) area.querySelector('textarea')?.focus();
+      }
+      return;
+    }
+
+    // 11. Submit a reply to a comment
+    if (e.target.matches('[data-action="submit-reply"]')) {
+      const postId = e.target.dataset.postId;
+      const parentId = e.target.dataset.parentId;
+      submitComment(postId, parentId);
+      return;
+    }
+
+    // 12. Start editing a comment
+    if (e.target.matches('[data-action="toggle-edit-comment"]')) {
+      const commentId = e.target.dataset.commentId;
+      const bubble = document.getElementById(`bubble-${commentId}`);
+      const editArea = document.getElementById(`edit-input-${commentId}`);
+      if (bubble && editArea) {
+        bubble.style.display = 'none';
+        editArea.style.display = 'flex';
+        editArea.querySelector('textarea')?.focus();
+      }
+      return;
+    }
+
+    // 13. Cancel editing a comment
+    if (e.target.matches('[data-action="cancel-edit-comment"]')) {
+      const commentId = e.target.dataset.commentId;
+      const bubble = document.getElementById(`bubble-${commentId}`);
+      const editArea = document.getElementById(`edit-input-${commentId}`);
+      if (bubble && editArea) {
+        editArea.style.display = 'none';
+        bubble.style.display = 'block';
+      }
+      return;
+    }
+
+    // 14. Save a comment edit
+    if (e.target.matches('[data-action="save-edit-comment"]')) {
+      const commentId = e.target.dataset.commentId;
+      const postId = e.target.dataset.postId;
+      saveCommentEdit(postId, commentId);
+      return;
+    }
+
+    // 15. Delete a comment
+    if (e.target.matches('[data-action="delete-comment"]')) {
+      const commentId = e.target.dataset.commentId;
+      const postId = e.target.dataset.postId;
+      deleteComment(postId, commentId);
       return;
     }
   });
@@ -259,55 +344,81 @@ function clearDraftAttachment() {
   }
 }
 
-async function submitPost() {
+// Posts currently uploading in the background: tempId -> { content, attachment }
+const pendingUploads = new Map();
+
+function submitPost() {
   const input = document.getElementById('newPostContent');
   if (!input) return;
 
   const content = input.value.trim();
-  if (!content && !currentDraftAttachment) return;
+  const attachment = currentDraftAttachment;
+  if (!content && !attachment) return;
 
-  const btn = document.getElementById('publishPostBtn');
-  btn.disabled = true;
-  btn.textContent = 'Posting...';
+  // Reset the composer immediately so the user is free to keep using the
+  // app (post again, browse, navigate) while this one uploads in the
+  // background — large videos in particular can take a while.
+  input.value = '';
+  clearDraftAttachment();
+
+  // Unlock the AudioContext now, inside this click handler, so the
+  // completion chime can actually play later once the upload finishes
+  // (Safari in particular won't allow audio to start outside a gesture).
+  warmAudioContext();
+
+  const tempId = `pending-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  pendingUploads.set(tempId, { content, attachment });
+
+  if (postsFeed) {
+    postsFeed.querySelector('.empty-state')?.remove();
+    postsFeed.prepend(createPendingPostCard(tempId, content, attachment));
+  }
+
+  processPostUpload(tempId, content, attachment);
+}
+
+async function processPostUpload(tempId, content, attachment) {
+  const card = document.getElementById(tempId);
+  if (card) {
+    card.classList.remove('post-pending-error');
+    const statusRow = card.querySelector('.pending-status-row, .pending-error-row');
+    if (statusRow) statusRow.outerHTML = pendingStatusRowHtml(attachment);
+  }
 
   try {
     let mediaUrl = null;
     let mediaType = null;
     let sharedPatternId = null;
+    let mediaDegraded = false;
 
-    // Handle Uploads
-    if (currentDraftAttachment) {
-      const att = currentDraftAttachment;
-      if (att.type === 'pattern') {
-        // Create share entry
+    if (attachment) {
+      if (attachment.type === 'pattern') {
         const { data, error } = await supabase.from('shared_patterns').insert([{
           user_id: currentUser.id,
-          name: att.name,
-          pattern_json: att.data,
+          name: attachment.name,
+          pattern_json: attachment.data,
           description: content || 'Shared via Discussion'
         }]).select().single();
 
         if (error) throw error;
         sharedPatternId = data.id;
       } else {
-        // File Upload
-        const textType = att.type; // image, video, audio
-        mediaType = textType;
+        // File Upload (image / video / audio)
+        mediaType = attachment.type;
 
-        const fileExt = att.file.name.split('.').pop();
+        const fileExt = attachment.file.name.split('.').pop();
         const fileName = `${currentUser.id}/${Date.now()}.${fileExt}`;
 
-        const { data, error } = await supabase.storage
-          .from('post-media')
-          .upload(fileName, att.file);
-
-        if (error) {
-          console.warn('Upload failed (Bucket missing?), ignoring media.', error);
-          await alert('Media upload failed. Please contact admin to set up storage buckets.');
-          mediaType = null;
-        } else {
+        try {
+          await uploadFileWithProgress('post-media', fileName, attachment.file, (fraction) => {
+            updatePendingProgress(tempId, fraction);
+          });
           const { data: publicData } = supabase.storage.from('post-media').getPublicUrl(fileName);
           mediaUrl = publicData.publicUrl;
+        } catch (uploadErr) {
+          console.warn('Media upload failed.', uploadErr);
+          mediaType = null;
+          mediaDegraded = true;
         }
       }
     }
@@ -322,20 +433,112 @@ async function submitPost() {
 
     if (error) throw error;
 
-    // Reset UI
-    input.value = '';
-    clearDraftAttachment();
-    fetchPosts(); // Refresh
+    pendingUploads.delete(tempId);
+    document.getElementById(tempId)?.remove();
+    fetchPosts(); // Refresh with the real post now that it exists
+
+    if (mediaDegraded) {
+      showToast('Post published, but the media failed to upload.', { type: 'error' });
+    } else {
+      showToast('Your post is live!', { type: 'success' });
+      playSuccessChime();
+    }
 
   } catch (err) {
     console.error(err);
-    await alert('Failed to post: ' + err.message);
-  } finally {
-    if (btn) {
-      btn.textContent = 'Post';
-      btn.disabled = false;
+    pendingUploads.set(tempId, { content, attachment }); // keep for retry
+    showFailedPendingCard(tempId, err.message);
+    showToast('A post failed to upload.', { type: 'error' });
+  }
+}
+
+function describeUploadStatus(attachment) {
+  if (!attachment) return 'Posting…';
+  if (attachment.type === 'pattern') return 'Posting…';
+  return `Uploading ${attachment.type}… Please leave this tab open...`;
+}
+
+// A visible progress bar only makes sense for real file uploads (image/video/audio) —
+// pattern shares and text-only posts are near-instant single inserts.
+function hasProgressBar(attachment) {
+  return !!attachment && attachment.type !== 'pattern';
+}
+
+function pendingStatusRowHtml(attachment) {
+  const bar = hasProgressBar(attachment)
+    ? `<div class="pending-progress-track"><div class="pending-progress-fill" style="width:0%"></div></div><span class="pending-progress-pct">0%</span>`
+    : '';
+  return `<div class="pending-status-row"><span class="pending-spinner"></span> ${describeUploadStatus(attachment)}${bar}</div>`;
+}
+
+function updatePendingProgress(tempId, fraction) {
+  const card = document.getElementById(tempId);
+  if (!card) return;
+  const pct = Math.round(Math.min(1, Math.max(0, fraction)) * 100);
+  const fill = card.querySelector('.pending-progress-fill');
+  const label = card.querySelector('.pending-progress-pct');
+  const overlayPct = card.querySelector('.pending-overlay-pct');
+  if (fill) fill.style.width = `${pct}%`;
+  if (label) label.textContent = `${pct}%`;
+  if (overlayPct) overlayPct.textContent = `${pct}%`;
+}
+
+function showFailedPendingCard(tempId, message) {
+  const card = document.getElementById(tempId);
+  if (!card) return;
+  const statusRow = card.querySelector('.pending-status-row, .pending-error-row');
+  if (statusRow) {
+    statusRow.outerHTML = `
+      <div class="pending-error-row">
+        <span>Failed to post${message ? ': ' + escapeHtml(message) : ''}</span>
+        <button class="pending-retry-btn" data-action="retry-pending" data-temp-id="${tempId}">Retry</button>
+        <button class="pending-discard-btn" data-action="discard-pending" data-temp-id="${tempId}">Discard</button>
+      </div>`;
+  }
+}
+
+function maybeShowEmptyState() {
+  if (postsFeed && postsFeed.children.length === 0) {
+    postsFeed.innerHTML = '<div class="empty-state">No discussions yet. Be the first!</div>';
+  }
+}
+
+function createPendingPostCard(tempId, content, attachment) {
+  const card = document.createElement('div');
+  card.className = 'post-card post-pending';
+  card.id = tempId;
+
+  const userInitial = currentUser ? currentUser.email.charAt(0).toUpperCase() : '?';
+
+  let mediaHtml = '';
+  if (attachment && attachment.previewUrl) {
+    if (attachment.type === 'image') {
+      mediaHtml = `<div class="pending-media-wrap"><img src="${attachment.previewUrl}" class="post-media-img"><div class="pending-overlay"><span class="pending-spinner"></span> Uploading… <span class="pending-overlay-pct"></span></div></div>`;
+    } else if (attachment.type === 'video') {
+      mediaHtml = `<div class="pending-media-wrap"><video src="${attachment.previewUrl}" class="post-media-video" muted></video><div class="pending-overlay"><span class="pending-spinner"></span> Uploading… <span class="pending-overlay-pct"></span></div></div>`;
+    } else if (attachment.type === 'audio') {
+      mediaHtml = `<audio src="${attachment.previewUrl}" controls class="post-media-audio"></audio>`;
+    } else if (attachment.type === 'pattern') {
+      mediaHtml = `<div class="post-pattern-card"><div class="pp-icon">🎵</div><div class="pp-info"><div class="pp-name">${escapeHtml(attachment.name)}</div><div class="pp-sub">Attached Pattern</div></div></div>`;
     }
   }
+
+  card.innerHTML = `
+        <div class="post-header">
+            <div class="post-avatar">${userInitial}</div>
+            <div class="post-meta">
+                <span class="post-author">${currentUser?.email || 'You'}</span>
+                <span class="post-time">Just now</span>
+            </div>
+        </div>
+        <div class="post-body">
+            <p class="post-text">${escapeHtml(content)}</p>
+            ${mediaHtml}
+        </div>
+        ${pendingStatusRowHtml(attachment)}
+    `;
+
+  return card;
 }
 
 
@@ -350,7 +553,8 @@ async function fetchPosts() {
             *,
             profiles:user_id (username),
             pattern:shared_pattern_id (name, id),
-            post_likes(count)
+            post_likes(count),
+            post_comments(count)
         `)
     .order('created_at', { ascending: false })
     .limit(50);
@@ -444,6 +648,7 @@ function createPostCard(post, likedPostIds = new Set()) {
         <div class="post-footer">
             <div class="pf-stats">
                <span class="post-likes-count">${post.post_likes?.[0]?.count ?? post.likes_count ?? 0} Likes</span>
+               <span class="post-comments-count" data-action="toggle-comments" data-id="${post.id}">${post.post_comments?.[0]?.count ?? 0} Comments</span>
             </div>
             <div class="pf-actions">
                 <button class="pf-btn like-btn ${isLiked ? 'liked' : ''}" data-action="like-post" data-id="${post.id}">👍 Like</button>
@@ -501,6 +706,15 @@ async function deletePost(postId, btn) {
   }
 }
 
+function patchPostLikeCount(updatedPost) {
+  if (!updatedPost) return;
+  const card = document.querySelector(`.post-card[data-id="${updatedPost.id}"]`);
+  const countSpan = card?.querySelector('.post-likes-count');
+  if (countSpan && typeof updatedPost.likes_count === 'number') {
+    countSpan.textContent = `${updatedPost.likes_count} Likes`;
+  }
+}
+
 async function togglePostLike(postId, btn) {
   if (!currentUser) {
     await alert('Sign in to like posts');
@@ -536,6 +750,33 @@ async function togglePostLike(postId, btn) {
   }
 }
 
+/**
+ * Scrolls to a specific post (e.g. from a "someone commented on your post"
+ * notification) and opens its comments. The feed only loads recent posts,
+ * and fetchPosts() may still be in flight, so this retries briefly before
+ * giving up.
+ */
+export function focusPost(postId, attemptsLeft = 8) {
+  const card = postsFeed?.querySelector(`.post-card[data-id="${postId}"]`);
+  if (card) {
+    card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    card.classList.add('post-highlight');
+    setTimeout(() => card.classList.remove('post-highlight'), 2000);
+
+    const commentsSec = document.getElementById(`comments-${postId}`);
+    if (commentsSec && commentsSec.style.display === 'none') {
+      toggleComments(postId);
+    }
+    return;
+  }
+
+  if (attemptsLeft > 0) {
+    setTimeout(() => focusPost(postId, attemptsLeft - 1), 400);
+  } else {
+    showToast("Couldn't find that post — it may be older than what's shown.", { type: 'info' });
+  }
+}
+
 async function toggleComments(postId) {
   const sec = document.getElementById(`comments-${postId}`);
   const isHidden = sec.style.display === 'none';
@@ -560,39 +801,171 @@ async function loadComments(postId) {
     .order('created_at', { ascending: true });
 
   if (data) {
-    list.innerHTML = data.map(c => `
-            <div class="comment-row">
-                <div class="c-avatar">${(c.profiles?.username || '?').charAt(0)}</div>
-                <div class="c-bubble">
-                    <div class="c-author">${c.profiles?.username}</div>
-                    <div class="c-text">${escapeHtml(c.content)}</div>
-                </div>
-            </div>
-        `).join('');
+    const tree = buildCommentTree(data);
+    list.innerHTML = tree.length
+      ? tree.map(c => renderCommentNode(c, postId)).join('')
+      : '<div class="c-empty">No comments yet.</div>';
   }
 }
 
-async function submitComment(postId) {
+// Turns a flat, chronologically-ordered comment list into a tree of
+// { ...comment, children: [...] } nodes, nesting replies under their parent.
+function buildCommentTree(flat) {
+  const byId = new Map();
+  flat.forEach(c => byId.set(c.id, { ...c, children: [] }));
+
+  const roots = [];
+  flat.forEach(c => {
+    const node = byId.get(c.id);
+    const parent = c.parent_comment_id && byId.get(c.parent_comment_id);
+    if (parent) parent.children.push(node);
+    else roots.push(node);
+  });
+  return roots;
+}
+
+function renderCommentNode(c, postId) {
+  const childrenHtml = c.children.map(ch => renderCommentNode(ch, postId)).join('');
+
+  if (c.is_deleted) {
+    // Keep the row (and its replies) in place — just show a placeholder,
+    // with no reply/edit/delete actions available on it any more.
+    return `
+        <div class="comment-row" data-comment-id="${c.id}">
+            <div class="c-avatar">${(c.profiles?.username || '?').charAt(0)}</div>
+            <div class="c-body">
+                <div class="c-bubble c-bubble-deleted">
+                    <div class="c-text c-text-deleted">Comment deleted.</div>
+                </div>
+                ${childrenHtml ? `<div class="c-replies">${childrenHtml}</div>` : ''}
+            </div>
+        </div>
+    `;
+  }
+
+  const isOwner = currentUser && currentUser.id === c.user_id;
+  const wasEdited = c.updated_at && c.created_at && c.updated_at !== c.created_at;
+
+  const ownerActionsHtml = isOwner ? `
+                    <button class="c-reply-btn" data-action="toggle-edit-comment" data-comment-id="${c.id}">Edit</button>
+                    <button class="c-reply-btn c-delete-btn" data-action="delete-comment" data-comment-id="${c.id}" data-post-id="${postId}">Delete</button>` : '';
+
+  return `
+        <div class="comment-row" data-comment-id="${c.id}">
+            <div class="c-avatar">${(c.profiles?.username || '?').charAt(0)}</div>
+            <div class="c-body">
+                <div class="c-bubble" id="bubble-${c.id}">
+                    <div class="c-author">${escapeHtml(c.profiles?.username || 'Unknown')}</div>
+                    <div class="c-text">${escapeHtml(c.content)}${wasEdited ? ' <span class="c-edited-tag">Edited</span>' : ''}</div>
+                </div>
+                <div class="c-edit-area" id="edit-input-${c.id}" style="display:none;">
+                    <textarea class="comment-input c-edit-textarea">${escapeHtml(c.content)}</textarea>
+                    <div class="comment-actions">
+                        <button class="c-send-btn" data-action="save-edit-comment" data-comment-id="${c.id}" data-post-id="${postId}">Save</button>
+                        <button class="c-cancel-btn" data-action="cancel-edit-comment" data-comment-id="${c.id}">Cancel</button>
+                    </div>
+                </div>
+                <div class="c-actions">
+                    <button class="c-reply-btn" data-action="toggle-reply" data-comment-id="${c.id}">Reply</button>${ownerActionsHtml}
+                </div>
+                <div class="c-reply-input-area" id="reply-input-${c.id}" style="display:none;">
+                    <textarea class="comment-input c-reply-textarea" placeholder="Write a reply..."></textarea>
+                    <div class="comment-actions">
+                        <button class="c-send-btn" data-action="submit-reply" data-post-id="${postId}" data-parent-id="${c.id}">➤</button>
+                    </div>
+                </div>
+                ${childrenHtml ? `<div class="c-replies">${childrenHtml}</div>` : ''}
+            </div>
+        </div>
+    `;
+}
+
+async function submitComment(postId, parentCommentId = null) {
   if (!currentUser) {
     await alert("Please sign in.");
     return;
   }
 
-  const sec = document.getElementById(`comments-${postId}`);
-  const input = sec.querySelector('.comment-input');
+  const input = parentCommentId
+    ? document.querySelector(`#reply-input-${parentCommentId} .c-reply-textarea`)
+    : document.getElementById(`comments-${postId}`)?.querySelector('.comment-input');
+  if (!input) return;
+
   const content = input.value.trim();
   if (!content) return;
 
   const { error } = await supabase.from('post_comments').insert([{
     post_id: postId,
     user_id: currentUser.id,
+    parent_comment_id: parentCommentId,
     content: content
   }]);
 
-  if (!error) {
-    input.value = '';
-    loadComments(postId); // Refresh
+  if (error) {
+    console.error('Failed to post comment:', error);
+    await alert('Failed to post comment: ' + error.message);
+    return;
   }
+
+  input.value = '';
+  loadComments(postId); // Refresh
+  refreshCommentCount(postId);
+}
+
+async function saveCommentEdit(postId, commentId) {
+  const editArea = document.getElementById(`edit-input-${commentId}`);
+  const textarea = editArea?.querySelector('.c-edit-textarea');
+  if (!textarea) return;
+
+  const content = textarea.value.trim();
+  if (!content) return;
+
+  const { error } = await supabase
+    .from('post_comments')
+    .update({ content })
+    .eq('id', commentId)
+    .eq('user_id', currentUser.id);
+
+  if (error) {
+    console.error('Failed to edit comment:', error);
+    await alert('Failed to save your edit: ' + error.message);
+    return;
+  }
+
+  loadComments(postId);
+}
+
+async function deleteComment(postId, commentId) {
+  const ok = await confirm("Delete this comment? It will be replaced with \"Comment deleted.\" (any replies to it are kept).");
+  if (!ok) return;
+
+  // Soft delete: replies reference this comment via parent_comment_id, so a
+  // hard delete would cascade-remove them too. Flagging it instead keeps
+  // the thread intact.
+  const { error } = await supabase
+    .from('post_comments')
+    .update({ is_deleted: true })
+    .eq('id', commentId)
+    .eq('user_id', currentUser.id);
+
+  if (error) {
+    console.error('Failed to delete comment:', error);
+    await alert('Failed to delete comment: ' + error.message);
+    return;
+  }
+
+  loadComments(postId);
+}
+
+async function refreshCommentCount(postId) {
+  const { count } = await supabase
+    .from('post_comments')
+    .select('id', { count: 'exact', head: true })
+    .eq('post_id', postId);
+
+  const card = document.querySelector(`.post-card[data-id="${postId}"]`);
+  const countSpan = card?.querySelector('.post-comments-count');
+  if (countSpan && typeof count === 'number') countSpan.textContent = `${count} Comments`;
 }
 
 async function fetchAndLoadPattern(pid) {

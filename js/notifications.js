@@ -10,6 +10,7 @@ import { supabase } from './supabase-client.js';
 import { Bus, BUS_EVENT } from './bus.js';
 import { escapeHtml } from './utils.js';
 import { isInAppEnabled } from './notification-settings.js';
+import { navigate } from './router.js';
 
 // ===== STATE =====
 let bellBtn = null;
@@ -167,7 +168,7 @@ function renderPanel() {
         `;
       }
       return `
-        <div class="notif-item${unreadCls}" data-id="${n.id}" data-type="${escapeHtml(n.type)}">
+        <div class="notif-item${unreadCls}" data-id="${n.id}" data-type="${escapeHtml(n.type)}" data-post-id="${escapeHtml(String(n.data?.post_id || ''))}">
           <div class="notif-item-title">${escapeHtml(n.title)}</div>
           ${n.body ? `<div class="notif-item-body">${escapeHtml(n.body)}</div>` : ''}
           <div class="notif-item-time">${timeStr}</div>
@@ -182,6 +183,7 @@ const STUDENT_ASSIGNMENT_TYPES = new Set([
   'assignment_complete', 'assignment_reviewed',
 ]);
 const TEACHER_ASSIGNMENT_TYPES = new Set(['assignment_submitted']);
+const COMMENT_NOTIFICATION_TYPES = new Set(['post_comment', 'comment_reply']);
 
 async function resolveInvitationNotification(item, result) {
   const notifId = item.dataset.id;
@@ -246,6 +248,16 @@ async function handlePanelClick(e) {
     Bus.emit(BUS_EVENT.OPEN_STUDENT_ASSIGNMENTS);
   } else if (TEACHER_ASSIGNMENT_TYPES.has(type)) {
     Bus.emit(BUS_EVENT.OPEN_ASSIGNMENTS);
+  } else if (COMMENT_NOTIFICATION_TYPES.has(type)) {
+    const postId = item.dataset.postId;
+    navigate('community');
+    const [{ switchMainTab }, { initCommunityPosts, focusPost }] = await Promise.all([
+      import('./feed.js'),
+      import('./community-posts.js'),
+    ]);
+    switchMainTab('discussion');
+    initCommunityPosts();
+    if (postId) focusPost(postId);
   }
 }
 

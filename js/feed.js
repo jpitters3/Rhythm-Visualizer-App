@@ -67,7 +67,7 @@ export function initFeed() {
 
 let compositionsLoaded = false;
 
-function switchMainTab(tabName) {
+export function switchMainTab(tabName) {
   if (tabName === 'discussion') {
     navDiscussionBtn?.classList.add('active');
     navCompositionsBtn?.classList.remove('active');

@@ -233,6 +233,7 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
+  margin-bottom: 20px;
 }
 
 .cp-header {
@@ -317,6 +318,15 @@
 .cp-publish-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.post-highlight {
+  animation: post-highlight-flash 2s ease;
+}
+
+@keyframes post-highlight-flash {
+  0%, 100% { box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05); border-color: var(--panel-border); }
+  15% { box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.5); border-color: var(--accent); }
 }
 
 /* Post Card */
@@ -554,6 +564,96 @@
   display: block;
 }
 
+/* Pending (background-uploading) post card */
+.post-card.post-pending {
+  opacity: 0.85;
+}
+
+.pending-media-wrap {
+  position: relative;
+}
+
+.pending-media-wrap .post-media-img,
+.pending-media-wrap .post-media-video {
+  filter: brightness(0.6);
+}
+
+.pending-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: #fff;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.pending-spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: pending-spin 0.8s linear infinite;
+}
+
+@keyframes pending-spin {
+  to { transform: rotate(360deg); }
+}
+
+.pending-status-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  opacity: 0.7;
+  padding: 8px 0;
+}
+
+.pending-progress-track {
+  flex: 1;
+  min-width: 60px;
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(127, 127, 127, 0.25);
+  overflow: hidden;
+}
+
+.pending-progress-fill {
+  height: 100%;
+  background: var(--accent, #4a90d9);
+  border-radius: 3px;
+  transition: width 0.15s ease;
+}
+
+.pending-progress-pct {
+  font-variant-numeric: tabular-nums;
+  min-width: 2.5em;
+  text-align: right;
+}
+
+.pending-error-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.85rem;
+  color: #b3261e;
+  padding: 8px 0;
+}
+
+.pending-retry-btn,
+.pending-discard-btn {
+  background: none;
+  border: 1px solid currentColor;
+  border-radius: 6px;
+  padding: 3px 10px;
+  cursor: pointer;
+  font-weight: 600;
+  color: inherit;
+}
+
 /* Footer & Comments */
 .post-footer {
   border-top: 1px solid var(--panel-border);
@@ -562,10 +662,22 @@
 }
 
 .pf-stats {
+  display: flex;
+  align-items: center;
+  gap: 12px;
   font-size: 0.85rem;
   color: var(--text);
   opacity: 0.6;
   margin-bottom: 8px;
+}
+
+.post-comments-count {
+  cursor: pointer;
+}
+
+.post-comments-count:hover {
+  text-decoration: underline;
+  opacity: 1;
 }
 
 .pf-actions {
@@ -632,12 +744,16 @@
   font-weight: bold;
 }
 
+.c-body {
+  flex: 1;
+  min-width: 0;
+}
+
 .c-bubble {
   background: var(--bg);
   border: 1px solid var(--panel-border);
   padding: 8px 12px;
   border-radius: 12px;
-  flex: 1;
 }
 
 .c-author {
@@ -650,6 +766,91 @@
 .c-text {
   font-size: 0.9rem;
   color: var(--text);
+}
+
+.c-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+.c-reply-btn {
+  background: none;
+  border: none;
+  color: var(--text);
+  opacity: 0.6;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+}
+
+.c-reply-btn:hover {
+  opacity: 1;
+  text-decoration: underline;
+}
+
+.c-reply-input-area,
+.c-edit-area {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.c-reply-textarea,
+.c-edit-textarea {
+  height: 32px;
+}
+
+.c-cancel-btn {
+  background: none;
+  border: none;
+  color: var(--text);
+  opacity: 0.6;
+  cursor: pointer;
+  padding: 0 8px;
+  font-size: 0.85rem;
+}
+
+.c-cancel-btn:hover {
+  opacity: 1;
+}
+
+.c-delete-btn:hover {
+  color: #b3261e;
+  opacity: 1;
+}
+
+.c-edited-tag {
+  font-size: 0.75rem;
+  opacity: 0.5;
+  font-style: italic;
+}
+
+.c-bubble-deleted {
+  background: transparent;
+  border-style: dashed;
+}
+
+.c-text-deleted {
+  font-style: italic;
+  opacity: 0.55;
+}
+
+.c-replies {
+  margin-top: 10px;
+  padding-left: 14px;
+  border-left: 2px solid var(--panel-border);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.c-empty {
+  font-size: 0.85rem;
+  color: var(--text);
+  opacity: 0.6;
+  padding: 8px 0;
 }
 
 .comment-input-area {
