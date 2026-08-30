@@ -70,11 +70,27 @@ let perimSvgEl = null; // reference to the active perimeter SVG for arc calibrat
 // calibrated one, should go through getDisplayPosition() below rather than
 // reading HANDPAN_MAP directly.
 const perimeterPositions = new Map();
-// Radius (in the 0-100 perimeter SVG viewBox) at which bottom-note arcs are
-// drawn. Pushed out past the handpan image edge so the pucks have room to
-// sit clear of the rim and stay easy to tap — see .handpan-wrap padding in
-// css/handpanmap.css, which was widened to match.
-const PERIMETER_ARC_R = 48.5;
+// .hp-perimeter-svg spans the *entire* .handpan-wrap box (padding included —
+// see css/handpanmap.css), so its 0-100 viewBox maps to the full wrap, not
+// just the image. .handpan-wrap's padding is a fixed pixel amount (22px),
+// so "just past the image edge" is NOT a constant percentage of that 0-100
+// space — it depends on the wrap's current pixel size. A single hardcoded
+// radius can only be right at one particular wrap size, which is why
+// bottom-note pucks/labels drifted out of alignment as the panel-resize
+// divider shrinks or grows the pan. getPerimeterArcR() recomputes it live
+// instead, mirroring the DOT_FONT_RATIO/updateDotFontSizes() approach below.
+const HANDPAN_WRAP_PADDING_PX = 22; // keep in sync with .handpan-wrap padding
+const PERIMETER_ARC_MARGIN_PX = 6;  // gap pushing pucks just outside the image edge
+
+function getPerimeterArcR() {
+  const wrap = document.getElementById('handpanWrap');
+  const wrapSize = wrap?.getBoundingClientRect().width;
+  if (!wrapSize) return 48.5; // fallback before layout is measurable
+
+  const imageEdgePercent = 50 * (wrapSize - 2 * HANDPAN_WRAP_PADDING_PX) / wrapSize;
+  const marginPercent = (PERIMETER_ARC_MARGIN_PX / wrapSize) * 100;
+  return imageEdgePercent + marginPercent;
+}
 
 /** A note's current on-screen position — the perimeter-arc projection for a
  *  bottom note shown as a puck, or its plain HANDPAN_MAP x/y otherwise. */
@@ -832,16 +848,33 @@ function updateDotFontSizes() {
   });
 }
 
-// Dots resize whenever #handpanWrap does (mobile divider drag, window
-// resize, orientation change) — a live pixel measurement each time is what
-// actually keeps the text proportional, rather than trying to express it
-// as a single static CSS rule. Set up once; safe to call repeatedly.
+// Bottom-note pucks/labels rendered as perimeter arcs need their radius
+// recomputed (not just re-scaled) whenever the wrap resizes — see
+// getPerimeterArcR() above for why a fixed percentage can't work here.
+function repositionPerimeterArcs() {
+  if (!perimSvgEl) return;
+  handpanDots.forEach((entry, note) => {
+    if (entry?.isArc) updateArcPath(note);
+  });
+}
+
+// Dots resize whenever #handpanWrap (or, in dual top/bottom view,
+// #handpanWrapBottom) does (mobile divider drag, window resize, orientation
+// change) — a live pixel measurement each time is what actually keeps the
+// text and perimeter-arc pucks proportional, rather than trying to express
+// it as a single static CSS rule. Set up once; safe to call repeatedly.
 function ensureDotSizeObserver() {
   if (dotSizeObserver || !('ResizeObserver' in window)) return;
   const wrap = document.getElementById('handpanWrap');
   if (!wrap) return;
-  dotSizeObserver = new ResizeObserver(() => updateDotFontSizes());
+  dotSizeObserver = new ResizeObserver(() => {
+    updateDotFontSizes();
+    repositionPerimeterArcs();
+  });
   dotSizeObserver.observe(wrap);
+
+  const wrapBottom = document.getElementById('handpanWrapBottom');
+  if (wrapBottom) dotSizeObserver.observe(wrapBottom);
 }
 
 function buildPerimeterSvg(perimeterNotes) {
@@ -852,7 +885,7 @@ function buildPerimeterSvg(perimeterNotes) {
   svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
 
   const cx = 50, cy = 50;
-  const arcR = PERIMETER_ARC_R;
+  const arcR = getPerimeterArcR();
   const toRad = d => d * Math.PI / 180;
 
   perimeterNotes.forEach(({ note, p }, i) => {
@@ -969,7 +1002,7 @@ function updateArcPath(note) {
   const p = HANDPAN_MAP[note];
   if (!p) return;
 
-  const cx = 50, cy = 50, arcR = PERIMETER_ARC_R;
+  const cx = 50, cy = 50, arcR = getPerimeterArcR();
   const toRad = d => d * Math.PI / 180;
   const dx = (100 - p.x) - 50;
   const dy = p.y - 50;
