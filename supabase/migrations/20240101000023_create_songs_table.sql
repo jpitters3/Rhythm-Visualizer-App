@@ -1,6 +1,6 @@
 
 -- Create songs table for the Song Library
-create table songs (
+create table if not exists songs (
   id uuid default gen_random_uuid() primary key,
   user_id uuid references auth.users not null, -- The creator (Admin)
   name text not null,
