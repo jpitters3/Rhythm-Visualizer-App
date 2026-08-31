@@ -63,14 +63,23 @@
 
 /* Own row, separate from the other selection-tool buttons — shown/hidden
    in sync with #selectionTools via the .visible class (see
-   showSelectionMenu() in js/range-selection.js). */
+   showSelectionMenu() in js/range-selection.js). Stacked: the insert
+   above/below pair share a row, "Delete measure" gets its own row below
+   them (a destructive action shouldn't sit shoulder-to-shoulder with the
+   other two, both visually and to avoid mis-taps). */
 .insert-measure-row {
   display: none;
+  flex-direction: column;
   gap: 8px;
 }
 
 .insert-measure-row.visible {
   display: flex;
+}
+
+.insert-measure-pair {
+  display: flex;
+  gap: 8px;
 }
 
 .insert-measure-row button {
@@ -87,6 +96,15 @@
   white-space: nowrap;
   /* Hover/active feedback comes from the global button:hover/:active rules
      in css/controls.css — no need to redeclare it here. */
+}
+
+.insert-measure-row .sel-delete-measure-btn {
+  color: #b3261e;
+  border-color: rgba(179, 38, 30, 0.4);
+}
+
+.insert-measure-row .sel-delete-measure-btn:hover {
+  background: rgba(179, 38, 30, 0.08);
 }
 
 .separator {
@@ -196,15 +214,26 @@
     font-weight: 700;
   }
 
-  /* When controls or selection is active, hide the handpan content */
+  /* When controls or selection is active, hide the handpan content.
+     .hp-corner-btn (css/handpanmap.css) is included here too — it's a
+     sibling of .handpan-wrap/#ghostNoteSection, not a child, so without
+     this it would float over the swapped-in #panelControlsSlot toolbar
+     instead of disappearing with the rest of the pan. Also: selection-mode
+     fires from the exact same "a range is selected" condition that would
+     otherwise swap .hp-corner-add for .hp-corner-del, so the delete corner
+     button would never actually be reachable here anyway — #measureTools,
+     shown inside #panelControlsSlot below, already covers add/delete while
+     a selection toolbar is up. */
   .handpan-panel.selection-mode .handpan-tabs,
   .handpan-panel.selection-mode .handpan-wrap,
   .handpan-panel.selection-mode #handpanWrapBottom,
   .handpan-panel.selection-mode #ghostNoteSection,
+  .handpan-panel.selection-mode .hp-corner-btn,
   .handpan-panel.controls-mode .handpan-tabs,
   .handpan-panel.controls-mode .handpan-wrap,
   .handpan-panel.controls-mode #handpanWrapBottom,
-  .handpan-panel.controls-mode #ghostNoteSection {
+  .handpan-panel.controls-mode #ghostNoteSection,
+  .handpan-panel.controls-mode .hp-corner-btn {
     display: none !important;
   }
 

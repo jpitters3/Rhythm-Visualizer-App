@@ -463,16 +463,6 @@
         <div class="handpan-panel" aria-label="Handpan map">
           <!-- TABS -->
           <div class="handpan-tabs player">
-            <div class="measure-group mobile-only"
-              style="display: flex; flex-direction: column; align-items: center; gap: 2px;">
-              <span style="font-size: 11px; opacity: 0.7; margin-bottom: -2px;">Measures</span>
-              <div class="tab-btn-row" style="display: flex; gap: 8px;">
-                <button title="Add a new measure" class="addMeasureBtn tab-btn"
-                  style="font-size: 16px; padding: 6px 12px;">＋</button>
-                <button title="Delete active measure" class="delMeasureBtn tab-btn"
-                  style="font-size: 16px; padding: 6px 12px;">−</button>
-              </div>
-            </div>
             <div style="display: flex; flex-direction: column; align-items: center; gap: 2px;">
               <span style="font-size: 11px; opacity: 0.7; margin-bottom: -2px;">Scale Options</span>
               <div class="tab-btn-row" style="display: flex; gap: 12px;">
@@ -487,6 +477,24 @@
 
           <!-- Slot for mobile controls/selection panels -->
           <div id="panelControlsSlot"></div>
+
+          <!-- MOBILE CORNER CONTROLS: fixed just below the divider, pinned
+               to .handpan-panel's own stable left/right/top edges — NOT
+               .handpan-wrap's, which changes width (and is re-centered) as
+               the pan resizes, which would otherwise drag these
+               horizontally too. They stay put; only the pan grows/shrinks
+               beneath them. Measure +/- swaps in place (see
+               css/handpanmap.css) based on whether a cell is selected;
+               Options consolidates Settings/Chords/Customize/Flip. -->
+          <button title="Add a new measure" class="addMeasureBtn hp-corner-btn hp-corner-left hp-corner-add">＋</button>
+          <button title="Delete active measure" class="delMeasureBtn hp-corner-btn hp-corner-left hp-corner-del">−</button>
+          <button id="handpanOptionsBtn" class="hp-corner-btn hp-corner-right mobile-only" title="Options">⋯</button>
+          <div id="handpanOptionsMenu" class="dropdown-content hp-options-menu">
+            <button class="tab-btn" data-tab="handpanSettingsDrawer" title="Settings">🛸 Settings</button>
+            <button class="tab-btn" data-tab="chordDrawer" title="Chords">🎶 Chords</button>
+            <button class="tab-btn" data-tab="customizeDrawer" title="Customize">⚙️ Customize</button>
+            <button id="flipSideBtn" class="flip-btn hp-options-menu-item" style="display:none;" title="Flip to Bottom"><span class="hp-flip-icon">🔄</span><span class="hp-flip-label">Flip to Bottom</span></button>
+          </div>
 
           <!-- HANDPAN WRAP -->
           <div class="handpan-wrap" id="handpanWrap">
@@ -506,7 +514,6 @@
             <div class="handpan-overlay" id="handpanOverlayBottom"></div>
           </div>
           <div id="ghostNoteSection" class="under-handpan pill-group player">
-            <button id="flipSideBtn" class="flip-btn" style="display:none;" title="Flip to Bottom">🔄</button>
             <button id="ghostBackBtn" title="Move caret left" disabled>◂</button>
             <button id="ghostBtn" title="Place ghost note" disabled><img src="./assets/images/ghost.png" /></button>
             <button id="ghostFwdBtn" title="Move caret right" disabled>▸</button>
@@ -556,8 +563,11 @@
               <div class="scroll-indicator right">▸</div>
             </div>
             <div id="insertMeasureRow" class="selection-group insert-measure-row">
-              <button id="selInsertAboveBtn">+ Insert measure above</button>
-              <button id="selInsertBelowBtn">+ Insert measure below</button>
+              <div class="insert-measure-pair">
+                <button id="selInsertAboveBtn">+ Insert measure above</button>
+                <button id="selInsertBelowBtn">+ Insert measure below</button>
+              </div>
+              <button id="selDeleteMeasureBtn" class="sel-delete-measure-btn">🗑 Delete measure</button>
             </div>
           </div>
         </div>

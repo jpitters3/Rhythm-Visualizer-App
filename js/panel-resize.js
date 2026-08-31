@@ -89,6 +89,13 @@ export function initPanelResize() {
       if (child === wrap) return; // this is what the reserve is FOR, not part of it
       const cs = getComputedStyle(child);
       if (cs.display === 'none') return;
+      // position:absolute children (the mobile corner +/- and Options
+      // buttons, css/handpanmap.css .hp-corner-btn) are overlaid ON TOP of
+      // .handpan-wrap, not stacked in flow above/below it — counting their
+      // height here double-counted flow space they don't actually occupy,
+      // inflating the computed ceiling and leaving that exact amount as a
+      // gap below #ghostNoteSection once the panel was sized to it.
+      if (cs.position === 'absolute') return;
       // Flex items don't collapse margins, so each child's own margin box
       // (not just its border box) is real, rendered vertical space between
       // panel children — omitting it here previously left the panel a few

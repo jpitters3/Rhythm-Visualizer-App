@@ -163,6 +163,14 @@
     container-type: size;
     backface-visibility: hidden;
     padding-bottom: 60px;
+    /* NOTE: flex-start (the default, left implicit here) is required so
+       .handpan-wrap sits flush against .hp-corner-btn, which is fixed at
+       the panel's top edge (see css/handpanmap.css .hp-corner-btn) and
+       can't move to track the wrap. If js/panel-resize.js ever lets the
+       panel grow taller than the width-constrained pan actually needs,
+       that slack reappears below #ghostNoteSection instead of above the
+       pan — a real trade-off, not an oversight; flex-end was tried and
+       rejected because it separates the wrap from the corner buttons. */
   }
 
   .handpan-wrap {
@@ -498,14 +506,19 @@ div.under-handpan.pill-group button:last-child {
   border-right: none;
 }
 
-/* #ghostBackBtn rather than :first-child — the flip button is the actual
-   first DOM child now (see .flip-btn below), but it's not part of the pill,
-   so the pill's rounded left edge belongs to the leftmost pill button by
-   name instead of by position. */
 #ghostBackBtn {
   border-top-left-radius: 999px;
   border-bottom-left-radius: 999px;
   padding-left: 25px;
+}
+
+@media (min-width: 901px) {
+  /* Defensive: #handpanOptionsBtn (the only way to toggle .show) is
+     .mobile-only and can't be clicked on desktop, but guard against a
+     lingering .show class from a resize-without-reload. */
+  #handpanOptionsMenu {
+    display: none !important;
+  }
 }
 
 div.under-handpan.pill-group button:last-child {
@@ -669,6 +682,144 @@ body.dark .icon-btn.active {
 
 .tab-btn-row {
   margin-top: 5px;
+}
+
+@media (max-width: 900px) {
+  /* Scale Options now lives in #handpanOptionsMenu (see .hp-options-menu
+     below) and the measures live in the corner buttons (see
+     .hp-corner-btn) — the tab row has nothing left to show on mobile. */
+  .handpan-tabs {
+    display: none !important;
+  }
+}
+
+/* ==== MOBILE CORNER CONTROLS ==== */
+/* Fixed just below the divider, pinned to .handpan-panel's own stable
+   top/left/right edges — NOT .handpan-wrap's, which changes width (and is
+   re-centered via margin:auto) as the pan resizes, which dragged these
+   horizontally too when they lived there. Position stays put; only the pan
+   grows/shrinks beneath them, using the space that would otherwise sit
+   empty to its sides at this row's height. */
+.hp-corner-btn {
+  display: none; /* mobile-only; shown below */
+  position: absolute;
+  top: 8px;
+  z-index: 50;
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 18px;
+  color: var(--text);
+  transition: background 0.2s;
+}
+
+.hp-corner-btn::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: rgba(255, 255, 255, 0.5);
+  z-index: -1;
+}
+
+.hp-corner-btn:hover {
+  background: rgba(255, 255, 255, 0.4);
+}
+
+.hp-corner-btn:active {
+  transform: scale(0.96);
+}
+
+.hp-corner-left {
+  left: 8px;
+}
+
+.hp-corner-right {
+  right: 8px;
+}
+
+@media (max-width: 900px) {
+  /* Default: show "+"; the moment the user clicks/taps a cell (body.has-
+     caret, set from BUS_EVENT.CELL_CLICKED in js/measure-actions.js — fires
+     only from the real cell click handler in js/notegrid.js, NOT the many
+     programmatic setCaret() calls elsewhere, and NOT the same thing as a
+     long-press range selection, which instead opens the full selection
+     toolbar) swap to "-" in the same spot. Unselecting (click outside the
+     grid, Escape) swaps back to "+". */
+  .hp-corner-add {
+    display: flex;
+  }
+
+  .hp-corner-del {
+    display: none;
+  }
+
+  body.has-caret .hp-corner-add {
+    display: none;
+  }
+
+  body.has-caret .hp-corner-del {
+    display: flex;
+  }
+}
+
+/* ==== MOBILE OPTIONS MENU (Settings/Chords/Customize/Flip) ==== */
+/* Base .dropdown-content/.show styling comes from css/layout.css; this
+   overrides the anchor direction and restyles its buttons as left-aligned
+   icon+label rows instead of the tab row's square icon-only look. */
+.hp-options-menu {
+  /* Anchored with a fixed offset, not top:100%/bottom:100% — .dropdown-
+     content's containing block is .handpan-panel (the whole sticky pan +
+     grid + transport column, since that's the nearest positioned
+     ancestor), not #handpanOptionsBtn itself, so a percentage anchor would
+     place this far below the button rather than right under it. 8px top +
+     36px button height + 8px gap = 52px. */
+  top: 52px;
+  right: 8px;
+  left: auto;
+  margin-top: 0;
+  margin-bottom: 0;
+  display: none;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 180px !important;
+}
+
+.hp-options-menu.show {
+  display: flex;
+}
+
+.hp-options-menu .tab-btn,
+.hp-options-menu .flip-btn {
+  width: 100%;
+  height: auto;
+  min-width: 0;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  position: static;
+  transform: none;
+  justify-content: flex-start;
+  gap: 8px;
+  padding: 10px 12px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.hp-options-menu .tab-btn:hover,
+.hp-options-menu .flip-btn:hover {
+  background: rgba(0, 0, 0, 0.06);
+  transform: none;
+}
+
+.hp-options-menu .flip-btn::before {
+  content: none;
 }
 
 .tab-btn {

@@ -3,6 +3,7 @@ import { activeGrid } from './grid-context.js';
 import { renderAllMeasures } from './notegrid.js';
 import { setCaret, setRange, clearRange, getRange } from './range-selection.js';
 import { HistoryManager } from './history.js';
+import { Bus, BUS_EVENT } from './bus.js';
 
 export function getStepCountPerMeasure(ctx) {
   const c = ctx || activeGrid;
@@ -185,6 +186,24 @@ export async function deleteMeasuresRange(startM, endM, ctx) {
 
 // ===== UI EVENT LISTENERS ===== //
 
+// Shared by the +/- corner button (single active measure, no range needed)
+// and the long-press selection menu's "Delete measure" entry (usually IS a
+// range) — deletes whichever measure(s) the range spans, or just the
+// caret's own measure with no range. Both deleteMeasure/deleteMeasuresRange
+// already confirm with the user and push to HistoryManager, so undo works
+// no matter which path this takes.
+async function deleteActiveMeasureOrRange(ctx) {
+  const range = getRange(ctx);
+  if (range && range.length > 1) {
+    const s = ctx.stepsPerMeasure;
+    const startM = Math.floor(range.start / s);
+    const endM = Math.floor(range.end / s);
+    await deleteMeasuresRange(startM, endM, ctx);
+  } else {
+    await deleteMeasure(getActiveMeasureIndex(ctx), ctx);
+  }
+}
+
 export function initMeasureActions() {
   document.querySelectorAll('.addMeasureBtn').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -197,18 +216,7 @@ export function initMeasureActions() {
   });
 
   document.querySelectorAll('.delMeasureBtn').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      const ctx = activeGrid;
-      const range = getRange(ctx);
-      if (range && range.length > 1) {
-        const s = ctx.stepsPerMeasure;
-        const startM = Math.floor(range.start / s);
-        const endM = Math.floor(range.end / s);
-        await deleteMeasuresRange(startM, endM, ctx);
-      } else {
-        await deleteMeasure(getActiveMeasureIndex(ctx), ctx);
-      }
-    });
+    btn.addEventListener('click', () => deleteActiveMeasureOrRange(activeGrid));
   });
 
   document.getElementById('selDuplicateBtn')?.addEventListener('click', async () => {
@@ -223,5 +231,32 @@ export function initMeasureActions() {
   document.getElementById('selInsertBelowBtn')?.addEventListener('click', () => {
     const ctx = activeGrid;
     insertEmptyMeasureAt(getActiveMeasureIndex(ctx) + 1, ctx);
+  });
+
+  document.getElementById('selDeleteMeasureBtn')?.addEventListener('click', () => {
+    deleteActiveMeasureOrRange(activeGrid);
+  });
+
+  // Mobile corner +/- (css/handpanmap.css .hp-corner-add/.hp-corner-del):
+  // default to "+"; the moment the user actually clicks/taps a cell, swap
+  // to "-". CELL_CLICKED (js/notegrid.js) fires only from that real click
+  // handler — deliberately NOT the more general CARET_CHANGED, which also
+  // fires from plain programmatic setCaret() calls (loading a pattern,
+  // paste, ghost-note nav, compose-mode auto-advance, the initial grid's
+  // own construction defaulting caretIndex to 0) that aren't the user
+  // selecting anything and were previously making "-" show from load.
+  Bus.on(BUS_EVENT.CELL_CLICKED, () => {
+    document.body.classList.add('has-caret');
+  });
+
+  // Unselecting (clicking outside the grid, Escape — both call
+  // clearSelection(), which sets caretIndex to null and fires
+  // CARET_CHANGED) swaps back to "+". Using CARET_CHANGED here, unlike
+  // above, is fine: a null caretIndex unambiguously means "nothing is
+  // selected" regardless of what caused it.
+  Bus.on(BUS_EVENT.CARET_CHANGED, () => {
+    if (activeGrid.caretIndex === null) {
+      document.body.classList.remove('has-caret');
+    }
   });
 }

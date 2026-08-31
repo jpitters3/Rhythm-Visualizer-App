@@ -24,6 +24,7 @@ export const BUS_EVENT = {
   SHOW_CONGRATS_MODAL: 'monetization:show-congrats-modal',
   OPEN_AUTH_MODAL: 'auth:open-modal',
   CARET_CHANGED: 'caret-changed',
+  CELL_CLICKED: 'grid:cell-clicked',
   OPEN_STUDENT_ASSIGNMENTS: 'assignments:open-student',
   OPEN_ASSIGNMENTS: 'assignments:open',
   PRACTICE_ITEMS_CHANGED: 'practice:items-changed',

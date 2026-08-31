@@ -402,6 +402,21 @@ function hasBottomNotes() {
     mountedHandpanData.note_map.some(tf => (tf.side || 'top') === 'bottom');
 }
 
+// #flipSideBtn now lives as a row inside #handpanOptionsMenu (mobile) rather
+// than being a bare icon button, so it needs an icon + text label kept in
+// sync together instead of one textContent write — see the .hp-flip-icon/
+// .hp-flip-label spans in index.html.
+function updateFlipButtonLabel(icon, label, isFlipped) {
+  const flipBtn = document.getElementById('flipSideBtn');
+  if (!flipBtn) return;
+  flipBtn.title = label;
+  flipBtn.classList.toggle('flipped', !!isFlipped);
+  const iconEl = flipBtn.querySelector('.hp-flip-icon');
+  const labelEl = flipBtn.querySelector('.hp-flip-label');
+  if (iconEl) iconEl.textContent = icon;
+  if (labelEl) labelEl.textContent = label;
+}
+
 export function toggleHandpanSide() {
   if (!mountedHandpanData || !mountedHandpanData.bottom_image_url) return;
 
@@ -417,21 +432,12 @@ export function toggleHandpanSide() {
   localStorage.setItem('gp_handpanSide', currentHandpanSide);
 
   // Update toggle button
-  const flipBtn = document.getElementById('flipSideBtn');
-  if (flipBtn) {
-    flipBtn.classList.remove('flipped');
-    if (currentHandpanSide === 'bottom') flipBtn.classList.add('flipped');
-
-    if (currentHandpanSide === 'perimeter') {
-      flipBtn.textContent = '◎';
-      flipBtn.title = "Flip to Top";
-    } else if (currentHandpanSide === 'bottom') {
-      flipBtn.textContent = '🔄';
-      flipBtn.title = "Flip to Merged View";
-    } else {
-      flipBtn.textContent = '🔄';
-      flipBtn.title = "Flip to Bottom";
-    }
+  if (currentHandpanSide === 'perimeter') {
+    updateFlipButtonLabel('◎', 'Flip to Top', false);
+  } else if (currentHandpanSide === 'bottom') {
+    updateFlipButtonLabel('🔄', 'Flip to Merged View', true);
+  } else {
+    updateFlipButtonLabel('🔄', 'Flip to Bottom', false);
   }
 
   // Visuals — always single image, bottom wrap never shown
@@ -2061,6 +2067,28 @@ export function initHandpanMap() {
       }
     });
   });
+
+  // Mobile "Options" menu (Settings/Chords/Customize/Flip consolidated where
+  // the Flip button used to stand alone) — same toggle/outside-click-close
+  // pattern as the account dropdown in js/auth.js.
+  const handpanOptionsBtn = document.getElementById('handpanOptionsBtn');
+  const handpanOptionsMenu = document.getElementById('handpanOptionsMenu');
+  if (handpanOptionsBtn && handpanOptionsMenu) {
+    handpanOptionsBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      handpanOptionsMenu.classList.toggle('show');
+    });
+    handpanOptionsMenu.addEventListener('click', (e) => {
+      if (e.target.tagName === 'BUTTON' || e.target.closest('button')) {
+        handpanOptionsMenu.classList.remove('show');
+      }
+    });
+    window.addEventListener('click', (e) => {
+      if (!handpanOptionsBtn.contains(e.target) && !handpanOptionsMenu.contains(e.target)) {
+        handpanOptionsMenu.classList.remove('show');
+      }
+    });
+  }
 
   // Final initial calls
   registerHighlighter(highlightHandpan);
