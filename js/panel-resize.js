@@ -12,6 +12,15 @@
 // The drag-up ceiling — and the default starting position — is the pan's
 // natural full size; dragging down is the only way to shrink it and reveal
 // more of the grid.
+//
+// SIZING OWNERSHIP CONTRACT:
+//   Mobile (max-width: 900px): this file is the SOLE authority on
+//     .handpan-panel's height and .handpan-wrap's width (both set as inline
+//     styles). The mobile CSS deliberately has no container-type/cqh rule
+//     for these — don't add one back.
+//   Desktop (min-width: 901px): CSS-only (container-type: size + cqh in
+//     css/handpanmap.css). This file does nothing; the mq 'change' handler
+//     below clears its inline styles so that CSS takes back over.
 
 import { Bus, BUS_EVENT } from './bus.js';
 

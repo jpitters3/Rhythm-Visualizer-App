@@ -154,13 +154,15 @@
     max-width: 100%;
     transform: translateZ(0);
     /* GPU stability */
-    /* Same shrink-to-fit trick the desktop rule above uses: contain the
-       panel's own box (container-type: size) and cap the wrap off a %
-       of THIS panel's height (cqh), so dragging #panelResizeHandle to a
-       shorter height scales the pan down instead of clipping it. */
+    /* SIZING OWNER ON MOBILE: js/panel-resize.js — it is the sole authority
+       on this panel's height and on .handpan-wrap's width here (inline
+       styles set from the drag divider). Unlike the desktop rule above,
+       mobile does NOT use container-type/cqh: a user-draggable height plus
+       a changing custom property doesn't re-resolve reliably in cqh (see
+       the header comment in panel-resize.js). overflow: hidden stays only
+       as a clip safety net. */
     min-height: 160px;
     overflow: hidden;
-    container-type: size;
     backface-visibility: hidden;
     padding-bottom: 60px;
     /* NOTE: flex-start (the default, left implicit here) is required so
@@ -174,10 +176,8 @@
   }
 
   .handpan-wrap {
-    /* --hp-chrome is measured live by panel-resize.js (actual height of the
-       tabs row + ghost-note row, not a guess) — a mismatched guess here is
-       exactly what leaves a gap below the ghost row or clips it. */
-    max-width: min(100%, calc(100cqh - var(--hp-chrome, 140px)));
+    /* Width is set inline by js/panel-resize.js (syncWrapSize) — no cqh rule
+       here on purpose; see the .handpan-panel note above. */
     margin: 0 auto;
   }
 
@@ -568,14 +568,10 @@ div.lock-btn {
   }
 
   .handpan-wrap {
-    /* Used to have a flat 260px ceiling here regardless of available
-       height — that predates #panelResizeHandle and directly fights its
-       "full size by default, drag down to shrink" behavior. The user now
-       controls the size directly, so just match the max-width:900px
-       block's version (this rule wins below 768px purely because it's
-       later in source at equal specificity, so it still needs repeating
-       here rather than being deleted outright). */
-    max-width: min(100%, calc(100cqh - var(--hp-chrome, 140px)));
+    /* No max-width here: js/panel-resize.js owns the wrap's width on mobile
+       (inline style). Used to carry a flat 260px ceiling, then a cqh rule —
+       both predate/fight #panelResizeHandle's "full size by default, drag
+       down to shrink" behavior. */
     margin: 0 auto;
     /* Was "0 8px" — too tight for the bottom-note pucks (S/T) to clear the
        rim with a comfortable tap target on phones. Matches the base
