@@ -1015,7 +1015,7 @@ window.addEventListener('click', (e) => {
     !e.target.closest('.hp-dot') &&
     !e.target.closest('.hp-overlay') &&
     !e.target.closest('.handpan-tabs') &&
-    !e.target.closest('#ghostBtn') &&
+    !e.target.closest('#ghostNoteSection') &&
     !e.target.closest('.modal-overlay')
   ) {
     clearSelection(activeGrid);
