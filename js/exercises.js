@@ -4,6 +4,7 @@ import { currentProfile } from './profile.js';
 import { extractYouTubeId, escapeHtml } from './utils.js';
 import { togglePracticeItem, isItemInPractice, fetchPracticeItems } from './practice.js';
 import { Bus, BUS_EVENT } from './bus.js';
+import { show, hide, setVisible, isHidden } from './dom.js';
 
 let exercises = [];
 let categoryOrder = [];      // [{name, sort_order}] from exercise_categories
@@ -147,7 +148,7 @@ async function loadPracticeView() {
   const addBtn = document.getElementById('addExerciseBtn');
   if (!list) return;
 
-  if (addBtn) addBtn.style.display = isTeacher() ? '' : 'none';
+  setVisible(addBtn, isTeacher());
 
   list.innerHTML = '<p class="exercises-loading">Loading…</p>';
   await Promise.all([fetchExercises(), fetchProgress(), fetchCategoryOrder(), fetchPracticeItems()]);
@@ -397,20 +398,20 @@ function openModal(ex) {
   modalTitle.textContent = ex.name;
 
   modalDesc.textContent = ex.description || '';
-  modalDesc.style.display = ex.description ? '' : 'none';
+  setVisible(modalDesc, !!ex.description);
 
   if (ex.video_url) {
     const ytId = extractYouTubeId(ex.video_url);
-    modalVideo.style.display = '';
+    show(modalVideo);
     modalVideo.innerHTML = ytId
       ? `<iframe src="https://www.youtube-nocookie.com/embed/${ytId}?rel=0" frameborder="0" allowfullscreen></iframe>`
       : `<video src="${escapeHtml(ex.video_url)}" controls playsinline></video>`;
   } else {
-    modalVideo.style.display = 'none';
+    hide(modalVideo);
     modalVideo.innerHTML = '';
   }
 
-  modalStudioBtn.style.display = ex.studio_pattern_json ? '' : 'none';
+  setVisible(modalStudioBtn, !!ex.studio_pattern_json);
 
   // Flash cards launch button
   const isFlashCards = ex.name === 'Technique Flash Cards';
@@ -429,9 +430,9 @@ function openModal(ex) {
       });
       document.querySelector('.exercise-modal-footer')?.prepend(fcBtn);
     }
-    fcBtn.style.display = '';
+    show(fcBtn);
   } else if (fcBtn) {
-    fcBtn.style.display = 'none';
+    hide(fcBtn);
   }
 
   syncModalStatusButtons(progressMap[ex.id] || null);
@@ -607,7 +608,7 @@ async function openEditor(ex) {
   editorDesc.value      = ex?.description ?? '';
   editorVideo.value     = ex?.video_url ?? '';
 
-  editorDeleteBtn.style.display = ex ? '' : 'none';
+  setVisible(editorDeleteBtn, !!ex);
   populateCategoryList();
   await initPhraseSearch(ex?.studio_pattern_json);
   syncEditorPatternUI();
@@ -645,7 +646,7 @@ async function initPhraseSearch(currentPatternJson) {
 
   selectedPhraseName = null;
   editorPhraseInput.value = '';
-  editorPhraseClearX.style.display = 'none';
+  hide(editorPhraseClearX);
   hidePhraseDropdown();
 
   // Pre-select if pattern matches a library phrase
@@ -654,14 +655,14 @@ async function initPhraseSearch(currentPatternJson) {
     if (match) {
       selectedPhraseName = match.name;
       editorPhraseInput.value = match.name;
-      editorPhraseClearX.style.display = '';
+      show(editorPhraseClearX);
     }
   }
 }
 
 function onPhraseInputChange() {
   selectedPhraseName = null;
-  editorPhraseClearX.style.display = editorPhraseInput.value ? '' : 'none';
+  setVisible(editorPhraseClearX, !!editorPhraseInput.value);
   renderPhraseDropdown(editorPhraseInput.value);
 }
 
@@ -687,11 +688,11 @@ function renderPhraseDropdown(query) {
     });
   }
 
-  editorPhraseDropdown.style.display = '';
+  show(editorPhraseDropdown);
 }
 
 function hidePhraseDropdown() {
-  editorPhraseDropdown.style.display = 'none';
+  hide(editorPhraseDropdown);
 }
 
 function selectPhrase(name) {
@@ -700,7 +701,7 @@ function selectPhrase(name) {
 
   selectedPhraseName = name;
   editorPhraseInput.value = name;
-  editorPhraseClearX.style.display = '';
+  show(editorPhraseClearX);
   hidePhraseDropdown();
 
   editorPatternJson = phrase.data;
@@ -710,12 +711,12 @@ function selectPhrase(name) {
 function clearPhraseSearch() {
   selectedPhraseName = null;
   editorPhraseInput.value = '';
-  editorPhraseClearX.style.display = 'none';
+  hide(editorPhraseClearX);
   hidePhraseDropdown();
 }
 
 function onPhraseKeydown(e) {
-  if (editorPhraseDropdown.style.display === 'none') return;
+  if (isHidden(editorPhraseDropdown)) return;
   const options = [...editorPhraseDropdown.querySelectorAll('.ex-ed-phrase-option')];
   const focused = editorPhraseDropdown.querySelector('.focused');
   let idx = options.indexOf(focused);
@@ -740,11 +741,11 @@ function syncEditorPatternUI() {
   if (editorPatternJson) {
     editorPatternStatus.textContent = selectedPhraseName ?? 'Custom pattern';
     editorPatternStatus.style.opacity = '1';
-    editorClearPatternBtn.style.display = '';
+    show(editorClearPatternBtn);
   } else {
     editorPatternStatus.textContent = 'None';
     editorPatternStatus.style.opacity = '';
-    editorClearPatternBtn.style.display = 'none';
+    hide(editorClearPatternBtn);
   }
 }
 

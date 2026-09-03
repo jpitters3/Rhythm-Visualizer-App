@@ -187,7 +187,7 @@
               </div>
             </div>
             <div class="dropdown-divider"></div>
-            <button id="myAssignmentsBtn" style="display:none;">📋 My Assignments</button>
+            <button id="myAssignmentsBtn" hidden>📋 My Assignments</button>
             <button id="togglePracticeBtn">📋 Practice Plan</button>
             <button id="coachModeBtn" style="display:none;">🎯 Coach</button>
             <button id="gamesModeBtn" style="display:none;">⚄ Games</button>
@@ -993,7 +993,7 @@
       <div class="exercises-container">
         <div class="exercises-title-row">
           <h1 class="exercises-title">Practice Exercises</h1>
-          <button id="addExerciseBtn" class="exercises-add-btn" style="display:none;">+ Add Exercise</button>
+          <button id="addExerciseBtn" class="exercises-add-btn" hidden>+ Add Exercise</button>
         </div>
         <p class="exercises-subtitle">Select an exercise and track your progress.</p>
         <div id="exercisesList"></div>
@@ -2956,7 +2956,7 @@
           <button id="asgnNewFolderBtn" class="asgn-new-folder-btn">+ New Folder</button>
           <button id="asgnNewBtn" class="primary-btn">+ New Assignment</button>
         </div>
-        <div id="asgnBulkBar" class="asgn-bulk-bar" style="display:none;">
+        <div id="asgnBulkBar" class="asgn-bulk-bar" hidden>
           <span id="asgnBulkCount" class="asgn-bulk-count"></span>
           <select id="asgnBulkFolderSelect" class="asgn-select asgn-bulk-folder-select">
             <option value="">Move to folder…</option>
@@ -2968,7 +2968,7 @@
         <div id="asgnList" class="asgn-list"></div>
 
         <!-- Inline editor -->
-        <div id="asgnEditor" class="asgn-editor" style="display:none;">
+        <div id="asgnEditor" class="asgn-editor" hidden>
           <div class="asgn-editor-header">
             <h3 id="asgnEditorTitle">New Assignment</h3>
             <button id="asgnEditorCloseBtn" class="close-btn" aria-label="Close editor">&times;</button>
@@ -3033,13 +3033,13 @@
           </div>
 
           <div class="asgn-editor-footer">
-            <button id="asgnDeleteBtn" class="asgn-danger-btn" style="display:none;">Delete Assignment</button>
+            <button id="asgnDeleteBtn" class="asgn-danger-btn" hidden>Delete Assignment</button>
             <span id="asgnSaveStatus" class="asgn-save-status">Saved!</span>
             <button id="asgnSaveBtn" class="primary-btn">Save Assignment</button>
           </div>
 
           <!-- Assign to Students (shown after save) -->
-          <div id="asgnStudentSection" class="asgn-student-section" style="display:none;">
+          <div id="asgnStudentSection" class="asgn-student-section" hidden>
             <div class="asgn-section-heading">Assign to Students</div>
             <div id="asgnStudentList" class="asgn-student-list"></div>
             <div class="asgn-student-footer">
@@ -3059,7 +3059,7 @@
         <div id="asgnSubmissionList" class="asgn-submission-list"></div>
 
         <!-- Review panel -->
-        <div id="asgnReviewPanel" class="asgn-review-panel" style="display:none;">
+        <div id="asgnReviewPanel" class="asgn-review-panel" hidden>
           <div class="asgn-editor-header">
             <h3 id="asgnReviewTitle">Review Submission</h3>
             <button id="asgnReviewCloseBtn" class="close-btn" aria-label="Close review">&times;</button>
@@ -3095,7 +3095,7 @@
       </div>
 
       <!-- Detail view (hidden until an assignment is opened) -->
-      <div id="studentInboxDetailView" class="student-inbox-detail-view" style="display:none;">
+      <div id="studentInboxDetailView" class="student-inbox-detail-view" hidden>
         <div class="student-inbox-detail-header">
           <button id="studentInboxBackBtn" class="student-inbox-back-btn">← Back</button>
           <h3 id="studentInboxDetailTitle"></h3>
@@ -3104,14 +3104,14 @@
         <div class="student-inbox-scroll-body">
           <p id="studentInboxDetailDesc" class="student-inbox-detail-desc"></p>
 
-          <div id="studentInboxDetailVideo" class="student-inbox-video-container" style="display:none;"></div>
+          <div id="studentInboxDetailVideo" class="student-inbox-video-container" hidden></div>
 
-          <div id="studentInboxPhraseRef" style="display:none;"></div>
+          <div id="studentInboxPhraseRef" hidden></div>
 
           <div id="studentInboxItemsList" class="student-inbox-items-list"></div>
 
           <!-- Teacher feedback (shown when reviewed) -->
-          <div id="studentInboxFeedbackSection" class="student-inbox-feedback-section" style="display:none;">
+          <div id="studentInboxFeedbackSection" class="student-inbox-feedback-section" hidden>
             <div class="student-inbox-feedback-label">Teacher Feedback</div>
             <div id="studentInboxFeedbackText" class="student-inbox-feedback-text"></div>
           </div>
@@ -3136,7 +3136,7 @@
       </div>
 
       <div class="exercise-modal-body">
-        <div id="exerciseModalVideo" class="exercise-modal-video" style="display:none;"></div>
+        <div id="exerciseModalVideo" class="exercise-modal-video" hidden></div>
         <p id="exerciseModalDesc" class="exercise-modal-desc"></p>
         <div class="exercise-bpm-section">
           <div class="exercise-bpm-label">Target BPM</div>
@@ -3150,7 +3150,7 @@
       </div>
 
       <div class="exercise-modal-footer">
-        <button id="exerciseModalStudioBtn" class="secondary-btn" style="display:none;">Open in Studio</button>
+        <button id="exerciseModalStudioBtn" class="secondary-btn" hidden>Open in Studio</button>
         <button id="exerciseModalAddToPlanBtn" class="secondary-btn">+ Add to Plan</button>
         <div class="exercise-modal-status-group">
           <button class="exercise-modal-status-btn" data-status="working_on_it">Working On It</button>
@@ -3190,19 +3190,19 @@
           <label class="asgn-label">Studio Pattern</label>
           <div class="ex-ed-phrase-search" id="exEdPhraseSearch">
             <input type="text" id="exEdPhraseInput" class="ex-ed-phrase-input" placeholder="Search Library…" autocomplete="off" />
-            <button type="button" id="exEdPhraseClear" class="ex-ed-phrase-clear-x" aria-label="Clear" style="display:none;">×</button>
-            <div id="exEdPhraseDropdown" class="ex-ed-phrase-dropdown" style="display:none;"></div>
+            <button type="button" id="exEdPhraseClear" class="ex-ed-phrase-clear-x" aria-label="Clear" hidden>×</button>
+            <div id="exEdPhraseDropdown" class="ex-ed-phrase-dropdown" hidden></div>
           </div>
           <div class="ex-ed-pattern-row" style="margin-top:8px;">
             <span id="exEdPatternStatus" class="ex-ed-pattern-status">None</span>
             <button type="button" id="exEdUseCurrentBtn" class="secondary-btn ex-ed-pattern-btn">Use Current Pattern</button>
-            <button type="button" id="exEdClearPatternBtn" class="text-btn ex-ed-pattern-clear" style="display:none;">Clear</button>
+            <button type="button" id="exEdClearPatternBtn" class="text-btn ex-ed-pattern-clear" hidden>Clear</button>
           </div>
         </div>
       </div>
 
       <div class="exercise-editor-footer">
-        <button id="exEdDeleteBtn" class="text-btn ex-ed-delete-btn" style="display:none;">Delete Exercise</button>
+        <button id="exEdDeleteBtn" class="text-btn ex-ed-delete-btn" hidden>Delete Exercise</button>
         <div style="display:flex;gap:10px;margin-left:auto;">
           <button id="exEdCancelBtn" class="secondary-btn">Cancel</button>
           <button id="exEdSaveBtn" class="primary-btn">Save</button>

@@ -11,6 +11,7 @@ import { Modal } from './modal.js';
 import { alert, confirm } from './alert.js';
 import { escapeHtml, extractYouTubeId } from './utils.js';
 import { Bus, BUS_EVENT } from './bus.js';
+import { show, hide, setVisible } from './dom.js';
 
 // ===== CONSTANTS =====
 
@@ -98,13 +99,13 @@ export function openStudentAssignments() {
 function showStudentButton() {
   const btn = document.getElementById('myAssignmentsBtn');
   if (!btn) return;
-  btn.style.display = '';
+  show(btn);
   btn.onclick = openStudentAssignments;
 }
 
 function hideStudentButton() {
   const btn = document.getElementById('myAssignmentsBtn');
-  if (btn) btn.style.display = 'none';
+  hide(btn);
 }
 
 // ===== LOAD =====
@@ -215,7 +216,7 @@ async function openDetail(sa) {
   const descEl = document.getElementById('studentInboxDetailDesc');
   if (descEl) {
     descEl.textContent = sa.description || '';
-    descEl.style.display = sa.description ? '' : 'none';
+    setVisible(descEl, !!sa.description);
     descEl.style.whiteSpace = 'pre-wrap';
   }
 
@@ -223,12 +224,12 @@ async function openDetail(sa) {
   if (videoEl) {
     if (sa.video_url) {
       const videoId = extractYouTubeId(sa.video_url);
-      videoEl.style.display = '';
+      show(videoEl);
       videoEl.innerHTML = videoId
         ? `<iframe class="student-inbox-video-embed" src="https://www.youtube-nocookie.com/embed/${videoId}?rel=0" frameborder="0" allowfullscreen></iframe>`
         : `<video src="${escapeHtml(sa.video_url)}" controls playsinline style="width:100%;border-radius:8px;"></video>`;
     } else {
-      videoEl.style.display = 'none';
+      hide(videoEl);
       videoEl.innerHTML = '';
     }
   }
@@ -236,7 +237,7 @@ async function openDetail(sa) {
   const phraseRefEl = document.getElementById('studentInboxPhraseRef');
   if (phraseRefEl) {
     if (sa.phrase_name && sa.phrase_json) {
-      phraseRefEl.style.display = '';
+      show(phraseRefEl);
       phraseRefEl.innerHTML = `
         <div class="si-ref-phrase">
           <span class="si-ref-phrase-label">Reference Phrase:</span>
@@ -253,7 +254,7 @@ async function openDetail(sa) {
           syncPhraseNameDisplay(sa.phrase_name);
         });
     } else {
-      phraseRefEl.style.display = 'none';
+      hide(phraseRefEl);
       phraseRefEl.innerHTML = '';
     }
   }
@@ -333,7 +334,7 @@ function renderDetail() {
   const feedbackSection = document.getElementById('studentInboxFeedbackSection');
   const feedback = currentSA?.submission?.feedback;
   if (feedbackSection) {
-    feedbackSection.style.display = feedback ? '' : 'none';
+    setVisible(feedbackSection, !!feedback);
     const feedbackText = document.getElementById('studentInboxFeedbackText');
     if (feedbackText) feedbackText.textContent = feedback ?? '';
   }
@@ -341,9 +342,9 @@ function renderDetail() {
   // Footer buttons
   const saveBtn = document.getElementById('studentInboxSaveBtn');
   const submitBtn = document.getElementById('studentInboxSubmitBtn');
-  if (saveBtn) saveBtn.style.display = isLocked ? 'none' : '';
+  setVisible(saveBtn, !isLocked);
   if (submitBtn) {
-    submitBtn.style.display = isLocked ? 'none' : '';
+    setVisible(submitBtn, !isLocked);
     if (!isLocked) { submitBtn.disabled = false; submitBtn.textContent = 'Submit'; }
   }
   const statusEl = document.getElementById('studentInboxSaveStatus');
@@ -751,13 +752,13 @@ async function notifyTeacherSubmitted() {
 // ===== VIEW SWITCHING =====
 
 function showListView() {
-  document.getElementById('studentInboxListView').style.display = '';
-  document.getElementById('studentInboxDetailView').style.display = 'none';
+  show(document.getElementById('studentInboxListView'));
+  hide(document.getElementById('studentInboxDetailView'));
 }
 
 function showDetailView() {
-  document.getElementById('studentInboxListView').style.display = 'none';
-  document.getElementById('studentInboxDetailView').style.display = '';
+  hide(document.getElementById('studentInboxListView'));
+  show(document.getElementById('studentInboxDetailView'));
 }
 
 function closeDetail() {

@@ -13,6 +13,7 @@ import { escapeHtml } from './utils.js';
 import { Bus, BUS_EVENT } from './bus.js';
 import { copyCompositionAsSnapshot } from './song-composer.js';
 import { makeSortableGroup } from './sortable.js';
+import { show, hide, setVisible } from './dom.js';
 
 // ===== DOM REFS =====
 let modal = null;
@@ -173,8 +174,7 @@ function switchTab(tabName) {
     btn.classList.toggle('active', btn.dataset.tab === tabName);
   });
   modal.querySelectorAll('.asgn-tab-panel').forEach(panel => {
-    const isActive = panel.id === `asgnTab-${tabName}`;
-    panel.style.display = isActive ? '' : 'none';
+    setVisible(panel, panel.id === `asgnTab-${tabName}`);
   });
   if (tabName === 'submissions' && !submissionsLoaded) {
     submissionsLoaded = true;
@@ -297,7 +297,7 @@ function updateBulkBar() {
   const count = document.getElementById('asgnBulkCount');
   if (!bar) return;
   const n = selectedIds.size;
-  bar.style.display = n > 0 ? '' : 'none';
+  setVisible(bar, n > 0);
   if (count) count.textContent = `${n} selected`;
 
   // Repopulate folder select with current folders
@@ -755,17 +755,13 @@ function renderEditor() {
 
   // Delete btn
   const deleteBtn = document.getElementById('asgnDeleteBtn');
-  if (deleteBtn) deleteBtn.style.display = a?.id ? '' : 'none';
+  setVisible(deleteBtn, !!a?.id);
 
   // Student section
   const studentSection = document.getElementById('asgnStudentSection');
   if (studentSection) {
-    if (a?.id) {
-      studentSection.style.display = '';
-      renderStudentSection(a.id);
-    } else {
-      studentSection.style.display = 'none';
-    }
+    setVisible(studentSection, !!a?.id);
+    if (a?.id) renderStudentSection(a.id);
   }
 
   renderItemsList();
@@ -1035,7 +1031,7 @@ async function openReviewPanel(submissionRow) {
   if (body) body.innerHTML = '<div class="asgn-loading">Loading responses…</div>';
 
   const panel = document.getElementById('asgnReviewPanel');
-  if (panel) panel.style.display = '';
+  show(panel);
 
   if (!submissionRow.submission_id) {
     if (body) body.innerHTML = '<div class="asgn-loading">No submission data found.</div>';
@@ -1186,7 +1182,7 @@ function renderReviewPanel() {
 
 function closeReviewPanel() {
   const panel = document.getElementById('asgnReviewPanel');
-  if (panel) panel.style.display = 'none';
+  hide(panel);
   currentReview = null;
   reviewResponses = [];
 }
@@ -1201,7 +1197,7 @@ function openNewEditor() {
   savedItemIds = [];
   resetEditor();
   renderEditor();
-  document.getElementById('asgnEditor').style.display = '';
+  show(document.getElementById('asgnEditor'));
 }
 
 async function openEditEditor(assignmentId) {
@@ -1221,13 +1217,12 @@ async function openEditEditor(assignmentId) {
   cachedAssigneeMap = assigneeMap;
 
   renderEditor();
-  document.getElementById('asgnEditor').style.display = '';
+  show(document.getElementById('asgnEditor'));
   document.getElementById('asgnEditor').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 function resetEditor() {
-  const editor = document.getElementById('asgnEditor');
-  if (editor) editor.style.display = 'none';
+  hide(document.getElementById('asgnEditor'));
   currentAssignment = null;
   currentItems = [];
   savedItemIds = [];
@@ -1558,7 +1553,7 @@ async function handleSave() {
     renderEditor();
   } else {
     // Re-save: editor fields are unchanged and students haven't moved — skip re-render
-    document.getElementById('asgnDeleteBtn').style.display = '';
+    show(document.getElementById('asgnDeleteBtn'));
   }
 
   // Notify assigned students when assignment is first published

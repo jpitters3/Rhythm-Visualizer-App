@@ -158,4 +158,33 @@ test.describe('Chords & Chords', () => {
     }
   });
 
+  // A multi-edit session is scoped to one double-click. Moving to another beat
+  // with a plain click must end it, or its stale sub-slot cursor carries over —
+  // the next beat's notes then land in the wrong slots and any past slot 4 are
+  // silently dropped, so two chords entered back-to-back could collide.
+  test('Multi-edit session: a plain click on another beat ends the session', async ({ page }) => {
+    const cells = page.locator('.cell');
+
+    await cells.nth(0).dblclick();
+    await page.keyboard.press('1');
+    await page.keyboard.press('2');
+    await expect(cells.nth(0).locator('.sub-dot[data-idx="0"]')).toHaveText('1');
+    await expect(cells.nth(0).locator('.sub-dot[data-idx="1"]')).toHaveText('2');
+
+    // Single-click a different beat, then double-click it for a fresh chord.
+    await cells.nth(4).click();
+    await cells.nth(4).dblclick();
+    await page.keyboard.press('3');
+    await page.keyboard.press('4');
+    await page.keyboard.press('5');
+
+    // All three land in slots 0-2 (fresh session), not slots 2-3 with a drop.
+    await expect(cells.nth(4).locator('.sub-dot[data-idx="0"]')).toHaveText('3');
+    await expect(cells.nth(4).locator('.sub-dot[data-idx="1"]')).toHaveText('4');
+    await expect(cells.nth(4).locator('.sub-dot[data-idx="2"]')).toHaveText('5');
+    // Beat 0's chord is untouched.
+    await expect(cells.nth(0).locator('.sub-dot[data-idx="0"]')).toHaveText('1');
+    await expect(cells.nth(0).locator('.sub-dot[data-idx="1"]')).toHaveText('2');
+  });
+
 });

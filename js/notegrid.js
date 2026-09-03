@@ -721,6 +721,20 @@ function attachCellListeners(cell, ctx = activeGrid) {
 
     // 3. STANDARD CELL CLICK (RESET QUADRANTS)
     activeSubIndex = null;
+
+    // A plain click on a cell body (not a sub-dot) ends any active multi-edit
+    // session. The session is scoped to one double-click: its sub-slot cursor
+    // (multiEditSessionSlot) must not survive into the next beat, or the next
+    // notes entered there land in stale slots and overflow past slot 4 get
+    // silently dropped. Double-clicking a cell re-activates a fresh session.
+    if (isEditMulti) {
+      setIsEditMulti(false);
+      cells(ctx).forEach(c => {
+        c.classList.remove('multi-selected');
+        c.querySelectorAll('.sub-dot').forEach(s => s.classList.remove('active'));
+      });
+    }
+
     cells(ctx).forEach(c => {
       c.querySelectorAll('.sub-dot').forEach(s => s.classList.remove('selected'));
     });

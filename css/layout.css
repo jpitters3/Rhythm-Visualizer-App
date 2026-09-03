@@ -1,3 +1,12 @@
+/* ===== VISIBILITY ===== */
+/* The `hidden` attribute is the sanctioned show/hide mechanism (toggled via
+   js/dom.js show()/hide()). !important so it beats an element whose own rule
+   sets display: flex/grid — matches the existing [hidden] rules in
+   dashboard.css / library.css. */
+[hidden] {
+  display: none !important;
+}
+
 /* ===== APP HEADER / NAV ===== */
 /* Grid, not flex: a 3-zone header (fixed-width logo | flexible centered nav |
    fixed-width account/bell) where the center is genuinely centered against
