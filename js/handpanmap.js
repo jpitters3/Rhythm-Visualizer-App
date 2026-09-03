@@ -98,6 +98,19 @@ export function getDisplayPosition(note) {
   return perimeterPositions.get(note) || HANDPAN_MAP[note];
 }
 
+/** True when `note` is currently rendered as a rim puck (perimeter arc). Its
+ *  getDisplayPosition() is then in 0-100 units of .handpan-wrap (padding
+ *  included), whereas a plain HANDPAN_MAP note is 0-100 of #handpanOverlay
+ *  (the image area, inset from the wrap by its padding). */
+export function isPerimeterNote(note) {
+  return perimeterPositions.has(note);
+}
+
+/** 'top' | 'bottom' | 'perimeter' — which handpan face is currently drawn. */
+export function getHandpanSide() {
+  return currentHandpanSide;
+}
+
 /** A note's raw x position (0-100, left→right), or null if unknown — used
  *  to order exactly-two-note chords by physical left/right rather than
  *  assuming they share a hand. */
@@ -429,6 +442,36 @@ export function toggleHandpanSide() {
     currentHandpanSide = 'top';
   }
 
+  applyHandpanSide();
+}
+
+/**
+ * Switch directly to a named face ('top' | 'bottom' | 'perimeter'), with the
+ * same downgrade rules toggleHandpanSide() applies (no bottom image / no
+ * bottom notes → 'top'). Returns the face actually selected. Used by Pan Hero
+ * to force 'perimeter' while open and restore the prior face on close.
+ */
+export function setHandpanSide(side) {
+  let target = ['top', 'bottom', 'perimeter'].includes(side) ? side : 'top';
+  if ((target === 'bottom' || target === 'perimeter') &&
+      (!mountedHandpanData || !mountedHandpanData.bottom_image_url)) {
+    target = 'top';
+  }
+  if (target === 'perimeter' && !hasBottomNotes()) target = 'top';
+  if (target === currentHandpanSide) return currentHandpanSide;
+  // Nothing to re-parse without a mounted custom handpan (standard scales are
+  // always 'top').
+  if (!mountedHandpanData || !Array.isArray(mountedHandpanData.note_map)) {
+    return currentHandpanSide;
+  }
+  currentHandpanSide = target;
+  applyHandpanSide();
+  return currentHandpanSide;
+}
+
+// Rebuild the visual map + overlay for the current `currentHandpanSide`.
+// Callers set currentHandpanSide first.
+function applyHandpanSide() {
   localStorage.setItem('gp_handpanSide', currentHandpanSide);
 
   // Update toggle button
@@ -449,9 +492,6 @@ export function toggleHandpanSide() {
   const rot = imgSide === 'bottom'
     ? (mountedHandpanData.bottom_image_rotation || 0)
     : (mountedHandpanData.image_rotation || 0);
-  changeHandpanImage(targetSrc, () => {
-    if (handpanImg) handpanImg.style.transform = rot ? `rotate(${rot}deg)` : '';
-  });
 
   // Re-run the visual map logic
   // We need to re-parse the note map but only keep notes for this side
@@ -513,7 +553,22 @@ export function toggleHandpanSide() {
   // We must NOT nuke the Musical Map in `currentScale` because notes on the other side should still make sound if triggered by MIDI/Keyboard.
   // However, HANDPAN_MAP determines what is drawn.
   HANDPAN_MAP = newMap;
-  // buildHandpanOverlay() is now handled by img.onload above
+
+  const applyRotation = () => {
+    if (handpanImg) handpanImg.style.transform = rot ? `rotate(${rot}deg)` : '';
+  };
+
+  // Swap the image only when the source actually changes (top ↔ perimeter
+  // reuse the same top image). changeHandpanImage() rebuilds the overlay in
+  // its onload finalize; when the src is unchanged onload never fires, so
+  // rebuild directly.
+  const resolvedTarget = targetSrc ? new URL(targetSrc, document.baseURI).href : null;
+  if (resolvedTarget && handpanImg && handpanImg.src !== resolvedTarget) {
+    changeHandpanImage(targetSrc, applyRotation);
+  } else {
+    applyRotation();
+    buildHandpanOverlay();
+  }
 }
 
 // === MY SCALES MANAGEMENT ===

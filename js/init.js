@@ -27,6 +27,7 @@ import { HistoryManager } from './history.js';
 import ChordUI from './chord-ui.js';
 import { initPOTW } from './pattern-of-the-week.js';
 import { initHandpanMap, initScale } from './handpanmap.js';
+import { initPanHero } from './pan-hero.js';
 import { initDraggableDrawers } from './drawer-drag.js';
 import { initTranscription } from './transcription.js';
 import { initAiAssistant } from './ai-assistant.js';
@@ -87,6 +88,7 @@ async function init() {
     HistoryManager.init();
     ChordUI.init();
     initHandpanMap();
+    initPanHero();
     initDraggableDrawers();
     initTranscription();
     initCalProfiles();
