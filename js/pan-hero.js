@@ -10,7 +10,8 @@
 // can strike along with the falling notes.
 
 import { gridA } from './grid-context.js';
-import { getPlaybackPosition, intervalMs, resolveHand, start, stop } from './noteplayer.js';
+import { getPlaybackPosition, intervalMs, start, stop } from './noteplayer.js';
+import { getEffectiveHand } from './notegrid.js';
 import {
   HANDPAN_MAP, getDisplayPosition, isPerimeterNote, resolveTakSlapNote,
   setHandpanSide, getHandpanSide,
@@ -286,11 +287,12 @@ function isDark() {
   return document.body.classList.contains('dark');
 }
 
-// Hand colours — up/left (blue) vs down/right (magenta), matching the
-// presentation highway. Always rgb() so lerpToWhite() can parse them.
+// Hand colours. Pan Hero always sits on a near-black overlay, so it always
+// uses the dark-theme grid palette (--up-fill / --down-fill from
+// css/grid-and-labels.css) regardless of the app theme — L = blue, R = pink,
+// matching the studio's sub-dot / cell colours. rgb() so lerpToWhite() parses.
 function handColor(hand) {
-  if (hand === 'L') return isDark() ? 'rgb(60, 140, 240)' : 'rgb(2, 68, 150)';
-  return isDark() ? 'rgb(253, 3, 128)' : 'rgb(192, 36, 108)';
+  return hand === 'L' ? 'rgb(30, 121, 232)' : 'rgb(253, 3, 128)';
 }
 
 function labelText(label) {
@@ -353,18 +355,22 @@ function draw(t) {
     const dt = j - t;
     if (dt < -0.5) { sparked.delete(j); continue; }
 
-    const handData = gridA.innerHands ? gridA.innerHands[i] : null;
     const isChord = Array.isArray(raw);
     // Keep the ORIGINAL slot index — filtering out empty slots would re-index
-    // and desync each note from its per-slot sticking (chord colours) and hand.
+    // and desync each note from its slot.
     const slots = isChord ? raw : [raw];
 
     slots.forEach((label, subIdx) => {
       if (!label) return;
-      // Same sticking resolution playback/highlightHandpan use, so each chord
-      // note gets its real hand colour and a Tak/Slap falls into the lane its
-      // tonefield actually pulses in.
-      const hand = resolveHand(i, handData, subIdx, isChord, gridA.subdivision);
+      // Match the STUDIO grid's colouring exactly:
+      //  - chord sub-dots are coloured purely by column (slots 0,1 = left/L,
+      //    slots 2,3 = right/R — css/grid-and-labels.css .hand-column rules),
+      //    regardless of any cell-level manual sticking.
+      //  - single notes use getEffectiveHand() (manual override, else the
+      //    8th-note alternation) — the same call renderAllMeasures() makes.
+      const hand = isChord
+        ? (subIdx <= 1 ? 'L' : 'R')
+        : getEffectiveHand(i, gridA);
       const key = resolveTakSlapNote(String(label), hand);
       const tf = tonefieldScreenPos(key, boxes);
       if (!tf) return;
