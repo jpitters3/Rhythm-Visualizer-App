@@ -21,6 +21,11 @@ let active = false;
 let rafId = null;
 let frameCount = 0;
 let boxes = null;   // cached element rects (see refreshBoxes)
+let canvasCssW = 0;
+let canvasCssH = 0;
+let lastVW = 0;
+let lastVH = 0;
+let lastDrawTs = 0;
 
 let overlayEl = null;
 let canvas = null;
@@ -122,13 +127,14 @@ export function openPanHero() {
     start(gridA);
   }
 
-  window.addEventListener('resize', onResize);
-  window.addEventListener('orientationchange', onResize);
+  window.addEventListener('resize', onForcedResize);
+  window.addEventListener('orientationchange', onForcedResize);
   window.addEventListener('keydown', onKey, true);
   window.addEventListener('playbackStateChange', onPlaybackChange);
   window.addEventListener('popstate', closePanHero);
 
-  onResize();
+  lastDrawTs = 0;
+  onResize(true);
   rafId = requestAnimationFrame(loop);
 }
 
@@ -140,8 +146,8 @@ export function closePanHero() {
   rafId = null;
   boxes = null;
 
-  window.removeEventListener('resize', onResize);
-  window.removeEventListener('orientationchange', onResize);
+  window.removeEventListener('resize', onForcedResize);
+  window.removeEventListener('orientationchange', onForcedResize);
   window.removeEventListener('keydown', onKey, true);
   window.removeEventListener('playbackStateChange', onPlaybackChange);
   window.removeEventListener('popstate', closePanHero);
@@ -192,24 +198,39 @@ function onPlaybackChange() {
 }
 
 // Cap the backing-store resolution. The falling circles don't need retina
-// crispness, and clearRect + fills every frame scale with pixel count — an
-// uncapped 2× DPR on a large desktop viewport is ~4× the fill work of a phone.
+// crispness, and clearRect + fills + the per-frame GPU upload scale with pixel
+// count — an uncapped 2× DPR on a large desktop viewport is several times the
+// work of a phone.
 const MAX_DPR = 1.5;
 
-function onResize() {
+// Sync the canvas backing store to its CSS box. CSS owns the box (a centred
+// column on desktop, full width on mobile — see css/pan-hero.css); we only
+// re-measure when the viewport actually changed, since getBoundingClientRect
+// forces a layout flush and this runs from the frame loop.
+function onResize(force) {
   if (!canvas) return;
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  if (!force && vw === lastVW && vh === lastVH) return;
+  lastVW = vw;
+  lastVH = vh;
+
   const dpr = Math.min(window.devicePixelRatio || 1, MAX_DPR);
-  const w = window.innerWidth;
-  const h = window.innerHeight;
-  if (canvas.width !== Math.round(w * dpr) || canvas.height !== Math.round(h * dpr)) {
-    canvas.width = Math.round(w * dpr);
-    canvas.height = Math.round(h * dpr);
-    canvas.style.width = w + 'px';
-    canvas.style.height = h + 'px';
-    cctx.setTransform(1, 0, 0, 1, 0, 0);
-    cctx.scale(dpr, dpr);
-    boxes = null; // force a rect refresh next frame
-  }
+  const rect = canvas.getBoundingClientRect();
+  canvasCssW = Math.round(rect.width);
+  canvasCssH = Math.round(rect.height);
+  canvas.width = Math.round(canvasCssW * dpr);
+  canvas.height = Math.round(canvasCssH * dpr);
+  cctx.setTransform(1, 0, 0, 1, 0, 0);
+  cctx.scale(dpr, dpr);
+  boxes = null; // rects are now stale
+}
+
+// The resize/orientation listeners must bypass onResize's "viewport unchanged"
+// gate — a device-toolbar DPR change or a CSS breakpoint cross can resize the
+// canvas box without changing window.innerWidth/Height.
+function onForcedResize() {
+  onResize(true);
 }
 
 function maybeReforceSide() {
@@ -233,8 +254,20 @@ function refreshBoxes() {
   };
 }
 
+// Cap the render rate to ~60fps. On a 120Hz (ProMotion) display rAF fires
+// twice as often with half the budget; the falling-note motion gains nothing
+// from 120fps and the playback clock is continuous, so skipping alternate
+// frames is invisible.
+const MIN_FRAME_MS = 15;
+
 function loop() {
   if (!active) return;
+  rafId = requestAnimationFrame(loop);
+
+  const now = performance.now();
+  if (now - lastDrawTs < MIN_FRAME_MS) return;
+  lastDrawTs = now;
+
   frameCount++;
   onResize();
   maybeReforceSide();
@@ -245,8 +278,6 @@ function loop() {
 
   updateSparks();
   draw(t);
-
-  rafId = requestAnimationFrame(loop);
 }
 
 // ---------------------------------------------------------------------------
@@ -286,15 +317,15 @@ function tonefieldScreenPos(key, boxes) {
 }
 
 function draw(t) {
-  const w = window.innerWidth;
-  const h = window.innerHeight;
+  const w = canvasCssW;
+  const h = canvasCssH;
   cctx.clearRect(0, 0, w, h);
 
   const total = gridA.cells.length;
   if (!total || !boxes || !boxes.overlay) { drawSparks(); return; }
 
   const stepSec = intervalMs(gridA) / 1000;
-  const mobile = w < 700;
+  const mobile = window.innerWidth < 700;
   const leadSeconds = mobile ? LEAD_SECONDS_MOBILE : LEAD_SECONDS_DESKTOP;
   const leadSteps = Math.max(1, leadSeconds / stepSec);
 

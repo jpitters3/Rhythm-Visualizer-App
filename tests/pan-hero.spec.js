@@ -29,13 +29,20 @@ test('Pan Hero: desktop menu → open, re-parent + pin pan, auto-play', async ({
   await expect(page.locator('.handpan-panel #handpanWrap')).toHaveCount(0);
   expect(await page.evaluate(() => window.__gridA.playing)).toBe(true);
 
-  // canvas is sized to the viewport (DPR-scaled backing store)
-  const okCanvas = await page.evaluate(() => {
+  // Backing store matches the CSS box (DPR-capped). On desktop the canvas is a
+  // centred column narrower than the viewport.
+  const canvasInfo = await page.evaluate(() => {
     const c = document.getElementById('panHeroCanvas');
-    const dpr = window.devicePixelRatio || 1;
-    return c.width === Math.round(innerWidth * dpr) && c.height === Math.round(innerHeight * dpr);
+    const r = c.getBoundingClientRect();
+    const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+    return {
+      matchesBox: c.width === Math.round(Math.round(r.width) * dpr)
+        && c.height === Math.round(Math.round(r.height) * dpr),
+      narrowerThanViewport: r.width < window.innerWidth,
+    };
   });
-  expect(okCanvas).toBe(true);
+  expect(canvasInfo.matchesBox).toBe(true);
+  expect(canvasInfo.narrowerThanViewport).toBe(true);
 });
 
 test('Pan Hero: Escape closes and fully restores state', async ({ page }) => {
