@@ -1,0 +1,163 @@
+/* The Handpan Games hub (route #games, #view-games). See js/handpan-games.js. */
+
+.games-view {
+  align-items: center;
+}
+
+.hg-container {
+  max-width: 1080px;
+  width: 100%;
+  padding: 40px 32px 80px;
+  animation: mwFadeUp 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.hg-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  opacity: 0.45;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  margin-bottom: 28px;
+  transition: opacity 0.15s;
+}
+
+.hg-back:hover {
+  opacity: 0.8;
+}
+
+.hg-header {
+  margin-bottom: 40px;
+}
+
+.hg-eyebrow {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--btn-active);
+  margin: 0 0 10px;
+}
+
+.hg-title {
+  font-size: clamp(26px, 4vw, 38px);
+  font-weight: 800;
+  color: var(--text);
+  margin: 0 0 8px;
+  line-height: 1.15;
+}
+
+.hg-subtitle {
+  font-size: 15px;
+  color: var(--text);
+  opacity: 0.5;
+  margin: 0;
+}
+
+.hg-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 18px;
+}
+
+.hg-tile {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  text-align: left;
+  padding: 20px 22px;
+  min-height: 112px;
+  border-radius: 16px;
+  border: 1px solid var(--panel-border);
+  background: var(--panel);
+  color: var(--text);
+  cursor: pointer;
+  position: relative;
+  white-space: normal;
+  transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.hg-tile:hover {
+  transform: translateY(-2px);
+  border-color: var(--accent-glow);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+}
+
+body.dark .hg-tile:hover {
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
+}
+
+.hg-tile:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.hg-tile[data-status="soon"] {
+  opacity: 0.82;
+}
+
+.hg-tile-icon {
+  font-size: 30px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.hg-tile-body {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  min-width: 0;
+  flex: 1;
+}
+
+.hg-tile-topline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.hg-tile-name {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.hg-tile-blurb {
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--text);
+  opacity: 0.55;
+}
+
+.hg-tile-pill {
+  flex-shrink: 0;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: var(--panel-border);
+  color: var(--text);
+  opacity: 0.7;
+}
+
+@keyframes hgNudge {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-3px); }
+  75% { transform: translateX(3px); }
+}
+
+.hg-tile.hg-nudge {
+  animation: hgNudge 0.28s ease;
+}
+
+@media (max-width: 640px) {
+  .hg-container { padding: 28px 16px 60px; }
+  .hg-grid { grid-template-columns: 1fr; }
+}

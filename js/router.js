@@ -6,7 +6,7 @@ import { gridA } from './grid-context.js';
 import { Sidepanel } from './sidepanel.js';
 import { currentUser } from './state.js';
 
-const validRoutes = ['studio', 'home', 'dashboard', 'compose', 'community', 'library', 'method', 'method-welcome', 'practice'];
+const validRoutes = ['studio', 'home', 'dashboard', 'compose', 'community', 'library', 'method', 'method-welcome', 'practice', 'games'];
 const LAST_ROUTE_KEY = 'gp_last_route';
 let currentRoute = '';
 

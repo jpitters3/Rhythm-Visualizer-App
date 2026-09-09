@@ -40,6 +40,7 @@ import { Bus, BUS_EVENT } from './bus.js';
 import { initCoachingMode } from './coaching-mode.js';
 import { initCalProfiles } from './cal-profiles.js';
 import { initGames } from './games.js';
+import { initHandpanGames } from './handpan-games.js';
 import { initPracticeReminders } from './practice-reminders.js';
 import { initAdmin } from './admin.js';
 import { initNotifications } from './notifications.js';
@@ -98,6 +99,7 @@ async function init() {
     initFeed();
     initLibrary();
     initGames();
+    initHandpanGames();
     initPracticeReminders();
     initCourseMarketplace();
     initPatternsModal();

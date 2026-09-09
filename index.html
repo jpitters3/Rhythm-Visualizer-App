@@ -68,6 +68,7 @@
   <link rel="stylesheet" href="./css/student-management.css">
   <link rel="stylesheet" href="./css/method.css">
   <link rel="stylesheet" href="./css/exercises.css">
+  <link rel="stylesheet" href="./css/handpan-games.css">
   <link rel="stylesheet" href="./css/dashboard.css">
   <link rel="stylesheet" href="./css/onboarding-tour.css">
 
@@ -1003,6 +1004,9 @@
       </div>
     </div> <!-- END view-practice -->
 
+    <!-- Handpan Games hub (populated by js/handpan-games.js) -->
+    <div id="view-games" class="route-view games-view"></div>
+
   </div> <!-- End Container -->
 
   <!-- Legend -->
@@ -1709,6 +1713,10 @@
       <button id="browseExercisesBtn" class="browse-icon-btn">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M12 8v8m-4-4h8"></path></svg>
         Browse Exercises
+      </button>
+      <button id="openHandpanGamesBtn" class="browse-icon-btn">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="12" rx="4"></rect><path d="M7 12h4M9 10v4"></path><circle cx="16" cy="11" r="1"></circle><circle cx="18.5" cy="14" r="1"></circle></svg>
+        Handpan Games
       </button>
       <button id="closePracticeSidebar" class="close-btn">&times;</button>
     </div>

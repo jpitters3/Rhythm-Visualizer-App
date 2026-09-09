@@ -49,6 +49,10 @@ export function initPractice() {
     closePracticeSidebar();
     navigate('practice');
   });
+  document.getElementById('openHandpanGamesBtn')?.addEventListener('click', () => {
+    closePracticeSidebar();
+    navigate('games');
+  });
 
   Bus.on(BUS_EVENT.AUTH_LOGOUT, () => {
     practiceItems = [];
