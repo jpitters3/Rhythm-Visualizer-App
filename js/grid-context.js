@@ -68,9 +68,12 @@ export class GridContext {
   }
 
   copyGrid(otherGrid) {
-    this.innerLabels = otherGrid.innerLabels;
-    this.innerHands = otherGrid.innerHands;
-    this.innerFlams = otherGrid.innerFlams;
+    // Copy per-step arrays by value (chord/multi cells hold arrays — aliasing
+    // would tie the two grids' chords together).
+    const cloneSteps = a => (Array.isArray(a) ? a.map(v => (Array.isArray(v) ? v.slice() : v)) : a);
+    this.innerLabels = cloneSteps(otherGrid.innerLabels);
+    this.innerHands = cloneSteps(otherGrid.innerHands);
+    this.innerFlams = cloneSteps(otherGrid.innerFlams);
     this.step = otherGrid.step;
     this.playing = otherGrid.playing;
     this.bpm = otherGrid.bpm;

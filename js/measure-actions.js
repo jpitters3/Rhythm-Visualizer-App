@@ -137,9 +137,14 @@ export async function duplicateSelection(ctx) {
   const copyHands = c.innerHands.slice(r.start, r.end + 1);
   const copyFlams = Array.isArray(c.innerFlams) ? c.innerFlams.slice(r.start, r.end + 1) : [];
 
+  // slice() is a shallow copy — a chord/multi cell's value is an array, so the
+  // duplicated step would otherwise share the SAME array as the original and
+  // editing one sub-note would mutate both. Clone any array entries by value.
+  const cloneStep = v => (Array.isArray(v) ? v.slice() : v);
+
   for (let k = 0; k < copyFrom.length; k++) {
-    c.innerLabels[oldTotalSteps + k] = copyFrom[k];
-    c.innerHands[oldTotalSteps + k] = copyHands[k];
+    c.innerLabels[oldTotalSteps + k] = cloneStep(copyFrom[k]);
+    c.innerHands[oldTotalSteps + k] = cloneStep(copyHands[k]);
     if (Array.isArray(c.innerFlams)) c.innerFlams[oldTotalSteps + k] = copyFlams[k] ?? '';
   }
 
