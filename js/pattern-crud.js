@@ -253,6 +253,12 @@ export function serializePattern(ctx = gridA) {
     bpm = Math.round(bpm / ctx.mobileOriginalSubdivision);
   }
 
+  // Deep-copy per-step values: a chord/multi cell's label (and per-slot hands)
+  // is an array. A plain slice() would share those arrays with the live grid,
+  // so a later in-place sub-note edit would silently mutate this snapshot too
+  // (breaking undo/redo and the dirty check for chords).
+  const cloneSteps = arr => (arr ? arr.map(v => (Array.isArray(v) ? v.slice() : v)) : []);
+
   const state = {
     version: (typeof window.VERSION !== 'undefined' ? window.VERSION : 'v1.0'),
     beats: ctx.beats,
@@ -261,9 +267,9 @@ export function serializePattern(ctx = gridA) {
     handSplit: document.body.classList.contains('handSplit'),
     steps: ctx.stepsPerMeasure,
     measures: ctx.measures,
-    labels: ctx.innerLabels ? ctx.innerLabels.slice() : [],
-    hands: ctx.innerHands ? ctx.innerHands.slice() : [],
-    flams: ctx.innerFlams ? ctx.innerFlams.slice() : [],
+    labels: cloneSteps(ctx.innerLabels),
+    hands: cloneSteps(ctx.innerHands),
+    flams: cloneSteps(ctx.innerFlams),
     tags: ctx.tags ? ctx.tags.slice() : [],
   };
 
@@ -276,9 +282,9 @@ export function serializePattern(ctx = gridA) {
         subdivision: gridB.subdivision,
         bpm: Number(gridB.bpm),
         measures: gridB.measures,
-        labels: gridB.innerLabels ? gridB.innerLabels.slice() : [],
-        hands: gridB.innerHands ? gridB.innerHands.slice() : [],
-        flams: gridB.innerFlams ? gridB.innerFlams.slice() : [],
+        labels: cloneSteps(gridB.innerLabels),
+        hands: cloneSteps(gridB.innerHands),
+        flams: cloneSteps(gridB.innerFlams),
       };
     }
   }
@@ -349,15 +355,17 @@ export async function applyPattern(state, ctx = gridA) {
     return lbl === 'D' ? 'Ding' : lbl;
   });
 
-  ctx.innerHands = Array.isArray(state.hands) ? state.hands : Array(ctx.innerLabels.length).fill(null);
-  ctx.innerFlams = Array.isArray(state.flams) ? state.flams : Array(ctx.innerLabels.length).fill('');
+  // Copy (don't alias) — `state` may be a history snapshot that stays on the
+  // undo/redo stack; a later in-place edit must not reach back into it.
+  ctx.innerHands = Array.isArray(state.hands)
+    ? state.hands.map(v => (Array.isArray(v) ? v.slice() : v))
+    : Array(ctx.innerLabels.length).fill(null);
+  ctx.innerFlams = Array.isArray(state.flams)
+    ? state.flams.slice()
+    : Array(ctx.innerLabels.length).fill('');
 
   // Apply Tags
-  if (Array.isArray(state.tags)) {
-    ctx.tags = state.tags;
-  } else {
-    ctx.tags = [];
-  }
+  ctx.tags = Array.isArray(state.tags) ? state.tags.slice() : [];
 
   // Dual Grid Handling
   if (ctx === gridA) {
