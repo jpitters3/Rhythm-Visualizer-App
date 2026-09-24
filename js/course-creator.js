@@ -118,8 +118,12 @@ function addLessonToSection(sectionIndex) {
     title: "New Lesson",
     description: "",
     video_url: "",
-    pattern_json: serializePattern(), // Default to current grid
-    pattern_name: "", // New field for dropdown selection
+    // No pattern by default — was `serializePattern()` (whatever happened to
+    // be in the Studio grid), which silently linked every new lesson to
+    // that content. The teacher opts in via the ASSOCIATED PATTERN dropdown
+    // (a named pattern, or 📸 Capture Current Grid) or leaves it "None".
+    pattern_json: null,
+    pattern_name: null,
     assignment: null, // Linked assignment { id, title } or null
   };
   currentCourseData.sections[sectionIndex].lessons.push(lesson);
@@ -186,8 +190,14 @@ function renderLessonEl(sIdx, lIdx) {
   const lesson = currentCourseData.sections[sIdx].lessons[lIdx];
   const isLessonExpanded = expandedLessons.has(`${sIdx}-${lIdx}`);
 
+  // "None" is selected whenever the lesson has no pattern at all (pattern_json
+  // null/undefined) — NOT just when pattern_name is blank, since "Capture
+  // Current Grid" also leaves pattern_name blank while still attaching a real
+  // pattern_json. hasPattern is the single source of truth the other options'
+  // `selected` checks are gated on, so exactly one option is ever selected.
+  const hasPattern = lesson.pattern_json != null;
   const patternOptions = availablePatterns.map(name =>
-    `<option value="${name}" ${lesson.pattern_name === name ? 'selected' : ''}>${name}</option>`
+    `<option value="${name}" ${hasPattern && lesson.pattern_name === name ? 'selected' : ''}>${name}</option>`
   ).join('');
 
   const lessonEl = document.createElement('div');
@@ -216,7 +226,8 @@ function renderLessonEl(sIdx, lIdx) {
         <div class="meta-label">ASSOCIATED PATTERN</div>
         <div class="pattern-control-row">
           <select class="pattern-select" data-field="lesson-pattern" data-sidx="${sIdx}" data-lidx="${lIdx}">
-            <option value="">-- Capture Current Grid --</option>
+            <option value="__none__" ${!hasPattern ? 'selected' : ''}>None</option>
+            <option value="" ${hasPattern && !lesson.pattern_name ? 'selected' : ''}>-- Capture Current Grid --</option>
             ${patternOptions}
           </select>
           <button class="small-capture-btn" data-action="capturePattern" data-sidx="${sIdx}" data-lidx="${lIdx}" title="Save current grid as pattern">📸</button>
@@ -315,7 +326,19 @@ function handleCourseCreatorChange(e) {
 // Function to handle pattern selection in dropdown
 async function handlePatternSelect(selectEl, sIdx, lIdx) {
   const patternName = selectEl.value;
-  if (!patternName) return;
+
+  if (patternName === '__none__') {
+    // Explicitly unlink — clears BOTH fields, not just pattern_name, since
+    // js/courses.js's loadLesson() (the student-facing Studio) only clears
+    // the grid when pattern_json itself is null.
+    currentCourseData.sections[sIdx].lessons[lIdx].pattern_json = null;
+    currentCourseData.sections[sIdx].lessons[lIdx].pattern_name = null;
+    selectEl.style.backgroundColor = '#f8d7da';
+    setTimeout(() => selectEl.style.backgroundColor = '', 500);
+    return;
+  }
+
+  if (!patternName) return; // "-- Capture Current Grid --" placeholder — set via the 📸 button, not selectable as an action
 
   try {
     let patternData = null;

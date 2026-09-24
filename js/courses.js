@@ -14,6 +14,7 @@ import { autoLinkText } from './glossary.js';
 import { openAuthModal } from './auth.js';
 import { extractYouTubeId } from './utils.js';
 import { renderThumbnail } from './pattern-thumbnail.js';
+import { clearGrid } from './notegrid.js';
 
 // ===== SIDEBAR LOGIC (OWNED COURSES) =====
 
@@ -388,11 +389,15 @@ export async function loadLesson(lessonId) {
     }
     currentLesson = lesson;
 
-    // 1. Apply the groove to the grid
+    // 1. Apply the groove to the grid — or clear it
     if (lesson.pattern_json) {
       await applyPattern(lesson.pattern_json);
       updateCurrentPhraseName(lesson.title || 'Lesson');
       // Update last saved state to prevent false dirty check
+      snapshotCurrentState();
+    } else {
+      clearGrid();
+      updateCurrentPhraseName('- No Phrase Loaded -');
       snapshotCurrentState();
     }
 
