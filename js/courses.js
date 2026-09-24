@@ -802,6 +802,14 @@ function triggerCourseCompletionCelebration(courseTitle) {
   requestAnimationFrame(() => overlay.style.opacity = '1');
 }
 
+function flashUpdateButtonFeedback() {
+  const uBtn = document.getElementById('updateLessonBtn');
+  if (!uBtn) return;
+  const originalText = uBtn.innerHTML;
+  uBtn.innerHTML = '✅ Updated!';
+  setTimeout(() => uBtn.innerHTML = originalText, 2000);
+}
+
 export async function updateLessonFromGrid(lessonId) {
   const lesson = allLessons.find(l => l.id === lessonId);
   if (!lesson) {
@@ -809,12 +817,38 @@ export async function updateLessonFromGrid(lessonId) {
     return;
   }
 
-  if (!await confirm(`Are you sure you want to update the pattern for "${lesson.title}" with the current grid?`)) {
+  // 1. Description saves independently of the pattern — declining the
+  // pattern-update prompt below must not discard a description edit.
+  const editArea = document.getElementById('editLessonDescription');
+  const newDescription = editArea ? editArea.value : (lesson.description || '');
+  const descriptionChanged = newDescription !== (lesson.description || '');
+
+  if (descriptionChanged) {
+    try {
+      const { error } = await supabase
+        .from('lessons')
+        .update({ description: newDescription })
+        .eq('id', lessonId);
+      if (error) throw error;
+      lesson.description = newDescription;
+    } catch (err) {
+      console.error("Failed to update lesson description:", err);
+      await alert("Error updating description: " + err.message);
+      return; // don't go on to ask about the pattern if the description save itself failed
+    }
+  }
+
+  // 2. Pattern update is opt-in via its own confirmation.
+  if (!await confirm(`Update the pattern for "${lesson.title}" with the current grid?`)) {
+    if (descriptionChanged) {
+      snapshotCurrentState();
+      flashUpdateButtonFeedback();
+    }
     return;
   }
 
   const newName = await prompt("Pattern name (saves to library and lesson):", lesson.pattern_name || lesson.title);
-  if (newName === null) return; // Cancelled
+  if (newName === null) return; // Cancelled — description (if changed) is already saved
   const trimmedName = newName.trim();
   if (!trimmedName) {
     await alert("Name cannot be empty.");
@@ -823,13 +857,11 @@ export async function updateLessonFromGrid(lessonId) {
 
   try {
     const pattern_json = serializePattern();
-    const editArea = document.getElementById('editLessonDescription');
-    const newDescription = editArea ? editArea.value : (lesson.description || '');
 
-    // 1. Save to User Pattern Library
+    // Save to User Pattern Library
     if (typeof dbSavePattern === 'function') {
       await dbSavePattern(trimmedName, pattern_json);
-      // 1b. Refresh main pattern dropdown
+      // Refresh main pattern dropdown
       if (typeof refreshPatternSelect === 'function') {
         await refreshPatternSelect(trimmedName);
       }
@@ -837,38 +869,29 @@ export async function updateLessonFromGrid(lessonId) {
       console.warn("dbSavePattern not found, skipping library save");
     }
 
-    // 2. Update Lesson in Supabase (Pattern + Description)
+    // Update Lesson in Supabase (Pattern only — description already saved above)
     const { error } = await supabase
       .from('lessons')
       .update({
         pattern_json: pattern_json,
         pattern_name: trimmedName,
-        description: newDescription
       })
       .eq('id', lessonId);
 
     if (error) throw error;
 
-    // 3. Update local state
     lesson.pattern_json = pattern_json;
     lesson.pattern_name = trimmedName;
-    lesson.description = newDescription;
 
-    // Visual Feedback
-    const uBtn = document.getElementById('updateLessonBtn');
-    if (uBtn) {
-      const originalText = uBtn.innerHTML;
-      uBtn.innerHTML = '✅ Updated!';
-      setTimeout(() => uBtn.innerHTML = originalText, 2000);
-    }
+    flashUpdateButtonFeedback();
 
     // sync lastSavedState to avoid "unsaved changes" warnings
     snapshotCurrentState();
 
     console.log(`Lesson ${lessonId} and Pattern "${trimmedName}" updated successfully.`);
   } catch (err) {
-    console.error("Failed to update lesson/pattern:", err);
-    await alert("Error updating: " + err.message);
+    console.error("Failed to update lesson pattern:", err);
+    await alert("Error updating pattern: " + err.message);
   }
 }
 
