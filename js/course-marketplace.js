@@ -9,6 +9,62 @@ let marketplaceModal = null;
 let closeMarketBtn = null;
 let marketGrid = null;
 let marketPanel = null;
+let marketSearchInput = null;
+let marketFilterPillsEl = null;
+
+// Raw fetch results, cached so search/filter re-renders don't re-hit the DB.
+let cachedCourses = [];
+let cachedOwnedIds = new Set();
+let cachedArchivedIds = new Set();
+
+// Search + status filter state. Filters are an inclusive multi-select: none
+// active means "show everything" (today's behaviour, unchanged); each active
+// filter OR-widens which statuses match. Search narrows via AND on top of
+// that. Both persist for the session (not reset each time the modal opens)
+// so an admin toggling Publish/Delete doesn't lose their place.
+let searchQuery = '';
+let searchDebounce = null;
+const activeFilters = new Set(); // subset of 'available' | 'owned' | 'archived' | 'draft'
+
+const FILTERS = [
+  { id: 'available', label: 'Available', adminOnly: false },
+  { id: 'owned', label: 'Owned', adminOnly: false },
+  { id: 'archived', label: 'Archived', adminOnly: false },
+  { id: 'draft', label: 'Draft', adminOnly: true }, // drafts are invisible to non-admins anyway
+];
+
+// A course's single status bucket — matches the mutually-exclusive badge
+// logic renderMarketplace() already used per-card (draft > archived > owned > available).
+function courseStatus(course, ownedIds, archivedIds) {
+  if (!course.is_published) return 'draft';
+  const isOwned = ownedIds.has(course.id);
+  if (isOwned && archivedIds.has(course.id)) return 'archived';
+  if (isOwned) return 'owned';
+  return 'available';
+}
+
+function renderFilterPills() {
+  if (!marketFilterPillsEl) return;
+  const isAdmin = isAdminUser(currentUser);
+  marketFilterPillsEl.innerHTML = FILTERS
+    .filter(f => !f.adminOnly || isAdmin)
+    .map(f => `<button type="button" class="market-filter-pill${activeFilters.has(f.id) ? ' active' : ''}" data-filter="${f.id}">${f.label}</button>`)
+    .join('');
+}
+
+function applyFiltersAndRender() {
+  const isAdmin = isAdminUser(currentUser);
+  const q = searchQuery.trim().toLowerCase();
+
+  const visibleCourses = cachedCourses.filter(c => {
+    if (!isAdmin && !c.is_published) return false; // non-admins never see drafts
+    if (q && !c.title?.toLowerCase().includes(q)) return false;
+    if (activeFilters.size > 0 && !activeFilters.has(courseStatus(c, cachedOwnedIds, cachedArchivedIds))) return false;
+    return true;
+  });
+
+  renderMarketplace(visibleCourses, cachedOwnedIds, cachedArchivedIds, { filtered: !!q || activeFilters.size > 0 });
+}
 
 export async function openMarketplace() {
   if (!marketplaceModal) return;
@@ -48,7 +104,12 @@ export async function openMarketplace() {
       });
     }
 
-    renderMarketplace(allCourses || [], ownedIds, archivedIds);
+    cachedCourses = allCourses || [];
+    cachedOwnedIds = ownedIds;
+    cachedArchivedIds = archivedIds;
+
+    renderFilterPills();
+    applyFiltersAndRender();
 
   } catch (err) {
     console.error("Error loading marketplace:", err);
@@ -56,19 +117,15 @@ export async function openMarketplace() {
   }
 }
 
-function renderMarketplace(courses, ownedIds, archivedIds = new Set()) {
+function renderMarketplace(visibleCourses, ownedIds, archivedIds = new Set(), { filtered = false } = {}) {
   marketGrid.innerHTML = '';
 
   const isAdmin = typeof isAdminUser === 'function' ? isAdminUser(currentUser) : false;
 
-  // Filter: If NOT admin, show only published
-  const visibleCourses = courses.filter(c => {
-    if (isAdmin) return true;
-    return c.is_published === true;
-  });
-
   if (visibleCourses.length === 0) {
-    marketGrid.innerHTML = '<p>No courses available right now.</p>';
+    marketGrid.innerHTML = filtered
+      ? '<p>No courses match your search/filters.</p>'
+      : '<p>No courses available right now.</p>';
     return;
   }
 
@@ -291,6 +348,27 @@ export function initCourseMarketplace() {
   marketPanel = new Modal(marketplaceModal);
   closeMarketBtn = document.getElementById('closeMarketBtn');
   marketGrid = document.getElementById('marketGrid');
+  marketSearchInput = document.getElementById('marketSearch');
+  marketFilterPillsEl = document.getElementById('marketFilterPills');
+
+  marketSearchInput?.addEventListener('input', (e) => {
+    clearTimeout(searchDebounce);
+    const value = e.target.value;
+    searchDebounce = setTimeout(() => {
+      searchQuery = value;
+      applyFiltersAndRender();
+    }, 250);
+  });
+
+  marketFilterPillsEl?.addEventListener('click', (e) => {
+    const pill = e.target.closest('.market-filter-pill');
+    if (!pill) return;
+    const id = pill.dataset.filter;
+    if (activeFilters.has(id)) activeFilters.delete(id);
+    else activeFilters.add(id);
+    renderFilterPills();
+    applyFiltersAndRender();
+  });
 
   // Event Delegation for Marketplace
   marketGrid?.addEventListener('click', async (e) => {

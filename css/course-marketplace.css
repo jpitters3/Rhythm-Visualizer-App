@@ -27,7 +27,68 @@
 .market-subtitle {
   font-size: 14px;
   color: var(--text-secondary);
-  margin-bottom: 25px;
+  margin-bottom: 15px;
+}
+
+/* Search + status-filter pills. Pills are an inclusive multi-select (none
+   active = show everything; each active pill OR-widens the match) — the
+   same mental model as css/patterns-modal.css's category pills, but
+   multiple can be on at once since a course's status here is one of
+   several independent facets you might want to combine (e.g. Owned +
+   Archived) rather than a single mutually-exclusive category. */
+.market-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.market-search-input {
+  flex: 1;
+  min-width: 160px;
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 8px;
+  border: 1px solid var(--panel-border);
+  background: var(--panel);
+  color: var(--text);
+  font-size: 13px;
+  font-family: inherit;
+}
+
+.market-search-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.market-filter-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.market-filter-pill {
+  padding: 6px 14px;
+  border-radius: 99px;
+  border: 1px solid var(--panel-border);
+  background: var(--panel);
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.market-filter-pill:hover {
+  border-color: var(--accent);
+}
+
+.market-filter-pill.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
 }
 
 .market-grid {
