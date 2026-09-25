@@ -1235,20 +1235,15 @@ frFileInput?.addEventListener('change', e => {
 });
 frFileNameEl?.addEventListener('click', clearAudioFile);
 
-// Time signature / subdivision controls in FR header
 frTsBeatsEl?.addEventListener('change', () => {
   const val = parseInt(frTsBeatsEl.value) || 4;
   setBeats(val, activeGrid);
-  const orig = document.getElementById('tsBeats');
-  if (orig) orig.value = val;
   Bus.emit(BUS_EVENT.GRID_CHANGED);
 });
 
 frTsSubEl?.addEventListener('change', () => {
   const val = parseInt(frTsSubEl.value) || 2;
   setSubdivision(val, activeGrid);
-  const orig = document.getElementById('tsSub');
-  if (orig && orig.querySelector(`option[value="${val}"]`)) orig.value = val;
   updateBeatLines();
 });
 

@@ -90,16 +90,26 @@
   </script>
   <template id="transport-template">
     <div class="transport-group">
-      <button class="t-metro-btn" title="Metronome">
-        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
-          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M12 18v-8" />
-          <path d="M7 21h10" />
-          <path d="M6 21l5-16 5 16" />
-          <path d="M12 18a2 2 0 1 0 0 4 2 2 0 0 0 0-4Z" />
-        </svg>
-      </button>
-      <button class="t-subdiv-btn" title="Subdivision clicks">Sub</button>
+      <div class="t-metro-dropdown">
+        <button class="t-metro-btn" title="Metronome">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 18v-8" />
+            <path d="M7 21h10" />
+            <path d="M6 21l5-16 5 16" />
+            <path d="M12 18a2 2 0 1 0 0 4 2 2 0 0 0 0-4Z" />
+          </svg>
+        </button>
+        <!-- Mobile only: tapping .t-metro-btn opens this menu instead of
+             toggling directly — js/transport-ui.js moves .t-subdiv-btn and
+             .t-tap-btn OUT of here (back inline) on desktop, where the bar
+             has room and the bell keeps its old direct-toggle behavior. -->
+        <div class="t-metro-menu dropdown-content">
+          <button class="t-metro-toggle-row" title="Metronome">🔔 Metronome</button>
+          <button class="t-subdiv-btn" title="Subdivision clicks">Sub</button>
+          <button class="t-tap-btn" title="Tap Tempo">Tap</button>
+        </div>
+      </div>
       <select class="t-metro-sound" title="Metronome Sound"
         style="display: none; background: transparent; color: var(--text-secondary); border: 1px solid var(--panel-border); border-radius: 4px; padding: 2px 4px; font-size: 11px; margin-left: 4px; cursor: pointer; outline: none;">
         <option value="Click">Click</option>
@@ -110,7 +120,28 @@
         <input class="t-bpm-input" type="range" min="40" max="400" value="120" />
         <input class="t-bpm-num" type="number" min="40" max="400" value="120" />
       </div>
-      <button class="t-tap-btn" title="Tap Tempo">Tap</button>
+      <div class="ts-wrapper t-ts-wrapper">
+        <select class="t-beats-select ts-select" title="Beats per measure">
+          <option value="2">2</option>
+          <option value="3">3</option>
+          <option value="4">4</option>
+          <option value="5">5</option>
+          <option value="6">6</option>
+          <option value="7">7</option>
+          <option value="8">8</option>
+          <option value="9">9</option>
+          <option value="10">10</option>
+          <option value="11">11</option>
+          <option value="12">12</option>
+        </select>
+        <span class="ts-sep">×</span>
+        <select class="t-sub-select ts-select" title="Subdivision (steps per beat)">
+          <option value="1">♩</option>
+          <option value="2">♪</option>
+          <option value="3">♩³</option>
+          <option value="4">♬</option>
+        </select>
+      </div>
       <button class="t-countdown-btn" title="Count-in: Off">⏱</button>
       <button class="t-play-btn" title="Play/Stop">►</button>
       <button class="t-mute-btn" style="display:none;" title="Toggle Mute">🔊</button>
@@ -309,31 +340,10 @@
             <button id="flipHandsBtn" style="display:none;"
               title="Flip Remaining: Inverts hands from current selection onwards">🔁</button>
             <button id="dualModeBtn" title="Toggle Dual Grid Mode">👥</button>
-            <div class="control-group">
-              <!-- Time Signature -->
-              <div class="ts-wrapper">
-                <select id="tsBeats" class="ts-select" title="Beats per measure">
-                  <option value="2">2</option>
-                  <option value="3">3</option>
-                  <option value="4" selected>4</option>
-                  <option value="5">5</option>
-                  <option value="6">6</option>
-                  <option value="7">7</option>
-                  <option value="8">8</option>
-                  <option value="9">9</option>
-                  <option value="10">10</option>
-                  <option value="11">11</option>
-                  <option value="12">12</option>
-                </select>
-                <span class="ts-sep">×</span>
-                <select id="tsSub" class="ts-select" title="Subdivision (steps per beat)">
-                  <option value="1">♩</option>
-                  <option value="2" selected>♪</option>
-                  <option value="3">♩³</option>
-                  <option value="4">♬</option>
-                </select>
-              </div>
-            </div>
+            <!-- Measure settings (beats × subdivision) moved into the transport
+                 bar's #transport-template — they're phrase-owned data (saved/
+                 restored with the pattern, just like BPM), not an editing tool
+                 or app preference, so they now live beside BPM instead of here. -->
 
             <button id="undoBtn" title="Undo (Cmd+Z)" disabled>↩️</button>
             <button id="redoBtn" title="Redo (Cmd+Shift+Z)" style="display:none;" disabled>↪️</button>

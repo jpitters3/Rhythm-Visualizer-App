@@ -1,6 +1,8 @@
 // TransportUI manages a set of transport controls
-import { start, stop, getMetronomeSound, setMetronomeSound, getAudioCtx } from './noteplayer.js';
+import { start, stop, getMetronomeSound, setMetronomeSound, getAudioCtx, handleBeatsSelectChange, handleSubdivisionSelectChange } from './noteplayer.js';
 import { Bus, BUS_EVENT } from './bus.js';
+
+const MOBILE_BREAKPOINT = 768; // matches pattern-crud.js's normalizeMobileSubdivision
 
 function suppressHover(btn) {
   btn.classList.add('no-hover');
@@ -22,9 +24,44 @@ export class TransportUI {
     this.countdownBtn = container.querySelector('.t-countdown-btn');
     this.metroSoundSelect = container.querySelector('.t-metro-sound');
     this.muteBtn = container.querySelector('.t-mute-btn');
+    this.beatsSelect = container.querySelector('.t-beats-select');
+    this.subSelect = container.querySelector('.t-sub-select');
+    this.metroDropdown = container.querySelector('.t-metro-dropdown');
+    this.metroMenu = container.querySelector('.t-metro-menu');
+    this.metroToggleRow = container.querySelector('.t-metro-toggle-row');
 
     // Tap tempo state
     this.tapTimes = [];
+
+    // One fixed layout per breakpoint, decided once at construction — same
+    // convention pattern-crud.js's normalizeMobileSubdivision already uses.
+    // Not reactive to resize (nothing else in the app re-layouts transport
+    // controls live either).
+    this.isMobile = window.innerWidth <= MOBILE_BREAKPOINT;
+
+    // Desktop: .t-subdiv-btn/.t-tap-btn live inline in the bar, exactly as
+    // before this feature — the template's default/mobile home for them is
+    // inside .t-metro-menu, so move them back out. Mobile leaves them where
+    // the template put them (inside the menu), alongside .t-metro-toggle-row.
+    if (!this.isMobile) {
+      if (this.subdivBtn && this.metroDropdown) this.metroDropdown.after(this.subdivBtn);
+      const bpmControl = container.querySelector('.bpm-control');
+      if (this.tapBtn && bpmControl) bpmControl.after(this.tapBtn);
+      this.metroToggleRow?.remove();
+      this.metroToggleRow = null;
+    } else if (this.metroMenu) {
+      // Move the menu out to <body> rather than leaving it nested inside
+      // .t-metro-dropdown. Two reasons: .transport-container clips overflow
+      // on mobile (an absolutely-positioned child would be invisible), and
+      // .controls-transport (an ancestor, position:fixed) turns out to act
+      // as the containing block for nested position:fixed elements too —
+      // confirmed empirically, not just the overflow issue — so a fixed
+      // child positioned "under the button" would anchor to that ancestor's
+      // box instead of the viewport. Living directly under <body> sidesteps
+      // both. this.metroMenu / this.metroToggleRow / etc. stay valid
+      // references regardless of where the node currently lives.
+      document.body.appendChild(this.metroMenu);
+    }
 
     this.init();
   }
@@ -47,22 +84,55 @@ export class TransportUI {
     }
 
     if (this.metroBtn) {
-      this.metroBtn.onclick = (e) => {
-        e.stopPropagation();
-        const currentSound = getMetronomeSound();
-        if (!this.ctx.metronomeOn) {
-          this.ctx.metronomeOn = true;
-          setMetronomeSound('Click');
-        } else if (currentSound === 'Click') {
-          setMetronomeSound('Shaker');
-        } else {
-          this.ctx.metronomeOn = false;
-        }
-        localStorage.setItem('groovepan_metro' + '-' + this.ctx.id, this.ctx.metronomeOn ? 'on' : 'off');
-        TransportRegistry.updateAll(this.ctx);
-        e.currentTarget.blur();
-        if (!this.ctx.metronomeOn) suppressHover(e.currentTarget);
-      };
+      if (this.isMobile) {
+        // Mobile: tapping the bell opens the submenu instead of toggling
+        // directly — the toggle itself is .t-metro-toggle-row, inside it.
+        // The menu is positioned fixed + placed here in JS rather than via
+        // .t-metro-dropdown's normal position:relative/absolute anchor,
+        // because .transport-container clips overflow on mobile (needed to
+        // keep the compact button row from spilling out) — an absolutely
+        // positioned child would be invisibly clipped by that ancestor.
+        this.metroBtn.onclick = (e) => {
+          e.stopPropagation();
+          if (this.metroMenu?.classList.contains('show')) {
+            this.metroMenu.classList.remove('show');
+          } else {
+            this.positionMobileMetroMenu();
+            this.metroMenu?.classList.add('show');
+          }
+        };
+        // pointerdown, capture phase — not 'click', not bubble. Two separate
+        // reasons, both needed:
+        // 1. Several other transport buttons (play, countdown, subdiv, mute)
+        //    call e.stopPropagation() in their own click handlers, which
+        //    would stop a bubble-phase document listener from ever seeing
+        //    clicks on them. Capture runs before any of that.
+        // 2. The handpan itself — the single most likely "tap elsewhere" —
+        //    calls preventDefault() on touchstart specifically to suppress
+        //    the follow-up synthetic click on real touch devices (see
+        //    js/handpanmap.js's "suppress follow-up click so single taps
+        //    don't double-fire"). A 'click' listener would simply never fire
+        //    for a tap there at all. pointerdown always fires first,
+        //    regardless of what anything does with preventDefault() after.
+        document.addEventListener('pointerdown', (e) => {
+          // .metroMenu now lives under <body>, not inside .metroDropdown
+          // (see the constructor) — a click has to miss both to count as
+          // "outside."
+          if (
+            this.metroMenu?.classList.contains('show') &&
+            !this.metroDropdown.contains(e.target) &&
+            !this.metroMenu.contains(e.target)
+          ) {
+            this.metroMenu.classList.remove('show');
+          }
+        }, true);
+      } else {
+        this.metroBtn.onclick = (e) => this.toggleMetronome(e);
+      }
+    }
+
+    if (this.metroToggleRow) {
+      this.metroToggleRow.onclick = (e) => this.toggleMetronome(e);
     }
 
     if (this.bpmInput) {
@@ -135,11 +205,65 @@ export class TransportUI {
       };
     }
 
+    if (this.beatsSelect) {
+      this.beatsSelect.onchange = (e) => {
+        handleBeatsSelectChange(e.target.value, this.ctx);
+      };
+    }
+
+    if (this.subSelect) {
+      this.subSelect.onchange = (e) => {
+        handleSubdivisionSelectChange(e.target.value, this.ctx, e.target);
+      };
+    }
+
     // Register instance
     TransportRegistry.register(this);
 
     // Initial sync
     this.update();
+  }
+
+  positionMobileMetroMenu() {
+    if (!this.metroMenu || !this.metroBtn) return;
+    const rect = this.metroBtn.getBoundingClientRect();
+    // Fixed to the viewport, anchored ABOVE the bell button — the mobile
+    // transport bar sits flush against the bottom of the screen
+    // (.controls-transport { position:fixed; bottom:0 }), so opening
+    // downward (like #handpanOptionsMenu, whose trigger sits well above the
+    // bottom edge) would push the menu off-screen. Anchoring from `bottom`
+    // instead of computing `top: rect.top - menuHeight` means it grows
+    // upward correctly regardless of the menu's actual (possibly
+    // not-yet-rendered) height.
+    // .dropdown-content's base rule (css/layout.css) sets top:100% — an
+    // empty string only clears the *inline* style, falling back to that
+    // stylesheet value (100% of the fixed containing block's height =
+    // viewport height), not to "unset". Need the explicit 'auto' keyword to
+    // actually cancel it so `bottom` alone determines the box's position.
+    this.metroMenu.style.position = 'fixed';
+    this.metroMenu.style.top = 'auto';
+    this.metroMenu.style.bottom = `${window.innerHeight - rect.top + 8}px`;
+    this.metroMenu.style.left = `${rect.left}px`;
+  }
+
+  toggleMetronome(e) {
+    e?.stopPropagation();
+    const currentSound = getMetronomeSound();
+    if (!this.ctx.metronomeOn) {
+      this.ctx.metronomeOn = true;
+      setMetronomeSound('Click');
+    } else if (currentSound === 'Click') {
+      setMetronomeSound('Shaker');
+    } else {
+      this.ctx.metronomeOn = false;
+    }
+    localStorage.setItem('groovepan_metro' + '-' + this.ctx.id, this.ctx.metronomeOn ? 'on' : 'off');
+    TransportRegistry.updateAll(this.ctx);
+    if (e?.currentTarget) {
+      e.currentTarget.blur();
+      if (!this.ctx.metronomeOn) suppressHover(e.currentTarget);
+    }
+    if (this.isMobile) this.metroMenu?.classList.remove('show');
   }
 
   applyBpm(val, source) {
@@ -199,6 +323,21 @@ export class TransportUI {
       if (isOn) this.metroBtn.classList.remove('no-hover');
       this.metroBtn.style.opacity = isOn ? '1' : '0.5';
       this.metroBtn.title = isOn ? `Metronome: ${sound}` : 'Metronome: Off';
+    }
+
+    if (this.metroToggleRow) {
+      const isOn = this.ctx.metronomeOn;
+      const sound = getMetronomeSound();
+      this.metroToggleRow.textContent = isOn ? `🔔 Metronome: ${sound}` : '🔔 Metronome: Off';
+      this.metroToggleRow.classList.toggle('active', isOn);
+    }
+
+    if (this.beatsSelect) {
+      this.beatsSelect.value = this.ctx.beats;
+    }
+
+    if (this.subSelect) {
+      this.subSelect.value = this.ctx.subdivision;
     }
 
     if (this.subdivBtn) {

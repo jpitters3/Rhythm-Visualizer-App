@@ -137,7 +137,7 @@ export function resetGridToDefault(ctx = activeGrid) {
   ctx.innerHands = [];
   setDualGrid(false);
   clearGrid(ctx);
-  setBeats(4); setSubdivision(2);
+  setBeats(4); setSubdivision(2); // 4 beats / eighth notes — the fixed "new phrase" default
   ctx.setMeasures(2);
   renderAllMeasures(ctx);
 }

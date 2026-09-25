@@ -119,6 +119,65 @@ body.present #presentationControls {
   z-index: 1000;
 }
 
+/* --- Mobile metronome submenu ---
+   .t-metro-dropdown wraps the bell button + the menu, exactly like
+   css/layout.css's .dropdown/.dropdown-content pattern (position:relative on
+   the wrapper is what lets .dropdown-content's default top:100%/left:0 anchor
+   correctly, same trick, no per-page offset tuning needed the way
+   .hp-options-menu required). Base show/hide + panel chrome come from
+   .dropdown-content in css/layout.css — this only restyles the rows and
+   desktop-hides the trigger/menu split (desktop keeps the old direct-toggle
+   bell + inline Sub/Tap buttons; js/transport-ui.js does that layout switch
+   in JS, so no @media is needed here for which elements exist). */
+.t-metro-dropdown {
+  position: relative;
+}
+
+.t-metro-menu {
+  flex-direction: column;
+  gap: 2px;
+  width: 200px !important;
+  min-width: 200px !important;
+}
+
+.t-metro-menu.show {
+  display: flex !important;
+}
+
+.t-metro-menu .t-metro-toggle-row,
+.t-metro-menu .t-subdiv-btn,
+.t-metro-menu .t-tap-btn {
+  width: 100%;
+  height: auto;
+  min-width: 0;
+  box-sizing: border-box;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  position: static;
+  justify-content: flex-start;
+  text-align: left;
+  gap: 8px;
+  padding: 10px 12px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.t-metro-menu .t-metro-toggle-row:hover,
+.t-metro-menu .t-subdiv-btn:hover,
+.t-metro-menu .t-tap-btn:hover {
+  background: rgba(0, 0, 0, 0.06);
+}
+
+.t-metro-menu .t-metro-toggle-row.active,
+.t-metro-menu .t-subdiv-btn.active {
+  color: var(--accent-glow, var(--accent-light));
+}
+
 /* --- Metronome Sound States --- */
 .t-metro-btn.metro-beeps {
   background: rgba(var(--accent-rgb), 0.18) !important;

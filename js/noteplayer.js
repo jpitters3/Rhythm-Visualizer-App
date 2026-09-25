@@ -742,12 +742,20 @@ export function setBeats(b, ctx) {
   if (c === gridA) {
     setBeatsState(val);
     gridB.beats = val;
-    const sel = document.getElementById('tsBeats');
-    if (sel) sel.value = val;
   }
 
   renderAllMeasures(c);
   if (wasPlaying) start(c);
+  // Measure settings now live inside the (possibly multiply-cloned) transport
+  // template rather than a single #tsBeats element — sync every registered
+  // instance for this ctx instead of one singular id (mirrors how BPM already
+  // avoids this via TransportRegistry.updateAll). gridB's own value was just
+  // mirrored above too (c === gridA branch) — its transport instances need
+  // their own refresh, not just gridA's.
+  if (TransportRegistry) {
+    TransportRegistry.updateAll(c);
+    if (c === gridA) TransportRegistry.updateAll(gridB);
+  }
 }
 
 export function setSubdivision(s, ctx) {
@@ -762,12 +770,14 @@ export function setSubdivision(s, ctx) {
   if (c === gridA) {
     setSubdivisionState(val);
     gridB.subdivision = val;
-    const sel = document.getElementById('tsSub');
-    if (sel) sel.value = val;
   }
 
   renderAllMeasures(c);
   if (wasPlaying) start(c);
+  if (TransportRegistry) {
+    TransportRegistry.updateAll(c);
+    if (c === gridA) TransportRegistry.updateAll(gridB);
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -1109,51 +1119,58 @@ function showSubdivStretchDialog(toSub) {
   });
 }
 
+// ===== BEATS / SUBDIVISION SELECT HANDLERS =====
+// Extracted out of initNotePlayer() — the beats/subdivision <select>s used to be a
+// single #tsBeats/#tsSub pair; now they live inside the (possibly multiply-cloned)
+// transport template, so js/transport-ui.js calls these per-instance, once per select
+// the user actually interacts with. ctx is whichever grid that particular transport
+// instance is bound to (mirrors how BPM is already independent per instance) — but
+// the stretch/compress note-data operation below intentionally still always applies to
+// BOTH gridA and gridB together, exactly as before this change, since that's an
+// irreversible-ish data operation and no one asked for gridA/gridB to stretch
+// independently; only the *value* is now per-instance, not the safety behavior.
+export function handleBeatsSelectChange(newValRaw, ctx = activeGrid) {
+  if (HistoryManager) HistoryManager.pushState();
+  setBeats(parseInt(newValRaw) || 4, ctx);
+}
+
+export async function handleSubdivisionSelectChange(newValRaw, ctx = activeGrid, selectEl = null) {
+  if (HistoryManager) HistoryManager.pushState();
+  const c = ctx || activeGrid || gridA;
+  const newVal = parseInt(newValRaw) || 2;
+  const oldVal = c.subdivision;
+
+  if (newVal > oldVal && hasNotes(c)) {
+    // Upgrading to finer subdivision — offer to stretch
+    const factor = newVal / oldVal;
+    const choice = await showSubdivStretchDialog(newVal);
+    if (choice === 'stretch') {
+      stretchGrid(gridA, factor);
+      if (gridB) stretchGrid(gridB, factor);
+    }
+  } else if (newVal < oldVal) {
+    // Downgrading to coarser subdivision — warn if notes will be lost
+    const factor = oldVal / newVal;
+    if (hasNotesAtSubdivisions(c, factor)) {
+      const toName = SUB_NAMES[newVal] || `subdivision ${newVal}`;
+      const ok = await confirm(
+        `Notes that fall between beats will be permanently deleted when switching to ${toName}. Continue?`,
+        'Notes will be lost'
+      );
+      if (!ok) {
+        if (selectEl) selectEl.value = oldVal;
+        return;
+      }
+    }
+    compressGrid(gridA, factor);
+    if (gridB) compressGrid(gridB, factor);
+  }
+
+  setSubdivision(newVal, ctx);
+}
+
 // ===== INITIALIZATION =====
 export function initNotePlayer() {
-  // Attach beats / subdivision listeners
-  const tsBeatsEl = document.getElementById('tsBeats');
-  const tsSubEl = document.getElementById('tsSub');
-
-  tsBeatsEl?.addEventListener('change', () => {
-    if (HistoryManager) HistoryManager.pushState();
-    setBeats(parseInt(tsBeatsEl.value) || 4);
-  });
-  tsSubEl?.addEventListener('change', async () => {
-    if (HistoryManager) HistoryManager.pushState();
-    const newVal = parseInt(tsSubEl.value) || 2;
-    const ctx = activeGrid || gridA;
-    const oldVal = ctx.subdivision;
-
-    if (newVal > oldVal && hasNotes(ctx)) {
-      // Upgrading to finer subdivision — offer to stretch
-      const factor = newVal / oldVal;
-      const choice = await showSubdivStretchDialog(newVal);
-      if (choice === 'stretch') {
-        stretchGrid(gridA, factor);
-        if (gridB) stretchGrid(gridB, factor);
-      }
-    } else if (newVal < oldVal) {
-      // Downgrading to coarser subdivision — warn if notes will be lost
-      const factor = oldVal / newVal;
-      if (hasNotesAtSubdivisions(ctx, factor)) {
-        const toName = SUB_NAMES[newVal] || `subdivision ${newVal}`;
-        const ok = await confirm(
-          `Notes that fall between beats will be permanently deleted when switching to ${toName}. Continue?`,
-          'Notes will be lost'
-        );
-        if (!ok) {
-          tsSubEl.value = oldVal;
-          return;
-        }
-      }
-      compressGrid(gridA, factor);
-      if (gridB) compressGrid(gridB, factor);
-    }
-
-    setSubdivision(newVal);
-  });
-
   // Attempt to unlock audio on ANY user interaction (Click, Key, Touch)
   const unlockEvents = ['click', 'keydown', 'touchstart'];
   function unlockHandler() {

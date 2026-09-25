@@ -280,6 +280,33 @@ body:not(.dark) .transport-group .t-countdown-btn.active {
   color: var(--accent-dark);
 }
 
+/* Measure settings (beats × subdivision), relocated into the transport bar —
+   match the transport buttons' look (outlined pill, transparent fill), not
+   the top control strip's filled-pill .ts-wrapper style it came from. */
+.transport-group .t-ts-wrapper {
+  background: none;
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  transition: border-color 0.15s;
+}
+
+.transport-group .t-ts-wrapper:hover {
+  border-color: var(--accent-glow, var(--accent-light));
+}
+
+.transport-group .t-ts-wrapper .ts-select {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+body:not(.dark) .transport-group .t-ts-wrapper {
+  border-color: rgba(var(--accent-rgb), 0.25);
+}
+
+body:not(.dark) .transport-group .t-ts-wrapper:hover {
+  border-color: var(--accent);
+}
+
 /* --- BPM control: refined card style --- */
 .bpm-control {
   display: flex;
@@ -436,11 +463,23 @@ body:not(.dark) .transport-group .t-tap-btn.tapping {
 
   .transport-group .t-play-btn,
   .transport-group .t-metro-btn,
-  .transport-group .t-subdiv-btn,
-  .transport-group .t-tap-btn,
   .transport-group .t-countdown-btn {
     padding: 6px 7px;
     font-size: 13px;
+  }
+
+  /* Measure settings now live in the transport bar on mobile too (moved out
+     of #primaryControlsWrapper, which is hidden entirely on mobile — see
+     below) — keep it compact so it fits alongside BPM and the other
+     transport buttons in one row. */
+  .t-ts-wrapper {
+    padding: 0 8px;
+    height: 32px;
+  }
+
+  .t-ts-wrapper .ts-select {
+    font-size: 13px;
+    min-width: 18px;
   }
 }
 
@@ -456,11 +495,13 @@ body:not(.dark) .transport-group .t-tap-btn.tapping {
 
   .transport-group .t-play-btn,
   .transport-group .t-metro-btn,
-  .transport-group .t-subdiv-btn,
-  .transport-group .t-tap-btn,
   .transport-group .t-countdown-btn {
     padding: 6px 6px;
     font-size: 12px;
+  }
+
+  .t-ts-wrapper {
+    padding: 0 6px;
   }
 }
 

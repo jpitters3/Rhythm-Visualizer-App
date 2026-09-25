@@ -8,9 +8,11 @@
  * BPM always refers to beats per minute — what the user taps, what the metronome clicks.
  */
 
-// Global defaults (used before any grid is instantiated)
-let beats = Number(localStorage.getItem('defaultBeats')) || 4;
-let subdivision = Number(localStorage.getItem('defaultSubdivision')) || 2;
+const DEFAULT_BEATS = 4;
+const DEFAULT_SUBDIVISION = 2; // eighth notes
+
+let beats = DEFAULT_BEATS;
+let subdivision = DEFAULT_SUBDIVISION;
 
 export let STEPS = beats * subdivision; // e.g. 4 × 2 = 8
 
@@ -19,13 +21,11 @@ export function getSubdivision() { return subdivision; }
 
 export function setBeatsState(b) {
   beats = Math.max(1, Math.round(b));
-  localStorage.setItem('defaultBeats', beats);
   STEPS = beats * subdivision;
 }
 
 export function setSubdivisionState(s) {
   subdivision = Math.max(1, Math.round(s));
-  localStorage.setItem('defaultSubdivision', subdivision);
   STEPS = beats * subdivision;
 }
 
