@@ -228,7 +228,7 @@ const TOURS = {
         position: 'center',
       },
       {
-        target: '.browse-icon-btn', // marketplace / browse area
+        target: '#openMarketplace', // marketplace / browse area
         title: 'Marketplace',
         body: 'Find a free course and tap Get Course to add it to your dashboard. Give it a try!',
         position: 'bottom',
