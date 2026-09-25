@@ -54,7 +54,7 @@ export async function fetchCourses() {
     const { data: allCoursesData, error } = await supabase
       .from('courses')
       .select(`
-        id, title, description, owner_id, is_published,
+        id, title, description, owner_id, is_published, thumbnail_url,
         sections (
           id, title, order_index, is_published,
           lessons (

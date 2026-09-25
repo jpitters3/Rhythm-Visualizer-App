@@ -10,6 +10,7 @@ import { escapeHtml } from './utils.js';
 let currentCourseData = {
   title: "",
   description: "",
+  thumbnail_url: null,
   sections: []
 };
 
@@ -605,6 +606,78 @@ function renderCourseStructure() {
   });
 }
 
+function updateThumbPreview() {
+  const preview = document.getElementById('courseThumbPreview');
+  const uploadBtn = document.getElementById('uploadCourseThumbBtn');
+  const removeBtn = document.getElementById('removeCourseThumbBtn');
+  if (!preview) return;
+
+  // Course creation/editing is already admin-only at the entry point (the
+  // Create Course button lives under #adminSection), but hide the upload
+  // controls here too rather than relying solely on that — belt & suspenders.
+  const isAdmin = isAdminUser(currentUser);
+  if (uploadBtn) uploadBtn.style.display = isAdmin ? 'inline-block' : 'none';
+
+  const url = currentCourseData.thumbnail_url;
+  preview.style.backgroundImage = url ? `url('${url}')` : '';
+  if (removeBtn) removeBtn.style.display = (isAdmin && url) ? 'inline-block' : 'none';
+}
+
+async function triggerCourseThumbnailUpload() {
+  if (!currentUser || !isAdminUser(currentUser)) {
+    return await alert("Only admins can upload course thumbnails.");
+  }
+
+  let fileInput = document.getElementById('courseThumbInput');
+  if (!fileInput) {
+    fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.id = 'courseThumbInput';
+    fileInput.style.display = 'none';
+    fileInput.accept = 'image/*';
+    document.body.appendChild(fileInput);
+  }
+
+  fileInput.onchange = async (e) => {
+    const file = e.target.files[0];
+    fileInput.value = ''; // allow re-selecting the same file later
+    if (!file) return;
+
+    // Size limit check (5MB — this is a thumbnail, not a video)
+    if (file.size > 5 * 1024 * 1024) {
+      await alert("Image file is too large. Max 5MB.");
+      return;
+    }
+
+    const uploadBtn = document.getElementById('uploadCourseThumbBtn');
+    const originalText = uploadBtn?.textContent;
+    if (uploadBtn) { uploadBtn.textContent = "Uploading..."; uploadBtn.disabled = true; }
+
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${currentUser.id}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+
+      const { error } = await supabase.storage
+        .from('course-thumbnails')
+        .upload(fileName, file);
+
+      if (error) throw error;
+
+      const { data: publicData } = supabase.storage.from('course-thumbnails').getPublicUrl(fileName);
+      currentCourseData.thumbnail_url = publicData.publicUrl;
+      updateThumbPreview();
+
+    } catch (err) {
+      console.error("Thumbnail upload failed:", err);
+      await alert("Upload failed: " + err.message);
+    } finally {
+      if (uploadBtn) { uploadBtn.textContent = originalText; uploadBtn.disabled = false; }
+    }
+  };
+
+  fileInput.click();
+}
+
 async function triggerLessonVideoUpload(sIdx, lIdx) {
   if (!currentUser) return await alert("Please sign in to upload videos.");
   if (typeof isAdminUser === 'function' && !isAdminUser(currentUser)) {
@@ -819,6 +892,7 @@ async function openCourseCreator() {
     currentCourseData.sections.push({ title: "Section 1", lessons: [] });
     expandedSections.add(0);
   }
+  updateThumbPreview();
   renderCourseStructure();
 }
 
@@ -865,6 +939,12 @@ export function closeCourseCreator() {
 // Listeners
 openCourseBtn?.addEventListener('click', openCourseCreator);
 closeCourseBtn?.addEventListener('click', closeCourseCreator);
+
+document.getElementById('uploadCourseThumbBtn')?.addEventListener('click', triggerCourseThumbnailUpload);
+document.getElementById('removeCourseThumbBtn')?.addEventListener('click', () => {
+  currentCourseData.thumbnail_url = null;
+  updateThumbPreview();
+});
 
 
 
@@ -921,7 +1001,7 @@ async function handleCourseSave(shouldClose = true) {
       // === UPDATE Metatdata ===
       const { error: uErr } = await supabase
         .from('courses')
-        .update({ title, description, level, category, tags, progression_id: progressionId })
+        .update({ title, description, level, category, tags, progression_id: progressionId, thumbnail_url: currentCourseData.thumbnail_url || null })
         .eq('id', courseId);
       if (uErr) throw uErr;
     } else {
@@ -935,6 +1015,7 @@ async function handleCourseSave(shouldClose = true) {
           category,
           tags,
           progression_id: progressionId,
+          thumbnail_url: currentCourseData.thumbnail_url || null,
           owner_id: currentUser.id,
           is_published: false // Explicitly draft
         }])
@@ -1063,13 +1144,14 @@ async function handleCourseSave(shouldClose = true) {
       await alert("Course saved successfully!");
       closeCourseCreator();
       // Reset form
-      currentCourseData = { title: "", description: "", sections: [] };
+      currentCourseData = { title: "", description: "", thumbnail_url: null, sections: [] };
       document.getElementById('courseTitle').value = "";
       document.getElementById('courseDesc').value = "";
       document.getElementById('courseLevel').value = "";
       document.getElementById('courseCategory').value = "";
       document.getElementById('courseTags').value = "";
       document.getElementById('courseProgressionSelect').value = "";
+      updateThumbPreview();
       saveCourseBtn.textContent = "Save Course";
     } else {
       // Show flashing "Saved!" message for 3 seconds

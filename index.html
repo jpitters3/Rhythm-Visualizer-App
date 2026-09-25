@@ -1384,6 +1384,17 @@
         <input type="text" id="courseTitle" placeholder="Course Title (e.g., Intro to D-Kurd)" class="full-width">
         <textarea id="courseDesc" placeholder="Course Description"></textarea>
 
+        <div class="course-thumb-field">
+          <label class="prog-field-label">Course Thumbnail</label>
+          <div class="course-thumb-row">
+            <div id="courseThumbPreview" class="course-thumb-preview"></div>
+            <div class="course-thumb-actions">
+              <button type="button" id="uploadCourseThumbBtn" class="secondary-btn">📷 Upload Image</button>
+              <button type="button" id="removeCourseThumbBtn" class="secondary-btn" style="display:none;">Remove</button>
+            </div>
+          </div>
+        </div>
+
         <div style="display:flex; gap:16px;">
           <input type="number" id="courseLevel" placeholder="Level (e.g., 1)" min="1" step="1" style="flex:1;">
           <input type="text" id="courseCategory" placeholder="Category (e.g., Foundations)" list="courseCategoryList" style="flex:1;">
