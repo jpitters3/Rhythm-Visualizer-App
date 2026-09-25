@@ -20,6 +20,7 @@ import { clearGrid } from './notegrid.js';
 
 let activeCourseId = null;
 let activeCourseCollapsed = false; // true = active course is visually folded
+let lessonContentExpanded = true; // lesson player content: expanded by default, collapses only on explicit click
 export let allCourses = [];
 export let allSections = [];
 export let allLessons = [];
@@ -169,7 +170,7 @@ export function renderCourseSidebar(courses) {
         <!-- <h4>Not signed in.</h4> -->
         <h4>Please sign in to access courses.</h4>
         <button class="primary-btn" data-action="sign-in">Sign In</button><br/><br/><br/>
-        <button class="browse-big-btn" data-action="open-marketplace">Browse Course Marketplace</button>
+        <button id="openMarketplace" class="browse-big-btn" data-action="open-marketplace">Browse Course Marketplace</button>
       </div>
     `;
 
@@ -377,6 +378,16 @@ export async function setActiveCourse(courseId) {
   }
 }
 
+function applyLessonExpandedState() {
+  const lessonContentEl = document.getElementById('lessonContent');
+  const titleEl = document.getElementById('activeLessonTitle');
+  if (lessonContentEl) lessonContentEl.style.display = lessonContentExpanded ? 'block' : 'none';
+  if (titleEl) {
+    const bareTitle = titleEl.textContent.replace(/^[▲▼]\s*/, '');
+    titleEl.textContent = `${lessonContentExpanded ? '▲' : '▼'} ${bareTitle}`;
+  }
+}
+
 export async function loadLesson(lessonId) {
   try {
     if (hasUnsavedChanges()) {
@@ -436,8 +447,13 @@ export async function loadLesson(lessonId) {
     const titleEl = document.getElementById('activeLessonTitle');
     if (titleEl) {
       // Format: "▲ Lesson Title • Section Title"
-      titleEl.textContent = `▲ ${lesson.title}`;
+      titleEl.textContent = `${lesson.title}`;
     }
+
+    // Every lesson load starts expanded, regardless of how the previous
+    // lesson was left — collapsing is a per-lesson choice, not a sticky one.
+    lessonContentExpanded = true;
+    applyLessonExpandedState();
 
     // Inject Practice Button into Header
     const header = titleEl?.parentElement;
@@ -538,8 +554,6 @@ export async function loadLesson(lessonId) {
       }
     }
 
-    const lessonContentEl = document.getElementsByClassName('lesson-content')[0];
-    if (lessonContentEl) lessonContentEl.style.display = 'block';
 
     // Pattern preview
     const videoContainer = document.getElementById('videoContainer');
@@ -1008,17 +1022,8 @@ if (sidebarCloseBtn) sidebarCloseBtn.addEventListener('click', closeSidebar);
 const activeLessonHeader = document.getElementById('lessonHeader');
 if (activeLessonHeader) {
   activeLessonHeader.addEventListener('click', () => {
-    const lessonContent = document.getElementById('lessonContent');
-    const titleEl = document.getElementById('activeLessonTitle');
-    if (!lessonContent) return;
-
-    if (lessonContent.style.display === 'none') {
-      lessonContent.style.display = 'block';
-      if (titleEl) titleEl.textContent = '▲ ' + titleEl.textContent.replace('▼ ', '');
-    } else {
-      lessonContent.style.display = 'none';
-      if (titleEl) titleEl.textContent = '▼ ' + titleEl.textContent.replace('▲ ', '');
-    }
+    lessonContentExpanded = !lessonContentExpanded;
+    applyLessonExpandedState();
   });
 }
 
