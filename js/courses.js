@@ -168,7 +168,8 @@ export function renderCourseSidebar(courses) {
       <div class="empty-courses">
         <!-- <h4>Not signed in.</h4> -->
         <h4>Please sign in to access courses.</h4>
-        <button class="primary-btn" data-action="sign-in">Sign In</button>
+        <button class="primary-btn" data-action="sign-in">Sign In</button><br/><br/><br/>
+        <button class="browse-big-btn" data-action="open-marketplace">Browse Course Marketplace</button>
       </div>
     `;
 

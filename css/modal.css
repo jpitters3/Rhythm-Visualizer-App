@@ -71,6 +71,10 @@
   margin: 10px auto;
 }
 
+#authModal {
+  z-index: 10001;
+}
+
 /* Compact size for handpan drawer modals */
 .hp-drawer-modal {
   max-width: 400px;

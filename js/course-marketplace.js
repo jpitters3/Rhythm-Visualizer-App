@@ -4,6 +4,7 @@ import { supabase } from './supabase-client.js';
 import { Bus, BUS_EVENT } from './bus.js';
 import { currentUser, isAdminUser } from './state.js';
 import { fetchCourses, setActiveCourse, openSidebar } from './courses.js';
+import { openAuthModal } from './auth.js';
 
 let marketplaceModal = null;
 let closeMarketBtn = null;
@@ -302,8 +303,9 @@ export async function activateCourse(courseId) {
 
 export async function unlockCourse(courseId, isPaid, btn) {
   if (!currentUser) {
-    await alert("Please sign in to unlock courses.");
-    // show auth modal
+    // Browsing the marketplace is open to everyone; "Get Course" is the
+    // wall — sign in or create an account to actually unlock one.
+    openAuthModal();
     return;
   }
 
