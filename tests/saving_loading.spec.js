@@ -120,6 +120,78 @@ test.describe('Pattern Management', () => {
     await expect(cell0.locator('.inner')).toHaveText('1');
   });
 
+  // Measure settings (beats × subdivision) are phrase-owned data — saved and
+  // restored per-phrase via serializePattern()/applyPattern(), same as notes
+  // and BPM (js/rhythm-core.js's DEFAULT_BEATS/DEFAULT_SUBDIVISION are only a
+  // fixed starting point for a brand-new phrase, never a sticky "last used"
+  // global — see the Plan A default-leak fix). .t-beats-select/.t-sub-select
+  // live inline in the transport bar on both desktop and mobile (unlike
+  // .t-subdiv-btn/.t-tap-btn, which move into a mobile-only submenu), so no
+  // device-specific gating is needed to reach them.
+  async function setMeasureSettings(page, beats, subdivision) {
+    await page.locator('#mainTransport-A .t-beats-select').selectOption(String(beats));
+    await page.locator('#mainTransport-A .t-sub-select').selectOption(String(subdivision));
+  }
+
+  async function getMeasureSettings(page) {
+    return {
+      beats: await page.locator('#mainTransport-A .t-beats-select').inputValue(),
+      subdivision: await page.locator('#mainTransport-A .t-sub-select').inputValue(),
+    };
+  }
+
+  async function savePhraseAs(page, name) {
+    await openPhraseMenu(page);
+    await page.click('#saveBtn');
+    const saveModal = page.locator('#confirmModal');
+    await expect(saveModal).toHaveClass(/open/);
+    await expect(page.locator('#confirmTitle')).toHaveText('Save Phrase');
+    await page.fill('#confirmInput', name);
+    await page.click('#confirmOkBtn');
+    await expect(saveModal).not.toHaveClass(/open/);
+    await closeAccountMenu(page);
+  }
+
+  async function loadPhrase(page, name) {
+    await openPhraseMenu(page);
+    await page.click('#openPhraseBtn');
+    const openModal = page.locator('#openPhraseModal');
+    await expect(openModal).toHaveClass(/open/);
+    await page.locator('.phrase-list-item', { hasText: name }).click();
+
+    // Only appears if the grid has unsaved changes relative to whatever's
+    // currently loaded — harmless to skip when it doesn't show.
+    const loadConfirmModal = page.locator('#confirmModal.open');
+    if (await loadConfirmModal.isVisible().catch(() => false)) {
+      await page.click('#confirmOkBtn');
+      await expect(loadConfirmModal).not.toBeVisible();
+    }
+  }
+
+  test('Measure settings (beats × subdivision) persist per-phrase', async ({ page }) => {
+    const phrase1Name = `4-Quarter ${Date.now()}`;
+    const phrase2Name = `7-Eighth ${Date.now()}`;
+
+    // Phrase 1: 4 beats per measure, quarter notes
+    await setMeasureSettings(page, 4, 1);
+    await savePhraseAs(page, phrase1Name);
+
+    // Phrase 2: 7 beats per measure, eighth notes — same (empty) grid, just
+    // re-saved under a different name, so no stretch/compress note-data
+    // dialog can fire (that only triggers when the grid actually has notes).
+    await setMeasureSettings(page, 7, 2);
+    await savePhraseAs(page, phrase2Name);
+
+    // Load phrase 1 back and confirm ITS settings come back, not phrase 2's
+    // or the fixed new-phrase default.
+    await loadPhrase(page, phrase1Name);
+    await expect.poll(() => getMeasureSettings(page)).toEqual({ beats: '4', subdivision: '1' });
+
+    // Load phrase 2 and confirm the same, the other way around.
+    await loadPhrase(page, phrase2Name);
+    await expect.poll(() => getMeasureSettings(page)).toEqual({ beats: '7', subdivision: '2' });
+  });
+
   test('Delete Pattern', async ({ page }) => {
     const uniqueName = `Delete Me ${Date.now()}`;
 
