@@ -203,6 +203,15 @@ export async function saveCurrentPatternAs(name, source = 'manual') {
   const trimmed = String(name || '').trim();
   if (!trimmed) return false;
 
+  // Snapshot the grid NOW, before any awaits — this is what's being saved
+  // "as of the moment Save was clicked/confirmed." Calling serializePattern()
+  // later (e.g. inline in the dbSavePattern call below) meant it only ran
+  // after isAuthed()/dbListPatternNames() had already resolved; if the user
+  // (or a fast automated test) changed the grid again during that network
+  // round-trip, the save would silently capture the *new* state under the
+  // *old* name instead of what was actually on screen when they saved.
+  const patternSnapshot = serializePattern();
+
   try {
     // Check auth
     if (!(await isAuthed())) {
@@ -227,7 +236,7 @@ export async function saveCurrentPatternAs(name, source = 'manual') {
       return false;
     }
 
-    await dbSavePattern(trimmed, serializePattern(), source);
+    await dbSavePattern(trimmed, patternSnapshot, source);
     localStorage.setItem(LAST_USED_KEY, trimmed);
     await refreshPatternSelect(trimmed);
     updateCurrentPhraseName(trimmed);
