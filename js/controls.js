@@ -18,6 +18,7 @@ import { editHandsMode, setEditHandsMode, labelNotation, setLabelNotation, curre
 import { updateUserGridLabelNotation } from './profile.js';
 import { HistoryManager } from './history.js';
 import { canAccess, FEATURE } from './gated-feature.js';
+import { guardBeforeReplacingGrid } from './lesson-settings.js';
 import { alert, confirm, prompt, confirmCustom } from './alert.js';
 import { Bus, BUS_EVENT } from './bus.js';
 import { Modal } from './modal.js';
@@ -109,10 +110,7 @@ function updateNotationUI() {
 }
 
 export async function createNewPhrase() {
-  if (hasUnsavedChanges()) {
-    const ok = await confirm('You have unsaved changes. Discard and start a new phrase?');
-    if (!ok) return false;
-  }
+  if (!await guardBeforeReplacingGrid('You have unsaved changes. Discard and start a new phrase?')) return false;
   const existing = new Set(await dbListPatternNames());
   let defaultName = 'New Phrase';
   let n = 2;
@@ -469,10 +467,7 @@ async function showOpenPhraseModal() {
         `;
         btn.addEventListener('click', async () => {
           modal.close();
-          if (hasUnsavedChanges()) {
-            const ok = await confirm('You have unsaved changes. Discard and open this phrase?');
-            if (!ok) return;
-          }
+          if (!await guardBeforeReplacingGrid('You have unsaved changes. Discard and open this phrase?')) return;
           await loadPatternByName(name);
           updateCurrentPhraseName(name);
           updatePatternButtons();
@@ -626,22 +621,10 @@ export function initControls() {
     const selected = getSelectedPatternName();
     if (!selected) return;
 
-    if (hasUnsavedChanges()) {
-      const ok = await showCustomModal({
-        title: 'Unsaved Changes',
-        message: 'You have unsaved changes. Discard them and load the new pattern?',
-        mode: 'confirm'
-      });
-      if (ok) {
-        await loadPatternByName(selected);
-        updateCurrentPhraseName(selected);
-        updatePatternButtons();
-      }
-    } else {
-      await loadPatternByName(selected);
-      updateCurrentPhraseName(selected);
-      updatePatternButtons();
-    }
+    if (!await guardBeforeReplacingGrid('You have unsaved changes. Discard them and load the new pattern?')) return;
+    await loadPatternByName(selected);
+    updateCurrentPhraseName(selected);
+    updatePatternButtons();
   });
 
   // 5. Save / Load / Rename / Delete
@@ -685,20 +668,9 @@ export function initControls() {
       return;
     }
 
-    if (hasUnsavedChanges()) {
-      const ok = await showCustomModal({
-        title: 'Unsaved Changes',
-        message: 'You have unsaved changes. Discard them and load the new pattern?',
-        mode: 'confirm'
-      });
-      if (ok) {
-        await loadPatternByName(selected);
-        updatePatternButtons();
-      }
-    } else {
-      await loadPatternByName(selected);
-      updatePatternButtons();
-    }
+    if (!await guardBeforeReplacingGrid('You have unsaved changes. Discard them and load the new pattern?')) return;
+    await loadPatternByName(selected);
+    updatePatternButtons();
   });
 
   // Phrase Menu Toggle
@@ -830,14 +802,7 @@ export function initControls() {
   importBtn?.addEventListener('click', async (e) => {
     if (e) e.stopPropagation();
 
-    if (hasUnsavedChanges()) {
-      const ok = await showCustomModal({
-        title: 'Unsaved Changes',
-        message: 'You have unsaved changes. Discard them and proceed with import?',
-        mode: 'confirm'
-      });
-      if (!ok) return;
-    }
+    if (!await guardBeforeReplacingGrid('You have unsaved changes. Discard them and proceed with import?')) return;
 
     const raw = await showCustomModal({
       title: 'Import Pattern',

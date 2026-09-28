@@ -71,6 +71,13 @@ export function setGhostHandsShown(v) { ghostHandsShown = v; }
 export let isCalibrationMode = false;
 export function setIsCalibrationMode(v) { isCalibrationMode = v; }
 
+// Mirrors js/courses.js's own `currentLesson` (source of truth, set whenever
+// a lesson loads) here too, so js/lesson-settings.js and js/controls.js can
+// read "is a lesson currently loaded" without importing courses.js — which
+// already imports controls.js, so a back-import would be circular.
+export let currentLesson = null;
+export function setCurrentLesson(l) { currentLesson = l; }
+
 // Auth State (Migrated from auth.js/profile.js)
 export let currentUser = null;
 export function setCurrentUser(u) { currentUser = u; }

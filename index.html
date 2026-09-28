@@ -1291,94 +1291,96 @@
       </div>
       <div class="modal-subtitle" id="authModalSubtitle">Save your grooves to the cloud.</div>
 
-      <div class="modal-grid">
-        <!-- Step 1: Email only -->
-        <label class="modal-row" id="authEmailRow">
-          <span>Email</span>
-          <input id="authEmail" type="email" autocomplete="email" placeholder="you@example.com"
-            style="width:200px;padding:10px 12px;border-radius:999px;border:1px solid var(--panel-border);background:var(--panel);color:var(--text);" />
+      <form id="authForm" novalidate>
+        <div class="modal-grid">
+          <!-- Step 1: Email only -->
+          <label class="modal-row" id="authEmailRow">
+            <span>Email</span>
+            <input id="authEmail" type="email" autocomplete="email" placeholder="you@example.com"
+              style="width:200px;padding:10px 12px;border-radius:999px;border:1px solid var(--panel-border);background:var(--panel);color:var(--text);" />
+          </label>
+
+          <!-- Step 2a/b: Password (shown after email check) -->
+          <label id="authCurrentPassRow" class="modal-row" style="display:none;">
+            <span>Current Password</span>
+            <input id="authCurrentPass" type="password" autocomplete="current-password" placeholder="Confirm email change"
+              style="width:200px;padding:10px 12px;border-radius:999px;border:1px solid var(--panel-border);background:var(--panel);color:var(--text);" />
+          </label>
+
+          <label id="authPasswordRow" class="modal-row" style="display:none;">
+            <span>Password</span>
+            <input id="authPass" type="password" autocomplete="current-password" placeholder="••••••••"
+              style="width:200px;padding:10px 12px;border-radius:999px;border:1px solid var(--panel-border);background:var(--panel);color:var(--text);" />
+          </label>
+
+          <!-- Step 2b: Confirm password (signup only) -->
+          <label id="authPasswordConfirmRow" class="modal-row" style="display:none;">
+            <span>Confirm Password</span>
+            <input id="authPassConfirm" type="password" autocomplete="new-password" placeholder="Confirm new password"
+              style="width:200px;padding:10px 12px;border-radius:999px;border:1px solid var(--panel-border);background:var(--panel);color:var(--text);" />
+          </label>
+
+          <!-- Step 2b: Name fields (signup only) -->
+          <label id="authFirstNameRow" class="modal-row" style="display:none;">
+            <span>First Name <span style="color:var(--accent,#6366f1);">*</span></span>
+            <input id="authFirstName" type="text" autocomplete="given-name" placeholder="Your first name"
+              style="width:200px;padding:10px 12px;border-radius:999px;border:1px solid var(--panel-border);background:var(--panel);color:var(--text);" />
+          </label>
+          <label id="authLastNameRow" class="modal-row" style="display:none;">
+            <span>Last Name</span>
+            <input id="authLastName" type="text" autocomplete="family-name" placeholder="Optional"
+              style="width:200px;padding:10px 12px;border-radius:999px;border:1px solid var(--panel-border);background:var(--panel);color:var(--text);" />
+          </label>
+
+          <label id="authOtpRow" class="modal-row" style="display:none;">
+            <span>Verification Code</span>
+            <input id="authOtp" type="text" autocomplete="one-time-code" placeholder="12345678"
+              style="width:200px;padding:10px 12px;border-radius:999px;border:1px solid var(--panel-border);background:var(--panel);color:var(--text);text-align:center;letter-spacing:0.2em;font-size:16px;"
+              maxlength="8" />
+          </label>
+        </div>
+
+
+        <!-- ToS checkbox (signup only) -->
+        <label id="authTosRow" class="modal-row"
+          style="display:none; align-items:flex-start; gap:10px; font-size:12px; color:var(--text-secondary); padding: 8px 0; max-width:340px;">
+          <input type="checkbox" id="authTosCheckbox" style="margin-top:2px; flex-shrink:0; cursor:pointer;" />
+          <span>I agree to the <a href="./tos.html" target="_blank"
+              style="color:var(--accent, #6366f1); text-decoration:underline;">Terms of Service</a> and <a
+              href="./privacy.html" target="_blank"
+              style="color:var(--accent, #6366f1); text-decoration:underline;">Privacy Policy</a></span>
         </label>
 
-        <!-- Step 2a/b: Password (shown after email check) -->
-        <label id="authCurrentPassRow" class="modal-row" style="display:none;">
-          <span>Current Password</span>
-          <input id="authCurrentPass" type="password" autocomplete="current-password" placeholder="Confirm email change"
-            style="width:200px;padding:10px 12px;border-radius:999px;border:1px solid var(--panel-border);background:var(--panel);color:var(--text);" />
-        </label>
+        <br />
 
-        <label id="authPasswordRow" class="modal-row" style="display:none;">
-          <span>Password</span>
-          <input id="authPass" type="password" autocomplete="current-password" placeholder="••••••••"
-            style="width:200px;padding:10px 12px;border-radius:999px;border:1px solid var(--panel-border);background:var(--panel);color:var(--text);" />
-        </label>
+        <div class="modal-hint" id="authHint"></div>
 
-        <!-- Step 2b: Confirm password (signup only) -->
-        <label id="authPasswordConfirmRow" class="modal-row" style="display:none;">
-          <span>Confirm Password</span>
-          <input id="authPassConfirm" type="password" autocomplete="new-password" placeholder="Confirm new password"
-            style="width:200px;padding:10px 12px;border-radius:999px;border:1px solid var(--panel-border);background:var(--panel);color:var(--text);" />
-        </label>
+        <div style="text-align: right; margin-bottom: 15px;">
+          <button type="button" id="authForgotPassword"
+            style="display:none; background:none; border:none; color:var(--text-secondary); font-size:12px; cursor:pointer; text-decoration:underline;">Forgot
+            Password?</button>
+          <button type="button" id="authTogglePasswordBtn"
+            style="display:none; background:none; border:none; color:var(--text-secondary); font-size:12px; cursor:pointer; text-decoration:underline;">Change
+            Password</button>
+          <button type="button" id="authBackBtn"
+            style="display:none; background:none; border:none; color:var(--text-secondary); font-size:12px; cursor:pointer; text-decoration:underline;">←
+            Use a different email</button>
+        </div>
 
-        <!-- Step 2b: Name fields (signup only) -->
-        <label id="authFirstNameRow" class="modal-row" style="display:none;">
-          <span>First Name <span style="color:var(--accent,#6366f1);">*</span></span>
-          <input id="authFirstName" type="text" autocomplete="given-name" placeholder="Your first name"
-            style="width:200px;padding:10px 12px;border-radius:999px;border:1px solid var(--panel-border);background:var(--panel);color:var(--text);" />
-        </label>
-        <label id="authLastNameRow" class="modal-row" style="display:none;">
-          <span>Last Name</span>
-          <input id="authLastName" type="text" autocomplete="family-name" placeholder="Optional"
-            style="width:200px;padding:10px 12px;border-radius:999px;border:1px solid var(--panel-border);background:var(--panel);color:var(--text);" />
-        </label>
-
-        <label id="authOtpRow" class="modal-row" style="display:none;">
-          <span>Verification Code</span>
-          <input id="authOtp" type="text" autocomplete="one-time-code" placeholder="12345678"
-            style="width:200px;padding:10px 12px;border-radius:999px;border:1px solid var(--panel-border);background:var(--panel);color:var(--text);text-align:center;letter-spacing:0.2em;font-size:16px;"
-            maxlength="8" />
-        </label>
-      </div>
-
-
-      <!-- ToS checkbox (signup only) -->
-      <label id="authTosRow" class="modal-row"
-        style="display:none; align-items:flex-start; gap:10px; font-size:12px; color:var(--text-secondary); padding: 8px 0; max-width:340px;">
-        <input type="checkbox" id="authTosCheckbox" style="margin-top:2px; flex-shrink:0; cursor:pointer;" />
-        <span>I agree to the <a href="./tos.html" target="_blank"
-            style="color:var(--accent, #6366f1); text-decoration:underline;">Terms of Service</a> and <a
-            href="./privacy.html" target="_blank"
-            style="color:var(--accent, #6366f1); text-decoration:underline;">Privacy Policy</a></span>
-      </label>
-
-      <br />
-
-      <div class="modal-hint" id="authHint"></div>
-
-      <div style="text-align: right; margin-bottom: 15px;">
-        <button id="authForgotPassword"
-          style="display:none; background:none; border:none; color:var(--text-secondary); font-size:12px; cursor:pointer; text-decoration:underline;">Forgot
-          Password?</button>
-        <button id="authTogglePasswordBtn"
-          style="display:none; background:none; border:none; color:var(--text-secondary); font-size:12px; cursor:pointer; text-decoration:underline;">Change
-          Password</button>
-        <button id="authBackBtn"
-          style="display:none; background:none; border:none; color:var(--text-secondary); font-size:12px; cursor:pointer; text-decoration:underline;">←
-          Use a different email</button>
-      </div>
-
-      <div class="modal-actions">
-        <!-- Step 1 -->
-        <button id="authContinueBtn" class="active">Continue</button>
-        <!-- Step 2: login -->
-        <button id="authLogin" style="display:none;" class="active">Log in</button>
-        <!-- Step 2: signup -->
-        <button id="authRegister" style="display:none;">Create account</button>
-        <!-- Logged-in account management -->
-        <button id="authUpdateEmail" style="display:none;" class="active">Update Email</button>
-        <button id="authUpdatePassword" style="display:none;" class="active">Update Password</button>
-        <button id="authLogout" style="display:none;">Sign out</button>
-        <button id="authVerifyOtp" style="display:none;" class="active">Verify Code</button>
-      </div>
+        <div class="modal-actions">
+          <!-- Step 1 -->
+          <button type="button" id="authContinueBtn" class="active">Continue</button>
+          <!-- Step 2: login -->
+          <button type="button" id="authLogin" style="display:none;" class="active">Log in</button>
+          <!-- Step 2: signup -->
+          <button type="button" id="authRegister" style="display:none;">Create account</button>
+          <!-- Logged-in account management -->
+          <button type="button" id="authUpdateEmail" style="display:none;" class="active">Update Email</button>
+          <button type="button" id="authUpdatePassword" style="display:none;" class="active">Update Password</button>
+          <button type="button" id="authLogout" style="display:none;">Sign out</button>
+          <button type="button" id="authVerifyOtp" style="display:none;" class="active">Verify Code</button>
+        </div>
+      </form>
     </div>
   </div>
 
@@ -1493,6 +1495,27 @@
     </div>
   </div>
 
+
+  <!-- Lesson Save Changes Modal (js/lesson-settings.js) — shown instead of
+       the generic "Discard unsaved changes?" confirm whenever the grid
+       would be replaced while a course lesson is loaded. -->
+  <div id="lessonSaveChangesModal" class="modal-overlay" aria-hidden="true">
+    <div class="modal lesson-save-modal">
+      <div class="modal-header">
+        <h2 class="modal-title">Save your changes to this lesson?</h2>
+        <button id="closeLessonSaveModal" class="close-btn">&times;</button>
+      </div>
+      <div class="lesson-save-body">
+        <p id="lessonSaveModalSubtitle" class="lesson-save-subtitle"></p>
+        <div id="lessonSaveDiffList" class="lesson-save-diff-list"></div>
+      </div>
+      <div class="modal-footer lesson-save-footer">
+        <button id="lessonSaveConfirmBtn" class="primary-btn">Save for this lesson</button>
+        <button id="lessonSaveDiscardBtn" class="danger-btn">Discard</button>
+        <button id="lessonSaveCancelBtn" class="text-btn">Cancel</button>
+      </div>
+    </div>
+  </div>
 
   <!-- Course Marketplace Modal -->
   <div id="marketplaceModal" class="modal-overlay" aria-hidden="true">

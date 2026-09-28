@@ -1067,3 +1067,143 @@ body.dark .chord-fav-btn {
     display: none;
   }
 }
+
+/* ── Per-student lesson settings (js/lesson-settings.js) ──────────────── */
+
+/* Shared diff-row look, used both inside the Reset/Restore strip and the
+   Save-changes modal — one field name, an optional strikethrough "from"
+   value, an arrow, and the current/target value. */
+.lesson-save-diff-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 13.5px;
+  padding: 8px 10px;
+  background: rgba(var(--accent-rgb), 0.06);
+  border-radius: 10px;
+}
+
+.lesson-save-diff-row + .lesson-save-diff-row {
+  margin-top: 6px;
+}
+
+.lesson-save-diff-row .field {
+  font-weight: 600;
+  min-width: 68px;
+}
+
+.lesson-save-diff-row .from {
+  text-decoration: line-through;
+  color: var(--text-secondary, var(--text));
+  opacity: 0.7;
+}
+
+.lesson-save-diff-row .arrow {
+  opacity: 0.5;
+}
+
+.lesson-save-diff-row .to {
+  color: var(--accent-light, var(--accent));
+  font-weight: 600;
+}
+
+/* Reset/Restore strip — sits right after the pattern preview, before
+   #lessonControls (js/courses.js positions it via #lessonSettingsControl). */
+.lesson-settings-strip {
+  margin-top: 14px;
+  border: 1px solid var(--panel-border);
+  border-radius: 12px;
+  padding: 12px 14px;
+  background: rgba(var(--accent-rgb), 0.05);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.lesson-settings-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--accent-light, var(--accent));
+}
+
+.lesson-settings-diff {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.lesson-settings-btn {
+  align-self: flex-start;
+  border: none;
+  border-radius: 100px;
+  padding: 8px 16px;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: filter 0.15s, transform 0.15s;
+}
+
+.lesson-settings-btn:hover {
+  filter: brightness(1.08);
+  transform: translateY(-1px);
+}
+
+.lesson-settings-btn.reset {
+  background: var(--btn-bg);
+  color: var(--text);
+}
+
+.lesson-settings-btn.restore {
+  background: linear-gradient(135deg, var(--accent), var(--accent-light));
+  color: #fff;
+}
+
+/* Save-changes modal (#lessonSaveChangesModal) */
+.lesson-save-modal {
+  width: min(440px, 100%);
+}
+
+.lesson-save-body {
+  padding: 4px 24px 8px;
+}
+
+.lesson-save-subtitle {
+  font-size: 13px;
+  color: var(--text-secondary, var(--text));
+  opacity: 0.8;
+  margin: 4px 0 14px;
+}
+
+.lesson-save-diff-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.lesson-save-footer {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.lesson-save-footer button {
+  width: 100%;
+}
+
+.text-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary, var(--text));
+  opacity: 0.75;
+  padding: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.text-btn:hover {
+  opacity: 1;
+}

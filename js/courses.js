@@ -1,8 +1,8 @@
 import { alert, confirm, prompt } from './alert.js';
 import { Sidepanel, updateBodySidebarClass, setLastSidebarType, registerPanelOpener, toggleLastSidebar } from './sidepanel.js';
 import { Bus, BUS_EVENT } from './bus.js';
-import { currentUser, isAdminUser } from './state.js';
-import { applyPattern, serializePattern, dbSavePattern, refreshPatternSelect, hasUnsavedChanges, snapshotCurrentState } from './pattern-crud.js';
+import { currentUser, isAdminUser, setCurrentLesson } from './state.js';
+import { applyPattern, serializePattern, dbSavePattern, refreshPatternSelect, snapshotCurrentState } from './pattern-crud.js';
 import { stop } from './noteplayer.js';
 import { supabase } from './supabase-client.js';
 import { updateAdminUI } from './auth.js';
@@ -15,6 +15,7 @@ import { openAuthModal } from './auth.js';
 import { extractYouTubeId } from './utils.js';
 import { renderThumbnail } from './pattern-thumbnail.js';
 import { clearGrid } from './notegrid.js';
+import { getLessonOverride, applyLessonOverride, captureLessonBaseline, guardBeforeReplacingGrid, renderLessonSettingsControl } from './lesson-settings.js';
 
 // ===== SIDEBAR LOGIC (OWNED COURSES) =====
 
@@ -390,9 +391,7 @@ function applyLessonExpandedState() {
 
 export async function loadLesson(lessonId) {
   try {
-    if (hasUnsavedChanges()) {
-      if (!await confirm('You have unsaved changes. Discard them?')) return;
-    }
+    if (!await guardBeforeReplacingGrid()) return;
 
     const lesson = allLessons.find(l => l.id === lessonId);
     if (!lesson) {
@@ -400,16 +399,28 @@ export async function loadLesson(lessonId) {
       return;
     }
     currentLesson = lesson;
+    setCurrentLesson(lesson);
 
-    // 1. Apply the groove to the grid — or clear it
-    if (lesson.pattern_json) {
+    // 1. Apply the groove to the grid — a personal override if the student
+    // has one for this lesson (js/lesson-settings.js), otherwise the shared
+    // default — or clear it if there's neither.
+    const override = await getLessonOverride(lessonId);
+    const appliedOverride = await applyLessonOverride(lesson, override);
+
+    if (appliedOverride) {
+      updateCurrentPhraseName(lesson.title || 'Lesson');
+      captureLessonBaseline();
+      snapshotCurrentState();
+    } else if (lesson.pattern_json) {
       await applyPattern(lesson.pattern_json);
       updateCurrentPhraseName(lesson.title || 'Lesson');
       // Update last saved state to prevent false dirty check
+      captureLessonBaseline();
       snapshotCurrentState();
     } else {
       clearGrid();
       updateCurrentPhraseName('- No Phrase Loaded -');
+      captureLessonBaseline();
       snapshotCurrentState();
     }
 
@@ -591,6 +602,21 @@ export async function loadLesson(lessonId) {
       document.getElementById('lessonPatternHint')?.remove();
     }
 
+    // Reset/Restore control (js/lesson-settings.js) — re-anchored every load
+    // right after whichever of the preview hint/canvas/video is currently
+    // present, so it always sits between the preview and #lessonControls
+    // regardless of whether this particular lesson has a pattern to preview.
+    document.getElementById('lessonSettingsControl')?.remove();
+    const settingsAnchor = document.getElementById('lessonPatternHint')
+      || document.getElementById('lessonPatternPreview')
+      || videoContainer;
+    if (settingsAnchor) {
+      const settingsEl = document.createElement('div');
+      settingsEl.id = 'lessonSettingsControl';
+      settingsAnchor.after(settingsEl);
+      renderLessonSettingsControl(lesson);
+    }
+
     // Completion Button
     const btn = document.getElementById('lessonCompleteBtn');
     const isComplete = completedLessonIds.has(lesson.id);
@@ -714,6 +740,11 @@ export function openLessonSidebar() {
 
 export function closeLessonSidebar() {
   lessonSidePanel.close();
+  // Explicitly leaving the lesson — guardBeforeReplacingGrid() (js/lesson-
+  // settings.js) should stop treating later, unrelated Studio actions this
+  // session as lesson-scoped once the student has closed out of it.
+  currentLesson = null;
+  setCurrentLesson(null);
 }
 
 export function openSidebar() {
@@ -1085,6 +1116,7 @@ export function initCourses() {
   Bus.on(BUS_EVENT.AUTH_LOGOUT, () => {
     activeCourseId = null;
     currentLesson = null;
+    setCurrentLesson(null);
     allCourses = [];
     allSections = [];
     allLessons = [];

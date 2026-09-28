@@ -376,6 +376,15 @@ export async function initAuth() {
 
   authLogoutDropdown?.addEventListener('click', async () => { logout(); });
 
+  // Every button inside #authForm is explicitly type="button" (see
+  // index.html), so a click never submits it — this is just a safety net
+  // for the Enter key, which can still trigger a native 'submit' event
+  // (e.g. a step with only one visible field). The existing Enter-key
+  // handler below (keydown → authContinueBtn.click()) is what actually
+  // drives step advancement; this only stops the browser from attempting a
+  // real page navigation.
+  document.getElementById('authForm')?.addEventListener('submit', (e) => e.preventDefault());
+
   // ── STEP 1: Continue (email check) ──────────────────────────────────────
   authContinueBtn?.addEventListener('click', async () => {
     const email = authEmail.value.trim();
