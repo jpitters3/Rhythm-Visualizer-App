@@ -527,6 +527,8 @@ export async function loadLesson(lessonId) {
     const descEl = document.getElementById('lessonDescription');
     if (descEl) {
       const rawDesc = lesson.description || '';
+      const lessonCourse = allCourses.find(c => c.sections.some(s => s.lessons.some(l => l.id === lessonId)));
+      const canEditDescription = isAdminUser(currentUser) || lessonCourse?.owner_id === currentUser?.id;
 
       // Ensure we have an edit textarea available
       let editArea = document.getElementById('editLessonDescription');
@@ -546,11 +548,18 @@ export async function loadLesson(lessonId) {
         descEl.parentNode.insertBefore(editArea, descEl.nextSibling);
       }
 
-      // Toggle edit mode vs view mode based on admin status
-      if (isAdminUser(currentUser)) {
+      // Toggle edit mode vs view mode based on ownership. The course creator
+      // (or an admin) always sees the editable textarea, even when empty, so
+      // they can still add a description. Everyone else only sees the
+      // rendered description when there's actually content — an empty div
+      // would otherwise just take up space in the sidebar for no reason.
+      if (canEditDescription) {
         descEl.style.display = 'none';
         editArea.style.display = 'block';
         editArea.value = rawDesc;
+      } else if (!rawDesc.trim()) {
+        editArea.style.display = 'none';
+        descEl.style.display = 'none';
       } else {
         editArea.style.display = 'none';
         descEl.style.display = 'block';

@@ -647,10 +647,14 @@ body.dark .lesson-sidebar-header {
   text-overflow: ellipsis;
 }
 
-/* Lesson navigation: ← [Complete] → */
+/* Lesson navigation: ← [Complete] → — grid-template-columns was missing
+   entirely, so with no explicit columns the 3 buttons defaulted to one per
+   row (stacked) instead of sitting side by side. Complete gets the wider
+   middle column since its label is the longest. */
 .lesson-nav-grid {
   display: grid;
-  gap: 10px;
+  grid-template-columns: 1fr 1.4fr 1fr;
+  gap: 8px;
   align-items: center;
 }
 
@@ -659,10 +663,15 @@ body.dark .lesson-sidebar-header {
   text-align: center;
   justify-content: center;
   align-items: center;
+  /* .primary-btn/.secondary-btn's own padding+font-size are sized for a
+     standalone button — too large for three of them to fit one row in a
+     narrow lesson sidebar without wrapping or overflowing. */
+  padding: 9px 6px;
+  font-size: 12px;
+  white-space: nowrap;
 }
 
 .lesson-prev-btn {
-  padding: 10px;
   justify-content: center;
 }
 
@@ -678,7 +687,7 @@ body.dark .lesson-sidebar-header {
   z-index: 1;
   flex-shrink: 0;
   margin: 0 16px 16px;
-  padding: 16px 20px;
+  padding: 10px 16px;
   border-radius: 16px;
   border: 1px solid rgba(0, 0, 0, 0.07);
   background: rgba(255, 255, 255, 0.7);
