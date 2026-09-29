@@ -15,14 +15,15 @@ class CustomAlert {
         this.input = this.modal.querySelector('#confirmInput');
         this.okBtn = this.modal.querySelector('#confirmOkBtn');
         this.cancelBtn = this.modal.querySelector('#confirmCancelBtn');
+        this.form = this.modal.querySelector('#confirmForm');
         this.resolve = null;
 
         this.init();
     }
 
     init() {
-        // Handle OK button
-        this.okBtn.addEventListener('click', () => {
+        this.form.addEventListener('submit', (e) => {
+            e.preventDefault();
             const value = this.inputWrapper.style.display === 'block' ? this.input.value : true;
             this.hide(value);
         });

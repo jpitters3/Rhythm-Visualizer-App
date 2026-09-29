@@ -2961,18 +2961,20 @@
 
   <div id="confirmModal" class="modal-overlay" aria-hidden="true">
     <div class="modal glass-panel">
-      <div id="confirmTitle" class="modal-title vibrant-text">Confirm</div>
-      <div id="confirmMessage" class="modal-subtitle">Are you sure?</div>
+      <form id="confirmForm" novalidate>
+        <div id="confirmTitle" class="modal-title vibrant-text">Confirm</div>
+        <div id="confirmMessage" class="modal-subtitle">Are you sure?</div>
 
-      <div id="confirmInputWrapper" style="display:none; margin: 15px 0;">
-        <input id="confirmInput" type="text" placeholder="Enter value..."
-          style="width:100%; padding:12px 15px; border-radius:12px; border:1px solid var(--panel-border); background:rgba(0,0,0,0.2); color:var(--text); font-size: 16px; outline: none;" />
-      </div>
+        <div id="confirmInputWrapper" style="display:none; margin: 15px 0;">
+          <input id="confirmInput" type="text" placeholder="Enter value..." autocomplete="off"
+            style="width:100%; padding:12px 15px; border-radius:12px; border:1px solid var(--panel-border); background:rgba(0,0,0,0.2); color:var(--text); font-size: 16px; outline: none;" />
+        </div>
 
-      <div class="modal-actions">
-        <button id="confirmCancelBtn" class="secondary-btn">Cancel</button>
-        <button id="confirmOkBtn" class="primary-btn active">OK</button>
-      </div>
+        <div class="modal-actions">
+          <button id="confirmCancelBtn" type="button" class="secondary-btn">Cancel</button>
+          <button id="confirmOkBtn" type="submit" class="primary-btn active">OK</button>
+        </div>
+      </form>
     </div>
   </div>
 
