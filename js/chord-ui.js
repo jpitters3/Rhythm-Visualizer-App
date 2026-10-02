@@ -2,13 +2,11 @@
  * Chord Library UI
  * Handles the display and interaction of the analyzed chords.
  */
-import { playNoteByLabel } from './noteplayer.js';
-import { getScale } from './state.js';
-import { SCALES } from './config.js';
 import { ChordAnalyzer } from './chord-analyzer.js';
 import { assignChordToSelectedCell } from './notegrid.js';
-import { setChordHighlight, getPitchPositionMap, isChordTestMode } from './handpanmap.js';
+import { setChordHighlight, getPitchPositionMap } from './handpanmap.js';
 import { annotatePlayability } from './chord-playability.js';
+import { getAllCurrentNotes, highlightChordNotes, playChordNotes } from './chord-playback.js';
 
 const ChordUI = (function () {
 
@@ -79,32 +77,6 @@ const ChordUI = (function () {
 
     if (countLabel) countLabel.textContent = results.length;
     renderList(results);
-  }
-
-  function getAllCurrentNotes() {
-    // 1. Check if we already have a currentScale object
-    const scale = getScale();
-    if (scale && scale.map) {
-      const notes = [];
-      if (scale.ding) notes.push(scale.ding);
-      Object.values(scale.map).forEach(n => notes.push(n));
-      return notes;
-    }
-
-    // 2. Fallback: Check SCALES global if we know the name
-    const scaleSelect = document.getElementById('scaleSelect');
-    if (scaleSelect && SCALES) {
-      const name = scaleSelect.value;
-      if (name && SCALES[name]) {
-        const s = SCALES[name];
-        const notes = [];
-        if (s.ding) notes.push(s.ding);
-        if (s.map) Object.values(s.map).forEach(n => notes.push(n));
-        return notes;
-      }
-    }
-
-    return [];
   }
 
   function renderList(chords) {
@@ -216,54 +188,12 @@ const ChordUI = (function () {
   }
 
   function highlightChord(chord, active) {
-    const notes    = chord.notes ?? chord;
-    const playable = isChordTestMode() ? (chord.playable ?? true) : true;
-    const scale    = getScale();
-    const labelToPitch = scale ? scale.map : null;
-    const dingPitch    = scale ? scale.ding : null;
-
-    if (!labelToPitch) return;
-
-    const targetLabels = [];
-    if (notes.includes(dingPitch)) { targetLabels.push('D'); targetLabels.push('Ding'); }
-    for (const [lbl, pitch] of Object.entries(labelToPitch)) {
-      if (notes.includes(pitch)) targetLabels.push(lbl);
-    }
-
-    setChordHighlight(targetLabels, active, playable);
+    highlightChordNotes(chord, active);
   }
 
   function playChord(notes) {
-    if (playNoteByLabel) {
-      const scale = getScale();
-      const labelToPitch = scale ? scale.map : null;
-      const dingPitch = scale ? scale.ding : null;
-
-      if (!labelToPitch) return;
-
-      const targetLabels = [];
-      const playedNotes = [];
-
-      notes.forEach((pitch, i) => {
-        let targetLabel = null;
-        if (pitch === dingPitch) targetLabel = 'D';
-        else {
-          for (const [lbl, p] of Object.entries(labelToPitch)) {
-            if (p === pitch) { targetLabel = lbl; break; }
-          }
-        }
-
-        if (targetLabel) {
-          targetLabels.push(targetLabel);
-          playNoteByLabel(targetLabel);
-        }
-      });
-
-      // Inject to Grid if a cell is selected based on imported function
-      if (typeof assignChordToSelectedCell === 'function') {
-        assignChordToSelectedCell(targetLabels);
-      }
-    }
+    const labels = playChordNotes(notes);
+    assignChordToSelectedCell(labels);
   }
 
   return {

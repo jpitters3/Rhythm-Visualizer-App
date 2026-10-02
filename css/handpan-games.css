@@ -161,3 +161,361 @@ body.dark .hg-tile:hover {
   .hg-container { padding: 28px 16px 60px; }
   .hg-grid { grid-template-columns: 1fr; }
 }
+
+/* Chord Wheel game (Harmony domain). See js/chord-wheel-game.js. */
+
+.cw-scale-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  opacity: 0.7;
+  margin-bottom: 16px;
+}
+
+.cw-scale-select-slot select {
+  font-size: 13px;
+  font-weight: 700;
+  color: #000;
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  padding: 4px 8px;
+  cursor: pointer;
+}
+
+body.dark .cw-scale-select-slot select {
+  color: var(--text);
+}
+
+.cw-board {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 32px;
+  flex-wrap: wrap;
+  margin-bottom: 24px;
+}
+
+/* Handpan and wheel are deliberately the same size — see .cw-wheel-wrap. */
+.cw-handpan-slot {
+  width: 260px;
+  max-width: 100%;
+  flex-shrink: 0;
+  display: flex;
+  justify-content: center;
+}
+
+.cw-handpan-slot .handpan-wrap {
+  width: 100%;
+}
+
+.cw-wheel-wrap {
+  position: relative;
+  width: 260px;
+  max-width: 100%;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+@keyframes cwHintPulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.06); opacity: 0.8; }
+}
+
+/* Normal flow (not absolutely positioned) so it reserves its own space below
+   the wheel instead of overlapping whatever comes next — it only takes up
+   room while actually shown ([hidden] removes it from flow entirely). */
+.cw-wheel-hint {
+  width: fit-content;
+  margin: 14px auto 0;
+  white-space: nowrap;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  padding: 6px 14px;
+  border-radius: 999px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+  animation: cwHintPulse 1.4s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.cw-wheel-pointer {
+  position: absolute;
+  top: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 12px solid transparent;
+  border-right: 12px solid transparent;
+  border-top: 18px solid var(--accent, #f6c84c);
+  z-index: 2;
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.25));
+}
+
+.cw-wheel-svg {
+  width: 100%;
+  height: auto;
+  border-radius: 50%;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.18);
+  will-change: transform;
+}
+
+.cw-wheel-label {
+  font-size: 20px;
+  font-weight: 700;
+  fill: #1a1a1a;
+  text-anchor: middle;
+  dominant-baseline: middle;
+}
+
+.cw-mode-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+
+.cw-chords-toggle-btn {
+  border: 1px solid var(--panel-border);
+  background: var(--panel);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 7px 14px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.cw-chords-toggle-btn:hover {
+  border-color: var(--accent-glow);
+}
+
+.cw-chords-panel {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 6px 16px;
+  padding: 16px;
+  margin-bottom: 20px;
+  border: 1px solid var(--panel-border);
+  border-radius: 14px;
+  background: var(--panel);
+}
+
+.cw-chord-toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cw-chord-toggle-row input {
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.cw-chord-preview-btn {
+  border: none;
+  background: none;
+  font-size: 14px;
+  color: var(--text);
+  padding: 2px 6px;
+  margin-left: -6px;
+  border-radius: 6px;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s;
+}
+
+.cw-chord-preview-btn:hover {
+  background: var(--panel-border);
+}
+
+.cw-chords-empty {
+  font-size: 13px;
+  color: var(--text);
+  opacity: 0.6;
+  grid-column: 1 / -1;
+  margin: 0;
+}
+
+.cw-mode-toggle {
+  display: inline-flex;
+  border: 1px solid var(--panel-border);
+  border-radius: 999px;
+  padding: 3px;
+  gap: 2px;
+}
+
+.cw-mode-btn {
+  border: none;
+  background: none;
+  color: var(--text);
+  opacity: 0.6;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 7px 16px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 0.15s, opacity 0.15s;
+}
+
+.cw-mode-btn.active {
+  background: var(--panel);
+  opacity: 1;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.cw-unplayable-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text);
+  opacity: 0.7;
+  cursor: pointer;
+}
+
+.cw-actions-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 28px;
+}
+
+.cw-actions-row button {
+  border: 1px solid var(--panel-border);
+  background: var(--panel);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 10px 16px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: border-color 0.15s, opacity 0.15s;
+}
+
+.cw-actions-row button:hover {
+  border-color: var(--accent-glow);
+}
+
+.cw-actions-row button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.cw-slots {
+  display: flex;
+  gap: 14px;
+}
+
+.cw-slots .sortable-indicator {
+  width: 2px;
+  align-self: stretch;
+}
+
+.cw-slot {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 20px 14px;
+  min-height: 130px;
+  border-radius: 16px;
+  border: 1px solid var(--panel-border);
+  background: var(--panel);
+  cursor: grab;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.cw-slot-target {
+  border-color: var(--accent, #f6c84c);
+  box-shadow: 0 0 0 2px var(--accent-glow, rgba(246, 200, 76, 0.35));
+}
+
+.cw-slot-index {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--text);
+  opacity: 0.4;
+}
+
+.cw-slot-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 6px;
+}
+
+.cw-chord-name {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.cw-chord-inversion {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--btn-active);
+  opacity: 0.85;
+}
+
+.cw-chord-empty {
+  font-size: 20px;
+  color: var(--text);
+  opacity: 0.3;
+}
+
+.cw-chord-badge {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text);
+  opacity: 0.55;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--panel-border);
+}
+
+.cw-spin-btn {
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--panel-border);
+  background: var(--panel);
+  border-radius: 50%;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
+}
+
+.cw-spin-btn:hover {
+  border-color: var(--accent-glow);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.16);
+  transform: scale(1.1) rotate(15deg);
+}
+
+.cw-spin-btn:active {
+  transform: scale(0.95);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+
+@media (max-width: 640px) {
+  .cw-slots { flex-wrap: wrap; }
+  .cw-slot { flex-basis: calc(50% - 7px); }
+  .cw-board { flex-direction: column-reverse; gap: 20px; }
+  .cw-wheel-wrap, .cw-handpan-slot { width: 220px; }
+}

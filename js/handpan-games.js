@@ -12,7 +12,7 @@ const DOMAINS = [
   { id: 'rhythm',        name: 'Rhythm',                icon: '🥁', blurb: 'Lock the pulse, subdivide, displace, groove.',    status: 'soon' },
   { id: 'coordination',  name: 'Coordination',          icon: '🤹', blurb: 'Hand independence and interplay.',                status: 'soon' },
   { id: 'patterns',      name: 'Patterns & Vocabulary', icon: '🧩', blurb: 'Build a library of go-to phrases.',               status: 'soon' },
-  { id: 'harmony',       name: 'Harmony',               icon: '🎶', blurb: 'Chords, tension, and resolution.',                status: 'soon' },
+  { id: 'harmony',       name: 'Harmony',               icon: '🎶', blurb: 'Chords, tension, and resolution.',                status: 'live' },
   { id: 'melody',        name: 'Melody',                icon: '🎵', blurb: 'Sing on the pan; shape a line.',                  status: 'soon' },
   { id: 'composition',   name: 'Composition',           icon: '✍️', blurb: 'Turn ideas into finished pieces.',                status: 'soon' },
   { id: 'improvisation', name: 'Improvisation',         icon: '⚡', blurb: 'Play freely without freezing up.',                status: 'soon' },
@@ -74,7 +74,14 @@ function render(view) {
         tile.classList.add('hg-nudge');
         return;
       }
-      // Future: navigate into the domain's game path.
+      openDomainGame(view, tile.dataset.domain);
     });
   });
+}
+
+async function openDomainGame(view, domainId) {
+  if (domainId === 'harmony') {
+    const { renderChordWheelGame } = await import('./chord-wheel-game.js');
+    renderChordWheelGame(view, { onBack: () => render(view) });
+  }
 }

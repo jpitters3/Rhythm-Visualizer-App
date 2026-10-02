@@ -6,7 +6,7 @@
  */
 
 // Note to MIDI map (0 = C, 11 = B)
-const NOTE_MAP = {
+export const NOTE_MAP = {
   'C': 0, 'C#': 1, 'DB': 1, 'D': 2, 'D#': 3, 'EB': 3,
   'E': 4, 'F': 5, 'F#': 6, 'GB': 6, 'G': 7, 'G#': 8, 'AB': 8,
   'A': 9, 'A#': 10, 'BB': 10, 'B': 11
@@ -79,15 +79,23 @@ function getCombinations(arr, k) {
   return results;
 }
 
+// 0 = root position (bass = root), 1 = first inversion (bass = third),
+// 2 = second inversion (bass = fifth).
+function inversionOf(bassPc, rootPc, thirdPc, fifthPc) {
+  if (bassPc === thirdPc) return 1;
+  if (bassPc === fifthPc) return 2;
+  return 0;
+}
+
 /**
  * Check if 3 notes form a chord
- * Returns { root: "D", quality: "Minor", name: "D Minor" } or null
+ * Returns { root: "D", quality: "Minor", name: "D Minor", inversion: 0 } or null
  */
 function identifyTriad(notesObjArr, spellingMap) {
   const sorted = [...notesObjArr].sort((a, b) => a.midi - b.midi);
   const [n1, n2, n3] = sorted;
 
-  const pc1 = n1.midi % 12;
+  const pc1 = n1.midi % 12; // bass note's pitch class — decides the inversion
   const pc2 = n2.midi % 12;
   const pc3 = n3.midi % 12;
 
@@ -104,7 +112,8 @@ function identifyTriad(notesObjArr, spellingMap) {
       return {
         root: map[root],
         quality: 'Major',
-        name: map[root] + ' Major'
+        name: map[root] + ' Major',
+        inversion: inversionOf(pc1, root, third, fifth)
       };
     }
 
@@ -113,7 +122,8 @@ function identifyTriad(notesObjArr, spellingMap) {
       return {
         root: map[root],
         quality: 'Minor',
-        name: map[root] + ' Minor'
+        name: map[root] + ' Minor',
+        inversion: inversionOf(pc1, root, minorThird, fifth)
       };
     }
 
@@ -123,7 +133,8 @@ function identifyTriad(notesObjArr, spellingMap) {
       return {
         root: map[root],
         quality: 'Diminished',
-        name: map[root] + ' Dim'
+        name: map[root] + ' Dim',
+        inversion: inversionOf(pc1, root, minorThird, dimFifth)
       };
     }
   }

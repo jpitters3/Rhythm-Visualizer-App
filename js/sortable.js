@@ -36,6 +36,7 @@ const DRAG_KEY = 'sortable/drag-id';
 export function makeSortableGroup({
   itemSelector,
   idAttribute = 'data-id',
+  axis = 'vertical', // 'vertical' (default) or 'horizontal'
   onReorder,
 } = {}) {
   const containers = new Map(); // containerEl → { event handlers }
@@ -61,12 +62,16 @@ export function makeSortableGroup({
 
   // Returns the item that the dragged card should be inserted BEFORE
   // (null = append to end of container).
-  function getInsertionPoint(containerEl, clientY) {
+  function getInsertionPoint(containerEl, clientX, clientY) {
     const items = [...containerEl.querySelectorAll(itemSelector)]
       .filter(el => getId(el) !== activeDragId);
     for (const item of items) {
-      const { top, height } = item.getBoundingClientRect();
-      if (clientY < top + height / 2) return item;
+      const rect = item.getBoundingClientRect();
+      if (axis === 'horizontal') {
+        if (clientX < rect.left + rect.width / 2) return item;
+      } else if (clientY < rect.top + rect.height / 2) {
+        return item;
+      }
     }
     return null;
   }
@@ -89,7 +94,7 @@ export function makeSortableGroup({
     e.preventDefault();
     e.stopPropagation();
     e.dataTransfer.dropEffect = 'move';
-    const beforeEl = getInsertionPoint(containerEl, e.clientY);
+    const beforeEl = getInsertionPoint(containerEl, e.clientX, e.clientY);
     const ind = getIndicator();
     containerEl.insertBefore(ind, beforeEl); // insertBefore(x, null) = appendChild
   }
@@ -101,7 +106,7 @@ export function makeSortableGroup({
   function handleDrop(containerEl, e) {
     e.preventDefault();
     const id = e.dataTransfer.getData(DRAG_KEY);
-    const beforeEl = getInsertionPoint(containerEl, e.clientY);
+    const beforeEl = getInsertionPoint(containerEl, e.clientX, e.clientY);
     removeIndicator();
     if (!id || !onReorder) return;
     onReorder({
