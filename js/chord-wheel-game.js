@@ -25,6 +25,7 @@ let mode = 'scale';
 let includeUnplayable = false;
 let wheelRotation = 0;
 let wheelSpinning = false;
+let activeSpinAbort = null; // cancels the in-flight spin's pending transitionend
 let activePool = [];
 let disabledChords = new Set(); // signatures, e.g. "9-Minor" — off the wheel
 
@@ -223,6 +224,9 @@ function buildWheelSVG(pool) {
 }
 
 function renderWheel() {
+  // Rebuilding mid-spin destroys the old SVG's pending transitionend
+  // listener, which would otherwise strand wheelSpinning=true forever.
+  activeSpinAbort?.();
   activePool = getActivePool();
   wheelSvgEl.outerHTML = buildWheelSVG(activePool);
   wheelSvgEl = document.querySelector('.cw-wheel-svg');
@@ -257,12 +261,22 @@ function spinWheelTo(slotIndex) {
     const onEnd = () => {
       wheelSvgEl.removeEventListener('transitionend', onEnd);
       wheelSpinning = false;
+      activeSpinAbort = null;
       slots[slotIndex] = activePool[targetIndex];
       playChordAt(slots[slotIndex]);
       renderSlots();
       resolve();
     };
     wheelSvgEl.addEventListener('transitionend', onEnd);
+
+    // No landing assignment on abort — the wheel's being rebuilt out from
+    // under this spin (new scale/pool), so the slot should stay unfilled.
+    activeSpinAbort = () => {
+      wheelSvgEl.removeEventListener('transitionend', onEnd);
+      wheelSpinning = false;
+      activeSpinAbort = null;
+      resolve();
+    };
   });
 }
 

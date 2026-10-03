@@ -360,3 +360,33 @@ test('Chord Wheel: navigating away via any route restores the handpan, not just 
     await deleteTestUser(u.user.id);
   }
 });
+
+test('Chord Wheel: interrupting a spin with a scale change does not soft-lock the wheel', async ({ page }) => {
+  test.setTimeout(60000);
+  const u = await createTestUser(false);
+
+  try {
+    await loginAsTestUser(page, u);
+    await openGame(page);
+
+    // Start a spin, then switch scale well before SPIN_MS (3200ms) elapses —
+    // rebuilding the wheel mid-transition used to strand wheelSpinning=true.
+    await page.click('.cw-wheel-wrap');
+    await page.waitForTimeout(400);
+
+    const currentValue = await page.locator('#scaleSelect').inputValue();
+    const options = await page.locator('#scaleSelect option').evaluateAll(
+      opts => opts.map(o => o.value).filter(v => v && !v.startsWith('custom:'))
+    );
+    const otherOption = options.find(v => v !== currentValue);
+    test.skip(!otherOption, 'Not enough built-in scales available to test switching');
+
+    await page.selectOption('#scaleSelect', otherOption);
+    await page.waitForTimeout(600);
+
+    await page.click('.cw-wheel-wrap');
+    await waitForSlotFilled(page, 0, 6000);
+  } finally {
+    await deleteTestUser(u.user.id);
+  }
+});
