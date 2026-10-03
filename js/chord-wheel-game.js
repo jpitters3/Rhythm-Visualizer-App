@@ -4,10 +4,13 @@ import { annotatePlayability } from './chord-playability.js';
 import { getAllCurrentNotes, highlightChordNotes, playChordNotes } from './chord-playback.js';
 import { getPitchPositionMap } from './handpanmap.js';
 import { assignChordToSelectedCell, applySelection, renderAllMeasures } from './notegrid.js';
-import { appendEmptyMeasure } from './measure-actions.js';
+import { measureRange } from './measure-actions.js';
 import { activeGrid, currentUser, getSelectedScaleName } from './state.js';
 import { makeSortable } from './sortable.js';
 import { navigate } from './router.js';
+import { Bus, BUS_EVENT } from './bus.js';
+import { guardBeforeReplacingGrid } from './lesson-settings.js';
+import { HistoryManager } from './history.js';
 
 const ROOTS = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 const QUALITIES = ['Major', 'Minor'];
@@ -75,9 +78,16 @@ function getActivePool() {
   return getModeVocabulary().filter(c => !disabledChords.has(chordSignature(c)));
 }
 
+// getSelectedScaleName() isn't stable across a reload — it's "D Kurd" live
+// in-session but restores as the slug "d_kurd" from its own saved prefs.
+// Normalize so both forms land on the same key.
+function normalizeScaleKey(name) {
+  return (name || 'default').toLowerCase().replace(/\s+/g, '_');
+}
+
 function disabledChordsStorageKey() {
   const userId = currentUser?.id || 'guest';
-  const scaleKey = getSelectedScaleName() || 'default';
+  const scaleKey = normalizeScaleKey(getSelectedScaleName());
   return `cw_disabled_chords_${userId}_${scaleKey}`;
 }
 
@@ -140,6 +150,16 @@ function unmountScaleSelect() {
 
 // Mirrors js/chord-ui.js's own scale-change refresh: the 100ms delay lets
 // js/handpanmap.js finish updating currentScale/getAllCurrentNotes() first.
+// On a fresh page load, the game can mount before js/auth.js finishes its
+// async getSession() restore — currentUser is still null at that instant, so
+// the disabled-chords key would key off 'guest' and miss the real saved set.
+// Re-load once the real user becomes known, if that happens after mount.
+function onAuthReady() {
+  loadDisabledChords();
+  renderWheel();
+  renderChordsPanel();
+}
+
 function onScaleChanged() {
   setTimeout(() => {
     slots = [null, null, null, null];
@@ -260,13 +280,17 @@ function playProgression() {
   }
 }
 
-function sendToStudio() {
+async function sendToStudio() {
+  if (!await guardBeforeReplacingGrid('You have unsaved changes. Discard them and replace the grid with this progression?')) return;
+
   const ctx = activeGrid;
-  const startIndex = ctx.innerLabels.length;
-  while (ctx.innerLabels.length - startIndex < 4) appendEmptyMeasure(ctx);
+  HistoryManager?.pushState();
+  ctx.setMeasures(slots.length); // one measure per chord, fully cleared
+  ctx.step = 0;
 
   slots.forEach((chord, i) => {
-    applySelection(startIndex + i, ctx);
+    const { start } = measureRange(i, ctx);
+    applySelection(start, ctx);
     const labels = playChordNotes(chord.notes);
     assignChordToSelectedCell(labels, ctx);
   });
@@ -427,11 +451,13 @@ export function renderChordWheelGame(view, { onBack } = {}) {
   mountScaleSelect(view.querySelector('.cw-scale-select-slot'));
   const scaleSelectEl = document.getElementById('scaleSelect');
   scaleSelectEl?.addEventListener('change', onScaleChanged);
+  Bus.on(BUS_EVENT.AUTH_LOGIN, onAuthReady);
 
   view.querySelector('.hg-back').addEventListener('click', () => {
     unmountHandpan();
     unmountScaleSelect();
     scaleSelectEl?.removeEventListener('change', onScaleChanged);
+    Bus.off(BUS_EVENT.AUTH_LOGIN, onAuthReady);
     onBack?.();
   });
   wheelWrapEl.addEventListener('click', () => spinWheelTo(nextEmptySlotIndex()));

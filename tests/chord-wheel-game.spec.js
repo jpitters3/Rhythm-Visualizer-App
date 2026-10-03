@@ -3,45 +3,73 @@ require('dotenv').config();
 const { createTestUser, deleteTestUser, loginAsTestUser } = require('./utils/auth-helper');
 
 // Chord Wheel — the Harmony domain's first live game (js/chord-wheel-game.js).
-// The wheel's CSS spin transition is ~3.2s; waits below are sized for that.
+// Waits below poll actual DOM state instead of a fixed delay, since the
+// wheel's ~3.2s CSS spin transition can run slower under load than its
+// nominal duration (dropped frames, a backgrounded tab, etc.).
+
+async function openGame(page) {
+  await page.waitForTimeout(1500);
+  await page.evaluate(() => { window.location.hash = '#games'; });
+  await page.waitForSelector('.hg-tile', { timeout: 10000 });
+  await page.click('.hg-tile[data-domain="harmony"]');
+  await expect(page.locator('.cw-container')).toBeVisible();
+}
+
+async function waitForSlotFilled(page, slotIndex, timeout = 10000) {
+  await page.waitForFunction(
+    (i) => !!document.querySelector(`.cw-slot[data-id="slot-${i}"] .cw-chord-name`),
+    slotIndex,
+    { timeout }
+  );
+}
+
+async function waitForAllSlotsFilled(page, timeout = 20000) {
+  await page.waitForFunction(
+    () => document.querySelectorAll('.cw-chord-name').length === 4,
+    null,
+    { timeout }
+  );
+}
+
 test('Chord Wheel: spin, reorder, click-to-play, Any Chords mode, send to Studio', async ({ page }) => {
-  test.setTimeout(120000);
+  test.setTimeout(150000);
   const errors = [];
   page.on('pageerror', e => errors.push(e.message));
   const u = await createTestUser(false);
 
   try {
     await loginAsTestUser(page, u);
-    await page.waitForTimeout(1500);
-    await page.evaluate(() => { window.location.hash = '#games'; });
-    await page.waitForSelector('.hg-tile', { timeout: 10000 });
+    await openGame(page);
 
-    await page.click('.hg-tile[data-domain="harmony"]');
-    await expect(page.locator('.cw-container')).toBeVisible();
     await expect(page.locator('.cw-slot')).toHaveCount(4);
     await expect(page.locator('.cw-send-btn')).toBeDisabled();
 
-    // Real scale + embedded virtual handpan (relocated from Studio, see js/free-record.js precedent).
-    await expect(page.locator('.cw-scale-name')).not.toBeEmpty();
+    // Real scale (relocated <select>, same one Studio uses) + embedded virtual
+    // handpan (relocated from Studio, see js/free-record.js precedent).
+    await expect(page.locator('.cw-scale-select-slot #scaleSelect')).toHaveCount(1);
     await expect(page.locator('.cw-handpan-slot #handpanWrap')).toHaveCount(1);
     await expect(page.locator('.cw-wheel-svg path').first()).toBeVisible();
 
-    // Spin slot 0, wait for the wheel's spin transition to finish.
-    await page.click('.cw-slot[data-id="slot-0"] .cw-spin-btn');
-    await page.waitForTimeout(3600);
-    await expect(page.locator('.cw-slot[data-id="slot-0"] .cw-chord-name')).not.toBeEmpty();
+    // Idle state: the hint is visible and slot 1 is marked as the spin target.
+    await expect(page.locator('.cw-wheel-hint')).toBeVisible();
+    await expect(page.locator('.cw-slot[data-id="slot-0"]')).toHaveClass(/cw-slot-target/);
 
-    // Click the filled slot: plays + highlights it on the embedded handpan.
+    // Tap the wheel itself (not a per-slot button) — targets slot 1, plays +
+    // highlights on landing, and the hint disappears once a slot is filled.
+    await page.click('.cw-wheel-wrap');
+    await waitForSlotFilled(page, 0);
+    await expect(page.locator('.cw-wheel-hint')).toBeHidden();
+    await expect(page.locator('.chord-highlight, .chord-highlight-red').first()).toBeVisible();
+    await expect(page.locator('.cw-slot[data-id="slot-1"]')).toHaveClass(/cw-slot-target/);
+
+    // Click the filled slot: plays + highlights it again on demand.
     await page.click('.cw-slot[data-id="slot-0"]');
     await page.waitForTimeout(200);
-    const highlighted = await page.locator('.chord-highlight, .chord-highlight-red').count();
-    expect(highlighted).toBeGreaterThan(0);
+    expect(await page.locator('.chord-highlight, .chord-highlight-red').count()).toBeGreaterThan(0);
 
     // Spin All 4 — sequential single-wheel spins.
     await page.click('.cw-spin-all-btn');
-    await page.waitForTimeout(4 * 3600);
-    const filledCount = await page.locator('.cw-chord-name').count();
-    expect(filledCount).toBe(4);
+    await waitForAllSlotsFilled(page);
     await expect(page.locator('.cw-send-btn')).toBeEnabled();
 
     // Reorder: drag slot 0 onto slot 3, confirm the chord order actually changes.
@@ -56,32 +84,44 @@ test('Chord Wheel: spin, reorder, click-to-play, Any Chords mode, send to Studio
     await page.click('.cw-mode-btn[data-mode="any"]');
     await expect(page.locator('.cw-unplayable-toggle')).toBeVisible();
     await page.click('.cw-spin-all-btn');
-    await page.waitForTimeout(4 * 3600);
+    await waitForAllSlotsFilled(page);
     await expect(page.locator('.cw-chord-badge')).toHaveCount(0);
 
-    // Play Progression: highlight changes over time as each chord plays.
-    await page.click('.cw-play-btn');
-    await page.waitForTimeout(300);
-    const sample1 = await page.evaluate(() => [...document.querySelectorAll('.chord-highlight, .chord-highlight-red')].map(e => e.className));
-    await page.waitForTimeout(750);
-    const sample2 = await page.evaluate(() => [...document.querySelectorAll('.chord-highlight, .chord-highlight-red')].map(e => e.className));
-    expect(sample1.length).toBeGreaterThan(0);
-    expect(sample2.length).toBeGreaterThan(0);
+    // Including unplayable chords surfaces the muted badge and blocks Send to Studio.
+    await page.check('#cwIncludeUnplayable');
+    for (let i = 0; i < 6 && (await page.locator('.cw-chord-badge').count()) === 0; i++) {
+      await page.click('.cw-spin-all-btn');
+      await waitForAllSlotsFilled(page);
+    }
+    if (await page.locator('.cw-chord-badge').count() > 0) {
+      await expect(page.locator('.cw-send-btn')).toBeDisabled();
+    }
+    await page.uncheck('#cwIncludeUnplayable');
 
-    // Send to Studio: drops the 4 chords into 4 new grid cells.
+    // Play Progression: highlight changes over time as each chord plays.
     await page.click('.cw-mode-btn[data-mode="scale"]');
     await page.click('.cw-spin-all-btn');
-    await page.waitForTimeout(4 * 3600);
-    const cellsBefore = await page.locator('#measures .cell').count();
+    await waitForAllSlotsFilled(page);
+    await page.click('.cw-play-btn');
+    await page.waitForTimeout(300);
+    const sample1 = await page.evaluate(() => document.querySelectorAll('.chord-highlight, .chord-highlight-red').length);
+    await page.waitForTimeout(750);
+    const sample2 = await page.evaluate(() => document.querySelectorAll('.chord-highlight, .chord-highlight-red').length);
+    expect(sample1).toBeGreaterThan(0);
+    expect(sample2).toBeGreaterThan(0);
+
+    // Send to Studio: clears the grid to exactly one measure per chord, each
+    // chord on the first beat of its measure, the rest of the measure empty.
     await page.click('.cw-send-btn');
     await page.waitForTimeout(800);
     await expect(page).toHaveURL(/#studio/);
-    const cellsAfter = await page.locator('#measures .cell').count();
-    expect(cellsAfter).toBeGreaterThanOrEqual(cellsBefore + 4);
+    await expect(page.locator('.measure-row')).toHaveCount(4);
 
-    const lastFour = await page.locator('#measures .cell').allTextContents();
-    const nonEmpty = lastFour.slice(-4).filter(t => t.trim().length > 0);
-    expect(nonEmpty.length).toBe(4);
+    for (const measure of await page.locator('.measure-row').all()) {
+      const cellTexts = await measure.locator('.cell').allTextContents();
+      expect(cellTexts[0].trim().length).toBeGreaterThan(0);
+      expect(cellTexts.slice(1).every(t => t.trim().length === 0)).toBe(true);
+    }
 
     expect(errors).toEqual([]);
   } finally {
@@ -89,23 +129,146 @@ test('Chord Wheel: spin, reorder, click-to-play, Any Chords mode, send to Studio
   }
 });
 
-test('Chord Wheel: back button restores the handpan to Studio', async ({ page }) => {
+test('Chord Wheel: Send to Studio prompts for unsaved Studio changes (cancel/discard)', async ({ page }) => {
   test.setTimeout(60000);
   const u = await createTestUser(false);
 
   try {
     await loginAsTestUser(page, u);
     await page.waitForTimeout(1500);
-    await page.evaluate(() => { window.location.hash = '#games'; });
-    await page.waitForSelector('.hg-tile', { timeout: 10000 });
 
-    await page.click('.hg-tile[data-domain="harmony"]');
+    // Dirty the Studio grid first so guardBeforeReplacingGrid() has something
+    // to prompt about (js/lesson-settings.js, reused by sendToStudio()).
+    await page.evaluate(() => { window.location.hash = '#studio'; });
+    await page.waitForSelector('.measure-row:visible', { timeout: 20000 }).catch(() => {});
+    await page.evaluate(() => document.querySelectorAll('.tour-overlay').forEach(el => el.remove()));
+    await page.locator('#measures .cell').nth(0).click();
+    await page.keyboard.press('1');
+    await expect(page.locator('#measures .cell').nth(0)).toContainText('1');
+
+    await openGame(page);
+    await page.click('.cw-spin-all-btn');
+    await waitForAllSlotsFilled(page);
+
+    // Cancel: stays in the game, grid untouched.
+    await page.click('.cw-send-btn');
+    const promptMessage = page.locator('#confirmMessage');
+    await expect(promptMessage).toContainText('unsaved changes');
+    await page.click('#confirmCancelBtn');
+    await page.waitForTimeout(300);
+    await expect(page.locator('.cw-container')).toBeVisible();
+
+    // Discard: proceeds, grid now holds the progression in Studio.
+    await page.click('.cw-send-btn');
+    await expect(promptMessage).toBeVisible();
+    await page.click('#confirmOkBtn');
+    await page.waitForTimeout(800);
+    await expect(page).toHaveURL(/#studio/);
+    await expect(page.locator('.measure-row')).toHaveCount(4);
+  } finally {
+    await deleteTestUser(u.user.id);
+  }
+});
+
+test('Chord Wheel: back button restores the handpan and scale select to Studio', async ({ page }) => {
+  test.setTimeout(60000);
+  const u = await createTestUser(false);
+
+  try {
+    await loginAsTestUser(page, u);
+    await openGame(page);
+
     await expect(page.locator('.cw-handpan-slot #handpanWrap')).toHaveCount(1);
+    await expect(page.locator('.cw-scale-select-slot #scaleSelect')).toHaveCount(1);
 
     await page.click('.hg-back');
     await page.waitForTimeout(300);
     await expect(page.locator('.cw-handpan-slot')).toHaveCount(0);
     await expect(page.locator('#handpanWrap')).toHaveCount(1);
+    await expect(page.locator('#scaleSelect')).toHaveCount(1);
+  } finally {
+    await deleteTestUser(u.user.id);
+  }
+});
+
+test('Chord Wheel: switching scale resets the board and repopulates the wheel', async ({ page }) => {
+  test.setTimeout(60000);
+  const u = await createTestUser(false);
+
+  try {
+    await loginAsTestUser(page, u);
+    await openGame(page);
+
+    await page.click('.cw-wheel-wrap');
+    await waitForSlotFilled(page, 0);
+
+    const currentValue = await page.locator('#scaleSelect').inputValue();
+    const options = await page.locator('#scaleSelect option').evaluateAll(
+      opts => opts.map(o => o.value).filter(v => v && !v.startsWith('custom:'))
+    );
+    const otherOption = options.find(v => v !== currentValue);
+    test.skip(!otherOption, 'Not enough built-in scales available to test switching');
+
+    await page.selectOption('#scaleSelect', otherOption);
+    await page.waitForTimeout(600);
+
+    // Slots reset and the hint comes back since the board is empty again.
+    await expect(page.locator('.cw-slot[data-id="slot-0"] .cw-chord-empty')).toBeVisible();
+    await expect(page.locator('.cw-wheel-hint')).toBeVisible();
+  } finally {
+    await deleteTestUser(u.user.id);
+  }
+});
+
+test('Chord Wheel: chords panel lists inversions separately, toggles the wheel pool, and persists', async ({ page }) => {
+  test.setTimeout(120000);
+  const u = await createTestUser(false);
+
+  try {
+    await loginAsTestUser(page, u);
+    await openGame(page);
+
+    await page.click('.cw-chords-toggle-btn');
+    await expect(page.locator('.cw-chords-panel')).toBeVisible();
+
+    const labels = await page.locator('.cw-chord-preview-btn').allTextContents();
+    expect(labels.length).toBeGreaterThan(0);
+
+    // Clicking a chord's name previews it without touching its checkbox.
+    const firstRow = page.locator('.cw-chord-toggle-row').first();
+    const checkedBefore = await firstRow.locator('input').isChecked();
+    await firstRow.locator('.cw-chord-preview-btn').click();
+    await page.waitForTimeout(150);
+    expect(await firstRow.locator('input').isChecked()).toBe(checkedBefore);
+    expect(await page.locator('.chord-highlight, .chord-highlight-red').count()).toBeGreaterThan(0);
+
+    // Disable the first listed chord; it must never appear from a spin.
+    const disabledLabel = labels[0];
+    await firstRow.locator('input').uncheck();
+
+    let sawDisabled = false;
+    for (let i = 0; i < 10 && !sawDisabled; i++) {
+      await page.click('.cw-slot[data-id="slot-0"] .cw-spin-btn');
+      await waitForSlotFilled(page, 0);
+      // Direct DOM read (not locator.textContent()) — a root-position chord
+      // has no .cw-chord-inversion element, and auto-waiting on a selector
+      // that never appears would stall each non-matching iteration.
+      const rendered = await page.evaluate(() => {
+        const slot = document.querySelector('.cw-slot[data-id="slot-0"]');
+        const name = slot.querySelector('.cw-chord-name')?.textContent || '';
+        const inv = slot.querySelector('.cw-chord-inversion')?.textContent;
+        return inv ? `${name} (${inv})` : name;
+      });
+      if (rendered === disabledLabel) sawDisabled = true;
+    }
+    expect(sawDisabled).toBe(false);
+
+    // Persists across a full reload, scoped to this user+scale.
+    await page.reload();
+    await page.waitForTimeout(1500);
+    await openGame(page);
+    await page.click('.cw-chords-toggle-btn');
+    await expect(page.locator('.cw-chord-toggle-row').first().locator('input')).not.toBeChecked();
   } finally {
     await deleteTestUser(u.user.id);
   }
