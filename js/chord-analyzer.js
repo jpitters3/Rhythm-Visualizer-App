@@ -12,6 +12,16 @@ export const NOTE_MAP = {
   'A': 9, 'A#': 10, 'BB': 10, 'B': 11
 };
 
+// Root+quality identity, independent of inversion/voicing.
+export function rootQualitySignature(root, quality) {
+  return `${NOTE_MAP[root.toUpperCase()]}-${quality}`;
+}
+
+// Includes inversion — "Am" root position and "Am I" are distinct identities.
+export function chordSignature(c) {
+  return `${rootQualitySignature(c.root, c.quality)}-${c.inversion || 0}`;
+}
+
 // Pairs: [accidental semitone, natural-below semitone, sharp spelling, flat spelling]
 const ACCIDENTAL_PAIRS = [
   [1,  0, 'C#', 'Db'],

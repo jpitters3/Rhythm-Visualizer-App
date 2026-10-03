@@ -1,5 +1,5 @@
 // Chord Wheel — Harmony domain game. Spin a wheel for 4 chords, reorder, send to Studio.
-import { ChordAnalyzer, NOTE_MAP } from './chord-analyzer.js';
+import { ChordAnalyzer, rootQualitySignature, chordSignature } from './chord-analyzer.js';
 import { annotatePlayability } from './chord-playability.js';
 import { getAllCurrentNotes, highlightChordNotes, playChordNotes } from './chord-playback.js';
 import { getPitchPositionMap } from './handpanmap.js';
@@ -25,11 +25,6 @@ const WHEEL_COLORS = ['#f6c84c', '#5fb4e8', '#f08aa0', '#8fd19e', '#c89bf0', '#f
 // "G Minor" -> "Gm", "F Major" -> "F"
 function abbreviateChord(chord) {
   return chord.quality === 'Minor' ? `${chord.root}m` : chord.root;
-}
-
-// Includes inversion — "Am" root position and "Am I" are toggled separately.
-function chordSignature(c) {
-  return `${NOTE_MAP[c.root.toUpperCase()]}-${c.quality}-${c.inversion || 0}`;
 }
 
 function chordToggleLabel(c) {
@@ -143,12 +138,12 @@ class ChordWheelGame {
 
   getAnyChordsPool() {
     const scalePool = this.getScalePool();
-    const bySignature = new Map(scalePool.map(c => [`${NOTE_MAP[c.root.toUpperCase()]}-${c.quality}`, c]));
+    const bySignature = new Map(scalePool.map(c => [rootQualitySignature(c.root, c.quality), c]));
 
     const pool = [];
     for (const root of ROOTS) {
       for (const quality of QUALITIES) {
-        const match = bySignature.get(`${NOTE_MAP[root]}-${quality}`);
+        const match = bySignature.get(rootQualitySignature(root, quality));
         pool.push(match || { root, quality, name: `${root} ${quality}`, notes: null, onThisPan: false });
       }
     }
