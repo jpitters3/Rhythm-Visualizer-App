@@ -332,3 +332,31 @@ test('Chord Wheel: returning to #games after Send to Studio shows a fresh hub, n
     await deleteTestUser(u.user.id);
   }
 });
+
+test('Chord Wheel: navigating away via any route restores the handpan, not just Back/Send to Studio', async ({ page }) => {
+  test.setTimeout(60000);
+  const u = await createTestUser(false);
+
+  try {
+    await loginAsTestUser(page, u);
+    await openGame(page);
+    await expect(page.locator('.cw-handpan-slot #handpanWrap')).toHaveCount(1);
+
+    // Simulate clicking an unrelated nav link — not the game's own Back
+    // button or Send to Studio, which are the only paths that used to work.
+    await page.evaluate(() => { window.location.hash = '#dashboard'; });
+    await page.waitForTimeout(400);
+
+    await page.evaluate(() => { window.location.hash = '#studio'; });
+    await page.waitForSelector('.measure-row:visible', { timeout: 10000 }).catch(() => {});
+    await expect(page.locator('#handpanWrap')).toBeVisible();
+    const stillStuck = await page.evaluate(() => {
+      const wrap = document.getElementById('handpanWrap');
+      const slot = document.querySelector('.cw-handpan-slot');
+      return !!(wrap && slot && slot.contains(wrap));
+    });
+    expect(stillStuck).toBe(false);
+  } finally {
+    await deleteTestUser(u.user.id);
+  }
+});

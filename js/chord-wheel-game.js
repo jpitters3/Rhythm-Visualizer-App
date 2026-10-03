@@ -151,12 +151,21 @@ function unmountScaleSelect() {
 
 // Restores the handpan/scale-select to Studio and drops this instance's
 // listeners — needed whenever the game view stops being the active one,
-// whether via the back button or Send to Studio navigating away.
+// however that happens. Safe to call more than once.
 function teardownGame() {
   unmountHandpan();
   unmountScaleSelect();
   mountedScaleSelectEl?.removeEventListener('change', onScaleChanged);
   Bus.off(BUS_EVENT.AUTH_LOGIN, onAuthReady);
+  window.removeEventListener('routeChanged', onRouteChanged);
+}
+
+// Catches every way of leaving besides the Back button (which stays on the
+// #games route) — any other nav link, browser back/forward, etc. Same
+// pattern as js/method.js's onLeave(), which has the identical handpan
+// relocation problem.
+function onRouteChanged({ detail }) {
+  if (detail.route !== 'games') teardownGame();
 }
 
 // Mirrors js/chord-ui.js's own scale-change refresh: the 100ms delay lets
@@ -470,6 +479,7 @@ export function renderChordWheelGame(view, { onBack } = {}) {
   mountedScaleSelectEl = document.getElementById('scaleSelect');
   mountedScaleSelectEl?.addEventListener('change', onScaleChanged);
   Bus.on(BUS_EVENT.AUTH_LOGIN, onAuthReady);
+  window.addEventListener('routeChanged', onRouteChanged);
 
   view.querySelector('.hg-back').addEventListener('click', () => {
     teardownGame();
