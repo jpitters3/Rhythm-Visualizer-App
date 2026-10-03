@@ -20,22 +20,20 @@ const DOMAINS = [
   { id: 'collaboration', name: 'Collaboration',         icon: '👥', blurb: 'Play with others and hold your part.',            status: 'soon' },
 ];
 
-let rendered = false;
-
 export function initHandpanGames() {
   const view = document.getElementById('view-games');
   if (!view) return;
 
-  // Lazy-render on first navigation to the route.
+  // Always re-render on navigation to #games — a domain game can leave
+  // #view-games's markup stale (e.g. Send to Studio navigates away without
+  // going through this hub's own Back button).
   window.addEventListener('routeChanged', (e) => {
-    if (e.detail.route === 'games' && !rendered) render(view);
+    if (e.detail.route === 'games') render(view);
   });
   if (document.body.classList.contains('route-games')) render(view);
 }
 
 function render(view) {
-  rendered = true;
-
   const tiles = DOMAINS.map(d => `
     <button class="hg-tile" data-domain="${d.id}" data-status="${d.status}" type="button">
       <span class="hg-tile-icon" aria-hidden="true">${d.icon}</span>

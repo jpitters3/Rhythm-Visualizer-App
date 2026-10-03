@@ -643,11 +643,15 @@ export function initControls() {
     }
 
     const defaultName = `Phrase ${new Date().toLocaleString()}`;
+    // Prefer the name actually showing (e.g. set by Chord Wheel's Send to
+    // Studio, not yet a real saved option) over the backing select's value —
+    // same precedence renameCurrentPhrase() already uses.
+    const displayedName = document.getElementById('currentPhraseName')?.textContent?.trim();
     const name = await showCustomModal({
       title: 'Save Phrase',
       message: 'Enter a name for your pattern:',
       mode: 'prompt',
-      defaultValue: getSelectedPatternName() || defaultName
+      defaultValue: (displayedName && displayedName !== 'Untitled') ? displayedName : (getSelectedPatternName() || defaultName)
     });
 
     if (name) {

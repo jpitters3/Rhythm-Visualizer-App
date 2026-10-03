@@ -11,6 +11,7 @@ import { navigate } from './router.js';
 import { Bus, BUS_EVENT } from './bus.js';
 import { guardBeforeReplacingGrid } from './lesson-settings.js';
 import { HistoryManager } from './history.js';
+import { updateCurrentPhraseName } from './controls.js';
 
 const ROOTS = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 const QUALITIES = ['Major', 'Minor'];
@@ -27,7 +28,7 @@ let wheelSpinning = false;
 let activePool = [];
 let disabledChords = new Set(); // signatures, e.g. "9-Minor" — off the wheel
 
-let slotsEl, sendBtn, wheelSvgEl, wheelWrapEl, wheelHintEl, chordsPanelEl;
+let slotsEl, sendBtn, wheelSvgEl, wheelWrapEl, wheelHintEl, chordsPanelEl, mountedScaleSelectEl;
 let handpanWrapOrigParent = null;
 let handpanWrapOrigNextSibling = null;
 let scaleSelectOrigParent = null;
@@ -146,6 +147,16 @@ function unmountScaleSelect() {
   }
   scaleSelectOrigParent = null;
   scaleSelectOrigNextSibling = null;
+}
+
+// Restores the handpan/scale-select to Studio and drops this instance's
+// listeners — needed whenever the game view stops being the active one,
+// whether via the back button or Send to Studio navigating away.
+function teardownGame() {
+  unmountHandpan();
+  unmountScaleSelect();
+  mountedScaleSelectEl?.removeEventListener('change', onScaleChanged);
+  Bus.off(BUS_EVENT.AUTH_LOGIN, onAuthReady);
 }
 
 // Mirrors js/chord-ui.js's own scale-change refresh: the 100ms delay lets
@@ -296,6 +307,13 @@ async function sendToStudio() {
   });
 
   renderAllMeasures(ctx);
+  // ex. "Chords Am Dm Dm II C" — abbreviated like the wheel, inversions spelled
+  // out ("Dm II") since there's no second line to wrap them onto here.
+  const chordLabels = slots.map((chord) => (
+    chord.inversion ? `${abbreviateChord(chord)} ${INVERSION_LABEL[chord.inversion]}` : abbreviateChord(chord)
+  ));
+  updateCurrentPhraseName(`Chords ${chordLabels.join(' ')}`);
+  teardownGame(); // restore the handpan/scale-select to Studio before leaving
   navigate('studio');
 }
 
@@ -449,15 +467,12 @@ export function renderChordWheelGame(view, { onBack } = {}) {
   loadDisabledChords();
   mountHandpan(view.querySelector('.cw-handpan-slot'));
   mountScaleSelect(view.querySelector('.cw-scale-select-slot'));
-  const scaleSelectEl = document.getElementById('scaleSelect');
-  scaleSelectEl?.addEventListener('change', onScaleChanged);
+  mountedScaleSelectEl = document.getElementById('scaleSelect');
+  mountedScaleSelectEl?.addEventListener('change', onScaleChanged);
   Bus.on(BUS_EVENT.AUTH_LOGIN, onAuthReady);
 
   view.querySelector('.hg-back').addEventListener('click', () => {
-    unmountHandpan();
-    unmountScaleSelect();
-    scaleSelectEl?.removeEventListener('change', onScaleChanged);
-    Bus.off(BUS_EVENT.AUTH_LOGIN, onAuthReady);
+    teardownGame();
     onBack?.();
   });
   wheelWrapEl.addEventListener('click', () => spinWheelTo(nextEmptySlotIndex()));

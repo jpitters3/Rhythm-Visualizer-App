@@ -110,6 +110,17 @@ test('Chord Wheel: spin, reorder, click-to-play, Any Chords mode, send to Studio
     expect(sample1).toBeGreaterThan(0);
     expect(sample2).toBeGreaterThan(0);
 
+    // Expected phrase name: "Chords <abbr> <abbr>..." — abbreviated like the
+    // wheel (root letter + "m" for minor), inversions appended as "I"/"II".
+    const expectedAbbrevs = await page.locator('.cw-slot').evaluateAll((slots) => slots.map((slot) => {
+      const full = slot.querySelector('.cw-chord-name').textContent.trim();
+      const [root, quality] = full.split(' ');
+      const abbr = quality === 'Minor' ? `${root}m` : root;
+      const inv = slot.querySelector('.cw-chord-inversion')?.textContent.trim();
+      return inv ? `${abbr} ${inv}` : abbr;
+    }));
+    const expectedPhraseName = `Chords ${expectedAbbrevs.join(' ')}`;
+
     // Send to Studio: clears the grid to exactly one measure per chord, each
     // chord on the first beat of its measure, the rest of the measure empty.
     await page.click('.cw-send-btn');
@@ -122,6 +133,26 @@ test('Chord Wheel: spin, reorder, click-to-play, Any Chords mode, send to Studio
       expect(cellTexts[0].trim().length).toBeGreaterThan(0);
       expect(cellTexts.slice(1).every(t => t.trim().length === 0)).toBe(true);
     }
+
+    // The handpan and scale select must come back to Studio's own panel —
+    // sendToStudio() navigates away, not just the Back button. The Games
+    // view's markup isn't torn down on navigation (just hidden), so
+    // .cw-handpan-slot itself still exists — it just shouldn't hold the
+    // handpan anymore.
+    await expect(page.locator('.cw-handpan-slot #handpanWrap')).toHaveCount(0);
+    await expect(page.locator('#handpanWrap')).toBeVisible();
+    await expect(page.locator('.cw-scale-select-slot #scaleSelect')).toHaveCount(0);
+    await expect(page.locator('#scaleSelect')).toHaveCount(1);
+
+    // Phrase name reflects the sent chords, and pre-populates the Save modal.
+    await expect(page.locator('#currentPhraseName')).toHaveText(expectedPhraseName);
+    await page.click('#accountBtn');
+    await page.waitForSelector('#accountDropdownMenu.show', { timeout: 3000 });
+    await page.click('#phraseMenuBtn');
+    await page.waitForSelector('#phraseSubmenu.open', { timeout: 3000 });
+    await page.click('#saveBtn');
+    await expect(page.locator('#confirmInput')).toHaveValue(expectedPhraseName);
+    await page.click('#confirmCancelBtn');
 
     expect(errors).toEqual([]);
   } finally {
@@ -269,6 +300,34 @@ test('Chord Wheel: chords panel lists inversions separately, toggles the wheel p
     await openGame(page);
     await page.click('.cw-chords-toggle-btn');
     await expect(page.locator('.cw-chord-toggle-row').first().locator('input')).not.toBeChecked();
+  } finally {
+    await deleteTestUser(u.user.id);
+  }
+});
+
+test('Chord Wheel: returning to #games after Send to Studio shows a fresh hub, not a stale game', async ({ page }) => {
+  test.setTimeout(60000);
+  const u = await createTestUser(false);
+
+  try {
+    await loginAsTestUser(page, u);
+    await openGame(page);
+
+    await page.click('.cw-spin-all-btn');
+    await waitForAllSlotsFilled(page);
+    await page.click('.cw-send-btn');
+    await page.waitForTimeout(800);
+    await expect(page).toHaveURL(/#studio/);
+
+    // Returning via direct navigation (not the game's own Back button) must
+    // show the hub again, not the leftover game screen with no handpan.
+    await page.evaluate(() => { window.location.hash = '#games'; });
+    await page.waitForTimeout(500);
+    await expect(page.locator('.hg-grid')).toBeVisible();
+
+    await page.click('.hg-tile[data-domain="harmony"]');
+    await expect(page.locator('.cw-container')).toBeVisible();
+    await expect(page.locator('.cw-handpan-slot #handpanWrap')).toHaveCount(1);
   } finally {
     await deleteTestUser(u.user.id);
   }
