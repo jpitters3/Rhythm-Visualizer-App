@@ -1,5 +1,5 @@
 // Chord Wheel — Harmony domain game. Spin a wheel for 4 chords, reorder, send to Studio.
-import { ChordAnalyzer, rootQualitySignature, chordSignature } from './chord-analyzer.js';
+import { ChordAnalyzer, rootQualitySignature, chordSignature, getInversionLabel } from './chord-analyzer.js';
 import { annotatePlayability } from './chord-playability.js';
 import { getAllCurrentNotes, highlightChordNotes, playChordNotes } from './chord-playback.js';
 import { getPitchPositionMap } from './handpanmap.js';
@@ -15,9 +15,17 @@ import { updateCurrentPhraseName } from './controls.js';
 
 const ROOTS = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 const QUALITIES = ['Major', 'Minor'];
-const INVERSION_LABEL = ['', 'I', 'II'];
+// 4 call sites format "chord + inversion" differently (wheel label, slot card,
+// chords-panel toggle, phrase name) — intentional per their own layout
+// constraints, not accidental drift. Not worth forcing into one helper.
 const PLAY_SPACING_MS = 750;
 const SPIN_MS = 3200;
+const SPIN_ROTATIONS = 5; // full 360° turns before landing, for visual effect
+const JITTER_FACTOR = 0.6; // landing offset within a segment, as a fraction of its width
+const LABEL_RADIUS_RATIO = 0.78; // label distance from center, as a fraction of wheel radius
+const FONT_SIZE_DIVISOR = 2.6; // tunes how fast label font-size shrinks as segments narrow
+const INVERSION_LINE_HEIGHT = 1.05; // dy offset for the wrapped "I"/"II" line
+const INVERSION_FONT_SCALE = 0.75; // inversion text size, relative to the main label
 const WHEEL_COLORS = ['#f6c84c', '#5fb4e8', '#f08aa0', '#8fd19e', '#c89bf0', '#f0a35f', '#7fd4c8', '#e8838c'];
 
 // --- Pure helpers (no instance state) ---
@@ -28,7 +36,7 @@ function abbreviateChord(chord) {
 }
 
 function chordToggleLabel(c) {
-  return c.inversion ? `${c.name} (${INVERSION_LABEL[c.inversion]})` : c.name;
+  return c.inversion ? `${c.name} (${getInversionLabel(c.inversion)})` : c.name;
 }
 
 // getSelectedScaleName() isn't stable across a reload — it's "D Kurd" live
@@ -50,7 +58,7 @@ function buildWheelSVG(pool) {
 
   const cx = 150, cy = 150, r = 146;
   // Bigger text when there's room, shrinking as segments get narrower
-  const fontSize = Math.max(9, Math.min(20, (2 * Math.PI * r * 0.78) / n / 2.6));
+  const fontSize = Math.max(9, Math.min(20, (2 * Math.PI * r * LABEL_RADIUS_RATIO) / n / FONT_SIZE_DIVISOR));
   let body = '';
   for (let i = 0; i < n; i++) {
     const a0 = (i / n) * 2 * Math.PI - Math.PI / 2;
@@ -62,11 +70,11 @@ function buildWheelSVG(pool) {
     body += `<path d="M${cx},${cy} L${x0.toFixed(2)},${y0.toFixed(2)} A${r},${r} 0 ${largeArc} 1 ${x1.toFixed(2)},${y1.toFixed(2)} Z" fill="${color}" stroke="#fff" stroke-width="2"/>`;
 
     const mid = (a0 + a1) / 2;
-    const tx = cx + r * 0.78 * Math.cos(mid), ty = cy + r * 0.78 * Math.sin(mid);
+    const tx = cx + r * LABEL_RADIUS_RATIO * Math.cos(mid), ty = cy + r * LABEL_RADIUS_RATIO * Math.sin(mid);
     const rotDeg = (mid * 180 / Math.PI) + 90;
     const inv = pool[i].inversion;
     const invSpan = inv
-      ? `<tspan x="${tx.toFixed(1)}" dy="${(fontSize * 1.05).toFixed(1)}" font-size="${(fontSize * 0.75).toFixed(1)}">${INVERSION_LABEL[inv]}</tspan>`
+      ? `<tspan x="${tx.toFixed(1)}" dy="${(fontSize * INVERSION_LINE_HEIGHT).toFixed(1)}" font-size="${(fontSize * INVERSION_FONT_SCALE).toFixed(1)}">${getInversionLabel(inv)}</tspan>`
       : '';
     body += `<text x="${tx.toFixed(1)}" y="${ty.toFixed(1)}" transform="rotate(${rotDeg.toFixed(1)} ${tx.toFixed(1)} ${ty.toFixed(1)})" class="cw-wheel-label" style="font-size:${fontSize.toFixed(1)}px">${abbreviateChord(pool[i])}${invSpan}</text>`;
   }
@@ -257,8 +265,8 @@ class ChordWheelGame {
     const targetIndex = Math.floor(Math.random() * n);
     const segment = 360 / n;
     const centerAngle = (targetIndex + 0.5) * segment;
-    const jitter = (Math.random() - 0.5) * segment * 0.6;
-    const extraSpins = 5 * 360;
+    const jitter = (Math.random() - 0.5) * segment * JITTER_FACTOR;
+    const extraSpins = SPIN_ROTATIONS * 360;
     const normalizedTarget = ((360 - centerAngle - jitter) % 360 + 360) % 360;
     const currentMod = ((this.wheelRotation % 360) + 360) % 360;
     this.wheelRotation += extraSpins + ((normalizedTarget - currentMod + 360) % 360);
@@ -336,7 +344,7 @@ class ChordWheelGame {
     // ex. "Chords Am Dm Dm II C" — abbreviated like the wheel, inversions
     // spelled out ("Dm II") since there's no second line to wrap onto here.
     const chordLabels = this.slots.map((chord) => (
-      chord.inversion ? `${abbreviateChord(chord)} ${INVERSION_LABEL[chord.inversion]}` : abbreviateChord(chord)
+      chord.inversion ? `${abbreviateChord(chord)} ${getInversionLabel(chord.inversion)}` : abbreviateChord(chord)
     ));
     updateCurrentPhraseName(`Chords ${chordLabels.join(' ')}`);
     this.teardown(); // restore the handpan/scale-select to Studio before leaving
@@ -353,7 +361,7 @@ class ChordWheelGame {
         <div class="cw-slot-index">${i + 1}</div>
         <div class="cw-slot-body">
           ${chord
-            ? `<div class="cw-chord-name">${chord.name}</div>${chord.inversion ? `<div class="cw-chord-inversion">${INVERSION_LABEL[chord.inversion]}</div>` : ''}${!chord.onThisPan ? '<div class="cw-chord-badge">Not on this scale</div>' : ''}`
+            ? `<div class="cw-chord-name">${chord.name}</div>${chord.inversion ? `<div class="cw-chord-inversion">${getInversionLabel(chord.inversion)}</div>` : ''}${!chord.onThisPan ? '<div class="cw-chord-badge">Not on this scale</div>' : ''}`
             : '<div class="cw-chord-empty">—</div>'}
         </div>
         <button class="cw-spin-btn" type="button" data-slot="${i}" title="Spin">🎡</button>

@@ -22,6 +22,12 @@ export function chordSignature(c) {
   return `${rootQualitySignature(c.root, c.quality)}-${c.inversion || 0}`;
 }
 
+// 0 = root position, 1 = first inversion, 2 = second inversion.
+const INVERSION_LABEL = ['', 'I', 'II'];
+export function getInversionLabel(inversion) {
+  return INVERSION_LABEL[inversion] || '';
+}
+
 // Pairs: [accidental semitone, natural-below semitone, sharp spelling, flat spelling]
 const ACCIDENTAL_PAIRS = [
   [1,  0, 'C#', 'Db'],
