@@ -43,9 +43,10 @@ export function highlightChordNotes(chordOrNotes, active) {
   setChordHighlight(targetLabels, active, playable);
 }
 
-// Plays each note in input order; returns the resolved labels. No grid side effects —
-// callers decide whether to also write into the Studio grid.
-export function playChordNotes(notes) {
+// Pure pitch -> handpan-label resolution, in input order. No audio, no side
+// effects — for callers that need the labels (e.g. to write into the grid)
+// without playing the chord.
+export function notesToLabels(notes) {
   const scale = getScale();
   const labelToPitch = scale ? scale.map : null;
   const dingPitch = scale ? scale.ding : null;
@@ -60,10 +61,15 @@ export function playChordNotes(notes) {
         if (p === pitch) { targetLabel = lbl; break; }
       }
     }
-    if (targetLabel) {
-      targetLabels.push(targetLabel);
-      playNoteByLabel(targetLabel);
-    }
+    if (targetLabel) targetLabels.push(targetLabel);
   });
   return targetLabels;
+}
+
+// Plays each note in input order; returns the resolved labels. No grid side effects —
+// callers decide whether to also write into the Studio grid.
+export function playChordNotes(notes) {
+  const labels = notesToLabels(notes);
+  labels.forEach(playNoteByLabel);
+  return labels;
 }

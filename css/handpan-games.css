@@ -274,6 +274,10 @@ body.dark .cw-scale-select-slot select {
   dominant-baseline: middle;
 }
 
+.cw-wheel-segment:hover path {
+  filter: brightness(1.08);
+}
+
 .cw-mode-row {
   display: flex;
   align-items: center;
@@ -440,6 +444,13 @@ body.dark .cw-scale-select-slot select {
   box-shadow: 0 0 0 2px var(--accent-glow, rgba(246, 200, 76, 0.35));
 }
 
+/* Outline (not border/box-shadow) so it stacks independently of the gold
+   target glow and a filled chord's own wheelColor border. */
+.cw-slot-selected {
+  outline: 3px dashed var(--btn-active, #2563eb);
+  outline-offset: 3px;
+}
+
 .cw-slot-index {
   font-size: 11px;
   font-weight: 700;
@@ -489,7 +500,13 @@ body.dark .cw-scale-select-slot select {
   background: var(--panel-border);
 }
 
-.cw-spin-btn {
+.cw-slot-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.cw-spin-btn,
+.cw-play-chord-btn {
   width: 36px;
   height: 36px;
   border: 1px solid var(--panel-border);
@@ -502,15 +519,30 @@ body.dark .cw-scale-select-slot select {
   transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
 }
 
-.cw-spin-btn:hover {
+.cw-spin-btn:hover,
+.cw-play-chord-btn:hover {
   border-color: var(--accent-glow);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.16);
-  transform: scale(1.1) rotate(15deg);
+  transform: scale(1.1);
 }
 
-.cw-spin-btn:active {
+.cw-spin-btn:hover { transform: scale(1.1) rotate(15deg); }
+
+.cw-spin-btn:active,
+.cw-play-chord-btn:active {
   transform: scale(0.95);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+
+.cw-play-chord-btn {
+  font-size: 14px;
+}
+
+.cw-play-chord-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
 }
 
 @media (max-width: 640px) {

@@ -1,7 +1,7 @@
 // Chord Wheel — Harmony domain game. Spin a wheel for 4 chords, reorder, send to Studio.
 import { ChordAnalyzer, rootQualitySignature, chordSignature, getInversionLabel } from './chord-analyzer.js';
 import { annotatePlayability } from './chord-playability.js';
-import { getAllCurrentNotes, highlightChordNotes, playChordNotes } from './chord-playback.js';
+import { getAllCurrentNotes, highlightChordNotes, playChordNotes, notesToLabels } from './chord-playback.js';
 import { getPitchPositionMap } from './handpanmap.js';
 import { assignChordToSelectedCell, applySelection, renderAllMeasures } from './notegrid.js';
 import { measureRange } from './measure-actions.js';
@@ -80,8 +80,6 @@ function buildWheelSVG(pool, colors) {
     const x1 = cx + r * Math.cos(a1), y1 = cy + r * Math.sin(a1);
     const largeArc = (a1 - a0) > Math.PI ? 1 : 0;
     const color = colors[i];
-    body += `<path d="M${cx},${cy} L${x0.toFixed(2)},${y0.toFixed(2)} A${r},${r} 0 ${largeArc} 1 ${x1.toFixed(2)},${y1.toFixed(2)} Z" fill="${color}" stroke="#fff" stroke-width="2"/>`;
-
     const mid = (a0 + a1) / 2;
     const tx = cx + r * LABEL_RADIUS_RATIO * Math.cos(mid), ty = cy + r * LABEL_RADIUS_RATIO * Math.sin(mid);
     const rotDeg = (mid * 180 / Math.PI) + 90;
@@ -89,7 +87,13 @@ function buildWheelSVG(pool, colors) {
     const invSpan = inv
       ? `<tspan x="${tx.toFixed(1)}" dy="${(fontSize * INVERSION_LINE_HEIGHT).toFixed(1)}" font-size="${(fontSize * INVERSION_FONT_SCALE).toFixed(1)}">${getInversionLabel(inv)}</tspan>`
       : '';
+
+    // Grouped so a click anywhere in the segment (path or label) resolves to
+    // one data-index, used for direct chord picks when a card is selected.
+    body += `<g class="cw-wheel-segment" data-index="${i}">`;
+    body += `<path d="M${cx},${cy} L${x0.toFixed(2)},${y0.toFixed(2)} A${r},${r} 0 ${largeArc} 1 ${x1.toFixed(2)},${y1.toFixed(2)} Z" fill="${color}" stroke="#fff" stroke-width="2"/>`;
     body += `<text x="${tx.toFixed(1)}" y="${ty.toFixed(1)}" transform="rotate(${rotDeg.toFixed(1)} ${tx.toFixed(1)} ${ty.toFixed(1)})" class="cw-wheel-label" style="font-size:${fontSize.toFixed(1)}px">${abbreviateChord(pool[i])}${invSpan}</text>`;
+    body += '</g>';
   }
   return `<svg class="cw-wheel-svg" viewBox="0 0 300 300">${body}</svg>`;
 }
@@ -133,6 +137,7 @@ class ChordWheelGame {
     this.activeSpinAbort = null; // cancels the in-flight spin's pending transitionend
     this.activePool = [];
     this.disabledChords = new Set(); // signatures, e.g. "9-Minor-0" — off the wheel
+    this.selectedSlotIndex = null; // a card awaiting a direct chord pick from the wheel
 
     this.handpanMount = createRelocatableMount('handpanWrap');
     this.scaleSelectMount = createRelocatableMount('scaleSelect');
@@ -243,6 +248,7 @@ class ChordWheelGame {
   onScaleChanged() {
     setTimeout(() => {
       this.slots = [null, null, null, null];
+      this.selectedSlotIndex = null;
       this.wheelRotation = 0;
       this.loadDisabledChords(); // key includes the scale — a fresh set per scale
       this.renderWheel();
@@ -335,11 +341,40 @@ class ChordWheelGame {
     return idx === -1 ? 0 : idx;
   }
 
+  // Clicking a card arms it for a direct pick; clicking it again disarms it.
+  selectSlot(idx) {
+    this.selectedSlotIndex = this.selectedSlotIndex === idx ? null : idx;
+    this.renderSlots();
+  }
+
+  // With a card selected, clicking a wheel segment assigns that exact chord
+  // to it directly (no spin). Otherwise, a wheel click is a normal random
+  // spin into the next empty slot.
+  handleWheelClick(e) {
+    if (this.wheelSpinning) return;
+    if (this.selectedSlotIndex === null) {
+      this.spinWheelTo(this.nextEmptySlotIndex());
+      return;
+    }
+    const segment = e.target.closest('.cw-wheel-segment');
+    if (!segment) return;
+    const index = parseInt(segment.dataset.index, 10);
+    const chord = this.activePool[index];
+    if (!chord) return;
+
+    const slotIndex = this.selectedSlotIndex;
+    this.slots[slotIndex] = { ...chord, wheelColor: this.wheelColors[index] };
+    playChordAt(this.slots[slotIndex]);
+    this.selectedSlotIndex = null;
+    this.renderSlots();
+  }
+
   handleReorder({ draggedId, beforeId }) {
     const fromIdx = parseInt(draggedId.split('-')[1], 10);
     const toIdx = beforeId ? parseInt(beforeId.split('-')[1], 10) : this.slots.length;
     const [moved] = this.slots.splice(fromIdx, 1);
     this.slots.splice(toIdx > fromIdx ? toIdx - 1 : toIdx, 0, moved);
+    this.selectedSlotIndex = null; // avoid pointing at the wrong card post-move
     this.renderSlots();
   }
 
@@ -365,7 +400,7 @@ class ChordWheelGame {
     this.slots.forEach((chord, i) => {
       const { start } = measureRange(i, ctx);
       applySelection(start, ctx);
-      const labels = playChordNotes(chord.notes);
+      const labels = notesToLabels(chord.notes); // silent — no audio on Send to Studio
       assignChordToSelectedCell(labels, ctx);
     });
 
@@ -385,17 +420,24 @@ class ChordWheelGame {
   renderSlots() {
     if (!this.slotsEl) return;
 
-    this.slotsEl.innerHTML = this.slots.map((chord, i) => `
-      <div class="cw-slot" draggable="true" data-id="slot-${i}" ${chord?.wheelColor ? `style="border-color:${chord.wheelColor};box-shadow:0 0 0 2px ${chord.wheelColor}"` : ''}>
+    this.slotsEl.innerHTML = this.slots.map((chord, i) => {
+      const selected = i === this.selectedSlotIndex;
+      const colorStyle = chord?.wheelColor ? `border-color:${chord.wheelColor};box-shadow:0 0 0 2px ${chord.wheelColor}` : '';
+      return `
+      <div class="cw-slot${selected ? ' cw-slot-selected' : ''}" draggable="true" data-id="slot-${i}" ${colorStyle ? `style="${colorStyle}"` : ''}>
         <div class="cw-slot-index">${i + 1}</div>
         <div class="cw-slot-body">
           ${chord
             ? `<div class="cw-chord-name">${chord.name}</div>${chord.inversion ? `<div class="cw-chord-inversion">${getInversionLabel(chord.inversion)}</div>` : ''}${!chord.onThisPan ? '<div class="cw-chord-badge">Not on this scale</div>' : ''}`
             : '<div class="cw-chord-empty">—</div>'}
         </div>
-        <button class="cw-spin-btn" type="button" data-slot="${i}" title="Spin">🎡</button>
+        <div class="cw-slot-actions">
+          <button class="cw-play-chord-btn" type="button" data-slot="${i}" title="Play" ${chord?.notes ? '' : 'disabled'}>▶</button>
+          <button class="cw-spin-btn" type="button" data-slot="${i}" title="Spin">🎡</button>
+        </div>
       </div>
-    `).join('');
+    `;
+    }).join('');
 
     this.slotsEl.querySelectorAll('.cw-spin-btn').forEach(btn => {
       btn.addEventListener('click', (e) => {
@@ -405,10 +447,15 @@ class ChordWheelGame {
       });
     });
 
+    this.slotsEl.querySelectorAll('.cw-play-chord-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        playChordAt(this.slots[parseInt(btn.dataset.slot, 10)]);
+      });
+    });
+
     this.slotsEl.querySelectorAll('.cw-slot').forEach((el, i) => {
-      const chord = this.slots[i];
-      if (!chord?.notes) return;
-      el.addEventListener('click', () => playChordAt(chord));
+      el.addEventListener('click', () => this.selectSlot(i));
     });
 
     const allFilled = this.slots.every(c => c?.notes);
@@ -540,7 +587,7 @@ class ChordWheelGame {
       this.teardown();
       this.onBack?.();
     });
-    this.wheelWrapEl.addEventListener('click', () => this.spinWheelTo(this.nextEmptySlotIndex()));
+    this.wheelWrapEl.addEventListener('click', (e) => this.handleWheelClick(e));
     view.querySelector('.cw-spin-all-btn').addEventListener('click', () => this.spinAll());
     view.querySelector('.cw-play-btn').addEventListener('click', () => this.playProgression());
     this.sendBtn.addEventListener('click', () => this.sendToStudio());
