@@ -2,7 +2,7 @@
 import { ChordAnalyzer, rootQualitySignature, chordSignature, getInversionLabel } from './chord-analyzer.js';
 import { annotatePlayability } from './chord-playability.js';
 import { getAllCurrentNotes, highlightChordNotes, playChordNotes, notesToLabels } from './chord-playback.js';
-import { getPitchPositionMap } from './handpanmap.js';
+import { getPitchPositionMap, setHandpanSide } from './handpanmap.js';
 import { assignChordToSelectedCell, applySelection, renderAllMeasures } from './notegrid.js';
 import { measureRange } from './measure-actions.js';
 import { activeGrid, currentUser, getSelectedScaleName } from './state.js';
@@ -219,6 +219,11 @@ class ChordWheelGame {
   // listeners — needed whenever the game view stops being the active one,
   // however that happens. Safe to call more than once.
   teardown() {
+    // Restore whatever face the user had before the game forced 'perimeter'.
+    setHandpanSide(this.prevHandpanSideRaw || 'top');
+    if (this.prevHandpanSideRaw != null) localStorage.setItem('gp_handpanSide', this.prevHandpanSideRaw);
+    else localStorage.removeItem('gp_handpanSide');
+
     this.handpanMount.unmount();
     this.scaleSelectMount.unmount();
     this.mountedScaleSelectEl?.removeEventListener('change', this.onScaleChanged);
@@ -577,6 +582,11 @@ class ChordWheelGame {
       // instead. Studio re-syncs it on its own next routeChanged.
       wrap.style.maxWidth = '';
     }
+    // Force the merged "perimeter" face so bottom-note chords are visible as
+    // rim pucks, same approach as js/pan-hero.js's openPanHero(). No-ops
+    // safely for a standard handpan with no bottom face.
+    this.prevHandpanSideRaw = localStorage.getItem('gp_handpanSide');
+    setHandpanSide('perimeter');
     this.scaleSelectMount.mount(view.querySelector('.cw-scale-select-slot'));
     this.mountedScaleSelectEl = document.getElementById('scaleSelect');
     this.mountedScaleSelectEl?.addEventListener('change', this.onScaleChanged);

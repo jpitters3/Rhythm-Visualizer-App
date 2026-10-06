@@ -289,6 +289,12 @@ async function renderCustomOptions() {
   scaleSelect.value = getSelectedScaleName();
 }
 
+// #flipSideBtn (mobile options menu) and #flipSideBtnDesktop (the always-
+// visible desktop tab row) mirror the same flip state.
+function getFlipButtons() {
+  return document.querySelectorAll('#flipSideBtn, #flipSideBtnDesktop');
+}
+
 function applyCustomHandpan(handpanData) {
   console.log('Applying custom handpan:', handpanData);
   mountedHandpanData = handpanData; // Store for flipping
@@ -300,13 +306,12 @@ function applyCustomHandpan(handpanData) {
     handpanImg.style.transform = `rotate(${rot}deg)`;
   });
 
-  // Show/Hide Flip Button — position is fixed via CSS (.flip-btn, in the
+  // Show/Hide Flip Button(s) — position is fixed via CSS (.flip-btn, in the
   // ghost-note row) now, so this only toggles visibility.
-  const flipBtn = document.getElementById('flipSideBtn');
-  if (flipBtn) {
+  getFlipButtons().forEach((flipBtn) => {
     flipBtn.style.display = handpanData.bottom_image_url ? '' : 'none';
     flipBtn.onclick = () => toggleHandpanSide();
-  }
+  });
 
   // Update Map
   const newMap = {};
@@ -420,14 +425,16 @@ function hasBottomNotes() {
 // sync together instead of one textContent write — see the .hp-flip-icon/
 // .hp-flip-label spans in index.html.
 function updateFlipButtonLabel(icon, label, isFlipped) {
-  const flipBtn = document.getElementById('flipSideBtn');
-  if (!flipBtn) return;
-  flipBtn.title = label;
-  flipBtn.classList.toggle('flipped', !!isFlipped);
-  const iconEl = flipBtn.querySelector('.hp-flip-icon');
-  const labelEl = flipBtn.querySelector('.hp-flip-label');
-  if (iconEl) iconEl.textContent = icon;
-  if (labelEl) labelEl.textContent = label;
+  getFlipButtons().forEach((flipBtn) => {
+    flipBtn.title = label;
+    flipBtn.classList.toggle('flipped', !!isFlipped);
+    const iconEl = flipBtn.querySelector('.hp-flip-icon');
+    const labelEl = flipBtn.querySelector('.hp-flip-label');
+    // Desktop button is icon-only (no child spans) — write textContent directly.
+    if (iconEl) iconEl.textContent = icon;
+    else flipBtn.textContent = icon;
+    if (labelEl) labelEl.textContent = label;
+  });
 }
 
 export function toggleHandpanSide() {
@@ -1972,9 +1979,8 @@ export function initHandpanMap() {
 
     scaleStatus.textContent = `Scale: ${val}`;
 
-    // Explicitly hide flip button when switching to standard scales
-    const flipBtn = document.getElementById('flipSideBtn');
-    if (flipBtn) flipBtn.style.display = 'none';
+    // Explicitly hide flip button(s) when switching to standard scales
+    getFlipButtons().forEach((flipBtn) => { flipBtn.style.display = 'none'; });
 
     let currentModel = handpanColorSelect.value;
     const row = handpanColorSelect.closest('.setting-row');
