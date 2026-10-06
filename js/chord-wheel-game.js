@@ -26,7 +26,10 @@ const LABEL_RADIUS_RATIO = 0.78; // label distance from center, as a fraction of
 const FONT_SIZE_DIVISOR = 2.6; // tunes how fast label font-size shrinks as segments narrow
 const INVERSION_LINE_HEIGHT = 1.05; // dy offset for the wrapped "I"/"II" line
 const INVERSION_FONT_SCALE = 0.75; // inversion text size, relative to the main label
-const WHEEL_COLORS = ['#f6c84c', '#5fb4e8', '#f08aa0', '#8fd19e', '#c89bf0', '#f0a35f', '#7fd4c8', '#e8838c'];
+const WHEEL_HUE_START = 40; // first segment's hue, chosen to match the old palette's warm yellow
+const WHEEL_SATURATION = 65;
+const WHEEL_LIGHTNESS = 70;
+const MOBILE_BREAKPOINT = 640; // matches css/handpan-games.css's own mobile cutoff for this game
 
 // --- Pure helpers (no instance state) ---
 
@@ -52,7 +55,17 @@ function playChordAt(chord) {
   highlightChordNotes(chord, true);
 }
 
-function buildWheelSVG(pool) {
+// n evenly-spaced hues around the wheel — unique for any pool size, unlike
+// cycling through a fixed palette (which repeats once n exceeds its length).
+function generateWheelColors(n) {
+  if (!n) return [];
+  const hueStep = 360 / n;
+  return Array.from({ length: n }, (_, i) => (
+    `hsl(${(WHEEL_HUE_START + i * hueStep) % 360}, ${WHEEL_SATURATION}%, ${WHEEL_LIGHTNESS}%)`
+  ));
+}
+
+function buildWheelSVG(pool, colors) {
   const n = pool.length;
   if (!n) return '<svg viewBox="0 0 300 300" class="cw-wheel-svg"></svg>';
 
@@ -66,7 +79,7 @@ function buildWheelSVG(pool) {
     const x0 = cx + r * Math.cos(a0), y0 = cy + r * Math.sin(a0);
     const x1 = cx + r * Math.cos(a1), y1 = cy + r * Math.sin(a1);
     const largeArc = (a1 - a0) > Math.PI ? 1 : 0;
-    const color = WHEEL_COLORS[i % WHEEL_COLORS.length];
+    const color = colors[i];
     body += `<path d="M${cx},${cy} L${x0.toFixed(2)},${y0.toFixed(2)} A${r},${r} 0 ${largeArc} 1 ${x1.toFixed(2)},${y1.toFixed(2)} Z" fill="${color}" stroke="#fff" stroke-width="2"/>`;
 
     const mid = (a0 + a1) / 2;
@@ -245,7 +258,9 @@ class ChordWheelGame {
     // listener, which would otherwise strand wheelSpinning=true forever.
     this.activeSpinAbort?.();
     this.activePool = this.getActivePool();
-    this.wheelSvgEl.outerHTML = buildWheelSVG(this.activePool);
+    // Stored so a landing spin can tag its slot with the exact color it saw.
+    this.wheelColors = generateWheelColors(this.activePool.length);
+    this.wheelSvgEl.outerHTML = buildWheelSVG(this.activePool, this.wheelColors);
     this.wheelSvgEl = this.view.querySelector('.cw-wheel-svg');
     this.wheelSvgEl.style.transform = `rotate(${this.wheelRotation}deg)`;
   }
@@ -254,6 +269,19 @@ class ChordWheelGame {
     this.slotsEl?.querySelectorAll('.cw-slot').forEach((el) => {
       el.classList.toggle('cw-slot-target', el.dataset.id === `slot-${idx}`);
     });
+  }
+
+  // On mobile the wheel and the slots row aren't both on screen at once —
+  // bring whichever one just became relevant into view.
+  scrollWheelIntoViewOnMobile() {
+    if (window.innerWidth > MOBILE_BREAKPOINT) return;
+    this.wheelWrapEl?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+
+  scrollSlotIntoViewOnMobile(idx) {
+    if (window.innerWidth > MOBILE_BREAKPOINT) return;
+    this.slotsEl?.querySelector(`.cw-slot[data-id="slot-${idx}"]`)
+      ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
 
   spinWheelTo(slotIndex) {
@@ -279,9 +307,10 @@ class ChordWheelGame {
         this.wheelSvgEl.removeEventListener('transitionend', onEnd);
         this.wheelSpinning = false;
         this.activeSpinAbort = null;
-        this.slots[slotIndex] = this.activePool[targetIndex];
+        this.slots[slotIndex] = { ...this.activePool[targetIndex], wheelColor: this.wheelColors[targetIndex] };
         playChordAt(this.slots[slotIndex]);
         this.renderSlots();
+        this.scrollSlotIntoViewOnMobile(slotIndex);
         resolve();
       };
       this.wheelSvgEl.addEventListener('transitionend', onEnd);
@@ -357,7 +386,7 @@ class ChordWheelGame {
     if (!this.slotsEl) return;
 
     this.slotsEl.innerHTML = this.slots.map((chord, i) => `
-      <div class="cw-slot" draggable="true" data-id="slot-${i}">
+      <div class="cw-slot" draggable="true" data-id="slot-${i}" ${chord?.wheelColor ? `style="border-color:${chord.wheelColor};box-shadow:0 0 0 2px ${chord.wheelColor}"` : ''}>
         <div class="cw-slot-index">${i + 1}</div>
         <div class="cw-slot-body">
           ${chord
@@ -371,6 +400,7 @@ class ChordWheelGame {
     this.slotsEl.querySelectorAll('.cw-spin-btn').forEach(btn => {
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
+        this.scrollWheelIntoViewOnMobile();
         this.spinWheelTo(parseInt(btn.dataset.slot, 10));
       });
     });
