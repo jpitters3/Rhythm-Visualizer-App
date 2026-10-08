@@ -767,6 +767,16 @@ function attachCellListeners(cell, ctx = activeGrid) {
       return;
     }
 
+    // Caps Lock on: a plain click writes Ding directly, skipping the 'D' key.
+    if (ev.getModifierState && ev.getModifierState('CapsLock')) {
+      ctx.anchorIndex = i;
+      setCaret(i, ctx);
+      setRange(i, i, ctx);
+      if (HistoryManager) HistoryManager.pushState();
+      setInnerLabel(i, 'Ding', ctx);
+      return;
+    }
+
     // Plain tap on a touchscreen: just move the caret so the user can write
     // into the cell as normal. Deliberately does NOT set a range — that's
     // what triggers the selection toolbar/mobile selection-mode UI, which on
