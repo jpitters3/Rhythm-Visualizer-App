@@ -169,6 +169,48 @@
   opacity: 0.8;
 }
 
+/* Mini handpan-outline diagram shown instead of the quadrant dots when the
+   "Show chord shapes" setting is on (js/chord-shape-diagram.js). */
+.chord-shape-diagram {
+  position: absolute;
+  inset: 2%;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  z-index: 5;
+}
+
+.chord-shape-diagram .pan-outline {
+  fill: none;
+  stroke: var(--cell-border);
+  stroke-width: 2;
+  opacity: 0.5;
+}
+
+.chord-shape-diagram .note-dot {
+  fill: #000;
+  /* fill: var(--cell-border); */
+  opacity: 0.1;
+  border: solid 3px black;
+}
+
+.chord-shape-diagram .note-dot.active {
+  fill: var(--btn-active);
+  opacity: 1;
+}
+
+body.chord-shape-view .cell.multi-mode .chord-shape-diagram {
+  opacity: 1;
+}
+
+/* Sub-dots stay clickable (quadrant selection for keyboard/virtual-hands
+   entry) but their fill/text are hidden so they don't compete visually
+   with the diagram. .sub-dot.selected's white ring still shows through. */
+body.chord-shape-view .cell.multi-mode .sub-dot {
+  background: transparent !important;
+  color: transparent;
+}
+
 .cell.multi-mode.has-label {
   background-color: rgba(1, 1, 1, 1, 0.0);
   overflow: visible;

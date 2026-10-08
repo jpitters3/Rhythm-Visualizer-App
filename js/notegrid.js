@@ -12,6 +12,7 @@ import { Bus, BUS_EVENT } from './bus.js';
 import { confirm } from './alert.js';
 import { getNoteX } from './handpanmap.js';
 import { getCurrentZoomLevel } from './grid-zoom-controls.js';
+import { createChordShapeDiagramEl, updateChordShapeDiagram } from './chord-shape-diagram.js';
 
 export const cells = (ctx) => (ctx || activeGrid).cells;
 export let activeSubIndex = null;
@@ -207,6 +208,7 @@ export function updateGridLabels(ctx = activeGrid) {
         const isSubDing = lbl[sIdx] === '0' || lbl[sIdx] === 'Ding';
         sub.classList.toggle('visual-ding', isSubDing && pref === 'Pitches');
       });
+      updateChordShapeDiagram(cell.querySelector('.chord-shape-diagram'), lbl);
     }
   });
 }
@@ -333,6 +335,7 @@ export function renderAllMeasures(ctx = activeGrid) {
         quad.appendChild(leftCol);
         quad.appendChild(rightCol);
         cell.appendChild(quad);
+        cell.appendChild(createChordShapeDiagramEl());
 
         // Ghost note dot
         const ghost = document.createElement('div');
@@ -364,6 +367,7 @@ export function renderAllMeasures(ctx = activeGrid) {
             const isSubDing = lbl[idx] === '0' || lbl[idx] === 'Ding';
             allSubs[idx].classList.toggle('visual-ding', isSubDing && pref === 'Pitches');
           };
+          updateChordShapeDiagram(cell.querySelector('.chord-shape-diagram'), lbl);
         }
 
         cell.dataset.index = g;
@@ -577,6 +581,7 @@ export function setInnerLabel(i, value, ctx = activeGrid) {
       const isSubDing = label === '0' || label === 'Ding';
       subs[idx].classList.toggle('visual-ding', isSubDing && pref === 'Pitches');
     });
+    updateChordShapeDiagram(cell.querySelector('.chord-shape-diagram'), ctx.innerLabels[i]);
   }
 }
 

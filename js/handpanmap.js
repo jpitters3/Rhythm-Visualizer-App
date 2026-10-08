@@ -2050,6 +2050,18 @@ export function initHandpanMap() {
     }, 50);
   });
 
+  const CHORD_SHAPE_KEY = 'handpanChordShapeView';
+  const chordShapeToggle = document.getElementById('chordShapeToggle');
+  if (chordShapeToggle) {
+    const savedChordShape = localStorage.getItem(CHORD_SHAPE_KEY) === 'true';
+    chordShapeToggle.checked = savedChordShape;
+    document.body.classList.toggle('chord-shape-view', savedChordShape);
+    chordShapeToggle.addEventListener('change', () => {
+      localStorage.setItem(CHORD_SHAPE_KEY, String(chordShapeToggle.checked));
+      document.body.classList.toggle('chord-shape-view', chordShapeToggle.checked);
+    });
+  }
+
   showOctaveCheck?.addEventListener('change', () => {
     localStorage.setItem('handpanShowOctave', String(showOctaveCheck.checked));
     overlayNumberPitchNotes();
