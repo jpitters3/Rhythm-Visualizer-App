@@ -940,7 +940,7 @@ export async function start(ctx, isSync = true, skipCountdown = false) {
   const isGravity = document.body.classList.contains('mode-gravity') && document.body.classList.contains('present');
   const useCountdown = (isListening || isReviewing() || isGravity || c.countdownEnabled) && !skipCountdown;
   if (useCountdown) {
-    c.audioStep = -4;
+    c.audioStep = -(c.countdownSteps || 4);
     c.targetAudioStart = targetStart;
   } else {
     c.audioStep = targetStart;
@@ -954,7 +954,7 @@ export async function start(ctx, isSync = true, skipCountdown = false) {
   // If counting down, audioStartTime represents when the actual pattern (Step 0) starts.
   // This ensures visuals (Highway) are synced to the audio pattern start.
   if (useCountdown) {
-    c.audioStartTime = nextNoteTime + (4 * secondsPerBeat);
+    c.audioStartTime = nextNoteTime + ((c.countdownSteps || 4) * secondsPerBeat);
   } else {
     c.audioStartTime = nextNoteTime;
   }

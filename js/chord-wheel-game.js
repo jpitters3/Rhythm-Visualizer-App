@@ -3,7 +3,7 @@ import { ChordAnalyzer, rootQualitySignature, chordSignature, getInversionLabel 
 import { annotatePlayability } from './chord-playability.js';
 import { getAllCurrentNotes, highlightChordNotes, playChordNotes, notesToLabels } from './chord-playback.js';
 import { getPitchPositionMap, setHandpanSide } from './handpanmap.js';
-import { assignChordToSelectedCell, applySelection, renderAllMeasures } from './notegrid.js';
+import { assignChordToSelectedCell, applySelection, renderAllMeasures, getEffectiveHand } from './notegrid.js';
 import { measureRange } from './measure-actions.js';
 import { activeGrid, currentUser, getSelectedScaleName } from './state.js';
 import { makeSortable } from './sortable.js';
@@ -125,9 +125,10 @@ function createRelocatableMount(elementId) {
 // --- The game ---
 
 class ChordWheelGame {
-  constructor(view, { onBack } = {}) {
+  constructor(view, { onBack, rhythmHandoff = false } = {}) {
     this.view = view;
     this.onBack = onBack;
+    this.rhythmHandoff = rhythmHandoff;
 
     this.slots = [null, null, null, null];
     this.mode = 'scale';
@@ -395,6 +396,24 @@ class ChordWheelGame {
   }
 
   async sendToStudio() {
+    // Rhythm-game hand-off: the grid already holds 4 measures of a clapped
+    // rhythm (gridA, untouched since the rhythm game never swapped it out)
+    // — substitute each measure's first beat with its chord instead of
+    // wiping/resizing the grid to 4 blank measures.
+    if (this.rhythmHandoff) {
+      const ctx = activeGrid;
+      HistoryManager?.pushState();
+      this.slots.forEach((chord, i) => {
+        const { start } = measureRange(i, ctx);
+        applySelection(start, ctx);
+        assignChordToSelectedCell(notesToLabels(chord.notes), ctx);
+      });
+      renderAllMeasures(ctx);
+      this.teardown();
+      navigate('studio');
+      return;
+    }
+
     if (!await guardBeforeReplacingGrid('You have unsaved changes. Discard them and replace the grid with this progression?')) return;
 
     const ctx = activeGrid;
@@ -467,6 +486,48 @@ class ChordWheelGame {
     if (this.sendBtn) this.sendBtn.disabled = !allFilled;
     if (this.wheelHintEl) this.wheelHintEl.hidden = this.slots.some(c => c);
     this.highlightTargetSlot(this.nextEmptySlotIndex());
+    this.renderRhythmPreview();
+  }
+
+  // Rhythm hand-off only: a miniature read-only copy of the 4-measure
+  // rhythm grid (which is just `activeGrid` — untouched since the rhythm
+  // game never swapped it out), with each measure's first beat showing its
+  // chord slot instead of the clapped Ding once filled. Clicking it is a
+  // shortcut for Send to Studio, once every slot is filled.
+  renderRhythmPreview() {
+    if (!this.rhythmHandoff || !this.rhythmPreviewEl) return;
+
+    const ctx = activeGrid;
+    const stepsPerMeasure = ctx.stepsPerMeasure;
+    const measures = Math.ceil(ctx.innerLabels.length / stepsPerMeasure);
+
+    let html = '';
+    for (let m = 0; m < measures; m++) {
+      html += '<div class="cw-rhythm-row">';
+      for (let i = 0; i < stepsPerMeasure; i++) {
+        const chord = this.slots[m];
+        if (i === 0 && chord) {
+          html += `<div class="cw-rhythm-cell cw-rhythm-chord" style="background:${chord.wheelColor || 'var(--btn-active)'}" title="${chord.name}">${abbreviateChord(chord)}</div>`;
+        } else {
+          const idx = m * stepsPerMeasure + i;
+          const label = ctx.innerLabels[idx];
+          const hasNote = !!label;
+          // Same text convention as the real grid: Ding shows as "D", T/S
+          // (accent strikes) show as-is.
+          const displayText = hasNote ? ((label === '0' || label === 'Ding') ? 'D' : label) : '';
+          // Sticking color applies to every beat regardless of whether it's
+          // filled, matching the real grid's downbeat/upbeat rendering.
+          const handClass = getEffectiveHand(idx, ctx) === 'R' ? 'cw-rhythm-downbeat' : 'cw-rhythm-upbeat';
+          html += `<div class="cw-rhythm-cell ${handClass}${hasNote ? ' cw-rhythm-note' : ''}">${displayText}</div>`;
+        }
+      }
+      html += '</div>';
+    }
+    this.rhythmPreviewEl.innerHTML = html;
+
+    const allFilled = this.slots.every(c => c?.notes);
+    this.rhythmPreviewEl.classList.toggle('cw-rhythm-preview-ready', allFilled);
+    this.rhythmPreviewEl.title = allFilled ? 'Click to send to Studio' : 'Fill all 4 chord slots to send to Studio';
   }
 
   renderModeRow() {
@@ -564,11 +625,14 @@ class ChordWheelGame {
         </div>
 
         <div class="cw-slots"></div>
+
+        ${this.rhythmHandoff ? '<div class="cw-rhythm-preview" role="button" tabindex="0"></div>' : ''}
       </div>
     `;
 
     this.slotsEl = view.querySelector('.cw-slots');
     this.sendBtn = view.querySelector('.cw-send-btn');
+    this.rhythmPreviewEl = view.querySelector('.cw-rhythm-preview');
     this.wheelSvgEl = view.querySelector('.cw-wheel-svg');
     this.wheelWrapEl = view.querySelector('.cw-wheel-wrap');
     this.wheelHintEl = view.querySelector('.cw-wheel-hint');
@@ -601,6 +665,11 @@ class ChordWheelGame {
     view.querySelector('.cw-spin-all-btn').addEventListener('click', () => this.spinAll());
     view.querySelector('.cw-play-btn').addEventListener('click', () => this.playProgression());
     this.sendBtn.addEventListener('click', () => this.sendToStudio());
+    if (this.rhythmPreviewEl) {
+      this.rhythmPreviewEl.addEventListener('click', () => {
+        if (this.slots.every(c => c?.notes)) this.sendToStudio();
+      });
+    }
 
     view.querySelectorAll('.cw-mode-btn').forEach(btn => {
       btn.addEventListener('click', () => {

@@ -1,0 +1,151 @@
+/* Create Your Own Rhythm (route #games, Rhythm domain). See js/create-rhythm-game.js.
+   Reuses .hg-container/.hg-back/.hg-header etc. from css/handpan-games.css. */
+
+.rg-progress {
+  display: flex;
+  justify-content: space-between;
+  gap: 4px;
+  margin-bottom: 28px;
+}
+
+.rg-progress-step {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  opacity: 0.4;
+  transition: opacity 0.2s;
+}
+
+.rg-progress-step.rg-progress-current,
+.rg-progress-step.rg-progress-done {
+  opacity: 1;
+}
+
+.rg-progress-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--panel-border);
+}
+
+.rg-progress-step.rg-progress-done .rg-progress-dot {
+  background: var(--btn-active);
+}
+
+.rg-progress-step.rg-progress-current .rg-progress-dot {
+  background: var(--accent, #f6c84c);
+  box-shadow: 0 0 0 4px var(--accent-glow, rgba(246, 200, 76, 0.35));
+}
+
+.rg-progress-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--text);
+  text-align: center;
+}
+
+/* Below ~420px, labels only show for the current step so the strip never
+   needs to scroll horizontally. */
+@media (max-width: 420px) {
+  .rg-progress-step:not(.rg-progress-current) .rg-progress-label {
+    display: none;
+  }
+}
+
+.measures {
+  height: 170px;
+}
+
+.rg-stage {
+  min-height: 90px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  text-align: center;
+  padding: 20px 12px;
+  margin-bottom: 20px;
+  border-radius: 16px;
+  border: 1px solid var(--panel-border);
+  background: var(--panel);
+}
+
+.rg-instruction {
+  margin: 0;
+  font-size: 15px;
+  color: var(--text);
+  max-width: 560px;
+}
+
+.rg-listening {
+  font-weight: 700;
+  animation: rgPulse 1s ease-in-out infinite;
+}
+
+@keyframes rgPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.rg-hand-r {
+  color: var(--down-fill);
+}
+
+.rg-hand-l {
+  color: var(--up-fill);
+}
+
+.rg-cta-row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: center;
+  width: 100%;
+}
+
+.rg-cta-btn {
+  min-height: 52px;
+  padding: 14px 28px;
+  border-radius: 999px;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  border: 1px solid var(--panel-border);
+  transition: transform 0.1s, opacity 0.15s;
+}
+
+.rg-cta-btn:active {
+  transform: scale(0.97);
+}
+
+.rg-cta-primary {
+  background: var(--btn-active);
+  color: #0b0b12;
+  border-color: var(--btn-active);
+}
+
+.rg-cta-secondary {
+  background: var(--panel);
+  color: var(--text);
+}
+
+/* Full-width, stacked, generously tall on mobile so the primary CTA is easy
+   to hit with a thumb. */
+@media (max-width: 640px) {
+  .rg-cta-row {
+    flex-direction: column;
+  }
+
+  .rg-cta-btn {
+    width: 100%;
+    min-height: 56px;
+  }
+}
+
+.rg-grid-slot,
+.rg-transport-slot {
+  margin-top: 8px;
+}

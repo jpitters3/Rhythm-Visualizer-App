@@ -4,12 +4,13 @@
 // later; see the plan / project_handpan_games memo.
 
 import { navigate } from './router.js';
+import { guardBeforeReplacingGrid } from './lesson-settings.js';
 
 // The ten domains of the Handpan Pathway. `status`: 'soon' until a domain
 // has at least one playable game.
 const DOMAINS = [
   { id: 'technique',     name: 'Technique',             icon: '🎯', blurb: 'Cleaner strikes, better tone, more control.',    status: 'soon' },
-  { id: 'rhythm',        name: 'Rhythm',                icon: '🥁', blurb: 'Lock the pulse, subdivide, displace, groove.',    status: 'soon' },
+  { id: 'rhythm',        name: 'Rhythm',                icon: '🥁', blurb: 'Lock the pulse, subdivide, displace, groove.',    status: 'live' },
   { id: 'coordination',  name: 'Coordination',          icon: '🤹', blurb: 'Hand independence and interplay.',                status: 'soon' },
   { id: 'patterns',      name: 'Patterns & Vocabulary', icon: '🧩', blurb: 'Build a library of go-to phrases.',               status: 'soon' },
   { id: 'harmony',       name: 'Harmony',               icon: '🎶', blurb: 'Chords, tension, and resolution.',                status: 'live' },
@@ -81,5 +82,10 @@ async function openDomainGame(view, domainId) {
   if (domainId === 'harmony') {
     const { renderChordWheelGame } = await import('./chord-wheel-game.js');
     renderChordWheelGame(view, { onBack: () => render(view) });
+  }
+  if (domainId === 'rhythm') {
+    if (!await guardBeforeReplacingGrid('You have unsaved changes in the studio. Discard them and start a new rhythm?')) return;
+    const { renderCreateRhythmGame } = await import('./create-rhythm-game.js');
+    renderCreateRhythmGame(view, { onBack: () => render(view) });
   }
 }
