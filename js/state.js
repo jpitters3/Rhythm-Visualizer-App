@@ -44,6 +44,13 @@ export function setIsEditFlam(v) { isEditFlam = v; }
 export let longPressFired = false;
 export function setLongPressFired(v) { longPressFired = v; }
 
+// Create Your Own Rhythm (js/create-rhythm-game.js) sets this while active —
+// a plain tap on a beat writes Ding directly, same as a Caps-Lock click in
+// the Studio grid (js/notegrid.js), since the game's whole point is quickly
+// building a rhythm of Ding strikes by hand.
+export let tapToDingMode = false;
+export function setTapToDingMode(v) { tapToDingMode = v; }
+
 export let labelNotation = localStorage.getItem('labelNotation') || 'musical';
 export function setLabelNotation(v) {
   labelNotation = v;

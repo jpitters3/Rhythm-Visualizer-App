@@ -10,7 +10,7 @@ import { setBeats, setSubdivision, start, stop, addTickObserver, removeTickObser
 import { TransportRegistry } from './transport-ui.js';
 import { duplicateSelection } from './measure-actions.js';
 import { setRange, clearRange } from './range-selection.js';
-import { labelNotation, setLabelNotation, setIsListening } from './state.js';
+import { labelNotation, setLabelNotation, setIsListening, setTapToDingMode } from './state.js';
 import { saveCurrentPatternAs } from './controls.js';
 import { dbListPatternNames } from './pattern-crud.js';
 import { navigate } from './router.js';
@@ -79,6 +79,11 @@ class CreateRhythmGame {
     setLabelNotation('numeric');
     window.dispatchEvent(new CustomEvent('labelNotationChanged', { detail: 'numeric' }));
 
+    // A plain tap on a beat writes Ding directly (same shortcut as a
+    // Caps-Lock click in the Studio grid) — this game is all about quickly
+    // building a rhythm of Ding strikes by hand, with or without clapping.
+    setTapToDingMode(true);
+
     clearGrid(gridA);
     setBeats(BEATS, gridA);
     setSubdivision(SUBDIVISION, gridA);
@@ -93,6 +98,7 @@ class CreateRhythmGame {
 
     this.stopActiveListening();
     this.stopContentWatcher();
+    setTapToDingMode(false);
 
     setLabelNotation(this.prevLabelNotation || 'musical');
     window.dispatchEvent(new CustomEvent('labelNotationChanged', { detail: this.prevLabelNotation }));
@@ -298,7 +304,7 @@ class CreateRhythmGame {
     switch (this.step) {
       case 'intro':
         stage.innerHTML = `
-          <p class="rg-instruction">Tap Start to turn on the metronome and clap your rhythm — or tap Ding, Tak and Slap directly onto the grid below to build it by hand.</p>
+          <p class="rg-instruction">Tap Start to turn on the metronome and clap your rhythm — or directly tap the beats you want to accentuate to build it by hand.</p>
           <div class="rg-cta-row">
             <button class="rg-cta-btn rg-cta-primary" type="button" data-action="start">🥁 Start</button>
             ${this.hasContent ? '<button class="rg-cta-btn rg-cta-secondary" type="button" data-action="continue">Continue →</button>' : ''}

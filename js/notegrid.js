@@ -5,7 +5,7 @@ import { stop, setBeats, setSubdivision } from './noteplayer.js';
 import { getScale } from './state.js';
 import { setCaret, setRange, clearRange, getRange, updateDragSelectionOver, startLongPress, cancelLongPress, hasRange } from './range-selection.js';
 import { HistoryManager } from './history.js';
-import { editHandsMode, isEditMulti, multiEditSessionSlot, longPressFired, setLongPressFired, setIsEditMulti, setMultiEditSessionSlot, labelNotation, isEditFlam, setIsEditFlam } from './state.js';
+import { editHandsMode, isEditMulti, multiEditSessionSlot, longPressFired, setLongPressFired, setIsEditMulti, setMultiEditSessionSlot, labelNotation, isEditFlam, setIsEditFlam, tapToDingMode } from './state.js';
 import { TransportRegistry } from './transport-ui.js';
 import { isReviewing, getFeedbackForStep, showFeedbackTooltip, copyLogsForStep, getExpectedNoteForStep } from './coaching-mode.js';
 import { Bus, BUS_EVENT } from './bus.js';
@@ -772,13 +772,23 @@ function attachCellListeners(cell, ctx = activeGrid) {
       return;
     }
 
-    // Caps Lock on: a plain click writes Ding directly, skipping the 'D' key.
-    if (ev.getModifierState && ev.getModifierState('CapsLock')) {
-      ctx.anchorIndex = i;
-      setCaret(i, ctx);
-      setRange(i, i, ctx);
+    // Caps Lock on (or the Create Your Own Rhythm game is active): a plain
+    // click writes Ding directly, skipping the 'D' key. In the rhythm game
+    // specifically, a second tap toggles it back to a ghost note, and the
+    // tapped beat is never left selected — each tap is a one-off toggle,
+    // not the start of an editing session. Caps Lock in the Studio keeps
+    // its original behavior (always set Ding, cell stays selected).
+    if (tapToDingMode || (ev.getModifierState && ev.getModifierState('CapsLock'))) {
+      if (!tapToDingMode) {
+        ctx.anchorIndex = i;
+        setCaret(i, ctx);
+        setRange(i, i, ctx);
+      }
       if (HistoryManager) HistoryManager.pushState();
-      setInnerLabel(i, 'Ding', ctx);
+      const current = ctx.innerLabels[i];
+      const isDing = current === 'Ding' || current === '0';
+      const nextValue = (tapToDingMode && isDing) ? '' : 'Ding';
+      setInnerLabel(i, nextValue, ctx);
       return;
     }
 
