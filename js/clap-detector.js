@@ -18,8 +18,24 @@ const DEFAULT_MIN_HIT_RMS = 0.08; // floor used when no click level was ever mea
 const CLAP_OVER_CLICK_MULTIPLIER = 0.5;
 const REFRACTORY_MS = 150; // ignore further hits for this long after one lands, so a single clap's decay tail doesn't double-trigger
 
+// Mobile (coarse-pointer) also accepts finger snaps — one hand's usually
+// holding the phone, so clapping isn't always an option. A snap is much
+// quieter overall than a clap (often not much louder than the click itself
+// by raw RMS), but its energy sits disproportionately in the high
+// frequencies, unlike a soft, lower/mid shaker click — so on mobile a loud
+// BROADBAND hit (clap path, same as desktop) still counts, but so does a
+// much quieter hit whose high-frequency content clearly spikes above what
+// the click itself looks like up there.
+const HIGH_BAND_MIN_HZ = 2000;
+const HIGH_BAND_MAX_HZ = 8000;
+const SNAP_MIN_HIT_RMS = 0.015; // a snap's overall level floor — well below a clap's, close to the click's own
+const SNAP_HIGH_BAND_MULTIPLIER = 1.6; // how much louder than the click's own high-band energy a snap's spike must be
+const SNAP_HIGH_BAND_FLOOR = 25; // absolute floor (0-255 scale) in case the click registered ~0 up there
+
 let micStream = null;
 let analyser = null;
+let freqBuf = null;
+let isMobile = false;
 let rafId = null;
 let prevRMS = 0;
 let lastHitAt = 0;
@@ -27,6 +43,7 @@ let onHit = null;
 let calibrating = false;
 let calibrationCutoffAudioTime = 0; // audioCtx.currentTime (seconds) calibration ends at — the audio clock, not wall-clock
 let clickLevel = 0; // loudest RMS observed during calibration — our estimate of "how loud the click sounds through this mic"
+let clickHighBand = 0; // loudest high-frequency-band energy observed during calibration
 
 async function openMic(audioCtx) {
   const constraints = {
@@ -44,6 +61,19 @@ async function openMic(audioCtx) {
   }
 }
 
+// Average magnitude (0-255) across the bins spanning HIGH_BAND_MIN_HZ to
+// HIGH_BAND_MAX_HZ — a cheap stand-in for "how much high-frequency energy
+// is in this frame" without needing a true spectral-centroid calculation.
+function highBandEnergy(audioCtx) {
+  analyser.getByteFrequencyData(freqBuf);
+  const nyquist = audioCtx.sampleRate / 2;
+  const loBin = Math.max(0, Math.round((HIGH_BAND_MIN_HZ / nyquist) * freqBuf.length));
+  const hiBin = Math.min(freqBuf.length - 1, Math.round((HIGH_BAND_MAX_HZ / nyquist) * freqBuf.length));
+  let sum = 0;
+  for (let i = loBin; i <= hiBin; i++) sum += freqBuf[i];
+  return sum / Math.max(1, hiBin - loBin + 1);
+}
+
 function loop() {
   if (!analyser) return;
   const audioCtx = getAudioCtx();
@@ -54,6 +84,7 @@ function loop() {
   const rms = Math.sqrt(sum / buf.length);
   const flux = prevRMS > 0 ? rms / prevRMS : 0;
   prevRMS = rms;
+  const highBand = isMobile ? highBandEnergy(audioCtx) : 0; // skip the FFT read on desktop, unused there
 
   const nowMs = performance.now();
 
@@ -61,6 +92,7 @@ function loop() {
     // The count-in plays nothing but metronome clicks — whatever's loudest
     // here IS the click, heard through this mic at this volume/distance.
     if (rms > clickLevel) clickLevel = rms;
+    if (isMobile && highBand > clickHighBand) clickHighBand = highBand;
     // Compared against the audio clock, not performance.now() — see the
     // comment on calibrateUntilAudioTime's assignment in
     // startClapListening for why.
@@ -70,7 +102,12 @@ function loop() {
   }
 
   const minHitRms = Math.max(DEFAULT_MIN_HIT_RMS, clickLevel * CLAP_OVER_CLICK_MULTIPLIER);
-  const isHit = rms > minHitRms && flux > FLUX_THRESHOLD && (nowMs - lastHitAt) > REFRACTORY_MS;
+  const looksLikeClap = rms > minHitRms;
+  const looksLikeSnap = isMobile
+    && rms > SNAP_MIN_HIT_RMS
+    && highBand > Math.max(SNAP_HIGH_BAND_FLOOR, clickHighBand * SNAP_HIGH_BAND_MULTIPLIER);
+
+  const isHit = (looksLikeClap || looksLikeSnap) && flux > FLUX_THRESHOLD && (nowMs - lastHitAt) > REFRACTORY_MS;
   if (isHit) {
     lastHitAt = nowMs;
     onHit?.(audioCtx.currentTime * 1000);
@@ -109,10 +146,13 @@ export async function startClapListening(onClap, { calibrateUntilAudioTime = 0 }
   analyser = audioCtx.createAnalyser();
   analyser.fftSize = BUFSIZE;
   source.connect(analyser);
+  freqBuf = new Uint8Array(analyser.frequencyBinCount);
+  isMobile = window.matchMedia('(pointer: coarse)').matches;
 
   prevRMS = 0;
   lastHitAt = 0;
   clickLevel = 0;
+  clickHighBand = 0;
   calibrating = calibrateUntilAudioTime > audioCtx.currentTime;
   calibrationCutoffAudioTime = calibrateUntilAudioTime;
   onHit = onClap;
@@ -126,7 +166,9 @@ export function stopClapListening() {
   onHit = null;
   calibrating = false;
   clickLevel = 0;
+  clickHighBand = 0;
   calibrationCutoffAudioTime = 0;
+  freqBuf = null;
   if (micStream) micStream.getTracks().forEach(t => t.stop());
   micStream = null;
   analyser = null;
