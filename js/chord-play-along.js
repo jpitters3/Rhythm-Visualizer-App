@@ -43,6 +43,21 @@ function normalizeScaleKey(name) {
   return (name || 'default').toLowerCase().replace(/\s+/g, '_');
 }
 
+// chord.notes holds raw pitch strings like "Fs4"/"Bb3" (js/chord-analyzer.js's
+// parseNote() format) — notesToLabels() (js/chord-playback.js) converts
+// those to the handpan's own position labels (Ding/1-8), which is right
+// for the grid but not what "the notes that make up this chord" means in
+// the summary breakdown. This keeps the letter name and strips the octave.
+function formatPitchName(pitch) {
+  const match = pitch.match(/^([A-G])([#bBs]?)(-?\d+)$/i);
+  if (!match) return pitch;
+  const letter = match[1].toUpperCase();
+  const mod = match[2].toLowerCase();
+  if (mod === '#' || mod === 's') return `${letter}♯`;
+  if (mod === 'b') return `${letter}♭`;
+  return letter;
+}
+
 // A quick synthesized chime for the round-transition banner — ascending
 // major-triad arpeggio for a good round, a short descending dip for a
 // rough one. No audio asset needed; same createOscillator()+gain-envelope
@@ -66,6 +81,30 @@ function playRoundResultSound(good) {
     gain.connect(audioCtx.destination);
     osc.start(t);
     osc.stop(t + 0.32);
+  });
+}
+
+// A short bright "ding" for a single fully-correct chord (every expected
+// beat correct — see finalizeChordGrading()), distinct from the
+// round-transition chime above so the two don't read as the same event.
+function playChordSuccessSound() {
+  const audioCtx = getAudioCtx();
+  if (!audioCtx) return;
+  const now = audioCtx.currentTime;
+  const freqs = [880, 1108.73]; // A5 -> C#6
+  freqs.forEach((freq, i) => {
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(freq, now);
+    const t = now + i * 0.06;
+    gain.gain.setValueAtTime(0.0001, t);
+    gain.gain.exponentialRampToValueAtTime(0.14, t + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.22);
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start(t);
+    osc.stop(t + 0.24);
   });
 }
 
@@ -470,12 +509,29 @@ class ChordPlayAlong {
       else if (noteScore === 100) cell.classList.add('coach-timing');
       else cell.classList.add('coach-wrong');
     }
+
+    // Engine-level rule, not specific to "3 chord notes": the instant every
+    // expected beat for THIS chord (ARPEGGIO_STEPS here — a different game
+    // built on this same grading loop might expect more or fewer beats,
+    // spread across more measures) has been graded and all of them are
+    // correct, play the success chime right here — not deferred to the
+    // chord transition/round banner, so it lands the moment the player
+    // actually finishes nailing the chord, even mid-measure.
+    const chordOffset = this.chordIndex * gridA.stepsPerMeasure * 2;
+    const attemptSteps = ARPEGGIO_STEPS.map(s => chordOffset + gridA.stepsPerMeasure + s);
+    const allBeatsGraded = attemptSteps.every(s => this.graded.has(s));
+    if (allBeatsGraded && this.currentChordResult.notes.every(n => n.correct)) {
+      playChordSuccessSound();
+    }
   }
 
   // Any arpeggio note in chordIdx's attempt measure never detected at all
   // counts as missed (score 0). Called on every chord transition (for the
   // chord just finished) and once more at the very end of the phrase (for
   // the final chord, which has no "next chord" transition to trigger it).
+  // A chord that WAS fully graded via gradeNote() (every beat detected)
+  // already had its success chime fire there, the instant that happened —
+  // this only ever adds MISSED beats, so it can't also trigger success.
   finalizeChordGrading(chordIdx) {
     const chordOffset = chordIdx * gridA.stepsPerMeasure * 2;
     const attemptSteps = ARPEGGIO_STEPS.map(s => chordOffset + gridA.stepsPerMeasure + s);
@@ -516,13 +572,22 @@ class ChordPlayAlong {
 
     const banner = document.createElement('div');
     banner.className = `cpa-round-banner ${good ? 'cpa-round-banner-good' : 'cpa-round-banner-bad'}`;
+    // 🌱, not 💪 — a flexed bicep on a missed round reads as "you need to
+    // get stronger," not encouragement. Growth/keep-going fits better.
     banner.innerHTML = `
-      <span class="cpa-round-banner-icon">${good ? '🔥' : '💪'}</span>
+      <span class="cpa-round-banner-icon">${good ? '🔥' : '🌱'}</span>
       <span class="cpa-round-banner-text">
         Round ${roundIdx + 1} complete<br>${good ? 'Great playing!' : 'Keep at it!'}
       </span>
     `;
     document.body.appendChild(banner);
+    // Sits just above the measures grid, not a fixed viewport percentage —
+    // the grid's scroll position varies by device and by how far down the
+    // page the player has scrolled.
+    const gridRect = this.view.querySelector('.cpa-grid-slot')?.getBoundingClientRect();
+    if (gridRect) {
+      banner.style.top = `${Math.max(8, gridRect.top - banner.offsetHeight - 12)}px`;
+    }
     banner.addEventListener('animationend', () => this.closeRoundBanner());
     this.roundBannerEl = banner;
     // Safety net if animationend never fires (e.g. the tab was backgrounded).
@@ -553,6 +618,10 @@ class ChordPlayAlong {
       stop(gridA);
       TransportRegistry.updateAll(gridA);
     }
+    // Same reasoning as "Play Again" in renderSummaryModal(): wipe whatever
+    // coach-correct/-timing/-wrong highlighting the in-progress phrase left
+    // behind, back to a blank placeholder grid.
+    this.setupFreshPhrase();
     this.step = 'settings';
     this.renderStage();
     // Back to the same top-of-view state Start scrolled away from.
@@ -587,6 +656,30 @@ class ChordPlayAlong {
     const timingAccuracy = Math.round(allNotes.reduce((s, n) => s + n.timingScore, 0) / allNotes.length);
     const overallScore = Math.round(allNotes.reduce((s, n) => s + n.overallScore, 0) / allNotes.length);
     return { noteAccuracy, timingAccuracy, overallScore };
+  }
+
+  // Per-chord breakdown for the summary modal — one row per distinct chord
+  // signature (so e.g. "A Minor" and "A Minor I" stay separate, same
+  // uniqueness rule as buildChordSequence()'s one-per-round limit)
+  chordBreakdown() {
+    const bySignature = new Map();
+    this.sequence.forEach((chord, i) => {
+      const sig = chordSignature(chord);
+      if (!bySignature.has(sig)) {
+        bySignature.set(sig, {
+          label: chord.inversion ? `${chord.name} (${getInversionLabel(chord.inversion)})` : chord.name,
+          notesLabel: chord.notes.map(formatPitchName).join(' – '),
+          correct: 0,
+          incorrect: 0,
+        });
+      }
+      const result = this.results[i];
+      const allCorrect = !!result?.notes.length && result.notes.every(n => n.correct);
+      const entry = bySignature.get(sig);
+      if (allCorrect) entry.correct++;
+      else entry.incorrect++;
+    });
+    return Array.from(bySignature.values());
   }
 
   // --- Rendering ---
@@ -647,6 +740,10 @@ class ChordPlayAlong {
 
     if (this.step !== 'summary') this.closeSummaryModal();
     if (this.resetBtn) this.resetBtn.hidden = this.step !== 'playing';
+    // The modal (renderSummaryModal()) is the whole finish screen — an
+    // emptied-but-still-styled .cpa-stage would otherwise leave a blank
+    // panel-shaped box sitting behind it.
+    stage.hidden = this.step === 'summary';
 
     if (this.step === 'settings') {
       stage.innerHTML = `
@@ -693,7 +790,7 @@ class ChordPlayAlong {
       const roundSize = this.roundSizes[roundNum - 1] ?? CHORDS_PER_ROUND;
       stage.innerHTML = `
         <p class="cpa-round-count">Round ${roundNum} of ${this.roundSizes.length} — Chord ${posInRound} of ${roundSize}</p>
-        <h2 class="cpa-chord-name">${chordLabel}</h2>
+        <h2 class="cpa-chord-name cpa-chord-name-reveal">${chordLabel}</h2>
         <p class="cpa-instruction">Listen, then play it back on beats 1, 2, 3.</p>
       `;
       return;
@@ -712,6 +809,18 @@ class ChordPlayAlong {
   renderSummaryModal() {
     this.closeSummaryModal();
     const { noteAccuracy, timingAccuracy, overallScore } = this.overallStats();
+    const breakdownRows = this.chordBreakdown().map((row) => `
+      <div class="cpa-breakdown-row">
+        <div class="cpa-breakdown-main">
+          <span class="cpa-breakdown-name">${row.label}</span>
+          <span class="cpa-breakdown-notes">${row.notesLabel}</span>
+        </div>
+        <div class="cpa-breakdown-counts">
+          <span class="cpa-breakdown-count cpa-breakdown-correct">✓ ${row.correct}</span>
+          <span class="cpa-breakdown-count cpa-breakdown-incorrect">✗ ${row.incorrect}</span>
+        </div>
+      </div>
+    `).join('');
     const backdrop = document.createElement('div');
     backdrop.className = 'cpa-modal-backdrop';
     backdrop.innerHTML = `
@@ -722,6 +831,7 @@ class ChordPlayAlong {
           <div><strong>${noteAccuracy}%</strong><span>Notes</span></div>
           <div><strong>${timingAccuracy}%</strong><span>Timing</span></div>
         </div>
+        <div class="cpa-breakdown-list">${breakdownRows}</div>
         <div class="cpa-cta-row">
           <button class="cpa-cta-btn cpa-cta-secondary" type="button" data-action="again">Play Again</button>
           <button class="cpa-cta-btn cpa-cta-primary" type="button" data-action="done">Done</button>
@@ -730,6 +840,10 @@ class ChordPlayAlong {
     `;
     backdrop.querySelector('[data-action="again"]').addEventListener('click', () => {
       this.closeSummaryModal();
+      // Wipes the last phrase's coach-correct/-timing/-wrong highlighting
+      // (and its full round count of measures) back to the same blank
+      // placeholder grid the settings screen started with.
+      this.setupFreshPhrase();
       this.step = 'settings';
       this.renderStage();
       // Settings fields are back at the top of the view; the player was
