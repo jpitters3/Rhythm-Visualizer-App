@@ -14,6 +14,7 @@ import { labelNotation, setLabelNotation, currentUser, getSelectedScaleName } fr
 import { showToast } from './toast.js';
 import { startPitchListening, stopPitchListening, resetPitchHistory } from './pitch-detector.js';
 import { AUDIO_DELAY } from './config.js';
+import { supabase } from './supabase-client.js';
 
 const BEATS = 4;
 const SUBDIVISION = 2; // 8th notes — "1&2&" notation, 8 steps per measure
@@ -24,6 +25,12 @@ const DEFAULT_ROUND_COUNT = 1;
 const MIN_ROUNDS = 1;
 const MAX_ROUNDS = 6;
 const ROUND_GOOD_THRESHOLD = 70; // average overallScore across a round's notes, 0-100
+// "Known" for the My Progress dashboard — pitch-accuracy-only (see
+// chordBreakdown()'s own note on why timing is excluded), so this is
+// deliberately a separate constant from ROUND_GOOD_THRESHOLD even though
+// they're numerically the same today; the two measure different things
+// and have no reason to be forced to move together later.
+const CHORD_KNOWN_THRESHOLD = 70;
 
 // The Ding note has three equivalent spellings across the codebase:
 // notesToLabels() (js/chord-playback.js) returns 'D', the grid's own
@@ -85,8 +92,9 @@ function playRoundResultSound(good) {
 }
 
 // A short bright "ding" for a single fully-correct chord (every expected
-// beat correct — see finalizeChordGrading()), distinct from the
-// round-transition chime above so the two don't read as the same event.
+// beat correct — see gradeNote()/finalizeChordGrading()), distinct from
+// the round-transition chime above so the two don't read as the same
+// event.
 function playChordSuccessSound() {
   const audioCtx = getAudioCtx();
   if (!audioCtx) return;
@@ -100,6 +108,31 @@ function playChordSuccessSound() {
     const t = now + i * 0.06;
     gain.gain.setValueAtTime(0.0001, t);
     gain.gain.exponentialRampToValueAtTime(0.14, t + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.22);
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start(t);
+    osc.stop(t + 0.24);
+  });
+}
+
+// Same shape as playChordSuccessSound() (short two-note synthesized blip,
+// same envelope timing) but a flat, low "buzz" instead of a bright
+// ascending ding — a new, distinct sound for a chord that wasn't fully
+// correct, not a reuse of the success chime itself.
+function playChordIncorrectSound() {
+  const audioCtx = getAudioCtx();
+  if (!audioCtx) return;
+  const now = audioCtx.currentTime;
+  const freqs = [196.00, 185.00]; // G3 -> Fs3, a half-step down — a "buzz," not a tune
+  freqs.forEach((freq, i) => {
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(freq, now);
+    const t = now + i * 0.06;
+    gain.gain.setValueAtTime(0.0001, t);
+    gain.gain.exponentialRampToValueAtTime(0.1, t + 0.01);
     gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.22);
     osc.connect(gain);
     gain.connect(audioCtx.destination);
@@ -244,7 +277,9 @@ class ChordPlayAlong {
     this.tornDown = true;
 
     this.closeSummaryModal();
+    this.closeProgressModal();
     this.closeRoundBanner();
+    clearTimeout(this.chordSoundTimer);
     if (this.tickObserver) {
       removeTickObserver(this.tickObserver);
       this.tickObserver = null;
@@ -402,6 +437,7 @@ class ChordPlayAlong {
 
     this.chordIndex = 0;
     this.currentChordResult = { name: this.sequence[0].name, notes: [] };
+    this.chordResultSoundPlayed = false; // success/incorrect chime fires once per chord — see gradeNote()
     this.gradingActive = false;
     this.graded = new Set(); // attempt-step indices already graded (absolute, whole-phrase)
     resetPitchHistory();
@@ -428,6 +464,7 @@ class ChordPlayAlong {
 
         this.chordIndex = newChordIndex;
         this.currentChordResult = { name: this.sequence[this.chordIndex].name, notes: [] };
+        this.chordResultSoundPlayed = false;
         this.gradingActive = false;
         resetPitchHistory(); // previous chord's sustain-gate history doesn't apply to a new chord
         this.renderStage();
@@ -513,15 +550,19 @@ class ChordPlayAlong {
     // Engine-level rule, not specific to "3 chord notes": the instant every
     // expected beat for THIS chord (ARPEGGIO_STEPS here — a different game
     // built on this same grading loop might expect more or fewer beats,
-    // spread across more measures) has been graded and all of them are
-    // correct, play the success chime right here — not deferred to the
-    // chord transition/round banner, so it lands the moment the player
-    // actually finishes nailing the chord, even mid-measure.
+    // spread across more measures) has been graded, play success or
+    // incorrect right here — not deferred to the chord transition/round
+    // banner, so it lands the moment the player actually finishes playing
+    // the chord, even mid-measure. Only fires once per chord
+    // (chordResultSoundPlayed) — a chord with a note that's never detected
+    // at all only gets graded in full at finalizeChordGrading(), further
+    // below, which is the fallback for exactly that case.
     const chordOffset = this.chordIndex * gridA.stepsPerMeasure * 2;
     const attemptSteps = ARPEGGIO_STEPS.map(s => chordOffset + gridA.stepsPerMeasure + s);
     const allBeatsGraded = attemptSteps.every(s => this.graded.has(s));
-    if (allBeatsGraded && this.currentChordResult.notes.every(n => n.correct)) {
-      playChordSuccessSound();
+    if (allBeatsGraded && !this.chordResultSoundPlayed) {
+      this.chordResultSoundPlayed = true;
+      this.playChordResultSound(this.currentChordResult.notes.every(n => n.correct));
     }
   }
 
@@ -530,8 +571,10 @@ class ChordPlayAlong {
   // chord just finished) and once more at the very end of the phrase (for
   // the final chord, which has no "next chord" transition to trigger it).
   // A chord that WAS fully graded via gradeNote() (every beat detected)
-  // already had its success chime fire there, the instant that happened —
-  // this only ever adds MISSED beats, so it can't also trigger success.
+  // already had its success/incorrect chime fire there, the instant that
+  // happened (chordResultSoundPlayed) — this only ever adds MISSED beats,
+  // so when it's the one triggering the sound, it can only ever be
+  // incorrect (a missed note is never "correct").
   finalizeChordGrading(chordIdx) {
     const chordOffset = chordIdx * gridA.stepsPerMeasure * 2;
     const attemptSteps = ARPEGGIO_STEPS.map(s => chordOffset + gridA.stepsPerMeasure + s);
@@ -541,7 +584,22 @@ class ChordPlayAlong {
         gridA.cells[step]?.classList.add('coach-wrong');
       }
     });
+    if (!this.chordResultSoundPlayed && this.currentChordResult.notes.length) {
+      this.chordResultSoundPlayed = true;
+      this.playChordResultSound(false);
+    }
     this.results.push(this.currentChordResult);
+  }
+
+  // A beat of breathing room before the chime, instead of it landing right
+  // on top of the note that just decided it
+  playChordResultSound(correct) {
+    clearTimeout(this.chordSoundTimer);
+    this.chordSoundTimer = setTimeout(() => {
+      this.chordSoundTimer = null;
+      if (correct) playChordSuccessSound();
+      else playChordIncorrectSound();
+    }, 500);
   }
 
   finishPhrase() {
@@ -551,8 +609,13 @@ class ChordPlayAlong {
     }
     this.gradingActive = false;
     this.finalizeChordGrading(this.chordIndex);
-    stop(gridA);
-    TransportRegistry.updateAll(gridA);
+    // Deferred past this tick on purpose: this method is itself called
+    // from inside the tick observer, and stop() resets gridA.step to 0 as
+    // part of its normal cleanup
+    setTimeout(() => {
+      stop(gridA);
+      TransportRegistry.updateAll(gridA);
+    }, 0);
     this.finishExercise();
   }
 
@@ -613,6 +676,7 @@ class ChordPlayAlong {
     }
     this.gradingActive = false;
     this.closeRoundBanner();
+    clearTimeout(this.chordSoundTimer);
     stopPitchListening();
     if (gridA.playing) {
       stop(gridA);
@@ -637,11 +701,36 @@ class ChordPlayAlong {
 
   finishExercise() {
     stopPitchListening();
+    this.saveSession(); // fire-and-forget — never blocks showing the summary
     this.step = 'summary';
     this.renderStage();
   }
 
   // --- Scoring summary ---
+
+  // Persists this phrase to cpa_sessions (supabase/migrations/
+  // 20261012000000_create_cpa_sessions.sql) so the My Progress dashboard
+  // can aggregate across sessions. Guests (no account) just don't get
+  // history — same as every other save-to-Supabase feature in this app.
+  async saveSession() {
+    if (!currentUser) return;
+    const { overallScore, noteAccuracy, timingAccuracy } = this.overallStats();
+    try {
+      const { error } = await supabase.from('cpa_sessions').insert({
+        user_id: currentUser.id,
+        scale_key: normalizeScaleKey(getSelectedScaleName()),
+        round_count: this.roundCount,
+        bpm: gridA.bpm,
+        overall_score: overallScore,
+        note_accuracy: noteAccuracy,
+        timing_accuracy: timingAccuracy,
+        chord_results: this.chordBreakdown(),
+      });
+      if (error) throw error;
+    } catch (err) {
+      console.error('[ChordPlayAlong] Failed to save session:', err);
+    }
+  }
 
   overallStats() {
     const allNotes = this.results.flatMap(r => r.notes);
@@ -658,15 +747,26 @@ class ChordPlayAlong {
     return { noteAccuracy, timingAccuracy, overallScore };
   }
 
-  // Per-chord breakdown for the summary modal — one row per distinct chord
-  // signature (so e.g. "A Minor" and "A Minor I" stay separate, same
-  // uniqueness rule as buildChordSequence()'s one-per-round limit)
+  // Per-chord breakdown for the summary modal (and the row saved to
+  // cpa_sessions.chord_results) — one row per distinct chord signature (so
+  // e.g. "A Minor" and "A Minor I" stay separate, same uniqueness rule as
+  // buildChordSequence()'s one-per-round limit).
+  //
+  // "Correct" here is PITCH only (every note's noteScore === 100), not the
+  // stricter correct flag (which also requires timingError < 200ms) — a
+  // chord played at 200bpm will rack up late hits that a slower take
+  // wouldn't, and that's a tempo/reaction-speed story, not a "do they know
+  // this chord" story. Timing isn't tracked per-chord for progress at all
+  // right now; it'd need its own tempo-aware treatment (see overallStats()'s
+  // "Timing" stat for the session-level version), not a straight reuse of
+  // this same threshold.
   chordBreakdown() {
     const bySignature = new Map();
     this.sequence.forEach((chord, i) => {
       const sig = chordSignature(chord);
       if (!bySignature.has(sig)) {
         bySignature.set(sig, {
+          signature: sig,
           label: chord.inversion ? `${chord.name} (${getInversionLabel(chord.inversion)})` : chord.name,
           notesLabel: chord.notes.map(formatPitchName).join(' – '),
           correct: 0,
@@ -674,12 +774,140 @@ class ChordPlayAlong {
         });
       }
       const result = this.results[i];
-      const allCorrect = !!result?.notes.length && result.notes.every(n => n.correct);
+      const allCorrect = !!result?.notes.length && result.notes.every(n => n.noteScore === 100);
       const entry = bySignature.get(sig);
       if (allCorrect) entry.correct++;
       else entry.incorrect++;
     });
     return Array.from(bySignature.values());
+  }
+
+  // --- My Progress dashboard ---
+
+  // Every past session's chord_results for the CURRENT scale (progress on
+  // one handpan layout isn't meaningful mixed with another — same reasoning
+  // as scale_key's own column comment in the migration). Returns null on a
+  // fetch error (distinct from [], which legitimately means "no sessions
+  // yet") so the caller can tell "nothing to show" from "couldn't load."
+  async fetchProgressRows() {
+    if (!currentUser) return [];
+    try {
+      const { data, error } = await supabase
+        .from('cpa_sessions')
+        .select('chord_results')
+        .eq('user_id', currentUser.id)
+        .eq('scale_key', normalizeScaleKey(getSelectedScaleName()))
+        .order('created_at', { ascending: false })
+        .limit(200);
+      if (error) throw error;
+      return data || [];
+    } catch (err) {
+      console.error('[ChordPlayAlong] Failed to load progress:', err);
+      return null;
+    }
+  }
+
+  // Sums correct/incorrect per chord signature across every session row,
+  // then splits into "known" vs. "struggling" at CHORD_KNOWN_THRESHOLD.
+  // Known chords sort best-first (what's solid), struggling chords sort
+  // worst-first (what most needs attention) — whichever list is more
+  // useful to read top-to-bottom for that group.
+  aggregateProgress(sessionRows) {
+    const bySignature = new Map();
+    sessionRows.forEach((row) => {
+      (row.chord_results || []).forEach((entry) => {
+        if (!bySignature.has(entry.signature)) {
+          bySignature.set(entry.signature, {
+            label: entry.label,
+            notesLabel: entry.notesLabel,
+            correct: 0,
+            incorrect: 0,
+          });
+        }
+        const agg = bySignature.get(entry.signature);
+        agg.correct += entry.correct;
+        agg.incorrect += entry.incorrect;
+      });
+    });
+
+    const withAccuracy = Array.from(bySignature.values()).map((e) => {
+      const total = e.correct + e.incorrect;
+      return { ...e, total, accuracy: total ? Math.round(100 * e.correct / total) : 0 };
+    });
+
+    const known = withAccuracy
+      .filter(e => e.accuracy >= CHORD_KNOWN_THRESHOLD)
+      .sort((a, b) => b.accuracy - a.accuracy);
+    const struggling = withAccuracy
+      .filter(e => e.accuracy < CHORD_KNOWN_THRESHOLD)
+      .sort((a, b) => a.accuracy - b.accuracy);
+    return { known, struggling };
+  }
+
+  progressSectionHTML(title, icon, chords) {
+    if (!chords.length) return '';
+    const rows = chords.map(c => `
+      <div class="cpa-breakdown-row">
+        <div class="cpa-breakdown-main">
+          <span class="cpa-breakdown-name">${c.label}</span>
+          <span class="cpa-breakdown-notes">${c.notesLabel}</span>
+        </div>
+        <span class="cpa-progress-accuracy ${c.accuracy >= CHORD_KNOWN_THRESHOLD ? 'cpa-breakdown-correct' : 'cpa-breakdown-incorrect'}">${c.accuracy}%</span>
+      </div>
+    `).join('');
+    return `
+      <div class="cpa-progress-section">
+        <h3 class="cpa-progress-heading">${icon} ${title}</h3>
+        <div class="cpa-breakdown-list">${rows}</div>
+      </div>
+    `;
+  }
+
+  // Shared between the standalone "My Progress" modal and the summary
+  // carousel's second page — both just hand it a container to fill.
+  async loadProgressInto(container) {
+    if (!currentUser) {
+      container.innerHTML = '<p class="cpa-progress-empty">Sign in to track your progress over time.</p>';
+      return;
+    }
+    container.innerHTML = '<p class="cpa-progress-empty">Loading your progress…</p>';
+    const rows = await this.fetchProgressRows();
+    if (!container.isConnected) return; // modal/page was closed while this was in flight
+    if (rows === null) {
+      container.innerHTML = '<p class="cpa-progress-empty">Couldn’t load your progress right now.</p>';
+      return;
+    }
+    if (!rows.length) {
+      container.innerHTML = '<p class="cpa-progress-empty">Play a round to start building your progress history.</p>';
+      return;
+    }
+    const { known, struggling } = this.aggregateProgress(rows);
+    container.innerHTML = this.progressSectionHTML('Known well', '✅', known)
+      + this.progressSectionHTML('Still practicing', '🌱', struggling);
+  }
+
+  openProgressModal() {
+    this.closeProgressModal();
+    const backdrop = document.createElement('div');
+    backdrop.className = 'cpa-modal-backdrop';
+    backdrop.innerHTML = `
+      <div class="cpa-modal-card">
+        <h2 class="cpa-chord-name">My Progress</h2>
+        <div class="cpa-progress-body"></div>
+        <div class="cpa-cta-row">
+          <button class="cpa-cta-btn cpa-cta-primary" type="button" data-action="close">Close</button>
+        </div>
+      </div>
+    `;
+    backdrop.querySelector('[data-action="close"]').addEventListener('click', () => this.closeProgressModal());
+    document.body.appendChild(backdrop);
+    this.progressModalEl = backdrop;
+    this.loadProgressInto(backdrop.querySelector('.cpa-progress-body'));
+  }
+
+  closeProgressModal() {
+    this.progressModalEl?.remove();
+    this.progressModalEl = null;
   }
 
   // --- Rendering ---
@@ -757,7 +985,10 @@ class ChordPlayAlong {
           </div>
           <span class="cpa-field-hint">${CHORDS_PER_ROUND} chords per round</span>
         </label>
-        <button class="cpa-chords-toggle-btn" type="button">🎛️ Chords</button>
+        <div class="cpa-settings-toggle-row">
+          <button class="cpa-chords-toggle-btn" type="button">🎛️ Chords</button>
+          <button class="cpa-chords-toggle-btn" type="button" data-action="progress">📊 My Progress</button>
+        </div>
         <div class="cpa-chords-panel" hidden></div>
         <div class="cpa-cta-row"><button class="cpa-cta-btn cpa-cta-primary" type="button" data-action="play">▶ Start</button></div>
       `;
@@ -778,6 +1009,7 @@ class ChordPlayAlong {
         panel.hidden = !panel.hidden;
         if (!panel.hidden) this.renderChordsPanel();
       });
+      stage.querySelector('[data-action="progress"]').addEventListener('click', () => this.openProgressModal());
       stage.querySelector('[data-action="play"]').addEventListener('click', () => this.startExercise());
       return;
     }
@@ -806,6 +1038,11 @@ class ChordPlayAlong {
     }
   }
 
+  // Two pages: this phrase's results, then the same My Progress dashboard
+  // openProgressModal() shows standalone — swipeable (plain CSS scroll-snap,
+  // same technique as the Method rhythm carousel, js/method.js/css/method.css)
+  // plus explicit arrow buttons for anyone not on a touchscreen. Page 2's
+  // data loads lazily, only once the player actually swipes/clicks to it.
   renderSummaryModal() {
     this.closeSummaryModal();
     const { noteAccuracy, timingAccuracy, overallScore } = this.overallStats();
@@ -825,19 +1062,76 @@ class ChordPlayAlong {
     backdrop.className = 'cpa-modal-backdrop';
     backdrop.innerHTML = `
       <div class="cpa-modal-card">
-        <h2 class="cpa-chord-name">Nice work! 🎉</h2>
-        <div class="cpa-score-row">
-          <div><strong>${overallScore}%</strong><span>Overall</span></div>
-          <div><strong>${noteAccuracy}%</strong><span>Notes</span></div>
-          <div><strong>${timingAccuracy}%</strong><span>Timing</span></div>
+        <div class="cpa-carousel-viewport">
+          <div class="cpa-carousel-track">
+            <section class="cpa-carousel-page">
+              <h2 class="cpa-chord-name">Nice work! 🎉</h2>
+              <div class="cpa-score-row">
+                <div><strong>${overallScore}%</strong><span>Overall</span></div>
+                <div><strong>${noteAccuracy}%</strong><span>Notes</span></div>
+                <div><strong>${timingAccuracy}%</strong><span>Timing</span></div>
+              </div>
+              <div class="cpa-breakdown-list">${breakdownRows}</div>
+            </section>
+            <section class="cpa-carousel-page">
+              <h2 class="cpa-chord-name">My Progress</h2>
+              <div class="cpa-progress-body"></div>
+            </section>
+          </div>
+          <button class="cpa-carousel-arrow cpa-carousel-arrow-right" type="button" aria-label="See your progress">›</button>
+          <button class="cpa-carousel-arrow cpa-carousel-arrow-left" type="button" aria-label="Back to results" hidden>‹</button>
         </div>
-        <div class="cpa-breakdown-list">${breakdownRows}</div>
+        <div class="cpa-carousel-dots">
+          <button class="cpa-carousel-dot active" type="button" data-page="0" aria-label="Results"></button>
+          <button class="cpa-carousel-dot" type="button" data-page="1" aria-label="Progress"></button>
+        </div>
         <div class="cpa-cta-row">
           <button class="cpa-cta-btn cpa-cta-secondary" type="button" data-action="again">Play Again</button>
           <button class="cpa-cta-btn cpa-cta-primary" type="button" data-action="done">Done</button>
         </div>
       </div>
     `;
+
+    // .cpa-carousel-viewport is a non-scrolling positioning context for the
+    // arrows (absolutely positioned, overlaid on top); .cpa-carousel-track
+    // is the actual scroll-snap container underneath them.
+    const track = backdrop.querySelector('.cpa-carousel-track');
+    const dots = backdrop.querySelectorAll('.cpa-carousel-dot');
+    const arrowLeft = backdrop.querySelector('.cpa-carousel-arrow-left');
+    const arrowRight = backdrop.querySelector('.cpa-carousel-arrow-right');
+    let progressLoaded = false;
+    // Dot/arrow state updates on its own — a click already knows exactly
+    // which page it's headed to, so it shouldn't wait out the ~300ms
+    // smooth-scroll just to flip visibility at the end (that's what read
+    // as janky: the outgoing arrow sitting there through the whole
+    // animation, then both arrows swapping in one abrupt step at the end).
+    // A touch swipe has no such click to key off, so the scroll-settle
+    // listener below still drives this for that case — updatePageUI() is
+    // idempotent either way.
+    const updatePageUI = (index) => {
+      dots.forEach((d, i) => d.classList.toggle('active', i === index));
+      arrowLeft.hidden = index === 0;
+      arrowRight.hidden = index === dots.length - 1;
+      if (index === 1 && !progressLoaded) {
+        progressLoaded = true;
+        this.loadProgressInto(backdrop.querySelector('.cpa-progress-body'));
+      }
+    };
+    const goToPage = (index) => {
+      updatePageUI(index);
+      track.scrollTo({ left: track.clientWidth * index, behavior: 'smooth' });
+    };
+    arrowRight.addEventListener('click', () => goToPage(1));
+    arrowLeft.addEventListener('click', () => goToPage(0));
+    dots.forEach((dot) => dot.addEventListener('click', () => goToPage(parseInt(dot.dataset.page, 10))));
+    let scrollSettleTimer;
+    track.addEventListener('scroll', () => {
+      clearTimeout(scrollSettleTimer);
+      scrollSettleTimer = setTimeout(() => {
+        updatePageUI(Math.round(track.scrollLeft / track.clientWidth));
+      }, 120);
+    });
+
     backdrop.querySelector('[data-action="again"]').addEventListener('click', () => {
       this.closeSummaryModal();
       // Wipes the last phrase's coach-correct/-timing/-wrong highlighting
