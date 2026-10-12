@@ -8,10 +8,9 @@ import { getScaleChordPool, notesToLabels, playChordNotes, highlightChordNotes }
 import { setHandpanSide } from './handpanmap.js';
 import { gridA } from './grid-context.js';
 import { clearGrid, setInnerLabel, renderAllMeasures } from './notegrid.js';
-import { setBeats, setSubdivision, start, stop, addTickObserver, removeTickObserver, intervalMs } from './noteplayer.js';
+import { setBeats, setSubdivision, start, stop, addTickObserver, removeTickObserver, intervalMs, getAudioCtx } from './noteplayer.js';
 import { TransportRegistry } from './transport-ui.js';
 import { labelNotation, setLabelNotation, currentUser, getSelectedScaleName } from './state.js';
-import { navigate } from './router.js';
 import { showToast } from './toast.js';
 import { startPitchListening, stopPitchListening, resetPitchHistory } from './pitch-detector.js';
 import { AUDIO_DELAY } from './config.js';
@@ -20,7 +19,11 @@ const BEATS = 4;
 const SUBDIVISION = 2; // 8th notes — "1&2&" notation, 8 steps per measure
 const BPM = 45;
 const ARPEGGIO_STEPS = [0, 2, 4]; // beats 1/2/3 within a measure, at this subdivision
-const DEFAULT_ROUNDS = 4;
+const CHORDS_PER_ROUND = 4;
+const DEFAULT_ROUND_COUNT = 1;
+const MIN_ROUNDS = 1;
+const MAX_ROUNDS = 6;
+const ROUND_GOOD_THRESHOLD = 70; // average overallScore across a round's notes, 0-100
 
 // The Ding note has three equivalent spellings across the codebase:
 // notesToLabels() (js/chord-playback.js) returns 'D', the grid's own
@@ -38,6 +41,32 @@ function normalizeNoteLabel(label) {
 // value either way.
 function normalizeScaleKey(name) {
   return (name || 'default').toLowerCase().replace(/\s+/g, '_');
+}
+
+// A quick synthesized chime for the round-transition banner — ascending
+// major-triad arpeggio for a good round, a short descending dip for a
+// rough one. No audio asset needed; same createOscillator()+gain-envelope
+// approach js/transcription.js's countdown click already uses.
+function playRoundResultSound(good) {
+  const audioCtx = getAudioCtx();
+  if (!audioCtx) return;
+  const now = audioCtx.currentTime;
+  const freqs = good ? [523.25, 659.25, 783.99] : [392.00, 349.23]; // C5-E5-G5 vs. G4-F4
+  const noteGap = good ? 0.09 : 0.12;
+  freqs.forEach((freq, i) => {
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = good ? 'triangle' : 'sine';
+    osc.frequency.setValueAtTime(freq, now);
+    const t = now + i * noteGap;
+    gain.gain.setValueAtTime(0.0001, t);
+    gain.gain.exponentialRampToValueAtTime(0.18, t + 0.015);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.3);
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start(t);
+    osc.stop(t + 0.32);
+  });
 }
 
 // Moves a fixed, app-singleton DOM element (by id) into a slot and back —
@@ -71,7 +100,7 @@ class ChordPlayAlong {
     this.step = 'settings'; // 'settings' | 'playing' | 'summary'
     this.tornDown = false;
     this.tickObserver = null;
-    this.rounds = DEFAULT_ROUNDS;
+    this.roundCount = DEFAULT_ROUND_COUNT;
     this.disabledChords = new Set(); // chordSignature(c) values excluded from the random pool
 
     this.gridMount = createRelocatableMount('measures');
@@ -92,10 +121,27 @@ class ChordPlayAlong {
   // spin, so every game is a different mix of chords instead of always the
   // same fixed sequence. (js/chord-progression-templates.js is kept around
   // for when progressions come back, just not used here right now.)
-  buildChordSequence(count) {
-    const pool = getScaleChordPool().filter(c => !this.disabledChords.has(chordSignature(c)));
-    if (!pool.length) return [];
-    return Array.from({ length: count }, () => pool[Math.floor(Math.random() * pool.length)]);
+  //
+  // Returns roundCount arrays of up to CHORDS_PER_ROUND chords each. No
+  // chord signature (root+quality+inversion — so e.g. "A Minor" and
+  // "A Minor I" count as different chords) repeats within a single round;
+  // the same chord can reappear in a LATER round. A pool with fewer than
+  // CHORDS_PER_ROUND unique chords just gives that round fewer chords
+  // rather than repeating one to pad it out.
+  buildChordSequence(roundCount) {
+    const seen = new Set();
+    const uniquePool = getScaleChordPool().filter((c) => {
+      const sig = chordSignature(c);
+      if (this.disabledChords.has(sig) || seen.has(sig)) return false;
+      seen.add(sig);
+      return true;
+    });
+    if (!uniquePool.length) return [];
+
+    const roundSize = Math.min(CHORDS_PER_ROUND, uniquePool.length);
+    return Array.from({ length: roundCount }, () => (
+      [...uniquePool].sort(() => Math.random() - 0.5).slice(0, roundSize)
+    ));
   }
 
   // --- Disabled-chords persistence (scoped per user + scale, same shape
@@ -138,7 +184,11 @@ class ChordPlayAlong {
 
   // --- Lifecycle ---
 
-  setupFreshPhrase() {
+  // measureCount defaults to a single demo+attempt pair for the idle grid
+  // shown behind the settings screen; startExercise() passes the real
+  // count (2 measures per round, the whole phrase built up front so
+  // playback never stops/restarts between chords — see beginPhrase()).
+  setupFreshPhrase(measureCount = 2) {
     this.prevLabelNotation = labelNotation;
     setLabelNotation('musical'); // "1&2&" ampersand notation
     window.dispatchEvent(new CustomEvent('labelNotationChanged', { detail: 'musical' }));
@@ -146,10 +196,7 @@ class ChordPlayAlong {
     clearGrid(gridA);
     setBeats(BEATS, gridA);
     setSubdivision(SUBDIVISION, gridA);
-    gridA.setMeasures(2);
-    // countdownEnabled (a per-context flag, not the shared isListening one)
-    // is set per-round in beginRound() — only round 0 gets the "countdown
-    // from 4" count-in.
+    gridA.setMeasures(measureCount);
     renderAllMeasures(gridA);
   }
 
@@ -157,10 +204,8 @@ class ChordPlayAlong {
     if (this.tornDown) return;
     this.tornDown = true;
 
-    if (this.roundAdvanceTimer) {
-      clearTimeout(this.roundAdvanceTimer);
-      this.roundAdvanceTimer = null;
-    }
+    this.closeSummaryModal();
+    this.closeRoundBanner();
     if (this.tickObserver) {
       removeTickObserver(this.tickObserver);
       this.tickObserver = null;
@@ -172,6 +217,7 @@ class ChordPlayAlong {
     }
 
     gridA.countdownEnabled = false;
+    gridA.loopPlayback = true; // restore Studio's normal infinite-loop playback
     setLabelNotation(this.prevLabelNotation || 'musical');
     window.dispatchEvent(new CustomEvent('labelNotationChanged', { detail: this.prevLabelNotation }));
 
@@ -186,6 +232,10 @@ class ChordPlayAlong {
 
     this.mountedScaleSelectEl?.removeEventListener('change', this.onScaleChanged);
     this.gridMount.unmount();
+    // Restores the real "Measure 1"/"Measure 2" headers the 'Listen'/'Play'
+    // override (beginPhrase()) replaced — #measures is back in Studio's own
+    // DOM at this point, so this repaints it there, not here.
+    renderAllMeasures(gridA);
     this.transportMount.unmount();
     this.handpanMount.unmount();
     this.scaleSelectMount.unmount();
@@ -212,19 +262,50 @@ class ChordPlayAlong {
   // --- Exercise flow ---
 
   startExercise() {
-    const sequence = this.buildChordSequence(this.rounds);
-    if (!sequence.length) {
+    const rounds = this.buildChordSequence(this.roundCount);
+    if (!rounds.length || !rounds[0].length) {
       showToast('At least one chord needs to stay checked to play.', { type: 'error' });
       return;
     }
 
-    this.setupFreshPhrase();
-    this.sequence = sequence;
+    // this.sequence is every round's chords flattened into one phrase;
+    // roundSizes/roundEndIndices (chordIndex boundaries, cumulative) and
+    // chordRoundIndex/chordPositionInRound (per-chord lookups) are what let
+    // the tick observer and the UI talk about "round 2, chord 3 of 4"
+    // without assuming every round has exactly CHORDS_PER_ROUND chords —
+    // a small enabled-chords pool can make a round come up short.
+    this.roundSizes = rounds.map(r => r.length);
+    this.roundEndIndices = [];
+    this.chordRoundIndex = [];
+    this.chordPositionInRound = [];
+    let cumulative = 0;
+    rounds.forEach((roundChords, r) => {
+      roundChords.forEach((_, i) => {
+        this.chordRoundIndex.push(r);
+        this.chordPositionInRound.push(i);
+      });
+      cumulative += roundChords.length;
+      this.roundEndIndices.push(cumulative);
+    });
+    this.sequence = rounds.flat();
+
+    // The whole phrase (every round's demo + attempt measure pair) is sized
+    // and filled up front in beginPhrase(), then played start-to-finish in
+    // a single start(gridA) call — one steady beat straight through, no
+    // stop/restart gap between chords.
+    this.setupFreshPhrase(this.sequence.length * 2);
     this.results = []; // { degree, name, notes: [{correct,timingError}x3] }
-    this.roundIndex = 0;
+    this.chordIndex = 0;
 
     this.step = 'playing';
     this.renderStage();
+
+    // The layout doesn't change on Start (it's the same reordered-for-mobile
+    // layout throughout, see css/chord-play-along.css) — just bring the
+    // handpan/grid into view, since the settings fields above are no longer
+    // relevant once play begins.
+    const scrollContainer = this.view.closest('.route-view');
+    scrollContainer?.scrollTo({ top: scrollContainer.scrollHeight, behavior: 'smooth' });
 
     startPitchListening((label, ts) => this.onPitchDetected(label, ts)).then((ok) => {
       if (!ok) {
@@ -233,50 +314,98 @@ class ChordPlayAlong {
         this.renderStage();
         return;
       }
-      this.beginRound();
+      this.beginPhrase();
     });
   }
 
-  beginRound() {
-    if (this.roundIndex >= this.sequence.length) {
-      this.finishExercise();
-      return;
-    }
-
-    const chord = this.sequence[this.roundIndex];
-    this.currentRoundResult = { name: chord.name, notes: [] };
-    this.gradingActive = false;
-    this.graded = new Set(); // attempt-step indices already graded
-    resetPitchHistory(); // previous round's sustain-gate history doesn't apply to a new chord
+  // Builds every chord's demo ("Listen") + attempt ("Play") measure pair
+  // into the grid up front, then plays the whole thing through in one
+  // uninterrupted start(gridA) call
+  beginPhrase() {
+    const stepsPerMeasure = gridA.stepsPerMeasure;
+    const chordSteps = stepsPerMeasure * 2; // demo + attempt measure
 
     clearGrid(gridA);
-    const labels = notesToLabels(chord.notes);
-    ARPEGGIO_STEPS.forEach((step, i) => setInnerLabel(step, labels[i] || '', gridA));
-    // Hide the answer: visually swap those 3 cells to "?" without touching
-    // the underlying data, so the real scheduler still plays them in sync.
-    ARPEGGIO_STEPS.forEach((step) => {
-      const cell = gridA.cells[step];
-      const inner = cell?.querySelector('.inner');
-      if (inner) inner.textContent = '?';
-      cell?.classList.remove('label-ding', 'label-t', 'label-s', 'label-n', 'visual-ding');
-      cell?.classList.add('label-q');
+
+    this.sequence.forEach((chord, c) => {
+      const demoOffset = c * chordSteps;
+      const attemptOffset = demoOffset + stepsPerMeasure;
+      const labels = notesToLabels(chord.notes);
+
+      ARPEGGIO_STEPS.forEach((step, i) => setInnerLabel(demoOffset + step, labels[i] || '', gridA));
+      // Hide the answer: visually swap those 3 cells to "?" without
+      // touching the underlying data, so the real scheduler still plays
+      // them in sync.
+      ARPEGGIO_STEPS.forEach((step) => {
+        const cell = gridA.cells[demoOffset + step];
+        const inner = cell?.querySelector('.inner');
+        if (inner) inner.textContent = '?';
+        cell?.classList.remove('label-ding', 'label-t', 'label-s', 'label-n', 'visual-ding');
+        cell?.classList.add('label-q');
+      });
+      // Outline the 3 cells in each chord's attempt measure (beats 1, 2, 3)
+      // the player is actually meant to play — see .cpa-target-cell in
+      // css/chord-play-along.css.
+      ARPEGGIO_STEPS.forEach((step) => {
+        gridA.cells[attemptOffset + step]?.classList.add('cpa-target-cell');
+      });
     });
+
+    // "Listen"/"Play" read better than the grid's generic "Measure 1"/
+    // "Measure 2" headers for what's actually happening in each pair —
+    // visual-only, like the '?' override above; teardown() restores the
+    // real headers.
+    const headers = gridA.container?.querySelectorAll('.measure-header');
+    this.sequence.forEach((_, c) => {
+      if (headers?.[c * 2]) headers[c * 2].textContent = 'Listen';
+      if (headers?.[c * 2 + 1]) headers[c * 2 + 1].textContent = 'Play';
+    });
+
+    this.chordIndex = 0;
+    this.currentChordResult = { name: this.sequence[0].name, notes: [] };
+    this.gradingActive = false;
+    this.graded = new Set(); // attempt-step indices already graded (absolute, whole-phrase)
+    resetPitchHistory();
 
     this.renderStage();
 
-    const totalSteps = gridA.beats * gridA.subdivision * 2; // 2 measures
+    const totalSteps = chordSteps * this.sequence.length;
     let ticks = 0;
     this.tickObserver = (ctx) => {
       if (ctx.id !== 'A') return;
       ticks++;
-      if (ticks === gridA.stepsPerMeasure + 1) this.gradingActive = true; // attempt measure just started
-      if (ticks >= totalSteps) this.endRound();
+      const posInChord = (ticks - 1) % chordSteps;
+      const newChordIndex = Math.min(Math.floor((ticks - 1) / chordSteps), this.sequence.length - 1);
+
+      if (newChordIndex !== this.chordIndex) {
+        this.finalizeChordGrading(this.chordIndex);
+
+        // A round of CHORDS_PER_ROUND chords (or fewer, on a small pool)
+        // just finished — not on the very last chord of the whole phrase,
+        // which has no "next round" to transition into and gets no banner
+        // (finishPhrase()'s summary modal is its own payoff).
+        const completedRoundIdx = this.roundEndIndices.indexOf(newChordIndex);
+        if (completedRoundIdx !== -1) this.showRoundTransition(completedRoundIdx);
+
+        this.chordIndex = newChordIndex;
+        this.currentChordResult = { name: this.sequence[this.chordIndex].name, notes: [] };
+        this.gradingActive = false;
+        resetPitchHistory(); // previous chord's sustain-gate history doesn't apply to a new chord
+        this.renderStage();
+      }
+
+      if (posInChord === stepsPerMeasure) this.gradingActive = true; // this chord's attempt measure just started
+      if (ticks >= totalSteps) this.finishPhrase();
     };
     addTickObserver(this.tickObserver);
-    // Only the very first round gets a count-in — after that, playback
-    // should flow straight from one round into the next with no further
-    // "3, 2, 1" pause.
-    gridA.countdownEnabled = this.roundIndex === 0;
+    gridA.countdownEnabled = true; // one count-in for the whole phrase, not per chord
+    // The grid is normally an infinite loop sequencer — without this, the
+    // ~100ms audio lookahead schedules (and briefly plays) the first steps
+    // of "round 1 again" right as the phrase reaches its natural end, since
+    // that end is reached mid-schedule, before finishPhrase()'s stop() can
+    // land. See js/grid-context.js's loopPlayback and the matching guard in
+    // js/noteplayer.js's audioSchedulerTick().
+    gridA.loopPlayback = false;
     start(gridA);
   }
 
@@ -292,7 +421,8 @@ class ChordPlayAlong {
     // compensation Coaching Mode already applies, or "on the click" reads
     // as late (and playing early reads as perfectly on time).
     const audioStartMs = (gridA.audioStartTime || 0) * 1000 + (AUDIO_DELAY * 1000);
-    const attemptSteps = ARPEGGIO_STEPS.map(s => s + gridA.stepsPerMeasure);
+    const chordOffset = this.chordIndex * gridA.stepsPerMeasure * 2;
+    const attemptSteps = ARPEGGIO_STEPS.map(s => chordOffset + gridA.stepsPerMeasure + s);
 
     // Only attribute this detection to the one beat whose own time window
     // it actually falls in (±half a step) — not just whichever ungraded
@@ -308,7 +438,7 @@ class ChordPlayAlong {
     if (matchedStep === null || this.graded.has(matchedStep)) return;
 
     const expectedIdx = attemptSteps.indexOf(matchedStep);
-    const expectedLabel = notesToLabels(this.sequence[this.roundIndex].notes)[expectedIdx];
+    const expectedLabel = notesToLabels(this.sequence[this.chordIndex].notes)[expectedIdx];
     const timingError = Math.abs(timestampMs - (audioStartMs + matchedStep * msPerStep));
     this.gradeNote(matchedStep, expectedLabel, label, timingError);
   }
@@ -322,7 +452,7 @@ class ChordPlayAlong {
     const overallScore = noteScore * 0.7 + timingScore * 0.3;
     const correct = noteMatch && timingError < 200;
 
-    this.currentRoundResult.notes.push({ correct, noteScore, timingScore, overallScore, timingError });
+    this.currentChordResult.notes.push({ correct, noteScore, timingScore, overallScore, timingError });
 
     // Visual-only — the transport is still actively playing through this
     // very measure, and setInnerLabel() would write into the real
@@ -342,47 +472,82 @@ class ChordPlayAlong {
     }
   }
 
-  endRound() {
-    if (this.tickObserver) {
-      removeTickObserver(this.tickObserver);
-      this.tickObserver = null;
-    }
-    this.gradingActive = false;
-    stop(gridA);
-    TransportRegistry.updateAll(gridA);
-
-    // Any arpeggio note never detected at all counts as missed (score 0).
-    const attemptSteps = ARPEGGIO_STEPS.map(s => s + gridA.stepsPerMeasure);
+  // Any arpeggio note in chordIdx's attempt measure never detected at all
+  // counts as missed (score 0). Called on every chord transition (for the
+  // chord just finished) and once more at the very end of the phrase (for
+  // the final chord, which has no "next chord" transition to trigger it).
+  finalizeChordGrading(chordIdx) {
+    const chordOffset = chordIdx * gridA.stepsPerMeasure * 2;
+    const attemptSteps = ARPEGGIO_STEPS.map(s => chordOffset + gridA.stepsPerMeasure + s);
     attemptSteps.forEach((step) => {
       if (!this.graded.has(step)) {
-        this.currentRoundResult.notes.push({ correct: false, noteScore: 0, timingScore: 0, overallScore: 0, timingError: null });
+        this.currentChordResult.notes.push({ correct: false, noteScore: 0, timingScore: 0, overallScore: 0, timingError: null });
         gridA.cells[step]?.classList.add('coach-wrong');
       }
     });
-
-    this.results.push(this.currentRoundResult);
-    this.roundIndex++;
-    // brief pause so the round's feedback is visible — tracked so stopExercise()
-    // can cancel it if Stop is pressed during this gap between rounds.
-    this.roundAdvanceTimer = setTimeout(() => {
-      this.roundAdvanceTimer = null;
-      this.beginRound();
-    }, 1200);
+    this.results.push(this.currentChordResult);
   }
 
-  // Transport Stop (or leaving mid-exercise some other way) — halts
-  // playback/listening and returns to the settings screen so Start works
-  // cleanly again, same as a normal "stop" halts playback.
-  stopExercise() {
-    if (this.roundAdvanceTimer) {
-      clearTimeout(this.roundAdvanceTimer);
-      this.roundAdvanceTimer = null;
-    }
+  finishPhrase() {
     if (this.tickObserver) {
       removeTickObserver(this.tickObserver);
       this.tickObserver = null;
     }
     this.gradingActive = false;
+    this.finalizeChordGrading(this.chordIndex);
+    stop(gridA);
+    TransportRegistry.updateAll(gridA);
+    this.finishExercise();
+  }
+
+  // A round (CHORDS_PER_ROUND chords, or fewer on a small pool) just
+  // finished while the phrase keeps playing underneath — this is a
+  // non-blocking banner + chime, never a pause, so the steady beat holds.
+  // roundIdx is 0-based into this.roundSizes/this.results.
+  showRoundTransition(roundIdx) {
+    this.closeRoundBanner();
+
+    const roundResult = this.results.slice(-this.roundSizes[roundIdx]);
+    const notes = roundResult.flatMap(r => r.notes);
+    const avgScore = notes.length ? notes.reduce((s, n) => s + n.overallScore, 0) / notes.length : 0;
+    const good = avgScore >= ROUND_GOOD_THRESHOLD;
+
+    playRoundResultSound(good);
+
+    const banner = document.createElement('div');
+    banner.className = `cpa-round-banner ${good ? 'cpa-round-banner-good' : 'cpa-round-banner-bad'}`;
+    banner.innerHTML = `
+      <span class="cpa-round-banner-icon">${good ? '🔥' : '💪'}</span>
+      <span class="cpa-round-banner-text">
+        Round ${roundIdx + 1} complete<br>${good ? 'Great playing!' : 'Keep at it!'}
+      </span>
+    `;
+    document.body.appendChild(banner);
+    banner.addEventListener('animationend', () => this.closeRoundBanner());
+    this.roundBannerEl = banner;
+    // Safety net if animationend never fires (e.g. the tab was backgrounded).
+    this.roundBannerTimer = setTimeout(() => this.closeRoundBanner(), 2200);
+  }
+
+  closeRoundBanner() {
+    if (this.roundBannerTimer) {
+      clearTimeout(this.roundBannerTimer);
+      this.roundBannerTimer = null;
+    }
+    this.roundBannerEl?.remove();
+    this.roundBannerEl = null;
+  }
+
+  // Transport Stop, the Reset button, or leaving mid-exercise some other
+  // way — halts playback/listening and returns to the settings screen so
+  // Start works cleanly again, same as a normal "stop" halts playback.
+  stopExercise() {
+    if (this.tickObserver) {
+      removeTickObserver(this.tickObserver);
+      this.tickObserver = null;
+    }
+    this.gradingActive = false;
+    this.closeRoundBanner();
     stopPitchListening();
     if (gridA.playing) {
       stop(gridA);
@@ -390,6 +555,15 @@ class ChordPlayAlong {
     }
     this.step = 'settings';
     this.renderStage();
+    // Back to the same top-of-view state Start scrolled away from.
+    this.view.closest('.route-view')?.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  // Reset button (header, visible only once play has begun) — a clearly
+  // intentional "start over" distinct from the transport's own play/stop
+  // icon, which doubles as this game's Start/Stop control.
+  resetExercise() {
+    this.stopExercise();
   }
 
   finishExercise() {
@@ -471,19 +645,36 @@ class ChordPlayAlong {
     const stage = this.stageEl;
     if (!stage) return;
 
+    if (this.step !== 'summary') this.closeSummaryModal();
+    if (this.resetBtn) this.resetBtn.hidden = this.step !== 'playing';
+
     if (this.step === 'settings') {
       stage.innerHTML = `
         <p class="cpa-instruction">Listen to each chord, then play it back on your handpan — beats 1, 2, 3 of each round.</p>
         <label class="cpa-field">
-          Number of chords
-          <input type="number" id="cpaRounds" min="2" max="12" value="${this.rounds}">
+          Number of rounds
+          <div class="cpa-round-stepper">
+            <button class="cpa-round-step-btn" type="button" data-step="-1" aria-label="Fewer rounds">−</button>
+            <input type="number" id="cpaRoundCount" min="${MIN_ROUNDS}" max="${MAX_ROUNDS}" value="${this.roundCount}" inputmode="numeric">
+            <button class="cpa-round-step-btn" type="button" data-step="1" aria-label="More rounds">+</button>
+          </div>
+          <span class="cpa-field-hint">${CHORDS_PER_ROUND} chords per round</span>
         </label>
         <button class="cpa-chords-toggle-btn" type="button">🎛️ Chords</button>
         <div class="cpa-chords-panel" hidden></div>
         <div class="cpa-cta-row"><button class="cpa-cta-btn cpa-cta-primary" type="button" data-action="play">▶ Start</button></div>
       `;
-      stage.querySelector('#cpaRounds').addEventListener('change', (e) => {
-        this.rounds = Math.max(2, Math.min(12, parseInt(e.target.value, 10) || DEFAULT_ROUNDS));
+      const roundInput = stage.querySelector('#cpaRoundCount');
+      const clampRounds = (n) => Math.max(MIN_ROUNDS, Math.min(MAX_ROUNDS, n));
+      roundInput.addEventListener('change', (e) => {
+        this.roundCount = clampRounds(parseInt(e.target.value, 10) || DEFAULT_ROUND_COUNT);
+        roundInput.value = this.roundCount;
+      });
+      stage.querySelectorAll('.cpa-round-step-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          this.roundCount = clampRounds(this.roundCount + parseInt(btn.dataset.step, 10));
+          roundInput.value = this.roundCount;
+        });
       });
       stage.querySelector('.cpa-chords-toggle-btn').addEventListener('click', () => {
         const panel = stage.querySelector('.cpa-chords-panel');
@@ -495,10 +686,13 @@ class ChordPlayAlong {
     }
 
     if (this.step === 'playing') {
-      const chord = this.sequence[this.roundIndex];
+      const chord = this.sequence[this.chordIndex];
       const chordLabel = chord ? (chord.inversion ? `${chord.name} (${getInversionLabel(chord.inversion)})` : chord.name) : '…';
+      const roundNum = (this.chordRoundIndex[this.chordIndex] ?? 0) + 1;
+      const posInRound = (this.chordPositionInRound[this.chordIndex] ?? 0) + 1;
+      const roundSize = this.roundSizes[roundNum - 1] ?? CHORDS_PER_ROUND;
       stage.innerHTML = `
-        <p class="cpa-round-count">Chord ${this.roundIndex + 1} of ${this.sequence.length}</p>
+        <p class="cpa-round-count">Round ${roundNum} of ${this.roundSizes.length} — Chord ${posInRound} of ${roundSize}</p>
         <h2 class="cpa-chord-name">${chordLabel}</h2>
         <p class="cpa-instruction">Listen, then play it back on beats 1, 2, 3.</p>
       `;
@@ -506,8 +700,22 @@ class ChordPlayAlong {
     }
 
     if (this.step === 'summary') {
-      const { noteAccuracy, timingAccuracy, overallScore } = this.overallStats();
-      stage.innerHTML = `
+      // A modal, not inline stage content — the finish screen should pop
+      // over the darkened game board rather than just swap into the same
+      // panel the chord name was sitting in.
+      stage.innerHTML = '';
+      this.renderSummaryModal();
+      return;
+    }
+  }
+
+  renderSummaryModal() {
+    this.closeSummaryModal();
+    const { noteAccuracy, timingAccuracy, overallScore } = this.overallStats();
+    const backdrop = document.createElement('div');
+    backdrop.className = 'cpa-modal-backdrop';
+    backdrop.innerHTML = `
+      <div class="cpa-modal-card">
         <h2 class="cpa-chord-name">Nice work! 🎉</h2>
         <div class="cpa-score-row">
           <div><strong>${overallScore}%</strong><span>Overall</span></div>
@@ -518,17 +726,30 @@ class ChordPlayAlong {
           <button class="cpa-cta-btn cpa-cta-secondary" type="button" data-action="again">Play Again</button>
           <button class="cpa-cta-btn cpa-cta-primary" type="button" data-action="done">Done</button>
         </div>
-      `;
-      stage.querySelector('[data-action="again"]').addEventListener('click', () => {
-        this.step = 'settings';
-        this.renderStage();
-      });
-      stage.querySelector('[data-action="done"]').addEventListener('click', () => {
-        this.teardown();
-        navigate('games');
-      });
-      return;
-    }
+      </div>
+    `;
+    backdrop.querySelector('[data-action="again"]').addEventListener('click', () => {
+      this.closeSummaryModal();
+      this.step = 'settings';
+      this.renderStage();
+      // Settings fields are back at the top of the view; the player was
+      // last scrolled down at the handpan/grid from the finished round.
+      this.view.closest('.route-view')?.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+    // Same exit path as the "Back to Games" button — resets to the games
+    // hub, the same display the player saw before picking this game.
+    backdrop.querySelector('[data-action="done"]').addEventListener('click', () => {
+      this.closeSummaryModal();
+      this.teardown();
+      this.onBack?.();
+    });
+    document.body.appendChild(backdrop);
+    this.modalEl = backdrop;
+  }
+
+  closeSummaryModal() {
+    this.modalEl?.remove();
+    this.modalEl = null;
   }
 
   render() {
@@ -551,11 +772,16 @@ class ChordPlayAlong {
         <div class="cpa-stage"></div>
 
         <div class="cpa-grid-slot"></div>
-        <div class="cpa-transport-slot"></div>
+        <div class="cpa-transport-row">
+          <button class="cpa-reset-btn" type="button" hidden>↺ Reset</button>
+          <div class="cpa-transport-slot"></div>
+        </div>
       </div>
     `;
 
     this.stageEl = view.querySelector('.cpa-stage');
+    this.resetBtn = view.querySelector('.cpa-reset-btn');
+    this.resetBtn.addEventListener('click', () => this.resetExercise());
 
     const wrap = this.handpanMount.mount(view.querySelector('.cpa-handpan-slot'));
     if (wrap) wrap.style.maxWidth = '';

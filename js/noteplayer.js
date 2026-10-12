@@ -550,6 +550,13 @@ const LOOKAHEAD_INTERVAL_MS = 25;
 function audioSchedulerTick(c) {
   if (!c.playing) return;
   while (nextNoteTime < audioCtx.currentTime + scheduleAheadTime) {
+    // c.loopPlayback === false: a one-shot phrase reached its last step —
+    // stop scheduling instead of wrapping into step 0 again (nextNote()'s
+    // own wrap is unconditional). The caller is expected to call stop()
+    // itself once it notices playback has reached the end; this just keeps
+    // the ~100ms lookahead from scheduling/playing the top of the phrase
+    // again before that stop() actually lands.
+    if (c.loopPlayback === false && c.audioStep >= c.cells.length) break;
     scheduleAudio(c, c.audioStep, nextNoteTime);
     nextNote(c);
   }

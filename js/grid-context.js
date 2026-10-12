@@ -24,6 +24,10 @@ export class GridContext {
     this.metronomeOn = false;
     this.metronomeSubdiv = true;
     this.countdownEnabled = false;
+    // Studio and most playback contexts are an infinite loop sequencer by
+    // design — reaching the end just wraps back to step 0 and keeps going
+    // (see nextNote() in js/noteplayer.js)
+    this.loopPlayback = true;
     this.isMuted = false;
     this.transcriptionIndex = 0;
     this.tags = [];
