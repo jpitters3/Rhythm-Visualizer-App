@@ -3,7 +3,9 @@
 import { playNoteByLabel } from './noteplayer.js';
 import { getScale } from './state.js';
 import { SCALES } from './config.js';
-import { setChordHighlight, isChordTestMode } from './handpanmap.js';
+import { setChordHighlight, isChordTestMode, getPitchPositionMap } from './handpanmap.js';
+import { ChordAnalyzer } from './chord-analyzer.js';
+import { annotatePlayability } from './chord-playability.js';
 
 export function getAllCurrentNotes() {
   const scale = getScale();
@@ -25,6 +27,20 @@ export function getAllCurrentNotes() {
     }
   }
   return [];
+}
+
+// Every playable triad on the current scale, EXCLUDING Diminished, with
+// inversions kept as separate entries (not collapsed to one-per-root) —
+// the exact pool js/chord-wheel-game.js's own getScalePool() builds.
+// Shared here so other chord games (e.g. js/chord-play-along.js) draw from
+// the identical list instead of a lookalike reimplementation.
+export function getScaleChordPool() {
+  const notes = getAllCurrentNotes();
+  if (!notes.length) return [];
+  const chords = annotatePlayability(ChordAnalyzer.analyze(notes), getPitchPositionMap());
+  return chords
+    .filter(c => c.playable && c.quality !== 'Diminished')
+    .map(c => ({ ...c, onThisPan: true }));
 }
 
 export function highlightChordNotes(chordOrNotes, active) {

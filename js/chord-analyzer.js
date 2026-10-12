@@ -157,6 +157,50 @@ function identifyTriad(notesObjArr, spellingMap) {
   return null; // No triad found
 }
 
+/**
+ * The diatonic triad at a given 1-based scale degree, found by stacking
+ * thirds directly from the scale's own note content (degree, degree+2,
+ * degree+4 — classic tertian stacking), independent of which octave each
+ * pitch class happens to occur on the physical handpan.
+ *
+ * scaleNotes is e.g. getAllCurrentNotes()'s output — Ding first, then
+ * tonefields. A 9-tonefield handpan's physical layout is NOT a simple
+ * one-octave ascending run: it commonly spans more than an octave while
+ * skipping some pitch classes in the low octave entirely (e.g. D Kurd has
+ * Ding=D3 then jumps straight to A3 — no E3/F3/G3 tonefields exist, those
+ * pitch classes only appear up in the D4-A4 range). So the degree order
+ * can't be found by walking notes in ascending absolute pitch and deduping
+ * — that reconstructs the physical tonefield layout, not the musical
+ * scale. Instead: collect every unique pitch class present (any octave),
+ * then sort them by semitone distance from the tonic (scaleNotes[0], i.e.
+ * Ding) — that's the actual scale shape, regardless of octave layout.
+ *
+ * Returns { root, quality, name, degree }, or null if that degree's stack
+ * isn't a clean Major/Minor/Diminished triad (e.g. a gapped exotic scale).
+ */
+export function diatonicTriadAtDegree(scaleNotes, degree) {
+  const parsed = scaleNotes.map(parseNote).filter(n => n !== null);
+  if (!parsed.length) return null;
+
+  const tonicPc = parsed[0].midi % 12;
+  const uniquePcs = [...new Set(parsed.map(n => n.midi % 12))];
+  const degreePcs = uniquePcs
+    .map(pc => ({ pc, fromTonic: (pc - tonicPc + 12) % 12 }))
+    .sort((a, b) => a.fromTonic - b.fromTonic)
+    .map(({ pc }) => pc);
+
+  const n = degreePcs.length;
+  if (n < 3) return null;
+
+  const spellingMap = buildSpellingMap(new Set(degreePcs));
+  const idx = ((degree - 1) % n + n) % n; // 1-based degree -> 0-based index, wraps past the octave
+  const stack = [degreePcs[idx], degreePcs[(idx + 2) % n], degreePcs[(idx + 4) % n]]
+    .map(pc => ({ midi: pc })); // only pitch-class (mod 12) math matters for quality/root naming here
+
+  const result = identifyTriad(stack, spellingMap);
+  return result ? { root: result.root, quality: result.quality, name: result.name, degree } : null;
+}
+
 // Public API
 export const ChordAnalyzer = {
   analyze: function (scaleNotes) {

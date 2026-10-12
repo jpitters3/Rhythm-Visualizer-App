@@ -248,8 +248,15 @@ export function initPanelResize() {
   // later), so minLeftHeightNeeded() can't measure one until now — re-clamp
   // once it can. Also keeps the cap correct whenever subdivision/measure
   // count changes row height afterward.
+  //
+  // panel.contains(wrap) guards against games that relocate BOTH #measures
+  // and #handpanWrap out of Studio's own panel at once (e.g. Chord Play
+  // Along) — #measures still re-renders there, which would otherwise keep
+  // firing this against Studio's own (hidden, zero-size) panel and pin a
+  // near-zero inline max-width onto the handpan whichever screen it's
+  // currently mounted on.
   Bus.on(BUS_EVENT.GRID_RENDERED, () => {
-    if (mq.matches) applyHeight(panel.getBoundingClientRect().height);
+    if (mq.matches && panel.contains(wrap)) applyHeight(panel.getBoundingClientRect().height);
   });
 
   // Leaving mobile: drop the inline sizing so the desktop CSS (flex/stretch,
@@ -268,7 +275,7 @@ export function initPanelResize() {
   // Width (or the transport bar's own height, e.g. a safe-area change on
   // rotate) can shift without crossing the mobile breakpoint.
   window.addEventListener('resize', () => {
-    if (!mq.matches) return;
+    if (!mq.matches || !panel.contains(wrap)) return; // see GRID_RENDERED listener above
     syncTransportReserve();
     refreshMaxHeight();
     applyHeight(panel.getBoundingClientRect().height);

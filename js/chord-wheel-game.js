@@ -1,8 +1,7 @@
 // Chord Wheel — Harmony domain game. Spin a wheel for 4 chords, reorder, send to Studio.
-import { ChordAnalyzer, rootQualitySignature, chordSignature, getInversionLabel } from './chord-analyzer.js';
-import { annotatePlayability } from './chord-playability.js';
-import { getAllCurrentNotes, highlightChordNotes, playChordNotes, notesToLabels } from './chord-playback.js';
-import { getPitchPositionMap, setHandpanSide } from './handpanmap.js';
+import { rootQualitySignature, chordSignature, getInversionLabel } from './chord-analyzer.js';
+import { getScaleChordPool, highlightChordNotes, playChordNotes, notesToLabels } from './chord-playback.js';
+import { setHandpanSide } from './handpanmap.js';
 import { assignChordToSelectedCell, applySelection, renderAllMeasures, getEffectiveHand } from './notegrid.js';
 import { measureRange } from './measure-actions.js';
 import { activeGrid, currentUser, getSelectedScaleName } from './state.js';
@@ -155,12 +154,7 @@ class ChordWheelGame {
   // --- Chord pools ---
 
   getScalePool() {
-    const notes = getAllCurrentNotes();
-    if (!notes.length) return [];
-    const chords = annotatePlayability(ChordAnalyzer.analyze(notes), getPitchPositionMap());
-    return chords
-      .filter(c => c.playable && c.quality !== 'Diminished')
-      .map(c => ({ ...c, onThisPan: true }));
+    return getScaleChordPool();
   }
 
   getAnyChordsPool() {

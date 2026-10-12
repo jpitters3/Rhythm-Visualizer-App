@@ -1034,7 +1034,7 @@ function getNoteClarityThreshold(noteLabel) {
     return userClarityThreshold;
 }
 
-function findClosestScaleNote(freq) {
+export function findClosestScaleNote(freq) {
     const currentScale = getScale();
     if (!currentScale) return null;
 
@@ -1097,7 +1097,7 @@ Bus.on(BUS_EVENT.CHALLENGE_CORRECTION, async (e) => {
 });
 
 // Standard Autocorrelation Algorithm
-function autoCorrelate(buffer, sampleRate) {
+export function autoCorrelate(buffer, sampleRate) {
     let SIZE = buffer.length;
     let rms = 0;
     for (let i = 0; i < SIZE; i++) {

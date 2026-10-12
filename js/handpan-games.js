@@ -78,14 +78,65 @@ function render(view) {
   });
 }
 
+// Domains with more than one game show a small in-domain choice screen
+// instead of jumping straight into a single game.
+const DOMAIN_GAMES = {
+  harmony: [
+    { id: 'chord-wheel', name: 'Chord Wheel', icon: '🎡', blurb: 'Spin chords, reorder them, build a progression.' },
+    { id: 'chord-play-along', name: 'Chord Play Along', icon: '🎧', blurb: 'Listen to a chord, then play it back by ear.' },
+  ],
+};
+
 async function openDomainGame(view, domainId) {
-  if (domainId === 'harmony') {
-    const { renderChordWheelGame } = await import('./chord-wheel-game.js');
-    renderChordWheelGame(view, { onBack: () => render(view) });
+  const games = DOMAIN_GAMES[domainId];
+  if (games) {
+    renderDomainChoice(view, domainId, games);
+    return;
   }
   if (domainId === 'rhythm') {
     if (!await guardBeforeReplacingGrid('You have unsaved changes in the studio. Discard them and start a new rhythm?')) return;
     const { renderCreateRhythmGame } = await import('./create-rhythm-game.js');
     renderCreateRhythmGame(view, { onBack: () => render(view) });
+  }
+}
+
+function renderDomainChoice(view, domainId, games) {
+  const domain = DOMAINS.find(d => d.id === domainId);
+  const cards = games.map(g => `
+    <button class="hg-tile" data-game="${g.id}" type="button">
+      <span class="hg-tile-icon" aria-hidden="true">${g.icon}</span>
+      <span class="hg-tile-body">
+        <span class="hg-tile-topline"><span class="hg-tile-name">${g.name}</span></span>
+        <span class="hg-tile-blurb">${g.blurb}</span>
+      </span>
+    </button>
+  `).join('');
+
+  view.innerHTML = `
+    <div class="hg-container">
+      <button class="hg-back" type="button" aria-label="Back">← Back</button>
+      <header class="hg-header">
+        <p class="hg-eyebrow">${domain.name}</p>
+        <h1 class="hg-title">${domain.name} games</h1>
+        <p class="hg-subtitle">${domain.blurb}</p>
+      </header>
+      <div class="hg-grid">${cards}</div>
+    </div>
+  `;
+
+  view.querySelector('.hg-back')?.addEventListener('click', () => render(view));
+  view.querySelectorAll('[data-game]').forEach(card => {
+    card.addEventListener('click', () => launchGame(view, card.dataset.game));
+  });
+}
+
+async function launchGame(view, gameId) {
+  if (gameId === 'chord-wheel') {
+    const { renderChordWheelGame } = await import('./chord-wheel-game.js');
+    renderChordWheelGame(view, { onBack: () => render(view) });
+  }
+  if (gameId === 'chord-play-along') {
+    const { renderChordPlayAlong } = await import('./chord-play-along.js');
+    renderChordPlayAlong(view, { onBack: () => render(view) });
   }
 }
