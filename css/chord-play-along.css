@@ -1,0 +1,761 @@
+/* Chord Play Along (route #games, Harmony domain). See js/chord-play-along.js.
+   Reuses .hg-container/.hg-back/.hg-header etc. from css/handpan-games.css,
+   and .coach-correct/.coach-timing/.coach-wrong from css/coaching-mode.css
+   for per-note feedback. */
+
+/* Reset sits immediately to the left of the transport bar, not "Back to
+   Games" at the top — on mobile, play happens with the handpan/grid/
+   transport scrolled into view at the BOTTOM of the screen (see the
+   [data-step] reorder below), so a top-anchored Reset was invisible
+   exactly when it mattered. The pair is centered as one unit, matching
+   how the transport pill alone centers itself (.transport-container,
+   css/transport-controls.css). */
+.cpa-transport-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+/* This game only ever runs at a fixed 4×8th-note meter with no count-in
+   control of its own (js/chord-play-along.js sets both once and leaves
+   them fixed), so the relocated transport hides those two fields rather
+   than showing controls that don't do anything useful here. Everything
+   else (BPM, metronome) stays live. */
+.cpa-transport-slot .t-ts-wrapper,
+.cpa-transport-slot .t-countdown-btn {
+  display: none;
+}
+
+.cpa-reset-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  height: 56px;
+  padding: 0 18px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text);
+  background: rgba(var(--panel-rgb), 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.15);
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.cpa-reset-btn:hover {
+  border-color: var(--accent-glow, var(--accent-light));
+  color: var(--accent-glow, var(--accent-light));
+}
+
+.cpa-scale-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  opacity: 0.7;
+  margin-bottom: 16px;
+}
+
+.cpa-chords-toggle-btn {
+  border: 1px solid var(--panel-border);
+  background: var(--panel);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 7px 14px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.cpa-chords-toggle-btn:hover {
+  border-color: var(--accent-glow);
+}
+
+.cpa-settings-toggle-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.cpa-chords-panel {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 6px 16px;
+  padding: 16px;
+  width: 100%;
+  max-width: 480px;
+  border: 1px solid var(--panel-border);
+  border-radius: 14px;
+  background: var(--panel);
+  text-align: left;
+}
+
+.cpa-chord-toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cpa-chord-toggle-row input {
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.cpa-chord-preview-btn {
+  border: none;
+  background: none;
+  font-size: 14px;
+  color: var(--text);
+  padding: 2px 6px;
+  margin-left: -6px;
+  border-radius: 6px;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s;
+}
+
+.cpa-chord-preview-btn:hover {
+  background: var(--panel-border);
+}
+
+.cpa-chords-empty {
+  font-size: 13px;
+  color: var(--text);
+  opacity: 0.6;
+  grid-column: 1 / -1;
+  margin: 0;
+}
+
+.cpa-chords-hint {
+  grid-column: 1 / -1;
+  margin: 0 0 4px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  opacity: 0.6;
+}
+
+/* Swapped for .cpa-chords-hint-tap at the mobile breakpoint below. */
+.cpa-chords-hint-tap {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  .cpa-chords-hint-tap {
+    display: inline;
+  }
+
+  .cpa-chords-hint-click {
+    display: none;
+  }
+}
+
+.cpa-board {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.cpa-handpan-slot {
+  width: 280px;
+  max-width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+.cpa-handpan-slot .handpan-wrap {
+  width: 100%;
+}
+
+.cpa-grid-slot .measures {
+  height: 340px;
+}
+
+/* Outlines the 3 "Play" cells (beats 1, 2, 3) the player is meant to hit */
+.cpa-target-cell {
+  border: 2px dashed var(--accent) !important;
+}
+
+.cpa-stage {
+  min-height: 90px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  text-align: center;
+  padding: 20px 12px;
+  border-radius: 16px;
+  border: 1px solid var(--panel-border);
+  background: var(--panel);
+}
+
+/* The summary modal is the whole finish screen (js/chord-play-along.js's
+   renderSummaryModal()) — without this, the [hidden] attribute set on a
+   'summary' render would lose to this very rule's own `display: flex`
+   (equal-specificity author rule beats the UA [hidden] default), leaving a
+   visible empty panel-shaped box behind the modal. */
+.cpa-stage[hidden] {
+  display: none;
+}
+
+.cpa-instruction {
+  margin: 0;
+  font-size: 15px;
+  color: var(--text);
+  max-width: 560px;
+}
+
+.cpa-round-count {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text);
+  opacity: 0.55;
+}
+
+.cpa-chord-name {
+  margin: 0;
+  font-size: 32px;
+  font-weight: 800;
+  color: var(--text);
+}
+
+/* The chord name is the one thing this whole game is teaching — it should
+   read as the loudest thing on screen, and announce itself with a real
+   entrance: blurred/tiny/rotated in, blooms with a big glow, overshoots,
+   settles with a little wobble. stage.innerHTML is rebuilt fresh per chord
+   (renderStage()'s 'playing' branch), so this is a genuinely new element
+   each time and the animation replays on its own — no JS retrigger needed. */
+.cpa-chord-name-reveal {
+  font-size: 44px;
+  color: var(--accent);
+  text-shadow: 0 0 28px rgba(var(--accent-rgb), 0.45);
+  animation: cpa-chord-reveal 0.7s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes cpa-chord-reveal {
+  0% {
+    opacity: 0;
+    transform: scale(0.3) rotate(-8deg);
+    filter: blur(16px);
+    text-shadow: 0 0 0 rgba(var(--accent-rgb), 0);
+  }
+  40% {
+    opacity: 1;
+    filter: blur(0);
+    text-shadow: 0 0 44px rgba(var(--accent-rgb), 0.85);
+  }
+  65% {
+    transform: scale(1.22) rotate(3deg);
+  }
+  82% {
+    transform: scale(0.94) rotate(-1.5deg);
+    text-shadow: 0 0 28px rgba(var(--accent-rgb), 0.45);
+  }
+  100% {
+    transform: scale(1) rotate(0deg);
+    text-shadow: 0 0 28px rgba(var(--accent-rgb), 0.45);
+  }
+}
+
+.cpa-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  opacity: 0.85;
+}
+
+.cpa-field input {
+  font-size: 15px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--panel-border);
+  background: var(--cell-bg, transparent);
+  color: var(--text);
+  width: 100px;
+  text-align: center;
+}
+
+.cpa-field-hint {
+  font-size: 11px;
+  font-weight: 600;
+  opacity: 0.55;
+}
+
+.cpa-round-stepper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cpa-round-stepper input {
+  width: 56px;
+}
+
+.cpa-round-step-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  border: 1px solid var(--panel-border);
+  background: var(--panel);
+  color: var(--text);
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  transition: border-color 0.15s, transform 0.1s;
+}
+
+.cpa-round-step-btn:hover {
+  border-color: var(--accent-glow);
+}
+
+.cpa-round-step-btn:active {
+  transform: scale(0.92);
+}
+
+.cpa-score-row {
+  display: flex;
+  gap: 24px;
+  /* Extra breathing room on top of .cpa-carousel-page's own 20px gap —
+     "Nice work!" and the score percentages were sitting too close
+     together. */
+  margin-top: 16px;
+}
+
+.cpa-score-row > div {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.cpa-score-row strong {
+  font-size: 26px;
+  color: var(--text);
+}
+
+.cpa-score-row span {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text);
+  opacity: 0.55;
+}
+
+/* Per-chord breakdown (js/chord-play-along.js's chordBreakdown()) — its own
+   scroll region so a long round count never pushes Play Again/Done off
+   screen; the rest of the modal card stays fixed. */
+.cpa-breakdown-list {
+  width: 100%;
+  max-height: 240px;
+  overflow-y: auto;
+  border: 1px solid var(--panel-border);
+  border-radius: 12px;
+  text-align: left;
+}
+
+.cpa-breakdown-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+}
+
+.cpa-breakdown-row + .cpa-breakdown-row {
+  border-top: 1px solid var(--panel-border);
+}
+
+.cpa-breakdown-main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.cpa-breakdown-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.cpa-breakdown-notes {
+  font-size: 12px;
+  color: var(--text);
+  opacity: 0.55;
+}
+
+.cpa-breakdown-counts {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.cpa-breakdown-count {
+  font-size: 13px;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-variant-numeric: tabular-nums;
+}
+
+.cpa-breakdown-correct {
+  color: #2ecc71;
+  background: rgba(46, 204, 113, 0.15);
+}
+
+.cpa-breakdown-incorrect {
+  color: #e74c3c;
+  background: rgba(231, 76, 60, 0.15);
+}
+
+.cpa-cta-row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: center;
+  width: 100%;
+}
+
+.cpa-cta-btn {
+  min-height: 52px;
+  padding: 14px 28px;
+  border-radius: 999px;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  border: 1px solid var(--panel-border);
+  transition: transform 0.1s, opacity 0.15s;
+}
+
+.cpa-cta-btn:active {
+  transform: scale(0.97);
+}
+
+.cpa-cta-primary {
+  background: var(--btn-active);
+  color: #0b0b12;
+  border-color: var(--btn-active);
+}
+
+.cpa-cta-secondary {
+  background: var(--panel);
+  color: var(--text);
+}
+
+/* Finish-screen modal (js/chord-play-along.js's renderSummaryModal()) —
+   appended to <body>, not the game's own view, so it overlays everything
+   including the route's scroll container regardless of scroll position. */
+.cpa-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 1000;
+  animation: cpa-backdrop-in 0.2s ease;
+}
+
+.cpa-modal-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  text-align: center;
+  width: 100%;
+  max-width: 420px;
+  padding: 32px 24px;
+  border-radius: 20px;
+  border: 1px solid var(--panel-border);
+  background: var(--panel);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+  animation: cpa-card-in 0.25s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+  /* Safety net for the fixed-height carousel on mobile (660px —
+     see .cpa-carousel-viewport below): on a short enough phone, that plus
+     the dots/CTA buttons below it can add up to more than the screen
+     itself, pushing Play Again/Done off-screen with no way to reach them.
+     Capping the card and letting IT scroll means the carousel's own fixed
+     height is still honored; the card just won't ever hide its own
+     buttons. */
+  max-height: calc(100vh - 40px);
+  max-height: calc(100svh - 40px);
+  overflow-y: auto;
+}
+
+@keyframes cpa-backdrop-in {
+  from { opacity: 0; }
+}
+
+@keyframes cpa-card-in {
+  from { opacity: 0; transform: scale(0.92) translateY(8px); }
+}
+
+/* Summary modal carousel (js/chord-play-along.js's renderSummaryModal()) —
+   page 1 (results) and page 2 (My Progress), swipeable via plain CSS
+   scroll-snap, same technique as the Method rhythm carousel
+   (css/method.css's .method-carousel). Bleeds to the card's own edges
+   (-24px matches .cpa-modal-card's horizontal padding) so a swipe doesn't
+   visually clip against that padding. */
+.cpa-carousel-viewport {
+  position: relative;
+  width: calc(100% + 48px);
+  margin: 0 -24px;
+}
+
+.cpa-carousel-track {
+  display: flex;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.cpa-carousel-track::-webkit-scrollbar {
+  display: none;
+}
+
+.cpa-carousel-page {
+  flex: 0 0 100%;
+  min-width: 0;
+  scroll-snap-align: start;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  /* Page 2 (My Progress) is naturally taller than page 1 (results) once
+     its data loads — without this, the page with LESS content hugs the
+     top of the (now fixed-height, see the mobile block below)
+     viewport instead of sitting where you'd expect it. */
+  justify-content: center;
+  gap: 20px;
+  text-align: center;
+  /* 44px clears .cpa-carousel-arrow (36px wide, 8px from the edge) on
+     whichever side has one, so a row's text never runs under it. */
+  padding: 0 44px;
+}
+
+.cpa-carousel-arrow {
+  position: absolute;
+  top: 65%;
+  transform: translateY(-50%);
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  border: 1px solid var(--panel-border);
+  background: var(--panel);
+  color: var(--text);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.cpa-carousel-arrow:hover {
+  border-color: var(--accent-glow, var(--accent-light));
+  color: var(--accent-glow, var(--accent-light));
+}
+
+/* css/controls.css has a GLOBAL button:hover/:active rule that sets its
+   own `transform` (a lift on hover, a scale on press) — on an ordinary
+   button that's fine, but `transform` is a single property, so it fully
+   replaces this button's own `translateY(-50%)` vertical-centering
+   transform the instant you hover or click it. Without this override, the
+   arrow visibly drops ~18px (half its own height — the centering offset
+   that just got clobbered) right when you tap it. Keeping -50% as the
+   base of both states is what actually fixes it; the trailing scale is
+   just this element's own press feedback, same idea as e.g.
+   .cpa-round-step-btn:active elsewhere in this file. */
+.cpa-carousel-arrow:hover:not(:disabled) {
+  transform: translateY(-50%);
+}
+
+.cpa-carousel-arrow:active:not(:disabled) {
+  transform: translateY(-50%) scale(0.92);
+}
+
+.cpa-carousel-arrow-left {
+  left: 8px;
+}
+
+.cpa-carousel-arrow-right {
+  right: 8px;
+}
+
+.cpa-carousel-dots {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}
+
+.cpa-carousel-dot {
+  width: 8px;
+  height: 8px;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: var(--panel-border);
+  cursor: pointer;
+  transition: background 0.15s, transform 0.15s;
+}
+
+.cpa-carousel-dot.active {
+  background: var(--accent);
+  transform: scale(1.3);
+}
+
+/* My Progress — shared by the carousel's second page and the standalone
+   modal opened from the settings screen (openProgressModal()). */
+.cpa-progress-body {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  width: 100%;
+}
+
+.cpa-progress-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  text-align: left;
+}
+
+.cpa-progress-heading {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.cpa-progress-accuracy {
+  font-size: 13px;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+
+.cpa-progress-empty {
+  margin: 0;
+  font-size: 14px;
+  color: var(--text);
+  opacity: 0.6;
+}
+
+/* Round-complete banner (js/chord-play-along.js's showRoundTransition()) —
+   appended to <body> like the summary modal, but non-blocking: no backdrop,
+   pointer-events: none, and it removes itself after the animation. The
+   phrase keeps playing underneath the whole time. */
+.cpa-round-banner {
+  position: fixed;
+  /* Overridden per-instance in showRoundTransition() (js/chord-play-along.js)
+     to sit just above the measures grid; this is only the fallback for the
+     rare case that element isn't found. */
+  top: 18%;
+  left: 50%;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 24px;
+  border-radius: 999px;
+  pointer-events: none;
+  color: #fff;
+  font-weight: 700;
+  text-align: left;
+  line-height: 1.3;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
+  animation: cpa-banner-pop 2s cubic-bezier(0.2, 0.9, 0.3, 1.1) forwards;
+}
+
+.cpa-round-banner-good {
+  background: linear-gradient(135deg, #f1c40f, #e67e22);
+}
+
+.cpa-round-banner-bad {
+  background: linear-gradient(135deg, #6b7280, #4b5563);
+}
+
+.cpa-round-banner-icon {
+  font-size: 30px;
+}
+
+.cpa-round-banner-text {
+  font-size: 15px;
+}
+
+@keyframes cpa-banner-pop {
+  0% { opacity: 0; transform: translate(-50%, -12px) scale(0.85); }
+  12% { opacity: 1; transform: translate(-50%, 0) scale(1.05); }
+  20% { transform: translate(-50%, 0) scale(1); }
+  82% { opacity: 1; transform: translate(-50%, 0) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -8px) scale(0.96); }
+}
+
+@media (max-width: 768px) {
+  .cpa-grid-slot .measures {
+    height: 220px;
+  }
+}
+
+@media (max-width: 640px) {
+  /* Without a fixed height, switching from page 1 (results) to page 2 (My
+     Progress, generally taller once its data loads) resizes the whole
+     modal card and makes it visibly grow/shrink on every swipe — fixing
+     the viewport's height (and stretching the track to fill it) keeps the
+     card a stable size; .cpa-carousel-page's justify-content: center
+     above is what keeps a shorter page's content from just sitting at the
+     top of that fixed space. */
+  .cpa-carousel-viewport {
+    height: 660px;
+  }
+
+  .cpa-carousel-track {
+    height: 100%;
+  }
+
+  .cpa-cta-row {
+    flex-direction: column;
+  }
+
+  .cpa-cta-btn {
+    width: 100%;
+    min-height: 56px;
+  }
+
+  /* Trade the scale picker for a bigger handpan and chord/instruction
+     readout, with the chord info above the handpan — the same layout for
+     every step, not just once play is underway. Clicking Start just
+     scrolls this into view (see js/chord-play-along.js's startExercise()),
+     it doesn't change anything about how the page is laid out. */
+  .cpa-scale-row {
+    display: none;
+  }
+
+  /* Chord name + instructions read first, the handpan (the thing you're
+     about to play) right after — js/chord-play-along.js's render() now
+     puts .cpa-stage before .cpa-board in source order (desktop wants this
+     reading order too), so no flex `order` override is needed here
+     anymore — plain document flow already does it. */
+
+  /* The space freed up by hiding the scale picker goes straight to the
+     handpan, since that's the actual game controller during play. */
+  .cpa-handpan-slot {
+    width: 320px;
+  }
+}
