@@ -54,36 +54,47 @@ export function initGridAutoscroll() {
 
     // --- LIGHTWEIGHT CHECKS (Every Beat) ---
 
-    // 1. Instant Loop Hack
-    // We only need to check this if we haven't already scrolled to top for this loop
-    let lastActiveIndex = -1;
-    for (let i = ctx.innerLabels.length - 1; i >= 0; i--) {
-      const lbl = ctx.innerLabels[i];
-      if (Array.isArray(lbl)) {
-        if (lbl.some(l => l && l !== '')) { lastActiveIndex = i; break; }
-      } else if (lbl && lbl !== '') {
-        lastActiveIndex = i; break;
+    // Both "loop back" shortcuts below assume every grid plays on an
+    // infinite loop (true for Studio, false for a one-shot phrase — see
+    // js/grid-context.js's loopPlayback, js/noteplayer.js's matching
+    // scheduler guard). A game like Chord Play Along can have trailing
+    // empty beats in its very last measure (only beats 1/2/3 are ever
+    // filled); without this guard, stepping past them here reads as "the
+    // loop just wrapped" and snaps the view back to measure 1 before the
+    // phrase has actually ended — the opposite of what a non-looping grid
+    // wants, which is to stay put on its last measure.
+    if (ctx.loopPlayback !== false) {
+      // 1. Instant Loop Hack
+      // We only need to check this if we haven't already scrolled to top for this loop
+      let lastActiveIndex = -1;
+      for (let i = ctx.innerLabels.length - 1; i >= 0; i--) {
+        const lbl = ctx.innerLabels[i];
+        if (Array.isArray(lbl)) {
+          if (lbl.some(l => l && l !== '')) { lastActiveIndex = i; break; }
+        } else if (lbl && lbl !== '') {
+          lastActiveIndex = i; break;
+        }
       }
-    }
 
-    if (currentStep > lastActiveIndex && lastActiveIndex >= 0) {
-      if (lastScrolledMeasure !== -2) { // Use -2 as a special state for "scrolled mid-measure"
-        // Instant Jump to Top
+      if (currentStep > lastActiveIndex && lastActiveIndex >= 0) {
+        if (lastScrolledMeasure !== -2) { // Use -2 as a special state for "scrolled mid-measure"
+          // Instant Jump to Top
+          measuresEl.style.scrollBehavior = 'auto';
+          measuresEl.scrollTop = 0;
+          measuresEl.style.scrollBehavior = ''; // Reset to CSS default (smooth)
+          lastScrolledMeasure = -2;
+        }
+        return;
+      }
+
+      // 2. Standard Loop-Back detection
+      if (currentMeasureIndex === 0 && lastScrolledMeasure > 0) {
         measuresEl.style.scrollBehavior = 'auto';
         measuresEl.scrollTop = 0;
-        measuresEl.style.scrollBehavior = ''; // Reset to CSS default (smooth)
-        lastScrolledMeasure = -2;
+        measuresEl.style.scrollBehavior = '';
+        lastScrolledMeasure = 0;
+        return;
       }
-      return;
-    }
-
-    // 2. Standard Loop-Back detection
-    if (currentMeasureIndex === 0 && lastScrolledMeasure > 0) {
-      measuresEl.style.scrollBehavior = 'auto';
-      measuresEl.scrollTop = 0;
-      measuresEl.style.scrollBehavior = '';
-      lastScrolledMeasure = 0;
-      return;
     }
 
     // --- PERFORMANCE GUARD (Once Per Measure) ---

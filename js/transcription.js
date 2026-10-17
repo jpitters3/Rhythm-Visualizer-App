@@ -1131,6 +1131,30 @@ export function autoCorrelate(buffer, sampleRate) {
     let T0 = maxpos;
     // return sampleRate / T0;
 
+    // Parabolic interpolation around the peak: maxpos is a whole-sample lag,
+    // so sampleRate/T0 is quantized to whatever Hz-step one extra sample of
+    // lag represents at that pitch — and that step gets coarser at higher
+    // frequencies. Fitting a parabola through the correlation values on
+    // either side of the peak and using ITS vertex (a fractional lag, not
+    // just the nearest integer) gives a materially more accurate frequency
+    // estimate, which is what actually determines whether e.g. a struck A
+    // reads closer to A or its neighbor Bb — a confidence/tolerance check
+    // on the matching side can't fix a measurement that was never precise
+    // enough in the first place.
+    if (maxpos > 0 && maxpos < SIZE - 1) {
+        const y0 = c[maxpos - 1], y1 = c[maxpos], y2 = c[maxpos + 1];
+        const denom = y0 - 2 * y1 + y2;
+        if (denom !== 0) {
+            const shift = 0.5 * (y0 - y2) / denom;
+            // A well-formed peak keeps the vertex within the two
+            // neighboring samples; a wildly out-of-range shift means the
+            // three points weren't actually a clean parabola (noisy
+            // signal), so fall back to the plain integer lag rather than
+            // trust a nonsensical extrapolation.
+            if (shift > -1 && shift < 1) T0 = maxpos + shift;
+        }
+    }
+
     // Calculate Clarity (Normalized Correlation Coefficient)
     // c[0] is the total energy (autocorrelation at lag 0)
     // clarity = c[T0] / c[0]

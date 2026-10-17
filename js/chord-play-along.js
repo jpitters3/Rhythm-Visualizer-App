@@ -10,7 +10,7 @@ import { gridA } from './grid-context.js';
 import { clearGrid, setInnerLabel, renderAllMeasures } from './notegrid.js';
 import { setBeats, setSubdivision, start, stop, addTickObserver, removeTickObserver, intervalMs, getAudioCtx } from './noteplayer.js';
 import { TransportRegistry } from './transport-ui.js';
-import { labelNotation, setLabelNotation, currentUser, getSelectedScaleName } from './state.js';
+import { labelNotation, setLabelNotation, currentUser, getSelectedScaleName, getScale } from './state.js';
 import { showToast } from './toast.js';
 import { startPitchListening, stopPitchListening, resetPitchHistory } from './pitch-detector.js';
 import { AUDIO_DELAY } from './config.js';
@@ -236,12 +236,15 @@ class ChordPlayAlong {
     } catch {
       // fall through to the default below
     }
-    // First time for this user+scale (nothing saved yet): inversions start
-    // UNCHECKED, root position starts checked — Increasing Complexity mode
+    // First time for this user+scale (nothing saved yet): 
+    // inversions start UNCHECKED;
+    // chords including the Ding start UNCHECKED; 
+    // root position starts checked — Increasing Complexity mode
     // will start the same way, unlocking inversions as rounds progress.
+    const dingPitch = getScale()?.ding;
     this.disabledChords = new Set(
       getScaleChordPool()
-        .filter(c => (c.inversion || 0) !== 0)
+        .filter(c => (c.inversion || 0) !== 0 || (dingPitch && c.notes.includes(dingPitch)))
         .map(c => chordSignature(c))
     );
   }
@@ -270,6 +273,10 @@ class ChordPlayAlong {
     setSubdivision(SUBDIVISION, gridA);
     gridA.setMeasures(measureCount);
     renderAllMeasures(gridA);
+
+    const headers = gridA.container?.querySelectorAll('.measure-header');
+    if (headers?.[0]) headers[0].textContent = 'Listen';
+    if (headers?.[1]) headers[1].textContent = 'Play';
   }
 
   teardown() {
@@ -280,6 +287,7 @@ class ChordPlayAlong {
     this.closeProgressModal();
     this.closeRoundBanner();
     clearTimeout(this.chordSoundTimer);
+    clearTimeout(this.chordPreviewFadeTimer);
     if (this.tickObserver) {
       removeTickObserver(this.tickObserver);
       this.tickObserver = null;
@@ -376,10 +384,16 @@ class ChordPlayAlong {
 
     // The layout doesn't change on Start (it's the same reordered-for-mobile
     // layout throughout, see css/chord-play-along.css) — just bring the
-    // handpan/grid into view, since the settings fields above are no longer
-    // relevant once play begins.
+    // stage into view, since the settings fields above are no longer
+    // relevant once play begins. Scrolled to the TOP of .cpa-stage (with a
+    // small gap above it), not all the way to the bottom of the page — the
+    // stage is what the player needs to read first, and scrolling to the
+    // bottom could crop its top edge off-screen on a short viewport.
     const scrollContainer = this.view.closest('.route-view');
-    scrollContainer?.scrollTo({ top: scrollContainer.scrollHeight, behavior: 'smooth' });
+    if (scrollContainer && this.stageEl) {
+      const stageGapFromTop = this.stageEl.getBoundingClientRect().top - scrollContainer.getBoundingClientRect().top;
+      scrollContainer.scrollTo({ top: scrollContainer.scrollTop + stageGapFromTop - 16, behavior: 'smooth' });
+    }
 
     startPitchListening((label, ts) => this.onPitchDetected(label, ts)).then((ok) => {
       if (!ok) {
@@ -927,9 +941,17 @@ class ChordPlayAlong {
       return true;
     });
 
-    panel.innerHTML = '';
+    // "Tap"/"Click" swap by CSS media query (same breakpoint as the rest of
+    // this file's mobile layout), not JS touch detection — a touch-capable
+    // laptop with a mouse should still read "Click" if it's wide enough to
+    // render the desktop layout.
+    panel.innerHTML = `
+      <p class="cpa-chords-hint">
+        <span class="cpa-chords-hint-tap">Tap</span><span class="cpa-chords-hint-click">Click</span> a chord to play 🎶
+      </p>
+    `;
     if (!unique.length) {
-      panel.innerHTML = '<p class="cpa-chords-empty">No chords available for this scale.</p>';
+      panel.insertAdjacentHTML('beforeend', '<p class="cpa-chords-empty">No chords available for this scale.</p>');
       return;
     }
 
@@ -955,6 +977,8 @@ class ChordPlayAlong {
       previewBtn.addEventListener('click', () => {
         playChordNotes(c.notes);
         highlightChordNotes(c, true);
+        clearTimeout(this.chordPreviewFadeTimer);
+        this.chordPreviewFadeTimer = setTimeout(() => highlightChordNotes(c, false), 2500);
       });
 
       row.append(checkbox, previewBtn);
@@ -1173,11 +1197,11 @@ class ChordPlayAlong {
 
         <div class="cpa-scale-row">Scale: <span class="cpa-scale-select-slot"></span></div>
 
+        <div class="cpa-stage"></div>
+
         <div class="cpa-board">
           <div class="cpa-handpan-slot"></div>
         </div>
-
-        <div class="cpa-stage"></div>
 
         <div class="cpa-grid-slot"></div>
         <div class="cpa-transport-row">
