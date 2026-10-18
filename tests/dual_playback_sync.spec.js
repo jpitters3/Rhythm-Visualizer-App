@@ -1,5 +1,5 @@
 const { test, expect } = require('@playwright/test');
-const { gotoStudio, openMobileControlsIfNeeded } = require('./helpers');
+const { gotoStudio, openMobileControlsIfNeeded, closeMobileControlsIfNeeded } = require('./helpers');
 
 test.describe('Dual Grid Playback Synchronization', () => {
   test.beforeEach(async ({ page }) => {
@@ -12,6 +12,10 @@ test.describe('Dual Grid Playback Synchronization', () => {
     // Enable Dual Mode
     await openMobileControlsIfNeeded(page);
     await page.click('#dualModeBtn');
+    // Restore the handpan panel — #dualModeBtn needed the controls panel
+    // open on mobile, which relocates over the handpan panel's slot and, in
+    // dual mode, ends up covering Grid B's own play button too.
+    await closeMobileControlsIfNeeded(page);
     await expect(page.locator('#controls-B')).toBeVisible();
   });
 
