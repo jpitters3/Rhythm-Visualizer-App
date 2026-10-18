@@ -1,5 +1,5 @@
 const { test, expect } = require('@playwright/test');
-const { gotoStudio } = require('./helpers');
+const { gotoStudio, openMobileControlsIfNeeded } = require('./helpers');
 const { createTestUser, deleteTestUser, loginAsTestUser } = require('./utils/auth-helper');
 
 test.describe('Pattern Management', () => {
@@ -25,7 +25,7 @@ test.describe('Pattern Management', () => {
   async function openPhraseMenu(page) {
     // On mobile: open hamburger menu first
     if (await page.locator('#mobileMenuBtn').isVisible()) {
-      const menu = page.locator('#headerMenu');
+      const menu = page.locator('#appNav');
       if (!await menu.evaluate(el => el.classList.contains('open'))) {
         await page.click('#mobileMenuBtn');
         await expect(menu).toHaveClass(/open/, { timeout: 2000 });
@@ -53,7 +53,7 @@ test.describe('Pattern Management', () => {
     }
     // On mobile: close hamburger menu
     if (await page.locator('#mobileMenuBtn').isVisible()) {
-      const menu = page.locator('#headerMenu');
+      const menu = page.locator('#appNav');
       if (await menu.evaluate(el => el.classList.contains('open'))) {
         await page.click('#mobileMenuBtn');
         await expect(menu).not.toHaveClass(/open/);
@@ -88,6 +88,7 @@ test.describe('Pattern Management', () => {
 
     // 3. Clear Grid
     await closeAccountMenu(page);
+    await openMobileControlsIfNeeded(page);
     await page.click('#clearBtn-A');
 
     // Handle Custom Modal Confirm

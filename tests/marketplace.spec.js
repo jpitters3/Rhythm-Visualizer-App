@@ -161,7 +161,7 @@ async function openCoursesSidebar(page) {
 async function ensureMenuOpen(page) {
   const mobileBtn = page.locator('#mobileMenuBtn');
   if (await mobileBtn.isVisible()) {
-    const menu = page.locator('#headerMenu');
+    const menu = page.locator('#appNav');
     const isOpen = await menu.evaluate(el => el.classList.contains('open'));
     if (!isOpen) {
       await mobileBtn.click();

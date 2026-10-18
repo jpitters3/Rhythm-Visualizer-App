@@ -1,5 +1,5 @@
 const { test, expect } = require('@playwright/test');
-const { gotoStudio } = require('./helpers');
+const { gotoStudio, openMobileControlsIfNeeded } = require('./helpers');
 
 test.describe('Dual Grid Playback Synchronization', () => {
   test.beforeEach(async ({ page }) => {
@@ -10,6 +10,7 @@ test.describe('Dual Grid Playback Synchronization', () => {
     await page.waitForSelector('.cell');
 
     // Enable Dual Mode
+    await openMobileControlsIfNeeded(page);
     await page.click('#dualModeBtn');
     await expect(page.locator('#controls-B')).toBeVisible();
   });

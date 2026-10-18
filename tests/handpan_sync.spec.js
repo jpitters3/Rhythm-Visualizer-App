@@ -1,5 +1,5 @@
 const { test, expect } = require('@playwright/test');
-const { gotoStudio } = require('./helpers');
+const { gotoStudio, clearGrid, openMobileControlsIfNeeded, closeMobileControlsIfNeeded } = require('./helpers');
 
 test.describe('Virtual Handpan Synchronization', () => {
   test.beforeEach(async ({ page }) => {
@@ -9,16 +9,16 @@ test.describe('Virtual Handpan Synchronization', () => {
 
   test('Handpan pulses and virtual hands should ONLY follow Grid A', async ({ page }) => {
     // 1. Enable Dual Mode
+    await openMobileControlsIfNeeded(page);
     await page.click('#dualModeBtn');
     await expect(page.locator('#measures-B')).toBeVisible();
 
     // 2. Clear both grids just in case
-    await page.click('#clearBtn-A');
-    await page.locator('#confirmModal.open').waitFor({ timeout: 5000 });
-    await page.click('#confirmOkBtn');
-    await page.click('#clearBtn-B');
-    await page.locator('#confirmModal.open').waitFor({ timeout: 5000 });
-    await page.click('#confirmOkBtn');
+    await clearGrid(page, 'A');
+    await clearGrid(page, 'B');
+    // Restore the handpan — clearGrid/#dualModeBtn needed the controls panel
+    // open on mobile, which relocates into (and hides) the handpan's slot.
+    await closeMobileControlsIfNeeded(page);
 
     // 3. Add a note ONLY to Grid B
     const cellB0 = page.locator('#measures-B .cell').first();

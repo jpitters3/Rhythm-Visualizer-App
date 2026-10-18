@@ -1,5 +1,5 @@
 const { test, expect } = require('@playwright/test');
-const { gotoStudio } = require('./helpers');
+const { gotoStudio, clearGrid, closeMobileControlsIfNeeded } = require('./helpers');
 
 // main.js re-exports gridA/renderAllMeasures (see its own comment on why) —
 // importing its actual deployed URL (not the source path, which only
@@ -10,9 +10,12 @@ const { gotoStudio } = require('./helpers');
 async function seedPattern(page) {
   await gotoStudio(page);
   await page.waitForSelector('.measure-row');
-  await page.click('#clearBtn-A');
-  await page.locator('#confirmModal.open').waitFor({ timeout: 5000 });
-  await page.click('#confirmOkBtn');
+  await clearGrid(page, 'A');
+  // Restore the handpan panel — clearGrid needed the controls panel open on
+  // mobile, which relocates into #panelControlsSlot and hides .handpan-tabs
+  // (css/measure-actions.css's .controls-mode rules), and every test here
+  // clicks the Pan Hero tab inside it right after seedPattern() returns.
+  await closeMobileControlsIfNeeded(page);
   const gridA = await page.evaluateHandle(async () => {
     const entryUrl = document.querySelector('script[type="module"][src*="main"]').src;
     const { gridA, renderAllMeasures } = await import(entryUrl);

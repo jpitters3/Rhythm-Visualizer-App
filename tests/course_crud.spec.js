@@ -76,7 +76,7 @@ test.describe('Course CRUD (Clean)', () => {
   test('Create and Save a new Course', async ({ page }) => {
     // 1. Open Course Modal (Admin only)
     // On Desktop, we must click #accountBtn to see the dropdown.
-    // On Mobile, the dropdown is flattened inside #headerMenu, so we just ensure menu is open.
+    // On Mobile, the dropdown is flattened inside #appNav, so we just ensure menu is open.
     const accountBtn = page.locator('#accountBtn');
     if (await accountBtn.isVisible()) {
       await accountBtn.click();
@@ -254,7 +254,7 @@ async function ensureMenuOpen(page) {
   // Check if we are in mobile mode
   const mobileBtn = page.locator('#mobileMenuBtn');
   if (await mobileBtn.isVisible()) {
-    const menu = page.locator('#headerMenu');
+    const menu = page.locator('#appNav');
     // If not visible, click toggle
     if (!await menu.isVisible()) {
       await mobileBtn.click();
@@ -266,7 +266,7 @@ async function ensureMenuOpen(page) {
 async function ensureMenuClosed(page) {
   // Only act if we are in mobile view (button is visible)
   if (await page.locator('#mobileMenuBtn').isVisible()) {
-    const menu = page.locator('#headerMenu');
+    const menu = page.locator('#appNav');
     const isOpen = await menu.evaluate(el => el.classList.contains('open'));
     if (isOpen) {
       await page.click('#mobileMenuBtn');

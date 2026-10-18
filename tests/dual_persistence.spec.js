@@ -1,5 +1,5 @@
 const { test, expect } = require('@playwright/test');
-const { gotoStudio } = require('./helpers');
+const { gotoStudio, openMobileControlsIfNeeded } = require('./helpers');
 
 test.describe('Dual Grid Persistence', () => {
   test.beforeEach(async ({ page }) => {
@@ -18,7 +18,7 @@ test.describe('Dual Grid Persistence', () => {
 
   async function ensureHeaderMenuOpen(page) {
     const mobileMenuBtn = page.locator('#mobileMenuBtn');
-    const headerMenu = page.locator('#headerMenu');
+    const headerMenu = page.locator('#appNav');
     if (await mobileMenuBtn.isVisible()) {
       const isOpen = await headerMenu.evaluate(el => el.classList.contains('open'));
       if (!isOpen) {
@@ -31,6 +31,7 @@ test.describe('Dual Grid Persistence', () => {
   test('should save and load a dual-grid pattern with time signature', async ({ page }) => {
     test.skip(true, 'Skipped pending dual_persistence implementation');
     // 1. Enable Dual Mode
+    await openMobileControlsIfNeeded(page);
     await page.click('#dualModeBtn');
     await expect(page.locator('#controls-B')).toBeVisible();
 
@@ -123,6 +124,7 @@ test.describe('Dual Grid Persistence', () => {
     await page.waitForTimeout(500);
 
     // 3. Enable Dual Mode manually
+    await openMobileControlsIfNeeded(page);
     await page.click('#dualModeBtn');
     await expect(page.locator('#measures-B')).toBeVisible();
 

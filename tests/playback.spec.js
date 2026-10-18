@@ -1,6 +1,6 @@
 // @ts-check
 const { test, expect } = require('@playwright/test');
-const { gotoStudio } = require('./helpers');
+const { gotoStudio, setBpm } = require('./helpers');
 
 test.describe('Playback & Controls', () => {
 
@@ -36,7 +36,7 @@ test.describe('Playback & Controls', () => {
     const bpmVal = page.locator('#mainTransport-A .t-bpm-num');
 
     // 1. Change BPM via Input
-    await bpmInput.fill('120');
+    await setBpm(page, 120, '#mainTransport-A');
     // 2. Verify Display
     await expect(bpmVal).toHaveValue('120');
 
@@ -77,7 +77,7 @@ test.describe('Playback & Controls', () => {
   test('Looping: Playback cycles correctly', async ({ page }) => {
     // Setup: 1 measure.
     // Set BPM fast enough to see changes but not too fast
-    await page.fill('#mainTransport-A .t-bpm-input', '120');
+    await setBpm(page, 120, '#mainTransport-A');
 
     // To verify looping without internals, we look for the 'active' class on columns.
 

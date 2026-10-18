@@ -1,5 +1,5 @@
 const { test, expect } = require('@playwright/test');
-const { gotoStudio } = require('./helpers');
+const { gotoStudio, openMobileControlsIfNeeded } = require('./helpers');
 
 test.describe('Presentation Mode', () => {
   test.beforeEach(async ({ page }) => {
@@ -138,6 +138,7 @@ test.describe('Presentation Mode', () => {
     });
 
   test('should hide Context B controls in presentation mode', async ({ page }) => {
+    await openMobileControlsIfNeeded(page);
     await page.click('#dualModeBtn');
     await expect(page.locator('#controls-B')).toBeVisible();
 

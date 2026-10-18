@@ -1,6 +1,6 @@
 // @ts-check
 const { test, expect } = require('@playwright/test');
-const { gotoStudio } = require('./helpers');
+const { gotoStudio, clearGrid, closeMobileControlsIfNeeded, setBpm } = require('./helpers');
 
 test.describe('Chords & Chords', () => {
 
@@ -12,7 +12,7 @@ test.describe('Chords & Chords', () => {
   // Helper for mobile menu
   async function ensureMenuClosed(page) {
     if (await page.locator('#mobileMenuBtn').isVisible()) {
-      const menu = page.locator('#headerMenu');
+      const menu = page.locator('#appNav');
       const isOpen = await menu.evaluate(el => el.classList.contains('open'));
       if (isOpen) {
         await page.click('#mobileMenuBtn');
@@ -24,9 +24,11 @@ test.describe('Chords & Chords', () => {
   test.beforeEach(async ({ page }) => {
     await gotoStudio(page);
     await ensureMenuClosed(page);
-    await page.click('#clearBtn-A');
-    await page.locator('#confirmModal.open').waitFor({ timeout: 5000 });
-    await page.click('#confirmOkBtn');
+    await clearGrid(page, 'A');
+    // Restore the handpan — clearGrid needed the controls panel open on
+    // mobile, which relocates into (and hides) the handpan's own slot, and
+    // this file taps .hp-dot.
+    await closeMobileControlsIfNeeded(page);
   });
 
   test('Multi-Note (Chord) Entry and Playback', async ({ page, browserName }) => {
@@ -61,8 +63,7 @@ test.describe('Chords & Chords', () => {
     // sub-dots updated visual text
 
     // 4. Set BPM to 40 for stability (ensure we catch 'active' class)
-    const bpmInput = page.locator('#mainTransport-A .t-bpm-input');
-    await bpmInput.fill('40');
+    await setBpm(page, 40, '#mainTransport-A');
 
     // 5. Start Playback
     await page.click('#mainTransport-A .t-play-btn');

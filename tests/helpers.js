@@ -4,11 +4,59 @@
  */
 
 /**
+ * Sets BPM via .t-bpm-num (the number input), not .t-bpm-input (the range
+ * slider) — small phones hide the slider entirely (css/controls.css,
+ * @media max-width:430px) in favor of the number input + tap, so filling
+ * the slider directly only works on desktop. .t-bpm-num applies on
+ * blur/Enter rather than on input (js/transport-ui.js), and syncs
+ * .t-bpm-input's value either way, so this works on every viewport and
+ * leaves existing .toHaveValue() assertions on either input unaffected.
+ */
+async function setBpm(page, value, containerSelector = '#mainTransport-A') {
+  const bpmNum = page.locator(`${containerSelector} .t-bpm-num`);
+  await bpmNum.fill(String(value));
+  await bpmNum.press('Enter');
+}
+
+/**
+ * #primaryControlsWrapper (clear/groove/label-notation/compose buttons etc.)
+ * is hidden entirely on mobile viewports (css/controls.css) — reachable only
+ * by first opening it via #mobileControlsBtn (js/mobile-menu.js), which
+ * relocates it into view. A no-op on desktop, where that button doesn't
+ * exist, and on mobile once it's already open — #mobileControlsBtn is a
+ * toggle, so clicking it a second time would close the panel instead.
+ * Call this before interacting with anything inside that wrapper.
+ */
+async function openMobileControlsIfNeeded(page) {
+  const btn = page.locator('#mobileControlsBtn').first();
+  if (!(await btn.isVisible().catch(() => false))) return;
+  const alreadyOpen = await page.locator('#primaryControlsWrapper')
+    .evaluate(el => el.classList.contains('mobile-open')).catch(() => false);
+  if (!alreadyOpen) await btn.click();
+}
+
+/**
+ * The inverse of openMobileControlsIfNeeded — opening the controls panel on
+ * mobile relocates it into the handpan panel's own slot (js/mobile-menu.js),
+ * hiding the handpan itself while it's open. Call this to restore the
+ * handpan (e.g. for tests that tap .hp-dot) after using a control that only
+ * mobile-controls-opening made reachable.
+ */
+async function closeMobileControlsIfNeeded(page) {
+  const btn = page.locator('#mobileControlsBtn').first();
+  if (!(await btn.isVisible().catch(() => false))) return;
+  const isOpen = await page.locator('#primaryControlsWrapper')
+    .evaluate(el => el.classList.contains('mobile-open')).catch(() => false);
+  if (isOpen) await btn.click();
+}
+
+/**
  * Clicks the clear button for the given grid and confirms the custom dialog.
  * The app uses a custom #confirmModal instead of the native browser confirm,
  * so we must wait for it to open and click OK.
  */
 async function clearGrid(page, gridId = 'A') {
+  await openMobileControlsIfNeeded(page);
   await page.click(`#clearBtn-${gridId}`);
   await page.locator('#confirmModal.open').waitFor({ timeout: 5000 });
   await page.click('#confirmOkBtn');
@@ -53,4 +101,4 @@ async function gotoStudio(page) {
   await page.goto('/#studio');
 }
 
-module.exports = { clearGrid, gotoStudio };
+module.exports = { clearGrid, gotoStudio, openMobileControlsIfNeeded, closeMobileControlsIfNeeded, setBpm };

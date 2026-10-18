@@ -1,13 +1,13 @@
 // @ts-check
 const { test, expect } = require('@playwright/test');
-const { gotoStudio } = require('./helpers');
+const { gotoStudio, clearGrid } = require('./helpers');
 
 test.describe('Grid Mechanics', () => {
 
   // Helper for mobile menu
   async function ensureMenuClosed(page) {
     if (await page.locator('#mobileMenuBtn').isVisible()) {
-      const menu = page.locator('#headerMenu');
+      const menu = page.locator('#appNav');
       const isOpen = await menu.evaluate(el => el.classList.contains('open'));
       if (isOpen) {
         await page.click('#mobileMenuBtn');
@@ -20,9 +20,7 @@ test.describe('Grid Mechanics', () => {
     await gotoStudio(page);
     await page.waitForSelector('.measure-row');
     await ensureMenuClosed(page);
-    await page.click('#clearBtn-A');
-    await page.locator('#confirmModal.open').waitFor({ timeout: 5000 });
-    await page.click('#confirmOkBtn');
+    await clearGrid(page, 'A');
   });
 
   test('Range Selection', async ({ page }) => {

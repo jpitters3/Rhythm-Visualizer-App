@@ -1,6 +1,6 @@
 // @ts-check
 const { test, expect } = require('@playwright/test');
-const { gotoStudio } = require('./helpers');
+const { gotoStudio, clearGrid, openMobileControlsIfNeeded, setBpm } = require('./helpers');
 
 test.describe('Dual Grid Functionality', () => {
 
@@ -20,6 +20,7 @@ test.describe('Dual Grid Functionality', () => {
     await expect(controlsB).not.toBeVisible();
 
     // Toggle On
+    await openMobileControlsIfNeeded(page);
     await dualModeBtn.click();
     await expect(dualModeBtn).toHaveClass(/active/);
     await expect(measuresB).toBeVisible();
@@ -33,6 +34,7 @@ test.describe('Dual Grid Functionality', () => {
   });
 
   test('Synchronized Playback States', async ({ page }) => {
+    await openMobileControlsIfNeeded(page);
     await page.click('#dualModeBtn');
 
     const playBtnA = page.locator('#mainTransport-A .t-play-btn');
@@ -50,25 +52,25 @@ test.describe('Dual Grid Functionality', () => {
   });
 
   test('Independent BPM Control', async ({ page }) => {
+    await openMobileControlsIfNeeded(page);
     await page.click('#dualModeBtn');
 
-    const bpmInputA = page.locator('#mainTransport-A .t-bpm-input');
     const bpmValA = page.locator('#mainTransport-A .t-bpm-num');
-    const bpmInputB = page.locator('#mainTransport-B .t-bpm-input');
     const bpmValB = page.locator('#mainTransport-B .t-bpm-num');
 
     // Change A to 120
-    await bpmInputA.fill('120');
+    await setBpm(page, 120, '#mainTransport-A');
     await expect(bpmValA).toHaveValue('120');
     await expect(bpmValB).toHaveValue('90'); // B should remain at default
 
     // Change B to 150
-    await bpmInputB.fill('150');
+    await setBpm(page, 150, '#mainTransport-B');
     await expect(bpmValA).toHaveValue('120');
     await expect(bpmValB).toHaveValue('150');
   });
 
   test('Focus Management (activeGrid)', async ({ page }) => {
+    await openMobileControlsIfNeeded(page);
     await page.click('#dualModeBtn');
 
     // Click inside Grid B to focus it. Grid A's measure-tools bar can
@@ -101,6 +103,7 @@ test.describe('Dual Grid Functionality', () => {
   });
 
   test('Independent Clear Logic', async ({ page }) => {
+    await openMobileControlsIfNeeded(page);
     await page.click('#dualModeBtn');
 
     // Add something to Grid A via UI
@@ -109,16 +112,12 @@ test.describe('Dual Grid Functionality', () => {
     await expect(page.locator('#measures .cell').first()).toHaveClass(/has-label/);
 
     // Clear Grid B
-    await page.click('#clearBtn-B');
-    await page.locator('#confirmModal.open').waitFor({ timeout: 5000 });
-    await page.click('#confirmOkBtn');
+    await clearGrid(page, 'B');
     // Grid A should still have its label
     await expect(page.locator('#measures .cell').first()).toHaveClass(/has-label/);
 
     // Clear Grid A
-    await page.click('#clearBtn-A');
-    await page.locator('#confirmModal.open').waitFor({ timeout: 5000 });
-    await page.click('#confirmOkBtn');
+    await clearGrid(page, 'A');
     await expect(page.locator('#measures .cell').first()).not.toHaveClass(/has-label/);
   });
 

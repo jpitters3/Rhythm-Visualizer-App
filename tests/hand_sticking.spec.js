@@ -1,15 +1,13 @@
 // @ts-check
 const { test, expect } = require('@playwright/test');
-const { gotoStudio } = require('./helpers');
+const { gotoStudio, clearGrid } = require('./helpers');
 
 test.describe('Hand Sticking Mechanics', () => {
 
   test.beforeEach(async ({ page }) => {
     await gotoStudio(page);
     await page.waitForSelector('.measure-row');
-    await page.click('#clearBtn-A');
-    await page.locator('#confirmModal.open').waitFor({ timeout: 5000 });
-    await page.click('#confirmOkBtn');
+    await clearGrid(page, 'A');
   });
 
   test('Right-click toggles hand sticking (skips redundant state)', async ({ page, isMobile }) => {

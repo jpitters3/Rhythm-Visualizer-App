@@ -1,5 +1,5 @@
 const { test, expect } = require('@playwright/test');
-const { gotoStudio } = require('./helpers');
+const { gotoStudio, clearGrid } = require('./helpers');
 
 // Regression: a chord/multi cell's label is an array. Duplicating a measure
 // (measure-actions.js duplicateSelection) and history snapshots (pattern-crud.js
@@ -9,9 +9,7 @@ const { gotoStudio } = require('./helpers');
 test('duplicating a measure copies chords by value', async ({ page }) => {
   await gotoStudio(page);
   await page.waitForSelector('.measure-row');
-  await page.click('#clearBtn-A');
-  await page.locator('#confirmModal.open').waitFor({ timeout: 5000 });
-  await page.click('#confirmOkBtn');
+  await clearGrid(page, 'A');
 
   const result = await page.evaluate(async () => {
     // main.js re-exports these (see its own comment on why) — importing its
@@ -52,9 +50,7 @@ test('duplicating a measure copies chords by value', async ({ page }) => {
 test('undo restores a chord sub-note edit', async ({ page }) => {
   await gotoStudio(page);
   await page.waitForSelector('.measure-row');
-  await page.click('#clearBtn-A');
-  await page.locator('#confirmModal.open').waitFor({ timeout: 5000 });
-  await page.click('#confirmOkBtn');
+  await clearGrid(page, 'A');
 
   const result = await page.evaluate(async () => {
     const entryUrl = document.querySelector('script[type="module"][src*="main"]').src;

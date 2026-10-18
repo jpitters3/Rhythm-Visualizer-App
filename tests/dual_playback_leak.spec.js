@@ -1,5 +1,5 @@
 const { test, expect } = require('@playwright/test');
-const { gotoStudio } = require('./helpers');
+const { gotoStudio, openMobileControlsIfNeeded } = require('./helpers');
 
 test.describe('Dual Grid Playback Leak', () => {
   test.beforeEach(async ({ page }) => {
@@ -14,6 +14,7 @@ test.describe('Dual Grid Playback Leak', () => {
 
     // Add a note to Grid B to make it audible (if it were playing)
     // We need to enable it momentarily to add the note
+    await openMobileControlsIfNeeded(page);
     await page.click('#dualModeBtn');
     const cellB0 = page.locator('#measures-B .cell').first();
     // Grid A's measure-tools bar can overlap Grid B's first row — a real,
@@ -25,6 +26,7 @@ test.describe('Dual Grid Playback Leak', () => {
     await expect(cellB0).toHaveText('1');
 
     // Disable Dual Mode
+    await openMobileControlsIfNeeded(page);
     await page.click('#dualModeBtn');
     await expect(measuresB).not.toBeVisible();
 
@@ -44,6 +46,7 @@ test.describe('Dual Grid Playback Leak', () => {
 
   test('Grid B should STOP playing when Dual Mode is toggled OFF', async ({ page }) => {
     // Enable Dual Mode
+    await openMobileControlsIfNeeded(page);
     await page.click('#dualModeBtn');
     await expect(page.locator('#measures-B')).toBeVisible();
 
@@ -56,6 +59,7 @@ test.describe('Dual Grid Playback Leak', () => {
     await expect(playBtnActive(playBtnB)).toBeTruthy();
 
     // Disable Dual Mode while playing
+    await openMobileControlsIfNeeded(page);
     await page.click('#dualModeBtn');
     await expect(page.locator('#measures-B')).not.toBeVisible();
 
