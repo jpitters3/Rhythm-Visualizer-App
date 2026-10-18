@@ -10,9 +10,11 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  deploy-and-test:
+  deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 10
+    outputs:
+      deploy_url: ${{ steps.netlify_deploy.outputs.deploy_url }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -49,14 +51,34 @@ jobs:
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
           NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
 
+  test:
+    needs: deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
       - name: Install Playwright browsers
         run: npx playwright install --with-deps
 
-      - name: Run Playwright tests against staging
-        id: playwright
-        run: npm test
+      - name: Run Playwright tests against staging (shard ${{ matrix.shard }}/4)
+        run: npx playwright test --reporter=blob --shard=${{ matrix.shard }}/4
         env:
-          PLAYWRIGHT_BASE_URL: ${{ steps.netlify_deploy.outputs.deploy_url }}
+          PLAYWRIGHT_BASE_URL: ${{ needs.deploy.outputs.deploy_url }}
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL_STAGING }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY_STAGING }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY_STAGING }}
@@ -64,8 +86,45 @@ jobs:
           TEST_PASSWORD: ${{ secrets.TEST_PASSWORD }}
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
 
-      - name: Upload Playwright report
+      - name: Upload blob report (shard ${{ matrix.shard }}/4)
         if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: blob-report-${{ matrix.shard }}
+          path: blob-report/
+          retention-days: 14
+
+  report:
+    needs: [deploy, test]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Download blob reports
+        uses: actions/download-artifact@v4
+        with:
+          pattern: blob-report-*
+          path: all-blob-reports
+          merge-multiple: true
+
+      - name: Merge into one HTML report
+        run: npx playwright merge-reports --reporter=html ./all-blob-reports
+        env:
+          PLAYWRIGHT_HTML_REPORT: playwright-report
+
+      - name: Upload merged Playwright report
         uses: actions/upload-artifact@v4
         with:
           name: playwright-report
@@ -73,12 +132,11 @@ jobs:
           retention-days: 14
 
       - name: Write summary
-        if: always()
         run: |
           echo "## Staging deploy" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "- **URL**: ${{ steps.netlify_deploy.outputs.deploy_url }}" >> "$GITHUB_STEP_SUMMARY"
-          if [ "${{ steps.playwright.outcome }}" = "success" ]; then
+          echo "- **URL**: ${{ needs.deploy.outputs.deploy_url }}" >> "$GITHUB_STEP_SUMMARY"
+          if [ "${{ needs.test.result }}" = "success" ]; then
             echo "- **Tests**: ✅ passed" >> "$GITHUB_STEP_SUMMARY"
           else
             echo "- **Tests**: ❌ failed — see the playwright-report artifact for details" >> "$GITHUB_STEP_SUMMARY"
