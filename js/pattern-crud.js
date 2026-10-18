@@ -311,6 +311,13 @@ export async function applyPattern(state, ctx = gridA) {
     return;
   }
 
+  // migratePatternState/normalizeMobileSubdivision mutate top-level fields
+  // in place — clone first so a caller's own object (e.g. courses.js's
+  // cached lesson.pattern_json, reused across every visit to that lesson)
+  // doesn't get permanently corrupted by the first load's mobile BPM
+  // doubling and subdivision collapse.
+  state = { ...state };
+
   // Migrate old format ({ mode, timeSignature }) to new ({ beats, subdivision })
   migratePatternState(state);
   // Mobile: collapse to quarter-note grid, scale BPM to compensate.

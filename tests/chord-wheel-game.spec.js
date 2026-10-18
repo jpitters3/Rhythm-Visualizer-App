@@ -75,7 +75,15 @@ test('Chord Wheel: spin, reorder, click-to-play, Any Chords mode, send to Studio
     await expect(page.locator('.cw-send-btn')).toBeEnabled();
 
     // Reorder: drag slot 0 onto slot 3, confirm the chord order actually changes.
-    const orderBefore = await page.locator('.cw-chord-name').allTextContents();
+    // The spin is random and the pool is small, so slots 0 and 3 occasionally
+    // land on the same chord name by chance — re-spin until they differ, or a
+    // swap between them would be undetectable from displayed text alone.
+    let orderBefore = await page.locator('.cw-chord-name').allTextContents();
+    for (let i = 0; i < 10 && orderBefore[0] === orderBefore[3]; i++) {
+      await page.click('.cw-spin-all-btn');
+      await waitForAllSlotsFilled(page);
+      orderBefore = await page.locator('.cw-chord-name').allTextContents();
+    }
     await page.locator('.cw-slot[data-id="slot-0"]').dragTo(page.locator('.cw-slot[data-id="slot-3"]'), { force: true });
     await page.waitForTimeout(400);
     const orderAfter = await page.locator('.cw-chord-name').allTextContents();

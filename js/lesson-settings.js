@@ -102,7 +102,14 @@ export async function applyLessonOverride(lesson, override) {
     }
   } else if (override?.custom_bpm && lesson.pattern_json) {
     await applyPattern(lesson.pattern_json);
-    gridA.bpm = override.custom_bpm;
+    // custom_bpm is stored in the same (un-collapsed) domain as the lesson's
+    // own pattern_json.bpm — applyPattern() just set gridA.mobileOriginalSubdivision
+    // if mobile collapsed this lesson's subdivision, so convert back to the
+    // doubled display domain it's using, the same way serializePattern()
+    // converts the other way when saving (js/pattern-crud.js).
+    gridA.bpm = gridA.mobileOriginalSubdivision
+      ? override.custom_bpm * gridA.mobileOriginalSubdivision
+      : override.custom_bpm;
     TransportRegistry.updateAll(gridA);
     return true;
   }

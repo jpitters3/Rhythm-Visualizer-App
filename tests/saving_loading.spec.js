@@ -169,7 +169,7 @@ test.describe('Pattern Management', () => {
     }
   }
 
-  test('Measure settings (beats × subdivision) persist per-phrase', async ({ page }) => {
+  test('Measure settings (beats × subdivision) persist per-phrase', async ({ page, isMobile }) => {
     const phrase1Name = `4-Quarter ${Date.now()}`;
     const phrase2Name = `7-Eighth ${Date.now()}`;
 
@@ -183,6 +183,13 @@ test.describe('Pattern Management', () => {
     await setMeasureSettings(page, 7, 2);
     await savePhraseAs(page, phrase2Name);
 
+    // On mobile, applyPattern() (js/pattern-crud.js normalizeMobileSubdivision)
+    // collapses any subdivision > 1 down to quarter notes and scales BPM to
+    // compensate, remembering the original in ctx.mobileOriginalSubdivision
+    // so a later save can reverse it — so the select itself reads back '1'
+    // on mobile even though '2' was saved.
+    const expectedSubdivision = isMobile ? '1' : '2';
+
     // Load phrase 1 back and confirm ITS settings come back, not phrase 2's
     // or the fixed new-phrase default.
     await loadPhrase(page, phrase1Name);
@@ -190,7 +197,7 @@ test.describe('Pattern Management', () => {
 
     // Load phrase 2 and confirm the same, the other way around.
     await loadPhrase(page, phrase2Name);
-    await expect.poll(() => getMeasureSettings(page)).toEqual({ beats: '7', subdivision: '2' });
+    await expect.poll(() => getMeasureSettings(page)).toEqual({ beats: '7', subdivision: expectedSubdivision });
   });
 
   test('Delete Pattern', async ({ page }) => {
