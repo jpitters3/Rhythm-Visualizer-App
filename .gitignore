@@ -15,3 +15,6 @@ dist/
 # Local dev HTTPS certs
 .certs/
 .certs-bak/
+
+# Supabase CLI local link state (changes every `supabase link`)
+supabase/.temp/
