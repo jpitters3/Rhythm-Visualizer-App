@@ -76,7 +76,7 @@ jobs:
         run: npx playwright install --with-deps
 
       - name: Run Playwright tests against staging (shard ${{ matrix.shard }}/4)
-        run: npx playwright test --reporter=blob --shard=${{ matrix.shard }}/4
+        run: npx playwright test --reporter=blob,list --shard=${{ matrix.shard }}/4
         env:
           PLAYWRIGHT_BASE_URL: ${{ needs.deploy.outputs.deploy_url }}
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL_STAGING }}
