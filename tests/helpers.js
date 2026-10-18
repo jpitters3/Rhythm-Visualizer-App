@@ -144,4 +144,19 @@ async function gotoStudio(page) {
   await page.goto('/#studio');
 }
 
-module.exports = { clearGrid, gotoStudio, openMobileControlsIfNeeded, closeMobileControlsIfNeeded, setBpm, clickMetroToggle, openNavIfNeeded };
+/**
+ * Expands/collapses an assignment item card (.asgn-item-card-header
+ * [data-action="item-toggle"], js/assignments.js). On Mobile Chrome,
+ * Playwright's .click()/.tap() on this dynamically-rendered element never
+ * delivers a click event to it at all (confirmed: a same-node marker survives
+ * the click, and a plain el.click() dispatched from the page toggles the
+ * .collapsed class correctly) — a Playwright/Chromium input-delivery quirk on
+ * this element, not an app bug. Dispatching the click from the page side
+ * instead works on every project.
+ */
+/** @param {import('@playwright/test').Locator} card */
+async function toggleItemCard(card) {
+  await card.locator('[data-action="item-toggle"]').evaluate((/** @type {HTMLElement} */ el) => el.click());
+}
+
+module.exports = { clearGrid, gotoStudio, openMobileControlsIfNeeded, closeMobileControlsIfNeeded, setBpm, clickMetroToggle, openNavIfNeeded, toggleItemCard };

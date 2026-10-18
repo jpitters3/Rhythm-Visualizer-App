@@ -25,6 +25,7 @@ require('dotenv').config();
 
 const { createTestUser, deleteTestUser, loginAsTestUser, supabaseAdmin } = require('./utils/auth-helper');
 const { waitForPageReady } = require('./utils/page-helper');
+const { toggleItemCard } = require('./helpers');
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -89,7 +90,7 @@ async function createMinimalAssignment(page, title) {
   await page.selectOption('#asgnAddItemType', 'mark_complete');
   await page.locator('#asgnAddItemBtn').click();
   const card = page.locator('.asgn-item-card').last();
-  await card.locator('[data-action="item-toggle"]').click();
+  await toggleItemCard(card);
   await card.locator('[data-field="item-title"]').fill('Do the thing');
 }
 
