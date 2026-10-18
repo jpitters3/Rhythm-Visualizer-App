@@ -33,6 +33,23 @@ async function waitForAllSlotsFilled(page, timeout = 20000) {
   );
 }
 
+// Re-spinning already-filled slots keeps '.cw-chord-name' at a steady count
+// of 4 throughout the whole ~13s sequential 4-spin pass (js/chord-wheel-
+// game.js's SPIN_MS * 4) — waitForAllSlotsFilled's count-based check would
+// resolve instantly against the *stale* pre-respin values instead of
+// waiting for the new pass to actually land. Wait for the text to actually
+// change from a snapshot taken right before the re-spin instead.
+async function waitForSlotsChangedFrom(page, previousTexts, timeout = 30000) {
+  await page.waitForFunction(
+    (prev) => {
+      const current = [...document.querySelectorAll('.cw-chord-name')].map(el => el.textContent);
+      return current.length === 4 && JSON.stringify(current) !== JSON.stringify(prev);
+    },
+    previousTexts,
+    { timeout }
+  );
+}
+
 test('Chord Wheel: spin, reorder, click-to-play, Any Chords mode, send to Studio', async ({ page }) => {
   test.setTimeout(150000);
   const errors = [];
@@ -75,13 +92,19 @@ test('Chord Wheel: spin, reorder, click-to-play, Any Chords mode, send to Studio
     await expect(page.locator('.cw-send-btn')).toBeEnabled();
 
     // Reorder: drag slot 0 onto slot 3, confirm the chord order actually changes.
-    // The spin is random and the pool is small, so slots 0 and 3 occasionally
-    // land on the same chord name by chance — re-spin until they differ, or a
-    // swap between them would be undetectable from displayed text alone.
+    // dragTo's { force: true } skips Playwright's intermediate hover/mousemove
+    // steps, so js/sortable.js's dragover insertion-point tracking only ever
+    // sees the drop coordinates — in practice that lands the drag as a swap
+    // of slots 0 and 1, not a move all the way to slot 3 (confirmed directly:
+    // 6/6 repeated drags here swapped positions 0 and 1 and left 2/3 alone).
+    // The spin is random and the pool is small, so slots 0 and 1 occasionally
+    // land on the same chord name by chance — re-spin until they differ, or
+    // the swap would be undetectable from displayed text alone.
     let orderBefore = await page.locator('.cw-chord-name').allTextContents();
-    for (let i = 0; i < 10 && orderBefore[0] === orderBefore[3]; i++) {
+    for (let i = 0; i < 10 && orderBefore[0] === orderBefore[1]; i++) {
+      const stale = orderBefore;
       await page.click('.cw-spin-all-btn');
-      await waitForAllSlotsFilled(page);
+      await waitForSlotsChangedFrom(page, stale);
       orderBefore = await page.locator('.cw-chord-name').allTextContents();
     }
     await page.locator('.cw-slot[data-id="slot-0"]').dragTo(page.locator('.cw-slot[data-id="slot-3"]'), { force: true });
@@ -91,8 +114,15 @@ test('Chord Wheel: spin, reorder, click-to-play, Any Chords mode, send to Studio
     expect(orderAfter.sort()).toEqual(orderBefore.sort()); // same 4 chords, new order
 
     // Any Chords mode: unplayable toggle appears, default excludes unplayable chords.
-    await page.click('.cw-mode-btn[data-mode="any"]');
-    await expect(page.locator('.cw-unplayable-toggle')).toBeVisible();
+    // The mode-button handler bails out as a no-op if this.wheelSpinning is
+    // still true (js/chord-wheel-game.js) — occasionally still the case this
+    // soon after the reorder drag's own spin-all retries above, so retry the
+    // click itself rather than just waiting longer for an internal flag this
+    // test has no direct visibility into.
+    await expect(async () => {
+      await page.click('.cw-mode-btn[data-mode="any"]');
+      await expect(page.locator('.cw-unplayable-toggle')).toBeVisible({ timeout: 1000 });
+    }).toPass({ timeout: 10000 });
     await page.click('.cw-spin-all-btn');
     await waitForAllSlotsFilled(page);
     await expect(page.locator('.cw-chord-badge')).toHaveCount(0);
