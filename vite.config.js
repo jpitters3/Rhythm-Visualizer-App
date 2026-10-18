@@ -35,6 +35,13 @@ export default defineConfig({
       },
       mangle: {
         toplevel: true,
+        // main.js re-exports these (see its own comment) so Playwright can
+        // reach live app singletons by dynamically importing the entry
+        // chunk's real deployed URL — toplevel mangling otherwise renames
+        // them (e.g. to single-letter names) in the production bundle,
+        // breaking that lookup even though it works fine against Vite's
+        // unminified dev server.
+        reserved: ['gridA', 'gridB', 'renderAllMeasures', 'duplicateSelection', 'setRange', 'HistoryManager'],
       },
     },
   },
