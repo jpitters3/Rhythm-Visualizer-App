@@ -27,6 +27,21 @@ async function createTestUser(isAdmin = false) {
     throw new Error(`Failed to create test user: ${error.message}`);
   }
 
+  // No DB trigger creates this row on signup — only the app's own in-browser
+  // signUp() flow does (js/auth.js), which admin.createUser() bypasses.
+  // Several RLS policies key off profiles.role (e.g. "Student selects their
+  // assigned published assignments" on public.assignments), so without this
+  // a test user can create data fine via this admin client but then fail to
+  // read it back through the app's own (RLS-bound) queries.
+  const { error: profileError } = await supabaseAdmin.from('profiles').upsert({
+    user_id: data.user.id,
+    role: isAdmin ? 'admin' : 'student',
+  }, { onConflict: 'user_id' });
+
+  if (profileError) {
+    throw new Error(`Failed to create test user profile: ${profileError.message}`);
+  }
+
   return {
     email,
     password,
