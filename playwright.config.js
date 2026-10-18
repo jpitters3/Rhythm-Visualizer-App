@@ -60,8 +60,10 @@ module.exports = defineConfig({
     },
   ],
 
-  /* Run your local dev server before starting the tests */
-  webServer: {
+  /* Run your local dev server before starting the tests — skipped when
+     baseURL is a remote deployed site (nothing to start, and Playwright
+     would otherwise refuse since that URL is already live). */
+  webServer: remoteBaseURL ? undefined : {
     command: 'npm run dev',
     url: baseURL,
     ignoreHTTPSErrors: true,
