@@ -16,12 +16,47 @@ const hasCerts = fs.existsSync('.certs/localhost-key.pem') && fs.existsSync('.ce
 const remoteBaseURL = process.env.PLAYWRIGHT_BASE_URL;
 const baseURL = remoteBaseURL || `${hasCerts ? 'https' : 'http'}://localhost:3000`;
 
+// Firefox is skipped in CI only (kept for local dev, where coverage matters
+// more than wall-clock time) — the staging workflow's 30-minute cap doesn't
+// fit the full 5-project matrix, and Firefox-specific bugs are rare enough
+// here that dropping it buys the most time back for the least coverage lost.
+const allProjects = [
+  {
+    name: 'chromium',
+    use: { ...devices['Desktop Chrome'] },
+  },
+  {
+    name: 'firefox',
+    use: {
+      ...devices['Desktop Firefox'],
+      launchOptions: {
+        firefoxUserPrefs: {
+          'dom.events.asyncClipboard.readText': true,
+          'dom.events.testing.asyncClipboard': true,
+        },
+      },
+    },
+  },
+  {
+    name: 'webkit',
+    use: { ...devices['Desktop Safari'] },
+  },
+  {
+    name: 'Mobile Chrome',
+    use: { ...devices['Pixel 5'] },
+  },
+  {
+    name: 'Mobile Safari',
+    use: { ...devices['iPhone 12'] },
+  },
+];
+
 module.exports = defineConfig({
   testDir: './tests',
   fullyParallel: false,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  workers: 4,
+  workers: process.env.CI ? 6 : 4,
   reporter: 'html',
   use: {
     baseURL,
@@ -29,36 +64,7 @@ module.exports = defineConfig({
     trace: 'on-first-retry',
   },
 
-  projects: [
-    {
-      name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
-    },
-    {
-      name: 'firefox',
-      use: {
-        ...devices['Desktop Firefox'],
-        launchOptions: {
-          firefoxUserPrefs: {
-            'dom.events.asyncClipboard.readText': true,
-            'dom.events.testing.asyncClipboard': true,
-          },
-        },
-      },
-    },
-    {
-      name: 'webkit',
-      use: { ...devices['Desktop Safari'] },
-    },
-    {
-      name: 'Mobile Chrome',
-      use: { ...devices['Pixel 5'] },
-    },
-    {
-      name: 'Mobile Safari',
-      use: { ...devices['iPhone 12'] },
-    },
-  ],
+  projects: process.env.CI ? allProjects.filter(p => p.name !== 'firefox') : allProjects,
 
   /* Run your local dev server before starting the tests — skipped when
      baseURL is a remote deployed site (nothing to start, and Playwright
