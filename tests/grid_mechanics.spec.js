@@ -64,13 +64,10 @@ test.describe('Grid Mechanics', () => {
   });
 
   test('Copy and Paste', async ({ page }) => {
-    const isMac = process.platform === 'darwin'; // This runs in Node (Playwright), so checks host OS. 
-    // Wait, browser OS matters for modifier key. 
-    // Playwright `Meta` maps to Command on Mac, Control on Windows usually.
-    // Let's use 'Meta' for consistent "Primary Modifier".
-    // Actually, on Linux/Windows 'Meta' is Windows key. 'Control' is Ctrl.
-    // 'ControlOrMeta' is a safe bet if supported, but typically tests specify.
-    // Let's try 'Meta' since user is on Mac (User Info says "The USER's OS version is mac").
+    // Meta = Command on macOS but the Windows key on Linux (where CI runs),
+    // which doesn't trigger copy/paste there — use the actual OS-correct
+    // modifier instead of hardcoding one.
+    const mod = process.platform === 'darwin' ? 'Meta' : 'Control';
 
     // 1. Setup: Cell 0 = '1', Cell 1 = '2'
     const c0 = page.locator('.cell').nth(0);
@@ -85,14 +82,14 @@ test.describe('Grid Mechanics', () => {
     await page.keyboard.up('Shift');
 
     // 3. Copy
-    await page.keyboard.press('Meta+c');
+    await page.keyboard.press(`${mod}+c`);
 
     // 4. Move to Cell 4
     const c4 = page.locator('.cell').nth(4);
     await c4.click();
 
     // 5. Paste
-    await page.keyboard.press('Meta+v');
+    await page.keyboard.press(`${mod}+v`);
 
     // 6. Verify
     const c5 = page.locator('.cell').nth(5);

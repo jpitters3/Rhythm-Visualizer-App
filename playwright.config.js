@@ -20,10 +20,18 @@ const baseURL = remoteBaseURL || `${hasCerts ? 'https' : 'http'}://localhost:300
 // more than wall-clock time) — the staging workflow's 30-minute cap doesn't
 // fit the full 5-project matrix, and Firefox-specific bugs are rare enough
 // here that dropping it buys the most time back for the least coverage lost.
+// CI runners have no real microphone, so getUserMedia() throws there without
+// these — coaching_mode.spec.js's turnOnMic() swallows that error, isListening
+// never flips true, and the countdown overlay it gates never shows. Harmless
+// locally too (just swaps in a synthetic stream), so applied everywhere.
+const fakeMediaDeviceArgs = {
+  args: ['--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream'],
+};
+
 const allProjects = [
   {
     name: 'chromium',
-    use: { ...devices['Desktop Chrome'] },
+    use: { ...devices['Desktop Chrome'], launchOptions: fakeMediaDeviceArgs },
   },
   {
     name: 'firefox',
@@ -43,7 +51,7 @@ const allProjects = [
   },
   {
     name: 'Mobile Chrome',
-    use: { ...devices['Pixel 5'] },
+    use: { ...devices['Pixel 5'], launchOptions: fakeMediaDeviceArgs },
   },
   {
     name: 'Mobile Safari',
