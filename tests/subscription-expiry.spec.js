@@ -78,10 +78,18 @@ test.describe('Subscription Expiry', () => {
     // No subscription banner (30 days > 14 day threshold)
     await expect(page.locator('#subscriptionBanner')).toBeHidden();
 
-    // Gated feature (My Scales) should open without upgrade modal
-    await page.evaluate(() => document.getElementById('myScalesBtn')?.click());
+    // Gated feature (My Scales) should open without upgrade modal. Two
+    // separate post-reload init paths race independently of .measure-row
+    // and of each other: js/auth.js's updateAccountUI() toggles the button's
+    // display, and js/handpanmap.js's own init attaches its click listener.
+    // Clicking before either lands is a race Chromium usually wins and
+    // WebKit loses more often — retry instead of guessing which one to wait
+    // for individually.
+    await expect(async () => {
+      await page.evaluate(() => document.getElementById('myScalesBtn')?.click());
+      await expect(page.locator('#myScalesModal')).toHaveClass(/open/, { timeout: 1000 });
+    }).toPass({ timeout: 5000, intervals: [200, 500, 1000] });
     await expect(page.locator('#upgradeModal')).not.toHaveClass(/open/);
-    await expect(page.locator('#myScalesModal')).toHaveClass(/open/, { timeout: 5000 });
   });
 
   test('expiring soon: warning banner visible with correct text and renew button', async ({ page }) => {
@@ -94,10 +102,13 @@ test.describe('Subscription Expiry', () => {
     await expect(banner).not.toHaveClass(/subscription-banner--expired/);
     await expect(page.locator('#subscriptionBannerTitle')).toContainText('expires in 5 day');
 
-    // Gated features still work while expiring
-    await page.evaluate(() => document.getElementById('myScalesBtn')?.click());
+    // Gated features still work while expiring (see the other test for why
+    // this retries instead of waiting on one specific precondition).
+    await expect(async () => {
+      await page.evaluate(() => document.getElementById('myScalesBtn')?.click());
+      await expect(page.locator('#myScalesModal')).toHaveClass(/open/, { timeout: 1000 });
+    }).toPass({ timeout: 5000, intervals: [200, 500, 1000] });
     await expect(page.locator('#upgradeModal')).not.toHaveClass(/open/);
-    await expect(page.locator('#myScalesModal')).toHaveClass(/open/, { timeout: 5000 });
 
     // Renew button opens upgrade modal
     await page.keyboard.press('Escape');
