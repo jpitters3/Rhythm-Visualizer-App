@@ -9,7 +9,12 @@ const { defineConfig, devices } = require('@playwright/test');
 // here instead of hardcoding one keeps this in sync with whichever mode the
 // webServer command below actually starts.
 const hasCerts = fs.existsSync('.certs/localhost-key.pem') && fs.existsSync('.certs/localhost.pem');
-const baseURL = `${hasCerts ? 'https' : 'http'}://localhost:3000`;
+// Set by .github/workflows/deploy-staging.yml once it knows the just-deployed
+// Netlify URL, so the same suite can run against a real deployed staging site
+// instead of a local dev server. Unset everywhere else (plain local/manual
+// `npm test`), which keeps today's localhost behavior as the default.
+const remoteBaseURL = process.env.PLAYWRIGHT_BASE_URL;
+const baseURL = remoteBaseURL || `${hasCerts ? 'https' : 'http'}://localhost:3000`;
 
 module.exports = defineConfig({
   testDir: './tests',

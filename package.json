@@ -10,7 +10,9 @@
     "test:ui": "npx playwright test --ui",
     "test:report": "npx playwright show-report",
     "lint": "eslint .",
-    "prepare": "husky"
+    "prepare": "husky",
+    "db:push:staging": "supabase link --project-ref mececymulqnvmaqbcnok && supabase db push",
+    "db:push:prod": "supabase link --project-ref ycdlqkaymkgpbpgtqubs && supabase db push"
   },
   "keywords": [],
   "author": "",
