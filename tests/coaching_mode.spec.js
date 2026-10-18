@@ -7,7 +7,11 @@ const { waitForPageReady } = require('./utils/page-helper');
 test.describe('Coaching Mode', () => {
   let testUser;
 
-  test.beforeEach(async ({ page }) => {
+  test.beforeEach(async ({ page, browserName }) => {
+    // WebKit doesn't support the 'microphone' permission string at all —
+    // grantPermissions() below throws "Unknown permission: microphone".
+    test.skip(browserName === 'webkit', "WebKit doesn't support programmatic microphone permission in Playwright");
+
     // Enable Console Logs
     page.on('console', msg => console.log(`BROWSER LOG: ${msg.text()}`));
 
