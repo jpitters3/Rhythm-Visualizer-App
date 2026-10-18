@@ -53,6 +53,12 @@ test.describe('Lesson Settings (Reset/Restore)', () => {
     // landing on a .lesson-link instead and loading a lesson early.
     await page.evaluate(() => document.getElementById('toggleSidebarBtn')?.click());
     await expect(page.locator('#courseSidebar.open')).toBeVisible({ timeout: 10000 });
+    // Close it again — opening it above was only to force courses.js to
+    // load/auto-expand the course and its lesson links, not because tests
+    // need it to stay open. On a narrow mobile viewport it overlays the
+    // full width, intercepting every click on #measures otherwise.
+    await page.evaluate(() => document.getElementById('toggleSidebarBtn')?.click());
+    await expect(page.locator('#courseSidebar')).not.toHaveClass(/open/);
   });
 
   test.afterEach(async () => {
@@ -65,10 +71,27 @@ test.describe('Lesson Settings (Reset/Restore)', () => {
   });
 
   async function openLesson(page, l) {
+    // Self-contained open/close around the click — #courseSidebar starts
+    // (and ends, see beforeEach/this function) closed, and on a narrow
+    // mobile viewport it overlays the full width, intercepting every click
+    // on #measures if left open afterward. Idempotent either way: a
+    // preceding explicit openSidebar() call just makes the open here a
+    // no-op, not a double-toggle.
+    const sidebar = page.locator('#courseSidebar');
+    if (!(await sidebar.evaluate(el => el.classList.contains('open')))) {
+      await page.evaluate(() => document.getElementById('toggleSidebarBtn')?.click());
+      await expect(sidebar).toHaveClass(/open/);
+    }
+
     const link = page.locator(`.lesson-link[data-id="${l.id}"]`);
     await link.scrollIntoViewIfNeeded();
     await link.click();
     await expect(page.locator('#lessonContent')).toBeVisible();
+
+    if (await sidebar.evaluate(el => el.classList.contains('open'))) {
+      await page.evaluate(() => document.getElementById('toggleSidebarBtn')?.click());
+      await expect(sidebar).not.toHaveClass(/open/);
+    }
   }
 
   async function openSidebar(page) {
