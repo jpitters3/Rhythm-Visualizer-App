@@ -144,4 +144,4 @@ async function gotoStudio(page) {
   await page.goto('/#studio');
 }
 
-module.exports = { clearGrid, gotoStudio, openMobileControlsIfNeeded, closeMobileControlsIfNeeded, setBpm, clickMetroToggle };
+module.exports = { clearGrid, gotoStudio, openMobileControlsIfNeeded, closeMobileControlsIfNeeded, setBpm, clickMetroToggle, openNavIfNeeded };
