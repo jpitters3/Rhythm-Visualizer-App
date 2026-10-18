@@ -66,6 +66,12 @@
     width: 44px;
   }
 
+  body.present #presentationControls {
+    max-width: calc(100vw - 24px);
+    flex-wrap: wrap;
+    row-gap: 6px;
+  }
+
   .transport-container .transport-group {
     gap: 4px;
   }
