@@ -12,6 +12,8 @@ async function openGame(page) {
   await page.evaluate(() => { window.location.hash = '#games'; });
   await page.waitForSelector('.hg-tile', { timeout: 10000 });
   await page.click('.hg-tile[data-domain="harmony"]');
+  await page.waitForSelector('.hg-tile[data-game="chord-wheel"]', { timeout: 10000 });
+  await page.click('.hg-tile[data-game="chord-wheel"]');
   await expect(page.locator('.cw-container')).toBeVisible();
 }
 
@@ -326,6 +328,8 @@ test('Chord Wheel: returning to #games after Send to Studio shows a fresh hub, n
     await expect(page.locator('.hg-grid')).toBeVisible();
 
     await page.click('.hg-tile[data-domain="harmony"]');
+    await page.waitForSelector('.hg-tile[data-game="chord-wheel"]', { timeout: 10000 });
+    await page.click('.hg-tile[data-game="chord-wheel"]');
     await expect(page.locator('.cw-container')).toBeVisible();
     await expect(page.locator('.cw-handpan-slot #handpanWrap')).toHaveCount(1);
   } finally {
