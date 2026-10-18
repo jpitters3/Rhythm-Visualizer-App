@@ -19,7 +19,7 @@ jobs:
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: 'npm'
 
       - name: Install dependencies
@@ -35,6 +35,7 @@ jobs:
         id: netlify_deploy
         run: |
           npx netlify-cli deploy \
+            --no-build \
             --dir=dist \
             --site="$NETLIFY_SITE_ID" \
             --auth="$NETLIFY_AUTH_TOKEN" \
