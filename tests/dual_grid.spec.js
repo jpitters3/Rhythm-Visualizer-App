@@ -1,6 +1,6 @@
 // @ts-check
 const { test, expect } = require('@playwright/test');
-const { gotoStudio, clearGrid, openMobileControlsIfNeeded, setBpm } = require('./helpers');
+const { gotoStudio, clearGrid, openMobileControlsIfNeeded, closeMobileControlsIfNeeded, setBpm } = require('./helpers');
 
 test.describe('Dual Grid Functionality', () => {
 
@@ -105,6 +105,11 @@ test.describe('Dual Grid Functionality', () => {
   test('Independent Clear Logic', async ({ page }) => {
     await openMobileControlsIfNeeded(page);
     await page.click('#dualModeBtn');
+    // #clearBtn-B (unlike #clearBtn-A) isn't inside #primaryControlsWrapper
+    // (index.html) — it's a separate, always-in-flow element, so the still-
+    // open controls panel (now relocated over the handpan panel) visually
+    // covers and intercepts clicks on it.
+    await closeMobileControlsIfNeeded(page);
 
     // Add something to Grid A via UI
     await page.locator('#measures .cell').first().click();

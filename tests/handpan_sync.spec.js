@@ -16,8 +16,8 @@ test.describe('Virtual Handpan Synchronization', () => {
     // 2. Clear both grids just in case
     await clearGrid(page, 'A');
     await clearGrid(page, 'B');
-    // Restore the handpan — clearGrid/#dualModeBtn needed the controls panel
-    // open on mobile, which relocates into (and hides) the handpan's slot.
+    // Restore the handpan — clearGrid('A') needed the controls panel open
+    // on mobile, which relocates into (and hides) the handpan's slot.
     await closeMobileControlsIfNeeded(page);
 
     // 3. Add a note ONLY to Grid B

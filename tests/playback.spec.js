@@ -1,6 +1,6 @@
 // @ts-check
 const { test, expect } = require('@playwright/test');
-const { gotoStudio, setBpm } = require('./helpers');
+const { gotoStudio, setBpm, clickMetroToggle } = require('./helpers');
 
 test.describe('Playback & Controls', () => {
 
@@ -47,13 +47,13 @@ test.describe('Playback & Controls', () => {
   test('Metronome Toggle', async ({ page }) => {
     const metroBtn = page.locator('#mainTransport-A .t-metro-btn');
 
-    // 1. Toggle On (use evaluate to bypass headless click restrictions)
-    await page.evaluate(() => document.querySelector('#mainTransport-A .t-metro-btn').click());
+    // 1. Toggle On
+    await clickMetroToggle(page, '#mainTransport-A');
     await expect(metroBtn).toHaveClass(/active/);
 
     // 2. Toggle Off (click twice more to cycle through states: Click -> Shaker -> Off)
-    await page.evaluate(() => document.querySelector('#mainTransport-A .t-metro-btn').click());
-    await page.evaluate(() => document.querySelector('#mainTransport-A .t-metro-btn').click());
+    await clickMetroToggle(page, '#mainTransport-A');
+    await clickMetroToggle(page, '#mainTransport-A');
     await expect(metroBtn).not.toHaveClass(/active/);
   });
 

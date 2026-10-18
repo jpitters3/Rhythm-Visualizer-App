@@ -19,6 +19,29 @@ async function setBpm(page, value, containerSelector = '#mainTransport-A') {
 }
 
 /**
+ * Clicks the metronome bell. On mobile (js/transport-ui.js), .t-metro-btn
+ * opens a submenu instead of toggling directly — the real toggle is
+ * .t-metro-toggle-row inside it, and toggleMetronome() closes that menu
+ * again after every click, so each call needs to reopen it. That menu isn't
+ * reachable as a descendant of containerSelector though: transport-ui.js
+ * reparents it to directly under <body> at construction time (clipping /
+ * position:fixed-containing-block reasons, its own comment explains), for
+ * every .transport-container that exists (A and B both, dual mode or not).
+ * Querying .show globally works anyway, since at most one menu is open at
+ * a time. A no-op extra step on desktop, where the bell toggles directly
+ * and this menu is never shown, so clicking the row too, if present, is
+ * harmless either way.
+ */
+async function clickMetroToggle(page, containerSelector = '#mainTransport-A') {
+  const metroBtn = page.locator(`${containerSelector} .t-metro-btn`);
+  await metroBtn.click();
+  const openMenu = page.locator('.t-metro-menu.show');
+  if (await openMenu.count() > 0) {
+    await openMenu.locator('.t-metro-toggle-row').click();
+  }
+}
+
+/**
  * #primaryControlsWrapper (clear/groove/label-notation/compose buttons etc.)
  * is hidden entirely on mobile viewports (css/controls.css) — reachable only
  * by first opening it via #mobileControlsBtn (js/mobile-menu.js), which
@@ -51,12 +74,32 @@ async function closeMobileControlsIfNeeded(page) {
 }
 
 /**
+ * #appNav (the nav links — Dashboard, Studio, Practice, Courses,
+ * Composer...) is a collapsed hamburger menu on mobile — #mobileMenuBtn
+ * toggles it open (js/mobile-menu.js). A no-op on desktop, where it's
+ * always visible. Call this before clicking any .nav-link.
+ */
+async function openNavIfNeeded(page) {
+  const menuBtn = page.locator('#mobileMenuBtn');
+  if (!(await menuBtn.isVisible().catch(() => false))) return;
+  const isOpen = await page.locator('#appNav').evaluate(el => el.classList.contains('open')).catch(() => false);
+  if (!isOpen) await menuBtn.click();
+}
+
+/**
  * Clicks the clear button for the given grid and confirms the custom dialog.
  * The app uses a custom #confirmModal instead of the native browser confirm,
- * so we must wait for it to open and click OK.
+ * so we must wait for it to open and click OK. Only #clearBtn-A lives inside
+ * #primaryControlsWrapper (index.html) — #clearBtn-B is a separate,
+ * always-in-flow element that the mobile controls panel, when open,
+ * visually covers and intercepts clicks on instead of helping reach.
  */
 async function clearGrid(page, gridId = 'A') {
-  await openMobileControlsIfNeeded(page);
+  if (gridId === 'A') {
+    await openMobileControlsIfNeeded(page);
+  } else {
+    await closeMobileControlsIfNeeded(page);
+  }
   await page.click(`#clearBtn-${gridId}`);
   await page.locator('#confirmModal.open').waitFor({ timeout: 5000 });
   await page.click('#confirmOkBtn');
@@ -101,4 +144,4 @@ async function gotoStudio(page) {
   await page.goto('/#studio');
 }
 
-module.exports = { clearGrid, gotoStudio, openMobileControlsIfNeeded, closeMobileControlsIfNeeded, setBpm };
+module.exports = { clearGrid, gotoStudio, openMobileControlsIfNeeded, closeMobileControlsIfNeeded, setBpm, clickMetroToggle };

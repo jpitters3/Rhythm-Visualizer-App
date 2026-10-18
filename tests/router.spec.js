@@ -1,6 +1,6 @@
 const { test, expect } = require('@playwright/test');
 const { createTestUser, deleteTestUser, loginAsTestUser } = require('./utils/auth-helper');
-const { gotoStudio } = require('./helpers');
+const { gotoStudio, openNavIfNeeded } = require('./helpers');
 
 test.describe('SPA Routing', () => {
   test.describe('guest', () => {
@@ -32,8 +32,7 @@ test.describe('SPA Routing', () => {
     });
 
     test('should switch to dashboard view when hash changes', async ({ page }) => {
-      // #navDashboardBtn is a plain top-level nav link, not inside the account
-      // dropdown — no need to open anything first.
+      await openNavIfNeeded(page);
       await page.locator('#navDashboardBtn').click();
 
       await expect(page).toHaveURL(/.*#dashboard/);
@@ -48,6 +47,7 @@ test.describe('SPA Routing', () => {
 
       // Navigate back to Studio via the real nav link (the old "Free Play
       // Engine" dashboard card this test used to click no longer exists).
+      await openNavIfNeeded(page);
       await page.locator('a[data-route="studio"]').click();
 
       await expect(page).toHaveURL(/.*#studio/);
