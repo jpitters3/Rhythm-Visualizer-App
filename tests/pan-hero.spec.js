@@ -28,10 +28,23 @@ async function seedPattern(page) {
   return gridA;
 }
 
-test('Pan Hero: desktop menu → open, re-parent + pin pan, auto-play', async ({ page }) => {
+// .handpan-tabs [data-pan-hero] is desktop-only — #handpanOptionsBtn
+// ("mobile-only" class, index.html) is the real way to reach it on mobile,
+// via its own #handpanOptionsMenu [data-pan-hero] duplicate.
+async function openPanHero(page) {
+  if (await page.locator('#handpanOptionsBtn').isVisible()) {
+    await page.click('#handpanOptionsBtn');
+    await page.waitForSelector('#handpanOptionsMenu.show');
+    await page.click('#handpanOptionsMenu [data-pan-hero]');
+  } else {
+    await page.click('.handpan-tabs [data-pan-hero]');
+  }
+}
+
+test('Pan Hero: desktop menu → open, re-parent + pin pan, auto-play', async ({ page, isMobile }) => {
   const gridA = await seedPattern(page);
 
-  await page.click('.handpan-tabs [data-pan-hero]');
+  await openPanHero(page);
   await page.waitForTimeout(300);
 
   await expect(page.locator('#panHeroOverlay')).toBeVisible();
@@ -40,7 +53,10 @@ test('Pan Hero: desktop menu → open, re-parent + pin pan, auto-play', async ({
   expect(await page.evaluate(g => g.playing, gridA)).toBe(true);
 
   // Backing store matches the CSS box (DPR-capped). On desktop the canvas is a
-  // centred column narrower than the viewport.
+  // centred column narrower than the viewport — below the 900px breakpoint
+  // (css/pan-hero.css) that's deliberately not true: a full-viewport canvas
+  // is cheap enough there, and narrowing it is a desktop-only perf
+  // optimization (full-viewport repaint cost on large displays).
   const canvasInfo = await page.evaluate(() => {
     const c = document.getElementById('panHeroCanvas');
     const r = c.getBoundingClientRect();
@@ -52,14 +68,14 @@ test('Pan Hero: desktop menu → open, re-parent + pin pan, auto-play', async ({
     };
   });
   expect(canvasInfo.matchesBox).toBe(true);
-  expect(canvasInfo.narrowerThanViewport).toBe(true);
+  expect(canvasInfo.narrowerThanViewport).toBe(!isMobile);
 });
 
 test('Pan Hero: Escape closes and fully restores state', async ({ page }) => {
   const gridA = await seedPattern(page);
   const sidePref = await page.evaluate(() => localStorage.getItem('gp_handpanSide'));
 
-  await page.click('.handpan-tabs [data-pan-hero]');
+  await openPanHero(page);
   await page.waitForTimeout(400);
   await page.keyboard.press('Escape');
   await page.waitForTimeout(300);
@@ -74,7 +90,7 @@ test('Pan Hero: Escape closes and fully restores state', async ({ page }) => {
 
 test('Pan Hero: exit button also closes', async ({ page }) => {
   await seedPattern(page);
-  await page.click('.handpan-tabs [data-pan-hero]');
+  await openPanHero(page);
   await page.waitForTimeout(300);
   await page.click('#panHeroExit');
   await page.waitForTimeout(300);

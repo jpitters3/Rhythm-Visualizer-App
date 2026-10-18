@@ -13,7 +13,7 @@ test.describe('AI Assistant', () => {
 
   test('should open and show welcome message', async ({ page }) => {
     // 1. Locate and click FAB
-    const fab = page.locator('#aiFab');
+    const fab = page.locator('[data-action="toggle-ai"]:visible');
     await expect(fab).toBeVisible();
     await fab.click();
 
@@ -29,7 +29,7 @@ test.describe('AI Assistant', () => {
 
   test('should send a message and receive a response', async ({ page }) => {
     // 1. Open Chat
-    await page.click('#aiFab');
+    await page.click('[data-action="toggle-ai"]:visible');
 
     // 2. Type message
     const input = page.locator('#aiInput');
@@ -59,7 +59,7 @@ test.describe('AI Assistant', () => {
 
   test('should close the chat', async ({ page }) => {
     // 1. Open
-    await page.click('#aiFab');
+    await page.click('[data-action="toggle-ai"]:visible');
     await expect(page.locator('#aiChatContainer')).toHaveClass(/open/);
 
     // 2. Click Close
@@ -76,7 +76,7 @@ test.describe('AI Assistant', () => {
     await page.waitForTimeout(10000);
 
     // 1. Open Chat
-    await page.click('#aiFab');
+    await page.click('[data-action="toggle-ai"]:visible');
 
     // 2. Type message
     const input = page.locator('#aiInput');

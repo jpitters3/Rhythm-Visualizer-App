@@ -91,7 +91,12 @@ test.describe('Calibration Feature', () => {
     }
   });
 
-  test.afterEach(async ({ page }) => {
+  test.afterEach(async ({ page, isMobile }) => {
+    // beforeEach test.skip()s on mobile before ever navigating the page, so
+    // it's still on about:blank here — an opaque origin where localStorage
+    // access throws, not just an empty one.
+    if (isMobile) return;
+
     // Clear browser session to prevent test interference
     await page.context().clearCookies();
     await page.evaluate(() => localStorage.clear());
