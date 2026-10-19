@@ -8,6 +8,7 @@
     "preview": "vite preview",
     "test": "npx playwright test",
     "test:ui": "npx playwright test --ui",
+    "test:smoke": "npx playwright test --grep @smoke --project=chromium --project=\"Mobile Chrome\"",
     "test:report": "npx playwright show-report",
     "lint": "eslint .",
     "prepare": "husky",

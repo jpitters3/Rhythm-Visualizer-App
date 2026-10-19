@@ -42,7 +42,7 @@ test.describe('Grid Mechanics', () => {
     await expect(cell2).toHaveClass(/range/);
   });
 
-  test('Note Entry Types', async ({ page }) => {
+  test('Note Entry Types', { tag: '@smoke' }, async ({ page }) => {
     const cell = page.locator('.cell').nth(0);
     await cell.click();
 

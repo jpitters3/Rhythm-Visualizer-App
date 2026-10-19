@@ -9,7 +9,7 @@ test.describe('Playback & Controls', () => {
     await page.waitForSelector('.measure-row');
   });
 
-  test('Play Start/Stop', async ({ page }) => {
+  test('Play Start/Stop', { tag: '@smoke' }, async ({ page }) => {
     const playBtn = page.locator('#mainTransport-A .t-play-btn');
 
     // 1. Initial State: Stopped
@@ -103,7 +103,7 @@ test.describe('Playback & Controls', () => {
   /* 
    * Sample Loading 
    */
-  test('Sample Loading: Assets load check', async ({ page }) => {
+  test('Sample Loading: Assets load check', { tag: '@smoke' }, async ({ page }) => {
     // We monitor network requests to ensure audio files return 200
     // and that no console errors occurred regarding audio.
 

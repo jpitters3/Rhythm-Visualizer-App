@@ -61,7 +61,7 @@ test.describe('Pattern Management', () => {
     }
   }
 
-  test('Save and Load Pattern', async ({ page }) => {
+  test('Save and Load Pattern', { tag: '@smoke' }, async ({ page }) => {
     const uniqueName = `Test Pattern ${Date.now()}`;
 
     // 1. Create a Pattern

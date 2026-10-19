@@ -9,7 +9,7 @@ const admin = createClient(process.env.VITE_SUPABASE_URL, process.env.SUPABASE_S
 // (description / video / pattern preview) when a lesson is opened. Previously
 // untested — see project_test_coverage memo item "Courses lesson player".
 for (const asAdmin of [false, true]) {
-  test(`lesson player shows description + video + pattern (${asAdmin ? 'admin' : 'student'})`, async ({ page }) => {
+  test(`lesson player shows description + video + pattern (${asAdmin ? 'admin' : 'student'})`, { tag: '@smoke' }, async ({ page }) => {
     test.setTimeout(120000);
     const errors = [];
     page.on('pageerror', e => errors.push(e.message));

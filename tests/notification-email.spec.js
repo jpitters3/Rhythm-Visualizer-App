@@ -118,7 +118,7 @@ test.describe('Notification email', () => {
     if (studentUser) await deleteTestUser(studentUser.user.id);
   });
 
-  test('publishing an assignment sends email with student user IDs', async ({ page }) => {
+  test('publishing an assignment sends email with student user IDs', { tag: '@smoke' }, async ({ page }) => {
     test.setTimeout(150_000);
     const ts = Date.now();
 
