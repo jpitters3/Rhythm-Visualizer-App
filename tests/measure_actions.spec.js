@@ -14,7 +14,7 @@ test.describe('Measure Actions', () => {
   /* 
    * 1. Measure Actions 
    */
-  test('Measure Actions: Add and Delete', async ({ page }) => {
+  test('Measure Actions: Add and Delete', { tag: '@core' }, async ({ page }) => {
     // Initial state
     const getCellCount = async () => await page.locator('#measures .cell').count();
 

@@ -23,7 +23,7 @@ test.describe('Grid Mechanics', () => {
     await clearGrid(page, 'A');
   });
 
-  test('Range Selection', async ({ page }) => {
+  test('Range Selection', { tag: '@core' }, async ({ page }) => {
     const cell0 = page.locator('.cell').nth(0);
     const cell2 = page.locator('.cell').nth(2);
 
@@ -61,7 +61,7 @@ test.describe('Grid Mechanics', () => {
     await expect(cell.locator('.inner')).toHaveText('S');
   });
 
-  test('Copy and Paste', async ({ page }) => {
+  test('Copy and Paste', { tag: '@core' }, async ({ page }) => {
     // Meta = Command on macOS but the Windows key on Linux (where CI runs),
     // which doesn't trigger copy/paste there — use the actual OS-correct
     // modifier instead of hardcoding one.

@@ -2,6 +2,7 @@
 /**
  * Shared Playwright test helpers
  */
+const { expect } = require('@playwright/test');
 
 /**
  * Sets BPM via .t-bpm-num (the number input), not .t-bpm-input (the range
@@ -87,6 +88,39 @@ async function openNavIfNeeded(page) {
 }
 
 /**
+ * Clicks a top-nav route link (Dashboard/Studio/Library/Community) the way a
+ * user would, opening the mobile hamburger menu first if needed and closing it
+ * again afterward if the click didn't, so it can't cover the page.
+ */
+async function navigateTo(page, route) {
+  await openNavIfNeeded(page);
+  await page.locator(`#appNav a[data-route="${route}"]`).click();
+  await page.waitForURL(`**/#${route}`);
+  const menuBtn = page.locator('#mobileMenuBtn');
+  if (await menuBtn.isVisible().catch(() => false)) {
+    const nav = page.locator('#appNav');
+    if (await nav.evaluate(el => el.classList.contains('open'))) await menuBtn.click();
+    await expect(nav).not.toHaveClass(/open/);
+  }
+}
+
+/**
+ * Same as navigateTo, for the nav buttons that open a side panel instead of a
+ * route (Courses: #toggleSidebarBtn, Composer: #toggleComposerBtn,
+ * Practice: #toggleExercisesBtn). Waits for `panelSelector` to open.
+ */
+async function openNavPanel(page, buttonSelector, panelSelector) {
+  await openNavIfNeeded(page);
+  await page.locator(buttonSelector).click();
+  await expect(page.locator(panelSelector)).toHaveClass(/open/);
+  const menuBtn = page.locator('#mobileMenuBtn');
+  if (await menuBtn.isVisible().catch(() => false)) {
+    const nav = page.locator('#appNav');
+    if (await nav.evaluate(el => el.classList.contains('open'))) await menuBtn.click();
+  }
+}
+
+/**
  * Clicks the clear button for the given grid and confirms the custom dialog.
  * The app uses a custom #confirmModal instead of the native browser confirm,
  * so we must wait for it to open and click OK. Only #clearBtn-A lives inside
@@ -159,4 +193,4 @@ async function toggleItemCard(card) {
   await card.locator('[data-action="item-toggle"]').evaluate((/** @type {HTMLElement} */ el) => el.click());
 }
 
-module.exports = { clearGrid, gotoStudio, openMobileControlsIfNeeded, closeMobileControlsIfNeeded, setBpm, clickMetroToggle, openNavIfNeeded, toggleItemCard };
+module.exports = { clearGrid, gotoStudio, openMobileControlsIfNeeded, closeMobileControlsIfNeeded, setBpm, clickMetroToggle, openNavIfNeeded, toggleItemCard, navigateTo, openNavPanel };

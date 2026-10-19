@@ -37,7 +37,7 @@ test.describe('Course Marketplace', () => {
     }
   });
 
-  test('Unlock a free course from the Marketplace', async ({ page }) => {
+  test('Unlock a free course from the Marketplace', { tag: '@core' }, async ({ page }) => {
     // 1. Seed a new free course via Admin client
     const courseTitle = `Test Marketplace Course ${Date.now()}`;
     const { data: course, error } = await supabaseAdmin

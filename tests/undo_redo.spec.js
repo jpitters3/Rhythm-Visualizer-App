@@ -51,7 +51,7 @@ test.describe('Undo/Redo Features', () => {
     await page.waitForSelector('.measure-row');
   });
 
-  test('Undo/Redo Note Entry', async ({ page }) => {
+  test('Undo/Redo Note Entry', { tag: '@core' }, async ({ page }) => {
     // 1. Initial State: grid empty
     // (Assuming default empty grid or we clear it)
     await clearGrid(page, 'A');
@@ -93,7 +93,7 @@ test.describe('Undo/Redo Features', () => {
       if (testUser) await deleteTestUser(testUser.user.id);
     });
 
-    test('Data Loss Prevention', async ({ page }) => {
+    test('Data Loss Prevention', { tag: '@core' }, async ({ page }) => {
       // 1. Clean state
       await clearGrid(page, 'A');
 

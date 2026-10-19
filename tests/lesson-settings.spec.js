@@ -70,7 +70,7 @@ test.describe('Lesson Settings (Reset/Restore)', () => {
     await deleteTestUser(u.user.id);
   });
 
-  async function openLesson(page, l, isMobile) {
+  async function openLesson(page, l, isMobile, { freeGrid = true } = {}) {
     // Self-contained open/close around the click — #courseSidebar starts
     // (and ends, see beforeEach/this function) closed, and on a narrow
     // mobile viewport it overlays the full width, intercepting every click
@@ -84,11 +84,15 @@ test.describe('Lesson Settings (Reset/Restore)', () => {
     }
 
     const link = page.locator(`.lesson-link[data-id="${l.id}"]`);
-    await link.scrollIntoViewIfNeeded();
     await link.click();
     await expect(page.locator('#lessonContent')).toBeVisible();
 
-    if (await sidebar.evaluate(el => el.classList.contains('open'))) {
+    // Loading a lesson closes the course list by itself (openLessonSidebar()).
+    // Only toggle it shut by hand if that doesn't happen (the unsaved-changes
+    // prompt holds the load) — toggling while the app is mid-switch reopens it.
+    try {
+      await expect(sidebar).not.toHaveClass(/open/, { timeout: 3000 });
+    } catch {
       await page.evaluate(() => document.getElementById('toggleSidebarBtn')?.click());
       await expect(sidebar).not.toHaveClass(/open/);
     }
@@ -96,8 +100,9 @@ test.describe('Lesson Settings (Reset/Restore)', () => {
     // #lessonPlayer (js/courses.js's openLessonSidebar()) opens automatically
     // on every lesson click, and at 360px fixed width (css/courses.css)
     // covers nearly all of a narrow mobile viewport, intercepting clicks on
-    // #measures behind it
-    if (isMobile) {
+    // #measures behind it. Pass { freeGrid: false } when the next steps use the
+    // Reset/Restore strip instead, since it lives inside this same panel.
+    if (isMobile && freeGrid) {
       const lessonPlayer = page.locator('#lessonPlayer');
       if (await lessonPlayer.evaluate(el => el.classList.contains('open'))) {
         await page.keyboard.press('Escape');
@@ -126,7 +131,7 @@ test.describe('Lesson Settings (Reset/Restore)', () => {
     }
   }
 
-  test('BPM-only change: save prompt, override persists, Reset/Restore round-trip', async ({ page, isMobile }) => {
+  test('BPM-only change: save prompt, override persists, Reset/Restore round-trip', { tag: '@core' }, async ({ page, isMobile }) => {
     await openLesson(page, lesson, isMobile);
 
     const bpmInput = page.locator('#mainTransport-A .t-bpm-num');
@@ -165,7 +170,7 @@ test.describe('Lesson Settings (Reset/Restore)', () => {
     // (un-doubled) custom_bpm back to the doubled display domain, so the
     // transport bar shows the original '128' the student typed either way.
     await openSidebar(page);
-    await openLesson(page, lesson, isMobile);
+    await openLesson(page, lesson, isMobile, { freeGrid: false });
     await expect(bpmInput).toHaveValue('128');
     await expect(page.locator('#lessonResetBtn')).toBeVisible();
     await expect(page.locator('#lessonSettingsControl')).toContainText('90');
@@ -181,7 +186,7 @@ test.describe('Lesson Settings (Reset/Restore)', () => {
     await expect(bpmInput).toHaveValue('128');
   });
 
-  test('Phrase edit: saves to the student\'s own library under the chosen name, Reset/Restore round-trip', async ({ page, isMobile }) => {
+  test('Phrase edit: saves to the student\'s own library under the chosen name, Reset/Restore round-trip', { tag: '@core' }, async ({ page, isMobile }) => {
     await openLesson(page, lesson, isMobile);
 
     const cell1 = page.locator('#measures .cell').nth(1);
@@ -215,7 +220,7 @@ test.describe('Lesson Settings (Reset/Restore)', () => {
     // Revisiting lesson 1: the custom phrase loads, and the Reset strip
     // shows the real saved name, not a generic "edited".
     await openSidebar(page);
-    await openLesson(page, lesson, isMobile);
+    await openLesson(page, lesson, isMobile, { freeGrid: false });
     await expect(cell1.locator('.inner')).toHaveText('2');
     await expect(page.locator('#lessonSettingsControl')).toContainText('saved as "My Faster Version"');
 
@@ -229,7 +234,7 @@ test.describe('Lesson Settings (Reset/Restore)', () => {
     await expect(cell1.locator('.inner')).toHaveText('2');
   });
 
-  test('Non-lesson Studio use keeps the plain binary discard confirm', async ({ page }) => {
+  test('Non-lesson Studio use keeps the plain binary discard confirm', { tag: '@core' }, async ({ page }) => {
     // beforeEach never loads a lesson — no lesson context is active here,
     // so this exercises the general (non-lesson) Studio path.
     const cell0 = page.locator('#measures .cell').nth(0);

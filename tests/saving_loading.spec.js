@@ -67,6 +67,9 @@ test.describe('Pattern Management', () => {
     // 1. Create a Pattern
     const cell0 = page.locator('.cell').nth(0);
     await cell0.click();
+    // Wait for the cell to actually take the selection before typing — on
+    // Mobile Safari a keypress right after the tap can land before it does.
+    await expect(cell0).toHaveClass(/selected/);
     await page.keyboard.press('1');
     await expect(cell0.locator('.inner')).toHaveText('1');
 
@@ -169,7 +172,7 @@ test.describe('Pattern Management', () => {
     }
   }
 
-  test('Measure settings (beats × subdivision) persist per-phrase', async ({ page, isMobile }) => {
+  test('Measure settings (beats × subdivision) persist per-phrase', { tag: '@core' }, async ({ page, isMobile }) => {
     const phrase1Name = `4-Quarter ${Date.now()}`;
     const phrase2Name = `7-Eighth ${Date.now()}`;
 
@@ -200,7 +203,7 @@ test.describe('Pattern Management', () => {
     await expect.poll(() => getMeasureSettings(page)).toEqual({ beats: '7', subdivision: expectedSubdivision });
   });
 
-  test('Delete Pattern', async ({ page }) => {
+  test('Delete Pattern', { tag: '@core' }, async ({ page }) => {
     const uniqueName = `Delete Me ${Date.now()}`;
 
     // 1. Save dummy pattern

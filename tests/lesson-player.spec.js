@@ -41,7 +41,6 @@ for (const asAdmin of [false, true]) {
       await page.waitForSelector('#courseSidebar.open', { timeout: 10000 });
       await page.locator(`.course-item[data-id="${course.id}"]`).click();
       const lessonLink = page.locator(`.lesson-link[data-id="${lesson.id}"]`);
-      await lessonLink.scrollIntoViewIfNeeded();
       await lessonLink.click();
 
       await expect(page.locator('#lessonContent')).toBeVisible();
