@@ -361,6 +361,16 @@ export function renderCourseSidebar(courses) {
 
   // Re-apply admin UI because we just injected new admin-only elements
   updateAdminUI();
+  // The list can re-render while the student is mid-search (e.g. a second
+  // fetch after login) — keep their filter instead of silently clearing it.
+  applyLessonSearch();
+}
+
+function applyLessonSearch() {
+  const term = (document.getElementById('courseSearchInput')?.value || '').toLowerCase();
+  document.querySelectorAll('#courseList .lesson-link').forEach(link => {
+    link.style.display = !term ? '' : link.textContent.toLowerCase().includes(term) ? 'flex' : 'none';
+  });
 }
 
 export async function setActiveCourse(courseId) {
@@ -1109,17 +1119,7 @@ export function initCourses() {
     openMarketplace();
   });
 
-  const searchInput = document.getElementById('courseSearchInput');
-  if (searchInput) {
-    searchInput.addEventListener('input', (e) => {
-      const term = e.target.value.toLowerCase();
-      const lessonLinks = document.querySelectorAll('.lesson-link');
-      lessonLinks.forEach(link => {
-        const text = link.textContent.toLowerCase();
-        link.style.display = text.includes(term) ? 'flex' : 'none';
-      });
-    });
-  }
+  document.getElementById('courseSearchInput')?.addEventListener('input', applyLessonSearch);
 
   // BUS LISTENERS
   Bus.on(BUS_EVENT.AUTH_LOGOUT, () => {
