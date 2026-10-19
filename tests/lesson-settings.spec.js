@@ -70,7 +70,7 @@ test.describe('Lesson Settings (Reset/Restore)', () => {
     await deleteTestUser(u.user.id);
   });
 
-  async function openLesson(page, l) {
+  async function openLesson(page, l, isMobile) {
     // Self-contained open/close around the click — #courseSidebar starts
     // (and ends, see beforeEach/this function) closed, and on a narrow
     // mobile viewport it overlays the full width, intercepting every click
@@ -96,15 +96,21 @@ test.describe('Lesson Settings (Reset/Restore)', () => {
     // #lessonPlayer (js/courses.js's openLessonSidebar()) opens automatically
     // on every lesson click, and at 360px fixed width (css/courses.css)
     // covers nearly all of a narrow mobile viewport, intercepting clicks on
-    // #measures behind it. Its own close button (#closeLessonBtn) also nulls
-    // out currentLesson (js/courses.js's closeLessonSidebar), which would
-    // break the lesson-scoped save guard these tests rely on — Escape
-    // instead just collapses the panel via Sidepanel.closeTopmost(), with no
-    // side effects beyond that.
-    const lessonPlayer = page.locator('#lessonPlayer');
-    if (await lessonPlayer.evaluate(el => el.classList.contains('open'))) {
-      await page.keyboard.press('Escape');
-      await expect(lessonPlayer).not.toHaveClass(/open/);
+    // #measures behind it. On desktop it doesn't overlap #measures at all —
+    // closing it there is both unnecessary and actively wrong, since
+    // #lessonResetBtn/#lessonRestoreBtn (js/lesson-settings.js's Reset strip)
+    // live inside this same panel and later steps need to click them. Its
+    // own close button (#closeLessonBtn) also nulls out currentLesson
+    // (js/courses.js's closeLessonSidebar), which would break the lesson-
+    // scoped save guard these tests rely on — Escape instead just collapses
+    // the panel via Sidepanel.closeTopmost(), with no side effects beyond
+    // that, so it's safe to use on mobile only, where it's actually needed.
+    if (isMobile) {
+      const lessonPlayer = page.locator('#lessonPlayer');
+      if (await lessonPlayer.evaluate(el => el.classList.contains('open'))) {
+        await page.keyboard.press('Escape');
+        await expect(lessonPlayer).not.toHaveClass(/open/);
+      }
     }
   }
 
@@ -129,7 +135,7 @@ test.describe('Lesson Settings (Reset/Restore)', () => {
   }
 
   test('BPM-only change: save prompt, override persists, Reset/Restore round-trip', async ({ page, isMobile }) => {
-    await openLesson(page, lesson);
+    await openLesson(page, lesson, isMobile);
 
     const bpmInput = page.locator('#mainTransport-A .t-bpm-num');
     await bpmInput.fill('128');
@@ -152,7 +158,7 @@ test.describe('Lesson Settings (Reset/Restore)', () => {
     // save-prompt, not the old plain "Discard unsaved changes?" — with a
     // diff line for the BPM change.
     await openSidebar(page);
-    await openLesson(page, lesson2);
+    await openLesson(page, lesson2, isMobile);
     await expect(page.locator('#lessonSaveChangesModal')).toHaveClass(/open/);
     await expect(page.locator('#lessonSaveDiffList')).toContainText('90');
     await expect(page.locator('#lessonSaveDiffList')).toContainText(savedBpm);
@@ -167,7 +173,7 @@ test.describe('Lesson Settings (Reset/Restore)', () => {
     // (un-doubled) custom_bpm back to the doubled display domain, so the
     // transport bar shows the original '128' the student typed either way.
     await openSidebar(page);
-    await openLesson(page, lesson);
+    await openLesson(page, lesson, isMobile);
     await expect(bpmInput).toHaveValue('128');
     await expect(page.locator('#lessonResetBtn')).toBeVisible();
     await expect(page.locator('#lessonSettingsControl')).toContainText('90');
@@ -183,8 +189,8 @@ test.describe('Lesson Settings (Reset/Restore)', () => {
     await expect(bpmInput).toHaveValue('128');
   });
 
-  test('Phrase edit: saves to the student\'s own library under the chosen name, Reset/Restore round-trip', async ({ page }) => {
-    await openLesson(page, lesson);
+  test('Phrase edit: saves to the student\'s own library under the chosen name, Reset/Restore round-trip', async ({ page, isMobile }) => {
+    await openLesson(page, lesson, isMobile);
 
     const cell1 = page.locator('#measures .cell').nth(1);
     await cell1.click();
@@ -192,7 +198,7 @@ test.describe('Lesson Settings (Reset/Restore)', () => {
     await expect(cell1.locator('.inner')).toHaveText('2');
 
     await openSidebar(page);
-    await openLesson(page, lesson2);
+    await openLesson(page, lesson2, isMobile);
     await expect(page.locator('#lessonSaveChangesModal')).toHaveClass(/open/);
     await expect(page.locator('#lessonSaveDiffList')).toContainText('edited');
 
@@ -217,7 +223,7 @@ test.describe('Lesson Settings (Reset/Restore)', () => {
     // Revisiting lesson 1: the custom phrase loads, and the Reset strip
     // shows the real saved name, not a generic "edited".
     await openSidebar(page);
-    await openLesson(page, lesson);
+    await openLesson(page, lesson, isMobile);
     await expect(cell1.locator('.inner')).toHaveText('2');
     await expect(page.locator('#lessonSettingsControl')).toContainText('saved as "My Faster Version"');
 
