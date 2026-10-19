@@ -60,7 +60,6 @@ pushed to the wrong project because of whatever I had linked last" risk.
 | `VITE_SUPABASE_URL_STAGING` | `https://mececymulqnvmaqbcnok.supabase.co` |
 | `VITE_SUPABASE_ANON_KEY_STAGING` | staging project's anon/publishable key |
 | `SUPABASE_SERVICE_ROLE_KEY_STAGING` | staging project's service role key (used by tests that create/delete users) |
-| `TEST_EMAIL`, `TEST_PASSWORD` | test account credentials (same as used locally) |
 | `RESEND_API_KEY` | used by the email-delivery smoke test |
 
 ### Manual Netlify setup

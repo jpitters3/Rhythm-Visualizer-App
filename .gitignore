@@ -3,6 +3,7 @@ node_modules/
 .vscode/
 playwright-report/
 test-results/
+blob-report/
 
 # Vite
 dist/
