@@ -1,5 +1,5 @@
 const { test, expect } = require('@playwright/test');
-const { gotoStudio } = require('./helpers');
+const { gotoStudio, openMobileControlsIfNeeded } = require('./helpers');
 const { createTestUser, deleteTestUser, loginAsTestUser } = require('./utils/auth-helper');
 
 test.describe('Pattern Management', () => {
@@ -25,7 +25,7 @@ test.describe('Pattern Management', () => {
   async function openPhraseMenu(page) {
     // On mobile: open hamburger menu first
     if (await page.locator('#mobileMenuBtn').isVisible()) {
-      const menu = page.locator('#headerMenu');
+      const menu = page.locator('#appNav');
       if (!await menu.evaluate(el => el.classList.contains('open'))) {
         await page.click('#mobileMenuBtn');
         await expect(menu).toHaveClass(/open/, { timeout: 2000 });
@@ -53,7 +53,7 @@ test.describe('Pattern Management', () => {
     }
     // On mobile: close hamburger menu
     if (await page.locator('#mobileMenuBtn').isVisible()) {
-      const menu = page.locator('#headerMenu');
+      const menu = page.locator('#appNav');
       if (await menu.evaluate(el => el.classList.contains('open'))) {
         await page.click('#mobileMenuBtn');
         await expect(menu).not.toHaveClass(/open/);
@@ -61,12 +61,15 @@ test.describe('Pattern Management', () => {
     }
   }
 
-  test('Save and Load Pattern', async ({ page }) => {
+  test('Save and Load Pattern', { tag: '@smoke' }, async ({ page }) => {
     const uniqueName = `Test Pattern ${Date.now()}`;
 
     // 1. Create a Pattern
     const cell0 = page.locator('.cell').nth(0);
     await cell0.click();
+    // Wait for the cell to actually take the selection before typing — on
+    // Mobile Safari a keypress right after the tap can land before it does.
+    await expect(cell0).toHaveClass(/selected/);
     await page.keyboard.press('1');
     await expect(cell0.locator('.inner')).toHaveText('1');
 
@@ -88,6 +91,7 @@ test.describe('Pattern Management', () => {
 
     // 3. Clear Grid
     await closeAccountMenu(page);
+    await openMobileControlsIfNeeded(page);
     await page.click('#clearBtn-A');
 
     // Handle Custom Modal Confirm
@@ -168,7 +172,7 @@ test.describe('Pattern Management', () => {
     }
   }
 
-  test('Measure settings (beats × subdivision) persist per-phrase', async ({ page }) => {
+  test('Measure settings (beats × subdivision) persist per-phrase', { tag: '@core' }, async ({ page, isMobile }) => {
     const phrase1Name = `4-Quarter ${Date.now()}`;
     const phrase2Name = `7-Eighth ${Date.now()}`;
 
@@ -182,6 +186,13 @@ test.describe('Pattern Management', () => {
     await setMeasureSettings(page, 7, 2);
     await savePhraseAs(page, phrase2Name);
 
+    // On mobile, applyPattern() (js/pattern-crud.js normalizeMobileSubdivision)
+    // collapses any subdivision > 1 down to quarter notes and scales BPM to
+    // compensate, remembering the original in ctx.mobileOriginalSubdivision
+    // so a later save can reverse it — so the select itself reads back '1'
+    // on mobile even though '2' was saved.
+    const expectedSubdivision = isMobile ? '1' : '2';
+
     // Load phrase 1 back and confirm ITS settings come back, not phrase 2's
     // or the fixed new-phrase default.
     await loadPhrase(page, phrase1Name);
@@ -189,10 +200,10 @@ test.describe('Pattern Management', () => {
 
     // Load phrase 2 and confirm the same, the other way around.
     await loadPhrase(page, phrase2Name);
-    await expect.poll(() => getMeasureSettings(page)).toEqual({ beats: '7', subdivision: '2' });
+    await expect.poll(() => getMeasureSettings(page)).toEqual({ beats: '7', subdivision: expectedSubdivision });
   });
 
-  test('Delete Pattern', async ({ page }) => {
+  test('Delete Pattern', { tag: '@core' }, async ({ page }) => {
     const uniqueName = `Delete Me ${Date.now()}`;
 
     // 1. Save dummy pattern

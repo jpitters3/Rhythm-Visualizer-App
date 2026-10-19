@@ -270,9 +270,16 @@ test.describe('Invite → Enroll → Dashboard Workflow', () => {
       // Hero card shows the assignment. A reload right after the invite RPC
       // can outrace loadDashboard()'s own fetch seeing the just-created row —
       // reload and retry a few times instead of trusting a single fixed wait.
+      // js/router.js's hashchange listener (which triggers loadDashboard())
+      // only fires when the hash actually changes — once already on
+      // #dashboard, re-goto'ing the same hash is a no-op and leaves whatever
+      // got rendered by the very first (possibly too-early) load in place.
+      // A real reload always re-runs the app's bootstrap, so use that for
+      // every retry instead.
+      await sPage.goto('/#dashboard', { waitUntil: 'networkidle' });
       const heroCard = sPage.locator('#dashAssignmentCard');
       await expect(async () => {
-        await sPage.goto('/#dashboard', { waitUntil: 'networkidle' });
+        await sPage.reload({ waitUntil: 'networkidle' });
         await expect(heroCard).toBeVisible({ timeout: 3000 });
         await expect(heroCard).toContainText(seed.assignment.title, { timeout: 3000 });
       }).toPass({ timeout: 20000, intervals: [1000, 2000, 3000] });

@@ -1,14 +1,12 @@
 import { test, expect } from '@playwright/test';
-import { gotoStudio } from './helpers.js';
+import { gotoStudio, clearGrid, openMobileControlsIfNeeded } from './helpers.js';
 
 test.describe('Keyboard Shortcuts', () => {
   test.beforeEach(async ({ page }) => {
     await gotoStudio(page);
     await page.waitForSelector('.measure-row');
     // Clear any existing pattern
-    await page.click('#clearBtn-A');
-    await page.locator('#confirmModal.open').waitFor({ timeout: 5000 });
-    await page.click('#confirmOkBtn');
+    await clearGrid(page, 'A');
   });
 
   test('Space bar toggles play/pause', async ({ page }) => {
@@ -89,6 +87,7 @@ test.describe('Keyboard Shortcuts', () => {
 
   test('D/T/S keys write notes (with compose mode)', async ({ page }) => {
     // Enable compose mode for auto-advance
+    await openMobileControlsIfNeeded(page);
     await page.click('#composeBtn');
     await page.waitForTimeout(100);
 
@@ -114,6 +113,7 @@ test.describe('Keyboard Shortcuts', () => {
 
   test('Number keys write notes (with compose mode)', async ({ page }) => {
     // Enable compose mode for auto-advance
+    await openMobileControlsIfNeeded(page);
     await page.click('#composeBtn');
     await page.waitForTimeout(100);
 
@@ -134,6 +134,7 @@ test.describe('Keyboard Shortcuts', () => {
 
   test('Alt+key writes without advancing', async ({ page }) => {
     // Enable compose mode (so we can test that Alt prevents advance)
+    await openMobileControlsIfNeeded(page);
     await page.click('#composeBtn');
     await page.waitForTimeout(100);
 

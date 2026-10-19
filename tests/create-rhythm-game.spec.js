@@ -17,6 +17,13 @@ test.use({
   permissions: ['microphone'],
 });
 
+// WebKit doesn't support the 'microphone' permission string at all —
+// test.use({ permissions }) above throws "Unknown permission: microphone"
+// when creating the context, before any test body even runs.
+test.beforeEach(({ browserName }) => {
+  test.skip(browserName === 'webkit', "WebKit doesn't support programmatic microphone permission in Playwright");
+});
+
 async function openGame(page) {
   await page.waitForTimeout(1500);
   await page.evaluate(() => { window.location.hash = '#games'; });

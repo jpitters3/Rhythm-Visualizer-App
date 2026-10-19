@@ -1,15 +1,17 @@
 // @ts-check
 const { test, expect } = require('@playwright/test');
-const { gotoStudio } = require('./helpers');
+const { gotoStudio, clearGrid, closeMobileControlsIfNeeded } = require('./helpers');
 
 test.describe('Tap vs long-press cell selection', () => {
 
   test.beforeEach(async ({ page }) => {
     await gotoStudio(page);
     await page.waitForSelector('.measure-row');
-    await page.click('#clearBtn-A');
-    await page.locator('#confirmModal.open').waitFor({ timeout: 5000 });
-    await page.click('#confirmOkBtn');
+    await clearGrid(page, 'A');
+    // Restore the handpan — clearGrid needed the controls panel open on
+    // mobile, which relocates into (and hides) the handpan's own slot, and
+    // this file taps .hp-dot.
+    await closeMobileControlsIfNeeded(page);
   });
 
   test('Quick tap/click selects the cell', async ({ page, isMobile }) => {

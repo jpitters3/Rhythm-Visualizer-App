@@ -95,3 +95,17 @@ import './css/technique-flash-cards.css';
 import './js/technique-flash-cards.js';
 import './css/free-record.css';
 import './js/free-record.js';
+
+// Re-exported so Playwright (tests/pan-hero.spec.js,
+// tests/measure-duplicate-chord.spec.js) can reach the live singletons by
+// dynamically importing this entry chunk's actual deployed URL (discovered
+// at runtime via document.querySelector('script[type="module"]').src) — ES
+// module caching returns the same running instances, not fresh ones. This
+// works identically against Vite's dev server and a production build, where
+// a plain import of the source file path (e.g. '/js/grid-context.js') would
+// 404 once everything is bundled into hashed /assets/*.js chunks.
+export { gridA, gridB } from './js/grid-context.js';
+export { renderAllMeasures } from './js/notegrid.js';
+export { duplicateSelection } from './js/measure-actions.js';
+export { setRange } from './js/range-selection.js';
+export { HistoryManager } from './js/history.js';

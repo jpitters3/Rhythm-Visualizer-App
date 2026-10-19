@@ -10,6 +10,7 @@ dist/
 .env.local
 *.local
 .env.test
+.env.*.bak
 
 # Local dev HTTPS certs
 .certs/
@@ -17,3 +18,6 @@ dist/
 
 # Supabase CLI local link state (changes every `supabase link`)
 supabase/.temp/
+
+# Local Netlify folder
+.netlify

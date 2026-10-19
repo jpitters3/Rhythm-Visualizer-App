@@ -1,6 +1,6 @@
 // @ts-check
 const { test, expect } = require('@playwright/test');
-const { gotoStudio } = require('./helpers');
+const { gotoStudio, clearGrid } = require('./helpers');
 
 test.describe('Measure Actions', () => {
 
@@ -8,15 +8,13 @@ test.describe('Measure Actions', () => {
     await gotoStudio(page);
     await page.waitForSelector('.measure-row');
 
-    await page.click('#clearBtn-A');
-    await page.locator('#confirmModal.open').waitFor({ timeout: 5000 });
-    await page.click('#confirmOkBtn');
+    await clearGrid(page, 'A');
   });
 
   /* 
    * 1. Measure Actions 
    */
-  test('Measure Actions: Add and Delete', async ({ page }) => {
+  test('Measure Actions: Add and Delete', { tag: '@core' }, async ({ page }) => {
     // Initial state
     const getCellCount = async () => await page.locator('#measures .cell').count();
 
@@ -26,7 +24,12 @@ test.describe('Measure Actions', () => {
     expect(initialCells).toBeGreaterThan(0);
 
     // 1. ADD MEASURE
-    await page.click('#addMeasureBtn');
+    // #addMeasureBtn (index.html) is inside .measure-group.desktop-only — a
+    // second, class-only "addMeasureBtn hp-corner-btn" duplicate (no id)
+    // sits in the handpan panel's corner for mobile. Both are wired by the
+    // shared .addMeasureBtn class (js/measure-actions.js), so target
+    // whichever is actually visible instead of the desktop-only id.
+    await page.click('.addMeasureBtn:visible');
 
     // Wait for the new measure to appear
     const stepsPerMeasure = await page.locator('.measure-row').first().locator('.cell').count();
@@ -39,7 +42,7 @@ test.describe('Measure Actions', () => {
     await lastCell.scrollIntoViewIfNeeded();
     await lastCell.click();
 
-    await page.click('#delMeasureBtn');
+    await page.click('.delMeasureBtn:visible');
     await page.locator('#confirmModal.open').waitFor({ timeout: 5000 });
     await page.click('#confirmOkBtn');
 

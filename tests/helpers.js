@@ -2,13 +2,138 @@
 /**
  * Shared Playwright test helpers
  */
+const { expect } = require('@playwright/test');
+
+/**
+ * Sets BPM via .t-bpm-num (the number input), not .t-bpm-input (the range
+ * slider) — small phones hide the slider entirely (css/controls.css,
+ * @media max-width:430px) in favor of the number input + tap, so filling
+ * the slider directly only works on desktop. .t-bpm-num applies on
+ * blur/Enter rather than on input (js/transport-ui.js), and syncs
+ * .t-bpm-input's value either way, so this works on every viewport and
+ * leaves existing .toHaveValue() assertions on either input unaffected.
+ */
+async function setBpm(page, value, containerSelector = '#mainTransport-A') {
+  const bpmNum = page.locator(`${containerSelector} .t-bpm-num`);
+  await bpmNum.fill(String(value));
+  await bpmNum.press('Enter');
+}
+
+/**
+ * Clicks the metronome bell. On mobile (js/transport-ui.js), .t-metro-btn
+ * opens a submenu instead of toggling directly — the real toggle is
+ * .t-metro-toggle-row inside it, and toggleMetronome() closes that menu
+ * again after every click, so each call needs to reopen it. That menu isn't
+ * reachable as a descendant of containerSelector though: transport-ui.js
+ * reparents it to directly under <body> at construction time (clipping /
+ * position:fixed-containing-block reasons, its own comment explains), for
+ * every .transport-container that exists (A and B both, dual mode or not).
+ * Querying .show globally works anyway, since at most one menu is open at
+ * a time. A no-op extra step on desktop, where the bell toggles directly
+ * and this menu is never shown, so clicking the row too, if present, is
+ * harmless either way.
+ */
+async function clickMetroToggle(page, containerSelector = '#mainTransport-A') {
+  const metroBtn = page.locator(`${containerSelector} .t-metro-btn`);
+  await metroBtn.click();
+  const openMenu = page.locator('.t-metro-menu.show');
+  if (await openMenu.count() > 0) {
+    await openMenu.locator('.t-metro-toggle-row').click();
+  }
+}
+
+/**
+ * #primaryControlsWrapper (clear/groove/label-notation/compose buttons etc.)
+ * is hidden entirely on mobile viewports (css/controls.css) — reachable only
+ * by first opening it via #mobileControlsBtn (js/mobile-menu.js), which
+ * relocates it into view. A no-op on desktop, where that button doesn't
+ * exist, and on mobile once it's already open — #mobileControlsBtn is a
+ * toggle, so clicking it a second time would close the panel instead.
+ * Call this before interacting with anything inside that wrapper.
+ */
+async function openMobileControlsIfNeeded(page) {
+  const btn = page.locator('#mobileControlsBtn').first();
+  if (!(await btn.isVisible().catch(() => false))) return;
+  const alreadyOpen = await page.locator('#primaryControlsWrapper')
+    .evaluate(el => el.classList.contains('mobile-open')).catch(() => false);
+  if (!alreadyOpen) await btn.click();
+}
+
+/**
+ * The inverse of openMobileControlsIfNeeded — opening the controls panel on
+ * mobile relocates it into the handpan panel's own slot (js/mobile-menu.js),
+ * hiding the handpan itself while it's open. Call this to restore the
+ * handpan (e.g. for tests that tap .hp-dot) after using a control that only
+ * mobile-controls-opening made reachable.
+ */
+async function closeMobileControlsIfNeeded(page) {
+  const btn = page.locator('#mobileControlsBtn').first();
+  if (!(await btn.isVisible().catch(() => false))) return;
+  const isOpen = await page.locator('#primaryControlsWrapper')
+    .evaluate(el => el.classList.contains('mobile-open')).catch(() => false);
+  if (isOpen) await btn.click();
+}
+
+/**
+ * #appNav (the nav links — Dashboard, Studio, Practice, Courses,
+ * Composer...) is a collapsed hamburger menu on mobile — #mobileMenuBtn
+ * toggles it open (js/mobile-menu.js). A no-op on desktop, where it's
+ * always visible. Call this before clicking any .nav-link.
+ */
+async function openNavIfNeeded(page) {
+  const menuBtn = page.locator('#mobileMenuBtn');
+  if (!(await menuBtn.isVisible().catch(() => false))) return;
+  const isOpen = await page.locator('#appNav').evaluate(el => el.classList.contains('open')).catch(() => false);
+  if (!isOpen) await menuBtn.click();
+}
+
+/**
+ * Clicks a top-nav route link (Dashboard/Studio/Library/Community) the way a
+ * user would, opening the mobile hamburger menu first if needed and closing it
+ * again afterward if the click didn't, so it can't cover the page.
+ */
+async function navigateTo(page, route) {
+  await openNavIfNeeded(page);
+  await page.locator(`#appNav a[data-route="${route}"]`).click();
+  await page.waitForURL(`**/#${route}`);
+  const menuBtn = page.locator('#mobileMenuBtn');
+  if (await menuBtn.isVisible().catch(() => false)) {
+    const nav = page.locator('#appNav');
+    if (await nav.evaluate(el => el.classList.contains('open'))) await menuBtn.click();
+    await expect(nav).not.toHaveClass(/open/);
+  }
+}
+
+/**
+ * Same as navigateTo, for the nav buttons that open a side panel instead of a
+ * route (Courses: #toggleSidebarBtn, Composer: #toggleComposerBtn,
+ * Practice: #toggleExercisesBtn). Waits for `panelSelector` to open.
+ */
+async function openNavPanel(page, buttonSelector, panelSelector) {
+  await openNavIfNeeded(page);
+  await page.locator(buttonSelector).click();
+  await expect(page.locator(panelSelector)).toHaveClass(/open/);
+  const menuBtn = page.locator('#mobileMenuBtn');
+  if (await menuBtn.isVisible().catch(() => false)) {
+    const nav = page.locator('#appNav');
+    if (await nav.evaluate(el => el.classList.contains('open'))) await menuBtn.click();
+  }
+}
 
 /**
  * Clicks the clear button for the given grid and confirms the custom dialog.
  * The app uses a custom #confirmModal instead of the native browser confirm,
- * so we must wait for it to open and click OK.
+ * so we must wait for it to open and click OK. Only #clearBtn-A lives inside
+ * #primaryControlsWrapper (index.html) — #clearBtn-B is a separate,
+ * always-in-flow element that the mobile controls panel, when open,
+ * visually covers and intercepts clicks on instead of helping reach.
  */
 async function clearGrid(page, gridId = 'A') {
+  if (gridId === 'A') {
+    await openMobileControlsIfNeeded(page);
+  } else {
+    await closeMobileControlsIfNeeded(page);
+  }
   await page.click(`#clearBtn-${gridId}`);
   await page.locator('#confirmModal.open').waitFor({ timeout: 5000 });
   await page.click('#confirmOkBtn');
@@ -53,4 +178,19 @@ async function gotoStudio(page) {
   await page.goto('/#studio');
 }
 
-module.exports = { clearGrid, gotoStudio };
+/**
+ * Expands/collapses an assignment item card (.asgn-item-card-header
+ * [data-action="item-toggle"], js/assignments.js). On Mobile Chrome,
+ * Playwright's .click()/.tap() on this dynamically-rendered element never
+ * delivers a click event to it at all (confirmed: a same-node marker survives
+ * the click, and a plain el.click() dispatched from the page toggles the
+ * .collapsed class correctly) — a Playwright/Chromium input-delivery quirk on
+ * this element, not an app bug. Dispatching the click from the page side
+ * instead works on every project.
+ */
+/** @param {import('@playwright/test').Locator} card */
+async function toggleItemCard(card) {
+  await card.locator('[data-action="item-toggle"]').evaluate((/** @type {HTMLElement} */ el) => el.click());
+}
+
+module.exports = { clearGrid, gotoStudio, openMobileControlsIfNeeded, closeMobileControlsIfNeeded, setBpm, clickMetroToggle, openNavIfNeeded, toggleItemCard, navigateTo, openNavPanel };

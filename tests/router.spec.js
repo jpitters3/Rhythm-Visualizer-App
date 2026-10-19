@@ -1,6 +1,6 @@
 const { test, expect } = require('@playwright/test');
 const { createTestUser, deleteTestUser, loginAsTestUser } = require('./utils/auth-helper');
-const { gotoStudio } = require('./helpers');
+const { gotoStudio, openNavIfNeeded } = require('./helpers');
 
 test.describe('SPA Routing', () => {
   test.describe('guest', () => {
@@ -9,7 +9,7 @@ test.describe('SPA Routing', () => {
       await page.waitForTimeout(500); // Give init scripts a moment to run
     });
 
-    test('should default to home view for guests when no hash is provided', async ({ page }) => {
+    test('should default to home view for guests when no hash is provided', { tag: '@smoke' }, async ({ page }) => {
       // dashboard.js redirects unauthenticated cold loads from 'dashboard' to 'home'
       // (see js/router.js's handleHashChange + js/dashboard.js's routeChanged guard)
       await expect(page).toHaveURL(/.*#home/);
@@ -31,9 +31,8 @@ test.describe('SPA Routing', () => {
       if (testUser) await deleteTestUser(testUser.user.id);
     });
 
-    test('should switch to dashboard view when hash changes', async ({ page }) => {
-      // #navDashboardBtn is a plain top-level nav link, not inside the account
-      // dropdown — no need to open anything first.
+    test('should switch to dashboard view when hash changes', { tag: '@smoke' }, async ({ page }) => {
+      await openNavIfNeeded(page);
       await page.locator('#navDashboardBtn').click();
 
       await expect(page).toHaveURL(/.*#dashboard/);
@@ -41,13 +40,14 @@ test.describe('SPA Routing', () => {
       await expect(page.locator('#view-dashboard')).toBeVisible();
     });
 
-    test('should switch back to studio from dashboard', async ({ page }) => {
+    test('should switch back to studio from dashboard', { tag: '@smoke' }, async ({ page }) => {
       await page.goto('/#dashboard');
       await page.waitForTimeout(500);
       await expect(page.locator('#view-dashboard')).toBeVisible();
 
       // Navigate back to Studio via the real nav link (the old "Free Play
       // Engine" dashboard card this test used to click no longer exists).
+      await openNavIfNeeded(page);
       await page.locator('a[data-route="studio"]').click();
 
       await expect(page).toHaveURL(/.*#studio/);

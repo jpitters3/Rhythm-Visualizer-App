@@ -1,6 +1,7 @@
 const { test, expect } = require('@playwright/test');
 require('dotenv').config();
 const { createTestUser, deleteTestUser, loginAsTestUser } = require('./utils/auth-helper');
+const { openNavIfNeeded } = require('./helpers');
 
 // The Handpan Games hub — Phase 0 shell (route #games, 10 domain tiles).
 test('Handpan Games hub opens from the practice sidebar', async ({ page }) => {
@@ -15,6 +16,7 @@ test('Handpan Games hub opens from the practice sidebar', async ({ page }) => {
     await page.evaluate(() => { window.location.hash = '#studio'; });
     await page.waitForSelector('.measure-row:visible', { timeout: 20000 }).catch(() => {});
 
+    await openNavIfNeeded(page);
     await page.click('#toggleExercisesBtn'); // "Practice" nav link → practice sidebar
     await page.waitForSelector('#practiceSidebar.open', { timeout: 8000 });
     await expect(page.locator('#openHandpanGamesBtn')).toBeVisible();

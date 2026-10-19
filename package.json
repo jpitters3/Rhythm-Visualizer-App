@@ -8,9 +8,13 @@
     "preview": "vite preview",
     "test": "npx playwright test",
     "test:ui": "npx playwright test --ui",
+    "test:smoke": "npx playwright test --grep @smoke --project=chromium --project=\"Mobile Chrome\"",
+    "test:core": "npx playwright test --grep \"@smoke|@core\" --project=chromium --project=\"Mobile Chrome\" --project=\"Mobile Safari\"",
     "test:report": "npx playwright show-report",
     "lint": "eslint .",
-    "prepare": "husky"
+    "prepare": "husky",
+    "db:push:staging": "supabase link --project-ref mececymulqnvmaqbcnok && supabase db push",
+    "db:push:prod": "supabase link --project-ref ycdlqkaymkgpbpgtqubs && supabase db push"
   },
   "keywords": [],
   "author": "",

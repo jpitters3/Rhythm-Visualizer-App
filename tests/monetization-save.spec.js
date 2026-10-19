@@ -56,25 +56,29 @@ test.describe('Monetization Save Gating', () => {
   });
 
 
-  test('should enforce authentication and 5-pattern limit', async ({ page }) => {
+  test('should enforce authentication and 5-pattern limit', { tag: '@core' }, async ({ page }) => {
     // Pipe browser logs to terminal
     page.on('console', msg => console.log(`[BROWSER] ${msg.text()}`));
 
     // Ensure grid is ready
     await page.waitForSelector('.measure-row');
 
+    // Writing a note as a guest opens the "save your creation" nudge on the
+    // shared #confirmModal, and the save attempt below opens a different
+    // dialog on that same modal. gotoStudio() auto-dismisses the nudge, but its
+    // timing varies by browser (on Mobile Safari it can land after the save
+    // dialog opens and get dismissed in its place), so handle it explicitly.
+    await page.removeLocatorHandler(page.locator('#confirmModal.open', { hasText: 'Sign Up / Sign In' }));
+
     // 3. Add some notes to the grid to make it a valid pattern
     const cell0 = page.locator('.cell').nth(0);
     await cell0.click();
     await page.keyboard.type('D');
 
-    // Writing a note as a guest triggers the "sign in to save your work" nudge
-    // (gotoStudio()'s addLocatorHandler auto-dismisses it) and the very next
-    // step below deliberately opens a *different* modal on the same reused
-    // #confirmModal singleton — if that happens before the nudge's dismiss
-    // finishes, the two overlap and the auto-dismiss can end up clicking
-    // Cancel on the wrong (alert-mode, cancel-hidden) modal. Let it settle.
-    await page.waitForTimeout(500);
+    const nudge = page.locator('#confirmModal.open', { hasText: 'Sign Up / Sign In' });
+    await expect(nudge).toBeVisible();
+    await page.click('#confirmCancelBtn');
+    await expect(page.locator('#confirmModal')).not.toHaveClass(/open/);
 
     // 4. Attempt to save as Guest
     // #saveBtn is inside the nav (hidden for guests) — trigger it directly

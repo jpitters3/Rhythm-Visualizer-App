@@ -3,12 +3,12 @@ require('dotenv').config();
 
 let isMobile = false;
 
+// #accountBtn/#navAccountWrapper (index.html) is a sibling of #appNav, not
+// nested inside it — clicking #mobileMenuBtn (which only toggles #appNav)
+// never actually reveals it. Confirmed empirically: #accountBtn works
+// directly and identically on both mobile and desktop viewports.
 async function clickAccountBtn(page) {
-  if (isMobile) {
-    await page.locator('#mobileMenuBtn').click();
-  } else {
-    await page.locator('#accountBtn').click({ force: true });
-  }
+  await page.locator('#accountBtn').click({ force: true });
 }
 
 const { createTestUser, deleteTestUser } = require('./utils/auth-helper');

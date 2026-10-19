@@ -1,5 +1,5 @@
 const { test, expect } = require('@playwright/test');
-const { gotoStudio } = require('./helpers');
+const { gotoStudio, clearGrid, openMobileControlsIfNeeded, closeMobileControlsIfNeeded } = require('./helpers');
 
 test.describe('Virtual Handpan Tap-to-Play', () => {
 
@@ -10,9 +10,9 @@ test.describe('Virtual Handpan Tap-to-Play', () => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await gotoStudio(page);
     await page.waitForSelector('.cell');
-    await page.click('#clearBtn-A');
-    await page.locator('#confirmModal.open').waitFor({ timeout: 5000 });
-    await page.click('#confirmOkBtn');
+    await clearGrid(page, 'A');
+    // Restore the handpan
+    await closeMobileControlsIfNeeded(page);
 
     // Writing the very first note as a signed-out guest triggers a one-time
     // "sign in to save your work" modal (controls.js). gotoStudio's locator
@@ -21,9 +21,7 @@ test.describe('Virtual Handpan Tap-to-Play', () => {
     // "click outside" handler). Burn through it here, before real assertions.
     await page.locator('#measures .cell').first().click();
     await page.keyboard.press('d');
-    await page.click('#clearBtn-A');
-    await page.locator('#confirmModal.open').waitFor({ timeout: 5000 });
-    await page.click('#confirmOkBtn');
+    await clearGrid(page, 'A');
   });
 
   test('Tapping a note plays it, highlights it, and writes it to the selected cell', async ({ page }) => {
@@ -54,7 +52,9 @@ test.describe('Virtual Handpan Tap-to-Play', () => {
     await expect(cell1).toHaveText('');
 
     // Compose mode ON: writes and advances, so a second tap lands in cell1.
+    await openMobileControlsIfNeeded(page);
     await page.click('#composeBtn');
+    await closeMobileControlsIfNeeded(page);
     await cell0.click();
     await page.locator('.hp-dot[data-note="1"]').click();
     await expect(cell0).toHaveText('1');
@@ -63,7 +63,9 @@ test.describe('Virtual Handpan Tap-to-Play', () => {
   });
 
   test('Alt+click writes without advancing, even in compose mode', async ({ page }) => {
+    await openMobileControlsIfNeeded(page);
     await page.click('#composeBtn');
+    await closeMobileControlsIfNeeded(page);
 
     const cell0 = page.locator('#measures .cell').nth(0);
     const cell1 = page.locator('#measures .cell').nth(1);

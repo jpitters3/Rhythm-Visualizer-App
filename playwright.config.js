@@ -9,14 +9,62 @@ const { defineConfig, devices } = require('@playwright/test');
 // here instead of hardcoding one keeps this in sync with whichever mode the
 // webServer command below actually starts.
 const hasCerts = fs.existsSync('.certs/localhost-key.pem') && fs.existsSync('.certs/localhost.pem');
-const baseURL = `${hasCerts ? 'https' : 'http'}://localhost:3000`;
+// Set by .github/workflows/deploy-staging.yml once it knows the just-deployed
+// Netlify URL, so the same suite can run against a real deployed staging site
+// instead of a local dev server. Unset everywhere else (plain local/manual
+// `npm test`), which keeps today's localhost behavior as the default.
+const remoteBaseURL = process.env.PLAYWRIGHT_BASE_URL;
+const baseURL = remoteBaseURL || `${hasCerts ? 'https' : 'http'}://localhost:3000`;
+
+// Firefox is skipped in CI only (kept for local dev, where coverage matters
+// more than wall-clock time) — the staging workflow's 30-minute cap doesn't
+// fit the full 5-project matrix, and Firefox-specific bugs are rare enough
+// here that dropping it buys the most time back for the least coverage lost.
+// CI runners have no real microphone, so getUserMedia() throws there without
+// these — coaching_mode.spec.js's turnOnMic() swallows that error, isListening
+// never flips true, and the countdown overlay it gates never shows. Harmless
+// locally too (just swaps in a synthetic stream), so applied everywhere.
+const fakeMediaDeviceArgs = {
+  args: ['--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream'],
+};
+
+const allProjects = [
+  {
+    name: 'chromium',
+    use: { ...devices['Desktop Chrome'], launchOptions: fakeMediaDeviceArgs },
+  },
+  {
+    name: 'firefox',
+    use: {
+      ...devices['Desktop Firefox'],
+      launchOptions: {
+        firefoxUserPrefs: {
+          'dom.events.asyncClipboard.readText': true,
+          'dom.events.testing.asyncClipboard': true,
+        },
+      },
+    },
+  },
+  {
+    name: 'webkit',
+    use: { ...devices['Desktop Safari'] },
+  },
+  {
+    name: 'Mobile Chrome',
+    use: { ...devices['Pixel 5'], launchOptions: fakeMediaDeviceArgs },
+  },
+  {
+    name: 'Mobile Safari',
+    use: { ...devices['iPhone 12'] },
+  },
+];
 
 module.exports = defineConfig({
   testDir: './tests',
   fullyParallel: false,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : 4,
+  workers: process.env.CI ? 6 : 4,
   reporter: 'html',
   use: {
     baseURL,
@@ -24,39 +72,12 @@ module.exports = defineConfig({
     trace: 'on-first-retry',
   },
 
-  projects: [
-    {
-      name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
-    },
-    {
-      name: 'firefox',
-      use: {
-        ...devices['Desktop Firefox'],
-        launchOptions: {
-          firefoxUserPrefs: {
-            'dom.events.asyncClipboard.readText': true,
-            'dom.events.testing.asyncClipboard': true,
-          },
-        },
-      },
-    },
-    {
-      name: 'webkit',
-      use: { ...devices['Desktop Safari'] },
-    },
-    {
-      name: 'Mobile Chrome',
-      use: { ...devices['Pixel 5'] },
-    },
-    {
-      name: 'Mobile Safari',
-      use: { ...devices['iPhone 12'] },
-    },
-  ],
+  projects: process.env.CI ? allProjects.filter(p => p.name !== 'firefox') : allProjects,
 
-  /* Run your local dev server before starting the tests */
-  webServer: {
+  /* Run your local dev server before starting the tests — skipped when
+     baseURL is a remote deployed site (nothing to start, and Playwright
+     would otherwise refuse since that URL is already live). */
+  webServer: remoteBaseURL ? undefined : {
     command: 'npm run dev',
     url: baseURL,
     ignoreHTTPSErrors: true,

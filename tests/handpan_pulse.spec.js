@@ -1,21 +1,22 @@
 const { test, expect } = require('@playwright/test');
-const { gotoStudio } = require('./helpers');
+const { gotoStudio, clearGrid, closeMobileControlsIfNeeded, setBpm } = require('./helpers');
 
 test.describe('Handpan Pulse Animations', () => {
 
   test.beforeEach(async ({ page }) => {
     await gotoStudio(page);
     await page.waitForSelector('.cell');
-    await page.click('#clearBtn-A');
-    await page.locator('#confirmModal.open').waitFor({ timeout: 5000 });
-    await page.click('#confirmOkBtn');
+    await clearGrid(page, 'A');
+    // Restore the handpan — clearGrid needed the controls panel open on
+    // mobile, which relocates into (and hides) the handpan's own slot, and
+    // every test here taps .hp-dot.
+    await closeMobileControlsIfNeeded(page);
   });
 
   test('Grid A playback triggers pulses on handpan', async ({ page }) => {
     // 1. Set very slow BPM (30 BPM = 2 steps per second = 500ms intervals)
     // Pulse will last ~450ms, making it easy for Playwright to catch.
-    const bpmInput = page.locator('#mainTransport-A .t-bpm-input');
-    await bpmInput.fill('40');
+    await setBpm(page, 40, '#mainTransport-A');
 
     // 2. Enter notes '1' and '2'
     const cell0 = page.locator('#measures .cell').first();

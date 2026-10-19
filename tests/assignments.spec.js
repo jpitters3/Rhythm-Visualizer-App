@@ -17,6 +17,7 @@ require('dotenv').config();
 
 const { createTestUser, deleteTestUser, loginAsTestUser, supabaseAdmin } = require('./utils/auth-helper');
 const { waitForPageReady } = require('./utils/page-helper');
+const { toggleItemCard } = require('./helpers');
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -92,7 +93,7 @@ test.describe('Assignment Workflow', () => {
       await tPage.selectOption('#asgnAddItemType', 'mark_complete');
       await tPage.locator('#asgnAddItemBtn').click();
       const markCard = tPage.locator('.asgn-item-card').last();
-      await markCard.locator('[data-action="item-toggle"]').click(); // expand
+      await toggleItemCard(markCard); // expand
       await markCard.locator('[data-field="item-title"]').fill('Complete the warm-up exercise');
       await markCard.locator('[data-field="item-required"]').check();
 
@@ -100,7 +101,7 @@ test.describe('Assignment Workflow', () => {
       await tPage.selectOption('#asgnAddItemType', 'quiz');
       await tPage.locator('#asgnAddItemBtn').click();
       const quizCard = tPage.locator('.asgn-item-card').last();
-      await quizCard.locator('[data-action="item-toggle"]').click();
+      await toggleItemCard(quizCard);
       await quizCard.locator('[data-field="item-title"]').fill('Quick check');
       await quizCard.locator('[data-field="item-required"]').check();
 
@@ -129,7 +130,7 @@ test.describe('Assignment Workflow', () => {
       await tPage.selectOption('#asgnAddItemType', 'link');
       await tPage.locator('#asgnAddItemBtn').click();
       const linkCard = tPage.locator('.asgn-item-card').last();
-      await linkCard.locator('[data-action="item-toggle"]').click();
+      await toggleItemCard(linkCard);
       await linkCard.locator('[data-field="item-title"]').fill('Share a reference link');
       await linkCard.locator('[data-field="item-required"]').check();
 
@@ -307,7 +308,7 @@ test.describe('Assignment Workflow', () => {
       await tPage.selectOption('#asgnAddItemType', 'phrase');
       await tPage.locator('#asgnAddItemBtn').click();
       const phraseCard = tPage.locator('.asgn-item-card').last();
-      await phraseCard.locator('[data-action="item-toggle"]').click(); // expand
+      await toggleItemCard(phraseCard); // expand
       await phraseCard.locator('[data-field="phrase-select"]').selectOption(phraseName);
 
       // ── Save ────────────────────────────────────────────────────────────

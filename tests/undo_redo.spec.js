@@ -1,6 +1,6 @@
 // @ts-check
 const { test, expect } = require('@playwright/test');
-const { gotoStudio } = require('./helpers');
+const { gotoStudio, clearGrid } = require('./helpers');
 const { createTestUser, deleteTestUser, loginAsTestUser } = require('./utils/auth-helper');
 
 // #phraseMenuBtn/#phraseSubmenu (Save/Import/Export/Share) live inside
@@ -9,7 +9,7 @@ const { createTestUser, deleteTestUser, loginAsTestUser } = require('./utils/aut
 // Reaching this menu at all requires being authenticated first.
 async function openPhraseMenu(page) {
   if (await page.locator('#mobileMenuBtn').isVisible()) {
-    const menu = page.locator('#headerMenu');
+    const menu = page.locator('#appNav');
     if (!await menu.evaluate(el => el.classList.contains('open'))) {
       await page.click('#mobileMenuBtn');
     }
@@ -29,7 +29,7 @@ async function openPhraseMenu(page) {
 // Import JSON is admin-only.
 async function openAdminSubmenu(page) {
   if (await page.locator('#mobileMenuBtn').isVisible()) {
-    const menu = page.locator('#headerMenu');
+    const menu = page.locator('#appNav');
     if (!await menu.evaluate(el => el.classList.contains('open'))) {
       await page.click('#mobileMenuBtn');
     }
@@ -51,12 +51,10 @@ test.describe('Undo/Redo Features', () => {
     await page.waitForSelector('.measure-row');
   });
 
-  test('Undo/Redo Note Entry', async ({ page }) => {
+  test('Undo/Redo Note Entry', { tag: '@core' }, async ({ page }) => {
     // 1. Initial State: grid empty
     // (Assuming default empty grid or we clear it)
-    await page.click('#clearBtn-A');
-    await page.locator('#confirmModal.open').waitFor({ timeout: 5000 });
-    await page.click('#confirmOkBtn');
+    await clearGrid(page, 'A');
 
     // 2. Add a note (Click first cell)
     const cell0 = page.locator('.cell').nth(0);
@@ -95,11 +93,9 @@ test.describe('Undo/Redo Features', () => {
       if (testUser) await deleteTestUser(testUser.user.id);
     });
 
-    test('Data Loss Prevention', async ({ page }) => {
+    test('Data Loss Prevention', { tag: '@core' }, async ({ page }) => {
       // 1. Clean state
-      await page.click('#clearBtn-A');
-      await page.locator('#confirmModal.open').waitFor({ timeout: 5000 });
-      await page.click('#confirmOkBtn');
+      await clearGrid(page, 'A');
 
       // 2. Make change
       await page.locator('.cell').nth(0).click();

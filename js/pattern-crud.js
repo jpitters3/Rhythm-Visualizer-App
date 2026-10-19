@@ -189,29 +189,39 @@ export async function refreshPatternSelect(selectedName = '') {
   if (!patternSelect) return;
 
   try {
-    patternSelect.innerHTML = '';
-
     let names = [];
     let loadLocal = true;
 
     // Try cloud first if supabase exists
     if (typeof supabase !== 'undefined') {
+      let authed = false;
       try {
-        const authed = await withTimeout(isAuthed(), 1000, 'auth-check');
-        if (authed) {
-          const cloudNames = await withTimeout(dbListPatternNames(), 2000, 'list-patterns');
-          names = (cloudNames || []).sort((a, b) => a.localeCompare(b));
-          loadLocal = false;
-        }
+        authed = await withTimeout(isAuthed(), 3000, 'auth-check');
       } catch (e) {
-        console.warn('Cloud pattern list failed or timed out, falling back to local:', e);
+        console.warn('Auth check failed or timed out, falling back to local patterns:', e);
+      }
+      if (authed) {
+        loadLocal = false;
+        try {
+          const cloudNames = await withTimeout(dbListPatternNames(), 8000, 'list-patterns');
+          names = cloudNames || [];
+        } catch (e) {
+          // A signed-in user's phrases live in the cloud, not localStorage —
+          // keep what's already listed (plus the one just saved) rather than
+          // showing an empty local list that looks like their saves vanished.
+          console.warn('Cloud pattern list failed or timed out, keeping current list:', e);
+          names = [...patternSelect.options].map(o => o.value).filter(Boolean);
+          if (selectedName && !names.includes(selectedName)) names.push(selectedName);
+        }
       }
     }
 
     if (loadLocal) {
-      const saved = getSavedPatterns();
-      names = Object.keys(saved).sort((a, b) => a.localeCompare(b));
+      names = Object.keys(getSavedPatterns());
     }
+    names.sort((a, b) => a.localeCompare(b));
+
+    patternSelect.innerHTML = '';
 
     if (names.length === 0) {
       const opt = document.createElement('option');
@@ -310,6 +320,13 @@ export async function applyPattern(state, ctx = gridA) {
     await alert('That pattern JSON does not look valid.');
     return;
   }
+
+  // migratePatternState/normalizeMobileSubdivision mutate top-level fields
+  // in place — clone first so a caller's own object (e.g. courses.js's
+  // cached lesson.pattern_json, reused across every visit to that lesson)
+  // doesn't get permanently corrupted by the first load's mobile BPM
+  // doubling and subdivision collapse.
+  state = { ...state };
 
   // Migrate old format ({ mode, timeSignature }) to new ({ beats, subdivision })
   migratePatternState(state);

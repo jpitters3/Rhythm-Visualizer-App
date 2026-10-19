@@ -1,5 +1,5 @@
 const { test, expect } = require('@playwright/test');
-const { gotoStudio } = require('./helpers');
+const { gotoStudio, clearGrid } = require('./helpers');
 
 // Regression: a chord/multi cell's label is an array. Duplicating a measure
 // (measure-actions.js duplicateSelection) and history snapshots (pattern-crud.js
@@ -9,22 +9,22 @@ const { gotoStudio } = require('./helpers');
 test('duplicating a measure copies chords by value', async ({ page }) => {
   await gotoStudio(page);
   await page.waitForSelector('.measure-row');
-  await page.click('#clearBtn-A');
-  await page.locator('#confirmModal.open').waitFor({ timeout: 5000 });
-  await page.click('#confirmOkBtn');
+  await clearGrid(page, 'A');
 
   const result = await page.evaluate(async () => {
-    const { gridA } = await import('/js/grid-context.js');
-    const ng = await import('/js/notegrid.js');
-    const ma = await import('/js/measure-actions.js');
-    const rs = await import('/js/range-selection.js');
+    // main.js re-exports these (see its own comment on why) — importing its
+    // actual deployed URL, not the source path (which only resolves against
+    // Vite's dev server), returns the same live singletons already running
+    // on the page, since ES module imports are cached by resolved URL.
+    const entryUrl = document.querySelector('script[type="module"][src*="main"]').src;
+    const { gridA, renderAllMeasures, duplicateSelection, setRange } = await import(entryUrl);
 
     const spm = gridA.stepsPerMeasure;
     gridA.innerLabels[0] = ['1', '', '3', '']; // chord at step 0 of measure 1
-    ng.renderAllMeasures(gridA);
+    renderAllMeasures(gridA);
 
-    rs.setRange(0, spm - 1, gridA);            // select measure 1
-    await ma.duplicateSelection(gridA);        // -> measure 2 is a copy
+    setRange(0, spm - 1, gridA);                // select measure 1
+    await duplicateSelection(gridA);             // -> measure 2 is a copy
 
     const orig = gridA.innerLabels[0];
     const dup = gridA.innerLabels[spm];        // same position in measure 2
@@ -50,17 +50,14 @@ test('duplicating a measure copies chords by value', async ({ page }) => {
 test('undo restores a chord sub-note edit', async ({ page }) => {
   await gotoStudio(page);
   await page.waitForSelector('.measure-row');
-  await page.click('#clearBtn-A');
-  await page.locator('#confirmModal.open').waitFor({ timeout: 5000 });
-  await page.click('#confirmOkBtn');
+  await clearGrid(page, 'A');
 
   const result = await page.evaluate(async () => {
-    const { gridA } = await import('/js/grid-context.js');
-    const ng = await import('/js/notegrid.js');
-    const { HistoryManager } = await import('/js/history.js');
+    const entryUrl = document.querySelector('script[type="module"][src*="main"]').src;
+    const { gridA, renderAllMeasures, HistoryManager } = await import(entryUrl);
 
     gridA.innerLabels[0] = ['1', '', '3', ''];
-    ng.renderAllMeasures(gridA);
+    renderAllMeasures(gridA);
 
     HistoryManager.pushState();       // snapshot with chord [1,3]
     gridA.innerLabels[0][0] = '9';    // in-place sub-note edit -> [9,3]

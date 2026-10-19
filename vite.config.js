@@ -26,6 +26,17 @@ export default defineConfig({
         tos:     path.resolve(__dirname, 'tos.html'),
         privacy: path.resolve(__dirname, 'privacy.html'),
       },
+      output: {
+        // main.js re-exports gridA/renderAllMeasures/etc. (see its own
+        // comment) so Playwright can reach live app singletons by
+        // dynamically importing the entry chunk's real deployed URL.
+        // Rollup renames exported bindings by default when minifying
+        // (independent of terser's own mangle.reserved below, which only
+        // protects the *internal* variable name, not the public export
+        // alias) — off so `import(url).gridA` etc. stay reachable by name
+        // in the actual production bundle, not just Vite's dev server.
+        minifyInternalExports: false,
+      },
     },
     minify: 'terser',
     terserOptions: {
@@ -35,6 +46,7 @@ export default defineConfig({
       },
       mangle: {
         toplevel: true,
+        reserved: ['gridA', 'gridB', 'renderAllMeasures', 'duplicateSelection', 'setRange', 'HistoryManager'],
       },
     },
   },
