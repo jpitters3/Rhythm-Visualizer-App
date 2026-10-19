@@ -96,15 +96,7 @@ test.describe('Lesson Settings (Reset/Restore)', () => {
     // #lessonPlayer (js/courses.js's openLessonSidebar()) opens automatically
     // on every lesson click, and at 360px fixed width (css/courses.css)
     // covers nearly all of a narrow mobile viewport, intercepting clicks on
-    // #measures behind it. On desktop it doesn't overlap #measures at all —
-    // closing it there is both unnecessary and actively wrong, since
-    // #lessonResetBtn/#lessonRestoreBtn (js/lesson-settings.js's Reset strip)
-    // live inside this same panel and later steps need to click them. Its
-    // own close button (#closeLessonBtn) also nulls out currentLesson
-    // (js/courses.js's closeLessonSidebar), which would break the lesson-
-    // scoped save guard these tests rely on — Escape instead just collapses
-    // the panel via Sidepanel.closeTopmost(), with no side effects beyond
-    // that, so it's safe to use on mobile only, where it's actually needed.
+    // #measures behind it
     if (isMobile) {
       const lessonPlayer = page.locator('#lessonPlayer');
       if (await lessonPlayer.evaluate(el => el.classList.contains('open'))) {
