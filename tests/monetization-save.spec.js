@@ -57,6 +57,9 @@ test.describe('Monetization Save Gating', () => {
 
 
   test('should enforce authentication and 5-pattern limit', { tag: '@core' }, async ({ page }) => {
+    // Guest flow, sign-in, then six saves at ~6s each: about 70s on CI's
+    // Mobile Safari, past the 60s default.
+    test.setTimeout(120000);
     // Pipe browser logs to terminal
     page.on('console', msg => console.log(`[BROWSER] ${msg.text()}`));
 
