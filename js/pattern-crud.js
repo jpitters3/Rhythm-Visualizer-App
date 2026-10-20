@@ -56,10 +56,15 @@ export function snapshotCurrentState() {
 }
 
 export async function dbListPatternNames() {
+  // dbSavePattern() takes the user from the live session; do the same when
+  // currentUser isn't set yet, or this queries user_id=undefined and silently
+  // returns no phrases.
+  const userId = currentUser?.id ?? (await supabase.auth.getUser()).data?.user?.id;
+  if (!userId) return [];
   const { data, error } = await supabase
     .from('patterns')
     .select('name')
-    .eq('user_id', currentUser?.id)
+    .eq('user_id', userId)
     .order('updated_at', { ascending: false });
 
   if (error) throw error;
