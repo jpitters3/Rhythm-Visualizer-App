@@ -72,3 +72,34 @@ test.describe('Library', () => {
     expect((data || []).map(p => p.name)).toEqual([evening]);
   });
 });
+
+// Regression: a slow load for one tab used to finish after a switch to another
+// tab and overwrite its grid (js/library.js renderSeq). Delaying the phrase list
+// makes the race deterministic. Full suite only; not @core.
+test('switching tabs while a slow load is in flight shows the new tab\'s items', async ({ page }) => {
+  test.setTimeout(90000);
+  const user = await createTestUser();
+  const ts = Date.now();
+  const phrase = `Slow Phrase ${ts}`;
+  const title = `Fast Song ${ts}`;
+  await seedPattern(user.user.id, phrase);
+  await supabaseAdmin.from('compositions').insert({ user_id: user.user.id, title });
+  try {
+    await loginAsTestUser(page, user);
+    await page.route(/rest\/v1\/patterns\?select=name%2Cdata%2Cupdated_at/, async route => {
+      await new Promise(r => setTimeout(r, 3000));
+      await route.continue();
+    });
+    await navigateTo(page, 'library');
+    await page.click('.library-tab[data-tab="compositions"]');
+    const grid = page.locator('#libraryGrid');
+    await expect(grid.locator('.library-card', { hasText: title })).toBeVisible({ timeout: 15000 });
+    // Past the delayed phrases response, the grid must still show compositions.
+    await page.waitForTimeout(4000);
+    await expect(grid.locator('.library-card', { hasText: title })).toBeVisible();
+    await expect(grid.locator('.library-card', { hasText: phrase })).toHaveCount(0);
+  } finally {
+    await deleteUserContent(user.user.id);
+    await deleteTestUser(user.user.id);
+  }
+});
