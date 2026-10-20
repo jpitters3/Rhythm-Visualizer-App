@@ -15,10 +15,10 @@ test.describe('Playback & Controls', () => {
     // 1. Initial State: Stopped
     await expect(playBtn).not.toHaveClass(/active/);
 
-    // 2. Start Playback
-    // Give the app a moment to settle and use evaluate for absolute reliability
+    // 2. Start Playback. Use a real click: browsers only let audio start from a
+    // genuine user gesture, and the production build ignores a scripted click.
     await page.waitForTimeout(500);
-    await page.evaluate(() => document.querySelector('#mainTransport-A .t-play-btn').click());
+    await playBtn.click();
 
     // 3. Verify Active State
     // Increase timeout to 10s to account for async audio initialization in test environment
@@ -26,7 +26,7 @@ test.describe('Playback & Controls', () => {
     await expect(playBtn).toHaveClass(/active/, { timeout: 10000 });
 
     // 4. Stop
-    await page.evaluate(() => document.querySelector('#mainTransport-A .t-play-btn').click());
+    await playBtn.click();
     await expect(playBtn).toHaveText('►', { timeout: 10000 });
     await expect(playBtn).not.toHaveClass(/active/, { timeout: 10000 });
   });
@@ -82,7 +82,7 @@ test.describe('Playback & Controls', () => {
     // To verify looping without internals, we look for the 'active' class on columns.
 
     // 1. Start playback
-    await page.evaluate(() => document.querySelector('#mainTransport-A .t-play-btn').click());
+    await page.locator('#mainTransport-A .t-play-btn').click();
 
     // Verify playback active
     await expect(page.locator('#mainTransport-A .t-play-btn')).toHaveClass(/active/, { timeout: 10000 });

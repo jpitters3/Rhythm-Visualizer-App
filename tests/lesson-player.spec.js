@@ -13,6 +13,13 @@ for (const asAdmin of [false, true]) {
     test.setTimeout(120000);
     const errors = [];
     page.on('pageerror', e => errors.push(e.message));
+    // The dashboard quote API bot-challenges CI runners (429, no CORS) and
+    // WebKit reports any failed fetch as a page error, even when caught.
+    await page.route('https://quoteslate.vercel.app/**', route => route.fulfill({
+      status: 200, contentType: 'application/json',
+      headers: { 'Access-Control-Allow-Origin': '*' },
+      body: JSON.stringify({ quote: 'Test quote.', author: 'Test' }),
+    }));
 
     const u = await createTestUser(asAdmin);
     const ts = Date.now();

@@ -1,8 +1,28 @@
 /**
+ * Netlify deploy previews inject a fixed "Powered by Netlify" badge iframe
+ * bottom-right that swallows clicks on mobile viewports. It can be injected
+ * after load, so a CSS rule is used rather than removing the node.
+ * @param {import('@playwright/test').Page} page
+ */
+async function hideNetlifyBadge(page) {
+  await page.addInitScript(() => {
+    const addStyle = () => {
+      const style = document.createElement('style');
+      style.textContent = '#nl-badge-frame { display: none !important; }';
+      document.documentElement.appendChild(style);
+    };
+    if (document.documentElement) addStyle();
+    else document.addEventListener('DOMContentLoaded', addStyle, { once: true });
+  });
+}
+
+/**
  * Wait for the page to be fully loaded and initialized
  * @param {import('@playwright/test').Page} page - Playwright page object
  */
 async function waitForPageReady(page) {
+  await hideNetlifyBadge(page);
+
   // A fresh context has no "tour seen" flags, so whichever onboarding tour
   // belongs to the landing route (js/onboarding-tour.js — one flag per
   // route: dashboard/studio/library/composer/practice/courses/community)
@@ -31,4 +51,4 @@ async function waitForPageReady(page) {
   await page.waitForTimeout(500);
 }
 
-module.exports = { waitForPageReady };
+module.exports = { waitForPageReady, hideNetlifyBadge };

@@ -3,6 +3,7 @@
  * Shared Playwright test helpers
  */
 const { expect } = require('@playwright/test');
+const { hideNetlifyBadge } = require('./utils/page-helper');
 
 /**
  * Sets BPM via .t-bpm-num (the number input), not .t-bpm-input (the range
@@ -152,6 +153,8 @@ async function clearGrid(page, gridId = 'A') {
  * skips all of them regardless of which route is landed on.
  */
 async function gotoStudio(page) {
+  await hideNetlifyBadge(page);
+
   await page.addInitScript(() => {
     const tourFlags = [
       'panafide_tour_dashboard', 'panafide_tour_studio', 'panafide_tour_library',

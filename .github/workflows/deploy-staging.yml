@@ -6,9 +6,10 @@ name: Deploy to Staging
 # manual dispatch      → smoke, core (@smoke + @core on chromium, Mobile Chrome
 #                        and Mobile Safari, no redeploy) or full
 #
-# Scheduled runs only fire from this file's copy on the default branch (main),
-# and check out main unless told otherwise — hence the explicit `staging` ref
-# below, and why the schedule only starts working once this is merged to main.
+# Scheduled runs only fire from this file's copy on the default branch (main)
+# and check out main by default, so core/full check out `staging` explicitly on
+# the schedule. Manual runs check out whichever branch "Use workflow from" picks,
+# so a branch's tests can be run against the deployed staging site.
 on:
   push:
     branches: ["staging"]
@@ -117,7 +118,7 @@ jobs:
       - name: Checkout staging
         uses: actions/checkout@v4
         with:
-          ref: staging
+          ref: ${{ github.event_name == 'schedule' && 'staging' || github.ref }}
 
       - name: Set up Node
         uses: actions/setup-node@v4
@@ -160,7 +161,7 @@ jobs:
       - name: Checkout staging
         uses: actions/checkout@v4
         with:
-          ref: staging
+          ref: ${{ github.event_name == 'schedule' && 'staging' || github.ref }}
 
       - name: Set up Node
         uses: actions/setup-node@v4

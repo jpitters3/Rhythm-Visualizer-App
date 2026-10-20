@@ -61,6 +61,9 @@ const allProjects = [
 
 module.exports = defineConfig({
   testDir: './tests',
+  // Playwright's 30s default is too tight for multi-step flows on slower CI
+  // runners (notably Mobile Safari). Tests needing more still set their own.
+  timeout: 60_000,
   fullyParallel: false,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
