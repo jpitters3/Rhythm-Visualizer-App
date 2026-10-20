@@ -14,6 +14,8 @@ import { refreshRemindersButton } from './practice-reminders.js';
 // When the teacher navigates to a student's dashboard, these are set
 let viewingAsUserId = null;
 let viewingAsName = null;
+// Bumped on every goals save so an older in-flight load can't repaint stale goals.
+let goalsSaveVersion = 0;
 
 // ── Public API ────────────────────────────────────────────────────────────────
 
@@ -124,6 +126,7 @@ export async function loadDashboard() {
   }
 
   // Fetch all data in parallel
+  const goalsVersionAtFetch = goalsSaveVersion;
   const [assignmentRow, goalsRow, practiceRes, courseIdsRes] = await Promise.all([
     fetchCurrentAssignment(userId),
     fetchGoals(userId),
@@ -141,7 +144,7 @@ export async function loadDashboard() {
   ]);
 
   renderAssignment(assignmentRow);
-  renderGoals(goalsRow);
+  if (goalsVersionAtFetch === goalsSaveVersion) renderGoals(goalsRow);
   renderPractice(practiceRes.data || []);
   await renderCourses((courseIdsRes.data || []).map(r => r.course_id));
   renderDailyQuote();
@@ -418,7 +421,7 @@ async function saveGoals() {
 
   if (!error) {
     closeGoalsModal();
-    // Re-render goals with new values
+    goalsSaveVersion++;
     renderGoals({ dream_goal: dreamGoal, short_term_goal: shortGoal });
     if (!error && saveBtn) setTimeout(() => { saveBtn.textContent = 'Save Goals'; }, 2000);
   }
