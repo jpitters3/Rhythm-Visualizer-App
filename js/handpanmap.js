@@ -2036,10 +2036,13 @@ export function initHandpanMap() {
   });
 
   let numberPitchTimer = null;
-  numberPitchSelect?.addEventListener('change', async () => {
+  numberPitchSelect?.addEventListener('change', async (e) => {
     const val = numberPitchSelect.value;
     localStorage.setItem('handpanLabelPref', val);
-    updateUserLabelPreference(val);
+    // Only save real user changes. profile.js dispatches a synthetic 'change'
+    // after loading this same value from the profile; saving it would just
+    // write it straight back on every sign-in.
+    if (e.isTrusted) updateUserLabelPreference(val);
     syncStateFromStorage();
     buildHandpanOverlay();
 
