@@ -73,6 +73,10 @@ module.exports = defineConfig({
     baseURL,
     ignoreHTTPSErrors: true,
     trace: 'on-first-retry',
+    // public/sw.js claims the page a few seconds after first load, mid-test.
+    // From then on WebKit sends requests through it, so page.route() mocks
+    // stop applying. No test exercises the service worker itself.
+    serviceWorkers: 'block',
   },
 
   projects: process.env.CI ? allProjects.filter(p => p.name !== 'firefox') : allProjects,
