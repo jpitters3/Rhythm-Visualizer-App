@@ -16,6 +16,9 @@ let currentFolderId = null;
 let currentFolderName = null;
 let searchQuery = '';
 let searchDebounce = null;
+// Bumped on every render; a slow load only writes the grid if no newer render
+// (e.g. a tab switch) started while it was waiting on its query.
+let renderSeq = 0;
 
 // Shared floating context menu
 let contextMenuEl = null;
@@ -210,6 +213,7 @@ export async function showFolderPicker(tab, onSelect) {
 // ===== RENDER =====
 
 async function renderLibrary() {
+  const seq = ++renderSeq;
   const grid = document.getElementById('libraryGrid');
   const foldersSection = document.getElementById('libraryFolders');
   const breadcrumb = document.getElementById('libraryBreadcrumb');
@@ -260,21 +264,21 @@ async function renderLibrary() {
   grid.innerHTML = '<div class="library-empty">Loading…</div>';
 
   if (currentTab === 'shared') {
-    await loadSharedWithMe(grid);
+    await loadSharedWithMe(grid, seq);
   } else if (currentTab === 'archive') {
-    await loadArchive(grid);
+    await loadArchive(grid, seq);
   } else if (currentTab === 'clips') {
     if (foldersSection) foldersSection.innerHTML = '';
     if (breadcrumb) { breadcrumb.innerHTML = ''; breadcrumb.hidden = true; }
-    await loadClips(grid);
+    await loadClips(grid, seq);
   } else {
-    await loadAndRender(currentTab, grid, foldersSection);
+    await loadAndRender(currentTab, grid, foldersSection, seq);
   }
 }
 
 // ===== PHRASES / COMPOSITIONS =====
 
-async function loadAndRender(tab, grid, foldersSection) {
+async function loadAndRender(tab, grid, foldersSection, seq) {
   const isCompositions = tab === 'compositions';
 
   const showFolders = !currentFolderId && !searchQuery;
@@ -283,6 +287,7 @@ async function loadAndRender(tab, grid, foldersSection) {
     showFolders ? getItemCountsPerFolder(tab) : Promise.resolve({}),
     fetchItems(tab),
   ]);
+  if (seq !== renderSeq) return;
 
   const { data, error } = itemsResult;
 
@@ -380,7 +385,7 @@ async function fetchItems(tab) {
 
 // ===== SHARED WITH ME =====
 
-async function loadSharedWithMe(grid) {
+async function loadSharedWithMe(grid, seq) {
   let q = supabase
     .from('patterns')
     .select('name, data, updated_at')
@@ -390,6 +395,7 @@ async function loadSharedWithMe(grid) {
     .order('updated_at', { ascending: sortAscending });
   if (searchQuery) q = q.ilike('name', `%${searchQuery}%`);
   const { data, error } = await q;
+  if (seq !== renderSeq) return;
 
   if (error || !data?.length) {
     grid.innerHTML = '<div class="library-empty"><p>No shared phrases saved yet.</p><span style="opacity:0.5;font-size:13px">When someone shares a pattern with you, use "Save a copy" to store it here.</span></div>';
@@ -414,7 +420,7 @@ async function loadSharedWithMe(grid) {
 
 // ===== ARCHIVE TAB =====
 
-async function loadArchive(grid) {
+async function loadArchive(grid, seq) {
   const [phrasesResult, compositionsResult] = await Promise.all([
     supabase
       .from('patterns')
@@ -429,6 +435,7 @@ async function loadArchive(grid) {
       .eq('archived', true)
       .order('created_at', { ascending: sortAscending }),
   ]);
+  if (seq !== renderSeq) return;
 
   const phrases = phrasesResult.data || [];
   const compositions = compositionsResult.data || [];
@@ -819,12 +826,13 @@ function buildCard({ title, date, patternData, onClick, dragPayload, menuItems =
 
 // ===== CLIPS =====
 
-async function loadClips(grid) {
+async function loadClips(grid, seq) {
   const { data: clips, error } = await supabase
     .from('clips')
     .select('id, title, audio_url, duration_secs, created_at')
     .eq('user_id', currentUser.id)
     .order('created_at', { ascending: false });
+  if (seq !== renderSeq) return;
 
   if (error) {
     grid.innerHTML = `<div class="library-empty">Could not load clips: ${error.message}</div>`;

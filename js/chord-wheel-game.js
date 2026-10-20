@@ -134,6 +134,7 @@ class ChordWheelGame {
     this.includeUnplayable = false;
     this.wheelRotation = 0;
     this.wheelSpinning = false;
+    this.spinAllActive = false;
     this.activeSpinAbort = null; // cancels the in-flight spin's pending transitionend
     this.activePool = [];
     this.disabledChords = new Set(); // signatures, e.g. "9-Minor-0" — off the wheel
@@ -293,6 +294,7 @@ class ChordWheelGame {
   spinWheelTo(slotIndex) {
     if (this.wheelSpinning || !this.activePool.length) return Promise.resolve();
     this.wheelSpinning = true;
+    this.updateSpinLock();
     this.highlightTargetSlot(slotIndex);
 
     const n = this.activePool.length;
@@ -313,6 +315,7 @@ class ChordWheelGame {
         this.wheelSvgEl.removeEventListener('transitionend', onEnd);
         this.wheelSpinning = false;
         this.activeSpinAbort = null;
+        this.updateSpinLock();
         this.slots[slotIndex] = { ...this.activePool[targetIndex], wheelColor: this.wheelColors[targetIndex] };
         playChordAt(this.slots[slotIndex]);
         this.renderSlots();
@@ -327,13 +330,28 @@ class ChordWheelGame {
         this.wheelSvgEl.removeEventListener('transitionend', onEnd);
         this.wheelSpinning = false;
         this.activeSpinAbort = null;
+        this.updateSpinLock();
         resolve();
       };
     });
   }
 
   async spinAll() {
-    for (let i = 0; i < 4; i++) await this.spinWheelTo(i);
+    this.spinAllActive = true;
+    this.updateSpinLock();
+    try {
+      for (let i = 0; i < 4; i++) await this.spinWheelTo(i);
+    } finally {
+      this.spinAllActive = false;
+      this.updateSpinLock();
+    }
+  }
+
+  // The mode buttons ignore clicks mid-spin (see their handler), so show them
+  // disabled for the whole spin, including all four spins of Spin All.
+  updateSpinLock() {
+    const busy = this.wheelSpinning || this.spinAllActive;
+    this.view?.querySelectorAll('.cw-mode-btn').forEach(btn => { btn.disabled = busy; });
   }
 
   nextEmptySlotIndex() {

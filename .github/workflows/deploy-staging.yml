@@ -1,44 +1,49 @@
 name: Deploy to Staging
 
-# push to staging      → deploy, then run the @smoke subset (chromium + Mobile Chrome)
-# daily schedule       → full suite (all CI projects, 4 shards) against the
-#                        already-deployed staging site — no redeploy
-# manual dispatch      → smoke, core (@smoke + @core on chromium, Mobile Chrome
-#                        and Mobile Safari, no redeploy) or full
+# Every run builds the site once, then each test job serves that build on its
+# own runner (http://localhost:3000) and tests it there, so test traffic never
+# touches Netlify. Netlify is only deployed to after tests pass.
 #
-# Scheduled runs only fire from this file's copy on the default branch (main),
-# and check out main unless told otherwise — hence the explicit `staging` ref
-# below, and why the schedule only starts working once this is merged to main.
+# push to staging      → build → core (@smoke + @core on chromium, Mobile
+#                        Chrome, Mobile Safari) → deploy to Netlify if green →
+#                        health-check the deployed site
+# daily schedule       → build staging → full suite (4 shards), no deploy
+# manual dispatch      → build the chosen branch → smoke, core or full, no deploy
+#
+# Scheduled runs only fire from this file's copy on the default branch (main)
+# and check out main by default, hence the explicit `staging` ref on the
+# schedule. Manual runs build and test whichever branch "Use workflow from" picks.
 on:
   push:
     branches: ["staging"]
+    paths-ignore: ["docs/**", "**.md"]
   schedule:
     - cron: "0 8 * * *" # 08:00 UTC daily (3–4am Eastern)
   workflow_dispatch:
     inputs:
       suite:
-        description: "smoke = deploy + @smoke tests; core = @smoke + @core tests, full = everything (both against the current staging site, no deploy)"
+        description: "smoke = @smoke on chromium + Mobile Chrome; core = @smoke + @core on chromium, Mobile Chrome, Mobile Safari; full = everything. Manual runs never deploy."
         type: choice
         options: [smoke, core, full]
-        default: smoke
+        default: core
 
 concurrency:
   group: staging-${{ github.event_name }}
   cancel-in-progress: true
 
 env:
-  SUITE: ${{ github.event_name == 'schedule' && 'full' || github.event_name == 'push' && 'smoke' || inputs.suite }}
+  SUITE: ${{ github.event_name == 'schedule' && 'full' || github.event_name == 'push' && 'core' || inputs.suite }}
+  REF: ${{ github.event_name == 'schedule' && 'staging' || github.ref }}
 
 jobs:
-  deploy:
-    if: github.event_name == 'push' || inputs.suite == 'smoke'
+  build:
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    outputs:
-      deploy_url: ${{ steps.netlify_deploy.outputs.deploy_url }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ env.REF }}
 
       - name: Set up Node
         uses: actions/setup-node@v4
@@ -54,6 +59,199 @@ jobs:
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL_STAGING }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY_STAGING }}
+
+      - name: Save the build for the test and deploy jobs
+        uses: actions/upload-artifact@v4
+        with:
+          name: site
+          path: dist/
+          retention-days: 3
+
+  smoke:
+    needs: build
+    if: inputs.suite == 'smoke'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.REF }}
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Download the build
+        uses: actions/download-artifact@v4
+        with:
+          name: site
+          path: dist/
+
+      - name: Serve the build on this runner
+        run: |
+          npx vite preview --port 3000 --strictPort > preview.log 2>&1 &
+          for i in $(seq 30); do curl -sf http://localhost:3000/ > /dev/null && exit 0; sleep 1; done
+          cat preview.log; exit 1
+
+      - name: Run @smoke tests
+        run: npx playwright test --grep @smoke --project=chromium --project="Mobile Chrome" --reporter=blob,list
+        env:
+          PLAYWRIGHT_BASE_URL: http://localhost:3000
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL_STAGING }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY_STAGING }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY_STAGING }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+
+      - name: Upload blob report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: blob-report-smoke
+          path: blob-report/
+          retention-days: 14
+
+  core:
+    needs: build
+    if: github.event_name == 'push' || inputs.suite == 'core'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.REF }}
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium webkit
+
+      - name: Download the build
+        uses: actions/download-artifact@v4
+        with:
+          name: site
+          path: dist/
+
+      - name: Serve the build on this runner
+        run: |
+          npx vite preview --port 3000 --strictPort > preview.log 2>&1 &
+          for i in $(seq 30); do curl -sf http://localhost:3000/ > /dev/null && exit 0; sleep 1; done
+          cat preview.log; exit 1
+
+      - name: Run @smoke + @core tests
+        run: npx playwright test --grep "@smoke|@core" --project=chromium --project="Mobile Chrome" --project="Mobile Safari" --reporter=blob,list
+        env:
+          PLAYWRIGHT_BASE_URL: http://localhost:3000
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL_STAGING }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY_STAGING }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY_STAGING }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+
+      - name: Upload blob report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: blob-report-core
+          path: blob-report/
+          retention-days: 14
+
+  full:
+    needs: build
+    if: github.event_name == 'schedule' || inputs.suite == 'full'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.REF }}
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps
+
+      - name: Download the build
+        uses: actions/download-artifact@v4
+        with:
+          name: site
+          path: dist/
+
+      - name: Serve the build on this runner
+        run: |
+          npx vite preview --port 3000 --strictPort > preview.log 2>&1 &
+          for i in $(seq 30); do curl -sf http://localhost:3000/ > /dev/null && exit 0; sleep 1; done
+          cat preview.log; exit 1
+
+      - name: Run full suite (shard ${{ matrix.shard }}/4)
+        run: npx playwright test --reporter=blob,list --shard=${{ matrix.shard }}/4
+        env:
+          PLAYWRIGHT_BASE_URL: http://localhost:3000
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL_STAGING }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY_STAGING }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY_STAGING }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+
+      - name: Upload blob report (shard ${{ matrix.shard }}/4)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: blob-report-${{ matrix.shard }}
+          path: blob-report/
+          retention-days: 14
+
+  deploy:
+    needs: [build, core]
+    if: github.event_name == 'push' && needs.core.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    outputs:
+      deploy_url: ${{ steps.netlify_deploy.outputs.deploy_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Download the tested build
+        uses: actions/download-artifact@v4
+        with:
+          name: site
+          path: dist/
 
       - name: Deploy to Netlify
         id: netlify_deploy
@@ -72,127 +270,14 @@ jobs:
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
           NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
 
-  smoke:
-    needs: deploy
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Install Playwright browsers
+      - name: Install Chromium for the health check
         run: npx playwright install --with-deps chromium
 
-      - name: Run @smoke tests against staging
-        run: npx playwright test --grep @smoke --project=chromium --project="Mobile Chrome" --reporter=blob,list
-        env:
-          PLAYWRIGHT_BASE_URL: ${{ needs.deploy.outputs.deploy_url }}
-          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL_STAGING }}
-          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY_STAGING }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY_STAGING }}
-          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
-
-      - name: Upload blob report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: blob-report-smoke
-          path: blob-report/
-          retention-days: 14
-
-  core:
-    if: inputs.suite == 'core'
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    steps:
-      - name: Checkout staging
-        uses: actions/checkout@v4
-        with:
-          ref: staging
-
-      - name: Set up Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Install Playwright browsers
-        run: npx playwright install --with-deps chromium webkit
-
-      - name: Run @smoke + @core tests against staging
-        run: npx playwright test --grep "@smoke|@core" --project=chromium --project="Mobile Chrome" --project="Mobile Safari" --reporter=blob,list
-        env:
-          PLAYWRIGHT_BASE_URL: ${{ vars.STAGING_URL }}
-          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL_STAGING }}
-          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY_STAGING }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY_STAGING }}
-          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
-
-      - name: Upload blob report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: blob-report-core
-          path: blob-report/
-          retention-days: 14
-
-  full:
-    if: github.event_name == 'schedule' || inputs.suite == 'full'
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    strategy:
-      fail-fast: false
-      matrix:
-        shard: [1, 2, 3, 4]
-    steps:
-      - name: Checkout staging
-        uses: actions/checkout@v4
-        with:
-          ref: staging
-
-      - name: Set up Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Install Playwright browsers
-        run: npx playwright install --with-deps
-
-      - name: Run full suite against staging (shard ${{ matrix.shard }}/4)
-        run: npx playwright test --reporter=blob,list --shard=${{ matrix.shard }}/4
-        env:
-          PLAYWRIGHT_BASE_URL: ${{ vars.STAGING_URL }}
-          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL_STAGING }}
-          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY_STAGING }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY_STAGING }}
-          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
-
-      - name: Upload blob report (shard ${{ matrix.shard }}/4)
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: blob-report-${{ matrix.shard }}
-          path: blob-report/
-          retention-days: 14
+      - name: Health-check the deployed site
+        run: node scripts/check-site.js "${{ vars.STAGING_URL }}" dist/index.html
 
   report:
-    needs: [deploy, smoke, core, full]
+    needs: [build, smoke, core, full, deploy]
     if: always() && (needs.smoke.result != 'skipped' || needs.core.result != 'skipped' || needs.full.result != 'skipped')
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -231,13 +316,25 @@ jobs:
       - name: Write summary
         env:
           RESULT: ${{ needs[env.SUITE].result }}
-          URL: ${{ env.SUITE == 'smoke' && needs.deploy.outputs.deploy_url || vars.STAGING_URL }}
+          DEPLOY: ${{ needs.deploy.result }}
+          EVENT: ${{ github.event_name }}
+          URL: ${{ vars.STAGING_URL }}
         run: |
-          echo "## Staging — $SUITE tests" >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "- **URL**: $URL" >> "$GITHUB_STEP_SUMMARY"
-          if [ "$RESULT" = "success" ]; then
-            echo "- **Tests**: ✅ passed" >> "$GITHUB_STEP_SUMMARY"
-          else
-            echo "- **Tests**: ❌ $RESULT — see the playwright-report artifact for details" >> "$GITHUB_STEP_SUMMARY"
-          fi
+          {
+            echo "## Staging — $SUITE tests"
+            echo ""
+            if [ "$RESULT" = "success" ]; then
+              echo "- **Tests**: ✅ passed"
+            else
+              echo "- **Tests**: ❌ $RESULT — see the playwright-report artifact for details"
+            fi
+            if [ "$EVENT" = "push" ]; then
+              case "$DEPLOY" in
+                success) echo "- **Deploy**: ✅ deployed and health-checked: $URL" ;;
+                skipped) echo "- **Deploy**: ⏭ skipped because tests didn't pass — Netlify untouched" ;;
+                *)       echo "- **Deploy**: ❌ $DEPLOY — see the deploy job's log" ;;
+              esac
+            else
+              echo "- **Deploy**: — (only pushes to staging deploy)"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"

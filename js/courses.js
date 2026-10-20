@@ -6,6 +6,7 @@ import { applyPattern, serializePattern, dbSavePattern, refreshPatternSelect, sn
 import { stop } from './noteplayer.js';
 import { supabase } from './supabase-client.js';
 import { updateAdminUI } from './auth.js';
+import { currentProfile, loadCurrentProfile } from './profile.js';
 import { isItemInPractice, togglePracticeItem, closePracticeSidebar } from './practice.js';
 import { loadCourseToEdit } from './course-creator.js';
 import { updateCurrentPhraseName } from './controls.js';
@@ -32,14 +33,9 @@ export async function fetchCourses() {
   if (!currentUser) renderCourseSidebar(null);
 
   try {
-    // 1. Fetch User Profile for Active Course ID
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('current_course_id')
-      .eq('user_id', currentUser.id)
-      .maybeSingle();
-
-    activeCourseId = profile?.current_course_id;
+    // 1. Active course ID, from the profile already loaded at sign-in
+    await loadCurrentProfile();
+    activeCourseId = currentProfile?.current_course_id;
 
     // 2. Fetch User's Enrolled Courses AND Completed Lessons
     const [enrollRes, progressRes] = await Promise.all([
@@ -382,11 +378,18 @@ export async function setActiveCourse(courseId) {
 
   // Persist
   if (currentUser) {
+    rememberCurrentCourse(courseId);
     await supabase
       .from('profiles')
       .update({ current_course_id: courseId })
       .eq('user_id', currentUser.id);
   }
+}
+
+// Keeps the shared profile in step with what's saved, since fetchCourses()
+// reads the active course from it rather than re-querying.
+function rememberCurrentCourse(courseId) {
+  if (currentProfile?.user_id === currentUser?.id) currentProfile.current_course_id = courseId;
 }
 
 function applyLessonExpandedState() {
@@ -1154,6 +1157,7 @@ export function initCourses() {
       renderCourseSidebar(allCourses);
       // Persist without waiting
       if (currentUser) {
+        rememberCurrentCourse(courseId);
         supabase.from('profiles').update({ current_course_id: courseId }).eq('user_id', currentUser.id);
       }
     }

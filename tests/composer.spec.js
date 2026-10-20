@@ -84,7 +84,8 @@ test.describe('Song Composer', () => {
     await navigateTo(page, 'library');
     await page.click('.library-tab[data-tab="compositions"]');
     const card = page.locator('#libraryGrid .library-card', { hasText: title });
-    await expect(card).toBeVisible();
+    // First Library load right after sign-in can pass 5s under a loaded run.
+    await expect(card).toBeVisible({ timeout: 15000 });
 
     await card.click();
     await page.waitForURL('**/#studio');

@@ -1,0 +1,42 @@
+# Before a push to staging, run the core test tier locally; before a push to
+# main, make sure the commits already went through staging.
+# Skip both with: git push --no-verify
+remote="$1"
+zero=0000000000000000000000000000000000000000
+run_core=0
+
+while read -r local_ref local_sha remote_ref remote_sha; do
+  [ "$local_sha" = "$zero" ] && continue # deleting a remote branch
+  case "$remote_ref" in
+    refs/heads/staging)
+      run_core=1
+      staging_sha="$local_sha"
+      ;;
+    refs/heads/main)
+      if ! git merge-base --is-ancestor "$local_sha" "refs/remotes/$remote/staging" 2>/dev/null; then
+        echo "✋ Not pushing to main: these commits haven't been pushed to staging yet."
+        echo "   Push staging first (it runs the tests), then merge staging into main."
+        exit 1
+      fi
+      ;;
+  esac
+done
+
+[ "$run_core" = 1 ] || exit 0
+
+# The tests run against the files on disk, so they must be the commit being pushed.
+if [ "$(git rev-parse HEAD)" != "$staging_sha" ]; then
+  echo "✋ Pushing staging, but a different commit is checked out, so the tests would check the wrong code."
+  echo "   Run: git checkout staging, then push again."
+  exit 1
+fi
+if ! git diff --quiet HEAD -- . ':(exclude).DS_Store'; then
+  echo "⚠️  You have uncommitted changes; the tests will include them, but the push won't."
+fi
+
+echo "🧪 Running the core tests before pushing to staging (about 5 minutes)."
+echo "   Skip with: git push --no-verify"
+npm run test:core -- --reporter=list || {
+  echo "❌ Core tests failed, so nothing was pushed. Fix them, or push with --no-verify."
+  exit 1
+}

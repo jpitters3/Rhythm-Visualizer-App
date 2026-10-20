@@ -1,6 +1,6 @@
 import { supabase } from './supabase-client.js';
 import { currentUser } from './state.js';
-import { currentProfile } from './profile.js';
+import { currentProfile, loadCurrentProfile } from './profile.js';
 import { openAuthModal } from './auth.js';
 import { navigate, getCurrentRoute } from './router.js';
 import { escapeHtml } from './utils.js';
@@ -14,6 +14,8 @@ import { refreshRemindersButton } from './practice-reminders.js';
 // When the teacher navigates to a student's dashboard, these are set
 let viewingAsUserId = null;
 let viewingAsName = null;
+// Bumped on every goals save so an older in-flight load can't repaint stale goals.
+let goalsSaveVersion = 0;
 
 // ── Public API ────────────────────────────────────────────────────────────────
 
@@ -26,9 +28,14 @@ export function initDashboard() {
     }
   });
 
-  // On login: go to bespoke dashboard, then start the tour if unseen
+  // On login: go to bespoke dashboard, then start the tour if unseen. Navigating
+  // fires routeChanged, which loads it and starts the tour (above); only an
+  // already-open Dashboard (no hash change, no event) needs loading here.
   Bus.on(BUS_EVENT.AUTH_LOGIN, async () => {
-    navigate('dashboard');
+    if (getCurrentRoute() !== 'dashboard') {
+      navigate('dashboard');
+      return;
+    }
     await loadDashboard();
     if (!localStorage.getItem(TOUR_KEY)) startTour('dashboard');
   });
@@ -124,6 +131,7 @@ export async function loadDashboard() {
   }
 
   // Fetch all data in parallel
+  const goalsVersionAtFetch = goalsSaveVersion;
   const [assignmentRow, goalsRow, practiceRes, courseIdsRes] = await Promise.all([
     fetchCurrentAssignment(userId),
     fetchGoals(userId),
@@ -141,7 +149,7 @@ export async function loadDashboard() {
   ]);
 
   renderAssignment(assignmentRow);
-  renderGoals(goalsRow);
+  if (goalsVersionAtFetch === goalsSaveVersion) renderGoals(goalsRow);
   renderPractice(practiceRes.data || []);
   await renderCourses((courseIdsRes.data || []).map(r => r.course_id));
   renderDailyQuote();
@@ -252,6 +260,15 @@ async function fetchCurrentAssignment(userId) {
 }
 
 async function fetchGoals(userId) {
+  // Your own goals are in the profile already loaded at sign-in; a teacher
+  // viewing a student's dashboard still needs that student's row.
+  if (userId === currentUser?.id) {
+    await loadCurrentProfile();
+    return currentProfile && {
+      dream_goal: currentProfile.dream_goal,
+      short_term_goal: currentProfile.short_term_goal,
+    };
+  }
   const { data } = await supabase
     .from('profiles')
     .select('dream_goal, short_term_goal')
@@ -417,8 +434,9 @@ async function saveGoals() {
   if (saveBtn) saveBtn.textContent = error ? 'Error — try again' : 'Save Goals';
 
   if (!error) {
+    if (currentProfile) Object.assign(currentProfile, { dream_goal: dreamGoal, short_term_goal: shortGoal });
     closeGoalsModal();
-    // Re-render goals with new values
+    goalsSaveVersion++;
     renderGoals({ dream_goal: dreamGoal, short_term_goal: shortGoal });
     if (!error && saveBtn) setTimeout(() => { saveBtn.textContent = 'Save Goals'; }, 2000);
   }

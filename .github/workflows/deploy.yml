@@ -45,3 +45,7 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+      - name: Install Chromium for the health check
+        run: npx playwright install --with-deps chromium
+      - name: Health-check production
+        run: node scripts/check-site.js https://panafide.com dist/index.html

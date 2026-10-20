@@ -444,7 +444,13 @@ async function showOpenPhraseModal() {
 
       listEl.innerHTML = '';
 
-      if (names.length === 0) return;
+      if (names.length === 0) {
+        const empty = document.createElement('div');
+        empty.className = 'phrase-list-empty';
+        empty.innerHTML = '<span>No saved phrases yet.</span>';
+        listEl.appendChild(empty);
+        return;
+      }
 
       if (filtered.length === 0) {
         const empty = document.createElement('div');

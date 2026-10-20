@@ -3,6 +3,7 @@
  * Shared Playwright test helpers
  */
 const { expect } = require('@playwright/test');
+const { hideNetlifyBadge, waitForAppReady } = require('./utils/page-helper');
 
 /**
  * Sets BPM via .t-bpm-num (the number input), not .t-bpm-input (the range
@@ -79,10 +80,14 @@ async function closeMobileControlsIfNeeded(page) {
  * Composer...) is a collapsed hamburger menu on mobile — #mobileMenuBtn
  * toggles it open (js/mobile-menu.js). A no-op on desktop, where it's
  * always visible. Call this before clicking any .nav-link.
+ * The button is visible (CSS) before js/init.js attaches its click handler,
+ * so right after a load or reload a click can land on a dead button and the
+ * menu never opens — hence waiting for startup to finish first.
  */
 async function openNavIfNeeded(page) {
   const menuBtn = page.locator('#mobileMenuBtn');
   if (!(await menuBtn.isVisible().catch(() => false))) return;
+  await waitForAppReady(page);
   const isOpen = await page.locator('#appNav').evaluate(el => el.classList.contains('open')).catch(() => false);
   if (!isOpen) await menuBtn.click();
 }
@@ -152,6 +157,8 @@ async function clearGrid(page, gridId = 'A') {
  * skips all of them regardless of which route is landed on.
  */
 async function gotoStudio(page) {
+  await hideNetlifyBadge(page);
+
   await page.addInitScript(() => {
     const tourFlags = [
       'panafide_tour_dashboard', 'panafide_tour_studio', 'panafide_tour_library',

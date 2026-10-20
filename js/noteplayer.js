@@ -225,9 +225,9 @@ function startAudioHardwareKeepAlive() {
 export async function preloadScaleSamples() {
   const s = getScale();
   const labels = new Set(['Ding', ...Object.keys(s.map || {})]);
-  for (const label of labels) {
+  await Promise.all([...labels].map(async (label) => {
     const { key, storagePath } = resolveSampleKey(label);
-    if (!key) continue;
+    if (!key) return;
     try {
       if (storagePath) {
         await loadCustomSample(key, storagePath);
@@ -237,7 +237,7 @@ export async function preloadScaleSamples() {
     } catch (e) {
       // console.log(`Error loading sample [${key}]: ${e}`);
     }
-  }
+  }));
 }
 
 // Every distinct note across every built-in scale — a small, fixed set
@@ -248,7 +248,7 @@ async function preloadAllScaleSamples() {
     notes.add((s.ding || 'D3') + '_ding');
     Object.values(s.map).forEach(n => notes.add(n));
   }
-  await Promise.all([...notes].map(n => {
+  await Promise.all([...notes].filter(n => !samples[n]).map(n => {
     const file = noteToFile(n);
     return loadSample(n, `${BASE_PATH}assets/audio/${file}`).catch(() => {});
   }));
@@ -257,14 +257,17 @@ async function preloadAllScaleSamples() {
 export async function preloadAudioSamples() {
   if (!samplesPreloaded && audioCtx) {
     samplesPreloaded = true;
-    const loads = [
+    // Only what the current scale needs is awaited: start() waits on this, and
+    // also awaiting every built-in scale's notes (~29 MB) delayed the first Play
+    // by several seconds. The rest load in the background afterward.
+    const essentials = Promise.all([
       loadSample(SOUND_TAK, `${BASE_PATH}assets/audio/dkurd_tak.wav`),
       loadSample(SOUND_SLAP, `${BASE_PATH}assets/audio/dkurd_slap.wav`),
       loadSample(SOUND_GHOST, `${BASE_PATH}assets/audio/Ghost2.wav`),
-      preloadAllScaleSamples(),
       preloadScaleSamples()
-    ];
-    return Promise.all(loads);
+    ]);
+    essentials.then(preloadAllScaleSamples, preloadAllScaleSamples);
+    return essentials;
   }
   return Promise.resolve();
 }

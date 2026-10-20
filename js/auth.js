@@ -445,8 +445,9 @@ export async function initAuth() {
     updateAccountUI();
     updateAdminUI();
     closeAuthModal();
-    Bus.emit(BUS_EVENT.AUTH_LOGIN, { user: currentUser });
-    Bus.emit(BUS_EVENT.PATTERN_REFRESH_NEEDED);
+    // No AUTH_LOGIN / PATTERN_REFRESH_NEEDED here: signInWithPassword() already
+    // ran the onAuthStateChange listener in initAuthSession(), which emits both.
+    // Emitting again made every sign-in reaction (and its Supabase calls) run twice.
   });
 
   // Allow Enter on password to log in

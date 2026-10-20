@@ -39,7 +39,9 @@ test.describe('Course Marketplace', () => {
 
   test('Unlock a free course from the Marketplace', { tag: '@core' }, async ({ page }) => {
     // 1. Seed a new free course via Admin client
-    const courseTitle = `Test Marketplace Course ${Date.now()}`;
+    // Every published course is listed in the marketplace, and this test runs on
+    // several projects at once, so the title must be unique beyond the millisecond.
+    const courseTitle = `Test Marketplace Course ${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
     const { data: course, error } = await supabaseAdmin
       .from('courses')
       .insert([{

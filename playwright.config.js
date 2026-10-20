@@ -61,6 +61,9 @@ const allProjects = [
 
 module.exports = defineConfig({
   testDir: './tests',
+  // Playwright's 30s default is too tight for multi-step flows on slower CI
+  // runners (notably Mobile Safari). Tests needing more still set their own.
+  timeout: 60_000,
   fullyParallel: false,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
@@ -69,7 +72,13 @@ module.exports = defineConfig({
   use: {
     baseURL,
     ignoreHTTPSErrors: true,
-    trace: 'on-first-retry',
+    // CI keeps a trace for every failed attempt, including first attempts that
+    // pass on retry, so intermittent failures can still be diagnosed.
+    trace: process.env.CI ? 'retain-on-failure' : 'on-first-retry',
+    // public/sw.js claims the page a few seconds after first load, mid-test.
+    // From then on WebKit sends requests through it, so page.route() mocks
+    // stop applying. No test exercises the service worker itself.
+    serviceWorkers: 'block',
   },
 
   projects: process.env.CI ? allProjects.filter(p => p.name !== 'firefox') : allProjects,

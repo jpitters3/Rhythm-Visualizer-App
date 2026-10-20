@@ -75,10 +75,10 @@ test.describe('Courses (student)', () => {
     await completeBtn.click();
     await expect(completeBtn).toHaveText('✅ Completed');
 
-    // Signed-in reloads land on the Dashboard; wait for it so the nav click
-    // below can't race the reload.
+    // Signed-in reloads land on the Dashboard (after briefly routing to Home
+    // until the session restores); wait for it so the nav click can't race it.
     await page.reload({ waitUntil: 'networkidle' });
-    await expect(page.locator('#view-dashboard')).toBeVisible();
+    await expect(page.locator('#view-dashboard')).toBeVisible({ timeout: 15000 });
     await openNavPanel(page, '#toggleSidebarBtn', '#courseSidebar');
     const linkAgain = page.locator(`.lesson-link[data-id="${lessons[0].id}"]`);
     await expect(linkAgain).toBeVisible();
