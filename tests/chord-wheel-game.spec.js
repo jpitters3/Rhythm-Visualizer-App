@@ -33,21 +33,14 @@ async function waitForAllSlotsFilled(page, timeout = 20000) {
   );
 }
 
-// Re-spinning already-filled slots keeps '.cw-chord-name' at a steady count
-// of 4 throughout the whole ~13s sequential 4-spin pass (js/chord-wheel-
-// game.js's SPIN_MS * 4) — waitForAllSlotsFilled's count-based check would
-// resolve instantly against the *stale* pre-respin values instead of
-// waiting for the new pass to actually land. Wait for the text to actually
-// change from a snapshot taken right before the re-spin instead.
-async function waitForSlotsChangedFrom(page, previousTexts, timeout = 30000) {
-  await page.waitForFunction(
-    (prev) => {
-      const current = [...document.querySelectorAll('.cw-chord-name')].map(el => el.textContent);
-      return current.length === 4 && JSON.stringify(current) !== JSON.stringify(prev);
-    },
-    previousTexts,
-    { timeout }
-  );
+// The mode buttons stay disabled until every spin of Spin All has landed
+// (js/chord-wheel-game.js updateSpinLock). Waiting on the chord names alone
+// isn't enough on a re-spin: all four slots are already filled, so the count
+// is 4 throughout the ~13s pass.
+async function spinAllAndWait(page) {
+  await page.click('.cw-spin-all-btn');
+  await expect(page.locator('.cw-mode-btn').first()).toBeEnabled({ timeout: 30000 });
+  await waitForAllSlotsFilled(page);
 }
 
 test('Chord Wheel: spin, reorder, click-to-play, Any Chords mode, send to Studio', async ({ page }) => {
@@ -87,8 +80,7 @@ test('Chord Wheel: spin, reorder, click-to-play, Any Chords mode, send to Studio
     expect(await page.locator('.chord-highlight, .chord-highlight-red').count()).toBeGreaterThan(0);
 
     // Spin All 4 — sequential single-wheel spins.
-    await page.click('.cw-spin-all-btn');
-    await waitForAllSlotsFilled(page);
+    await spinAllAndWait(page);
     await expect(page.locator('.cw-send-btn')).toBeEnabled();
 
     // Reorder: drag slot 0 onto slot 3, confirm the chord order actually changes.
@@ -102,9 +94,7 @@ test('Chord Wheel: spin, reorder, click-to-play, Any Chords mode, send to Studio
     // the swap would be undetectable from displayed text alone.
     let orderBefore = await page.locator('.cw-chord-name').allTextContents();
     for (let i = 0; i < 10 && orderBefore[0] === orderBefore[1]; i++) {
-      const stale = orderBefore;
-      await page.click('.cw-spin-all-btn');
-      await waitForSlotsChangedFrom(page, stale);
+      await spinAllAndWait(page);
       orderBefore = await page.locator('.cw-chord-name').allTextContents();
     }
     await page.locator('.cw-slot[data-id="slot-0"]').dragTo(page.locator('.cw-slot[data-id="slot-3"]'), { force: true });
@@ -114,24 +104,15 @@ test('Chord Wheel: spin, reorder, click-to-play, Any Chords mode, send to Studio
     expect(orderAfter.sort()).toEqual(orderBefore.sort()); // same 4 chords, new order
 
     // Any Chords mode: unplayable toggle appears, default excludes unplayable chords.
-    // The mode-button handler bails out as a no-op if this.wheelSpinning is
-    // still true (js/chord-wheel-game.js) — occasionally still the case this
-    // soon after the reorder drag's own spin-all retries above, so retry the
-    // click itself rather than just waiting longer for an internal flag this
-    // test has no direct visibility into.
-    await expect(async () => {
-      await page.click('.cw-mode-btn[data-mode="any"]');
-      await expect(page.locator('.cw-unplayable-toggle')).toBeVisible({ timeout: 1000 });
-    }).toPass({ timeout: 10000 });
-    await page.click('.cw-spin-all-btn');
-    await waitForAllSlotsFilled(page);
+    await page.click('.cw-mode-btn[data-mode="any"]');
+    await expect(page.locator('.cw-unplayable-toggle')).toBeVisible();
+    await spinAllAndWait(page);
     await expect(page.locator('.cw-chord-badge')).toHaveCount(0);
 
     // Including unplayable chords surfaces the muted badge and blocks Send to Studio.
     await page.check('#cwIncludeUnplayable');
     for (let i = 0; i < 6 && (await page.locator('.cw-chord-badge').count()) === 0; i++) {
-      await page.click('.cw-spin-all-btn');
-      await waitForAllSlotsFilled(page);
+      await spinAllAndWait(page);
     }
     if (await page.locator('.cw-chord-badge').count() > 0) {
       await expect(page.locator('.cw-send-btn')).toBeDisabled();
@@ -140,8 +121,7 @@ test('Chord Wheel: spin, reorder, click-to-play, Any Chords mode, send to Studio
 
     // Play Progression: highlight changes over time as each chord plays.
     await page.click('.cw-mode-btn[data-mode="scale"]');
-    await page.click('.cw-spin-all-btn');
-    await waitForAllSlotsFilled(page);
+    await spinAllAndWait(page);
     await page.click('.cw-play-btn');
     await page.waitForTimeout(300);
     const sample1 = await page.evaluate(() => document.querySelectorAll('.chord-highlight, .chord-highlight-red').length);
@@ -218,8 +198,7 @@ test('Chord Wheel: Send to Studio prompts for unsaved Studio changes (cancel/dis
     await expect(page.locator('#measures .cell').nth(0)).toContainText('1');
 
     await openGame(page);
-    await page.click('.cw-spin-all-btn');
-    await waitForAllSlotsFilled(page);
+    await spinAllAndWait(page);
 
     // Cancel: stays in the game, grid untouched.
     await page.click('.cw-send-btn');
@@ -353,8 +332,7 @@ test('Chord Wheel: returning to #games after Send to Studio shows a fresh hub, n
     await loginAsTestUser(page, u);
     await openGame(page);
 
-    await page.click('.cw-spin-all-btn');
-    await waitForAllSlotsFilled(page);
+    await spinAllAndWait(page);
     await page.click('.cw-send-btn');
     await page.waitForTimeout(800);
     await expect(page).toHaveURL(/#studio/);

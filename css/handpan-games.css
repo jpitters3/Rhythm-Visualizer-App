@@ -376,6 +376,12 @@ body.dark .cw-scale-select-slot select {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
+/* Disabled while the wheel spins (js/chord-wheel-game.js updateSpinLock). */
+.cw-mode-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
 .cw-unplayable-toggle {
   display: flex;
   align-items: center;
