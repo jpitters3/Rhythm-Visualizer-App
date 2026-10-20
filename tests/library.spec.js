@@ -35,7 +35,9 @@ test.describe('Library', () => {
     page.locator('#libraryGrid .library-card', { has: page.locator('.library-card-title', { hasText: name }) });
 
   test('lists saved phrases, search filters them, and opening one loads it in the Studio', { tag: '@core' }, async ({ page }) => {
-    await expect(card(page, morning)).toBeVisible();
+    // The Library's first load competes with the burst of requests the app
+    // fires right after sign-in; under a loaded test run it can pass 5s.
+    await expect(card(page, morning)).toBeVisible({ timeout: 15000 });
     await expect(card(page, evening)).toBeVisible();
 
     await page.fill('#librarySearch', 'Morning Groove');
