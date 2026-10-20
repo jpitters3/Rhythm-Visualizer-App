@@ -12,8 +12,11 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  // Pass-through strategy for now
-  event.respondWith(fetch(event.request));
+  // Leave cross-origin and non-GET requests to the browser: re-fetching them
+  // here turns a failed third-party call into a SW respondWith error.
+  const url = new URL(event.request.url);
+  if (event.request.method !== 'GET' || url.origin !== self.location.origin) return;
+  event.respondWith(fetch(event.request).catch(() => Response.error()));
 });
 
 // ── Web Push ─────────────────────────────────────────────────────────────
