@@ -28,9 +28,14 @@ export function initDashboard() {
     }
   });
 
-  // On login: go to bespoke dashboard, then start the tour if unseen
+  // On login: go to bespoke dashboard, then start the tour if unseen. Navigating
+  // fires routeChanged, which loads it and starts the tour (above); only an
+  // already-open Dashboard (no hash change, no event) needs loading here.
   Bus.on(BUS_EVENT.AUTH_LOGIN, async () => {
-    navigate('dashboard');
+    if (getCurrentRoute() !== 'dashboard') {
+      navigate('dashboard');
+      return;
+    }
     await loadDashboard();
     if (!localStorage.getItem(TOUR_KEY)) startTour('dashboard');
   });
