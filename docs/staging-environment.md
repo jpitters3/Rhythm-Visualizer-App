@@ -11,18 +11,27 @@ and two deploy pipelines, both owned by GitHub Actions.
 | Workflow | `.github/workflows/deploy.yml` | `.github/workflows/deploy-staging.yml` |
 
 Every push to `staging` builds the app against the staging Supabase project,
-deploys it to the staging Netlify site, then runs the full Playwright suite
+deploys it to the staging Netlify site, then runs the **core** test tier
 against that live URL. Results (pass/fail, HTML report) show up on that
 workflow's run in the **Actions** tab — that run history is the dashboard,
 nothing extra to check.
+
+| Tier | Tests | Projects | When |
+|---|---|---|---|
+| smoke | `@smoke` | chromium, Mobile Chrome | manual (**Run workflow** → `smoke`), deploys first |
+| core | `@smoke` + `@core` | chromium, Mobile Chrome, Mobile Safari | every push to `staging`; or manual, against the current site |
+| full | everything | all CI projects, 4 shards | daily at 08:00 UTC; or manual |
+
+Locally: `npm run test:smoke`, `npm run test:core`, or `npm test` for everything.
 
 ## Day-to-day flow
 
 1. Branch off `staging` (or `main`, your call) for a feature/fix.
 2. Merge into `staging` (PR or direct push).
-3. Watch the **Deploy to Staging** Actions run: it deploys, then runs
-   Playwright against the deployed staging URL. Fix anything red before
-   moving on — the HTML report artifact on that run has full traces.
+3. Watch the **Deploy to Staging** Actions run: it deploys, then runs the
+   core tier against the deployed staging URL. Fix anything red before
+   moving on — the HTML report artifact on that run has full traces. Check
+   that the latest daily full-suite run is green too.
 4. Once staging is green, merge `staging` → `main`. `deploy.yml` deploys to
    GitHub Pages exactly as it does today.
 

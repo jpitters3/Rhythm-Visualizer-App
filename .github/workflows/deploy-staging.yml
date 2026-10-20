@@ -1,10 +1,11 @@
 name: Deploy to Staging
 
-# push to staging      → deploy, then run the @smoke subset (chromium + Mobile Chrome)
+# push to staging      → deploy, then run core (@smoke + @core on chromium,
+#                        Mobile Chrome and Mobile Safari) against that deploy
 # daily schedule       → full suite (all CI projects, 4 shards) against the
 #                        already-deployed staging site — no redeploy
-# manual dispatch      → smoke, core (@smoke + @core on chromium, Mobile Chrome
-#                        and Mobile Safari, no redeploy) or full
+# manual dispatch      → smoke (deploy + @smoke on chromium and Mobile Chrome),
+#                        core (no redeploy) or full (no redeploy)
 #
 # Scheduled runs only fire from this file's copy on the default branch (main)
 # and check out main by default, so core/full check out `staging` explicitly on
@@ -18,7 +19,7 @@ on:
   workflow_dispatch:
     inputs:
       suite:
-        description: "smoke = deploy + @smoke tests; core = @smoke + @core tests, full = everything (both against the current staging site, no deploy)"
+        description: "smoke = deploy + @smoke tests; core = @smoke + @core tests; full = everything (core and full test the current staging site, no deploy)"
         type: choice
         options: [smoke, core, full]
         default: smoke
@@ -28,7 +29,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  SUITE: ${{ github.event_name == 'schedule' && 'full' || github.event_name == 'push' && 'smoke' || inputs.suite }}
+  SUITE: ${{ github.event_name == 'schedule' && 'full' || github.event_name == 'push' && 'core' || inputs.suite }}
 
 jobs:
   deploy:
@@ -75,6 +76,7 @@ jobs:
 
   smoke:
     needs: deploy
+    if: inputs.suite == 'smoke'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -111,7 +113,10 @@ jobs:
           retention-days: 14
 
   core:
-    if: inputs.suite == 'core'
+    needs: deploy
+    # On push, test the deploy that just finished; a manual core run tests
+    # whatever is already on staging (deploy is skipped, hence !cancelled()).
+    if: ${{ !cancelled() && ((github.event_name == 'push' && needs.deploy.result == 'success') || inputs.suite == 'core') }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -135,7 +140,7 @@ jobs:
       - name: Run @smoke + @core tests against staging
         run: npx playwright test --grep "@smoke|@core" --project=chromium --project="Mobile Chrome" --project="Mobile Safari" --reporter=blob,list
         env:
-          PLAYWRIGHT_BASE_URL: ${{ vars.STAGING_URL }}
+          PLAYWRIGHT_BASE_URL: ${{ needs.deploy.outputs.deploy_url || vars.STAGING_URL }}
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL_STAGING }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY_STAGING }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY_STAGING }}
@@ -232,7 +237,7 @@ jobs:
       - name: Write summary
         env:
           RESULT: ${{ needs[env.SUITE].result }}
-          URL: ${{ env.SUITE == 'smoke' && needs.deploy.outputs.deploy_url || vars.STAGING_URL }}
+          URL: ${{ needs.deploy.outputs.deploy_url || vars.STAGING_URL }}
         run: |
           echo "## Staging — $SUITE tests" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
