@@ -72,7 +72,9 @@ module.exports = defineConfig({
   use: {
     baseURL,
     ignoreHTTPSErrors: true,
-    trace: 'on-first-retry',
+    // CI keeps a trace for every failed attempt, including first attempts that
+    // pass on retry, so intermittent failures can still be diagnosed.
+    trace: process.env.CI ? 'retain-on-failure' : 'on-first-retry',
     // public/sw.js claims the page a few seconds after first load, mid-test.
     // From then on WebKit sends requests through it, so page.route() mocks
     // stop applying. No test exercises the service worker itself.
