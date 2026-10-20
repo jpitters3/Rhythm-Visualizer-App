@@ -10,17 +10,33 @@ import { setAccentPreset } from './brand.js';
 
 export let currentProfile = null;
 
-// Fetch attributes for the *current* user
+// Several modules react to sign-in at once and each awaits this; they share
+// one in-flight request instead of each fetching the row.
+let profileLoad = null;
+
+// Fetch attributes for the *current* user. Other modules read fields from the
+// resulting currentProfile rather than querying `profiles` themselves.
 export async function loadCurrentProfile() {
   if (!currentUser) {
     currentProfile = null;
     return;
   }
 
-  if (currentProfile !== null) {
-    return;
-  }
+  // Cached only if it's this user's: after a sign-out and a different sign-in
+  // (no reload), the previous user's profile would otherwise be reused.
+  if (currentProfile?.user_id === currentUser.id) return;
+  if (profileLoad?.userId === currentUser.id) return profileLoad.promise;
 
+  const promise = fetchCurrentProfile();
+  profileLoad = { userId: currentUser.id, promise };
+  try {
+    await promise;
+  } finally {
+    if (profileLoad?.promise === promise) profileLoad = null;
+  }
+}
+
+async function fetchCurrentProfile() {
   try {
     const { data, error } = await supabase
       .from('profiles')

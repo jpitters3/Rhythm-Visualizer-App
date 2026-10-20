@@ -1,6 +1,6 @@
 import { supabase } from './supabase-client.js';
 import { currentUser } from './state.js';
-import { currentProfile } from './profile.js';
+import { currentProfile, loadCurrentProfile } from './profile.js';
 import { openAuthModal } from './auth.js';
 import { navigate, getCurrentRoute } from './router.js';
 import { escapeHtml } from './utils.js';
@@ -260,6 +260,15 @@ async function fetchCurrentAssignment(userId) {
 }
 
 async function fetchGoals(userId) {
+  // Your own goals are in the profile already loaded at sign-in; a teacher
+  // viewing a student's dashboard still needs that student's row.
+  if (userId === currentUser?.id) {
+    await loadCurrentProfile();
+    return currentProfile && {
+      dream_goal: currentProfile.dream_goal,
+      short_term_goal: currentProfile.short_term_goal,
+    };
+  }
   const { data } = await supabase
     .from('profiles')
     .select('dream_goal, short_term_goal')
@@ -425,6 +434,7 @@ async function saveGoals() {
   if (saveBtn) saveBtn.textContent = error ? 'Error — try again' : 'Save Goals';
 
   if (!error) {
+    if (currentProfile) Object.assign(currentProfile, { dream_goal: dreamGoal, short_term_goal: shortGoal });
     closeGoalsModal();
     goalsSaveVersion++;
     renderGoals({ dream_goal: dreamGoal, short_term_goal: shortGoal });

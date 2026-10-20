@@ -1,7 +1,7 @@
 import { setCaret } from './range-selection.js';
 import { spellNote } from './utils.js';
 import { Modal } from './modal.js';
-import { updateUserLabelPreference } from './profile.js';
+import { updateUserLabelPreference, currentProfile, loadCurrentProfile } from './profile.js';
 import { writeToSession, clampIndex, getComposeOn, advanceSelection } from './compose-mode.js';
 import { preloadScaleSamples, noteForLabel, isDownbeatStep, registerHighlighter, playNoteByLabel, intervalMs } from './noteplayer.js';
 import { SCALES, SCALE_KEY_LOCAL, BASE_PATH } from './config.js';
@@ -198,23 +198,17 @@ export async function saveScaleRemote(name) {
   if (!currentUser) return;
   if (!supabase) return;
 
-  await supabase.from('profiles').upsert(
+  const { error } = await supabase.from('profiles').upsert(
     { user_id: currentUser.id, handpan_scale: name },
     { onConflict: 'user_id' }
   );
+  if (!error && currentProfile?.user_id === currentUser.id) currentProfile.handpan_scale = name;
 }
 
 export async function loadScaleRemote() {
   if (!currentUser) return null;
-  if (!supabase) return null;
-
-  const { data, error } = await supabase
-    .from('profiles')
-    .select('handpan_scale')
-    .eq('user_id', currentUser.id)
-    .maybeSingle();
-  if (error) return null;
-  return data?.handpan_scale || null;
+  await loadCurrentProfile();
+  return currentProfile?.handpan_scale || null;
 }
 
 export async function loadAllUserCustomHandpans() {

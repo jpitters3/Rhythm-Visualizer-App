@@ -56,6 +56,13 @@ test.describe('Dashboard', () => {
     await expect(page.locator('#dashDreamGoalCard')).toContainText(dream);
     await expect(page.locator('#dashShortGoalCard')).toContainText(focus);
 
+    // Leaving and coming back within the session reads the shared profile
+    // (js/profile.js), not the database — it must reflect the save.
+    await navigateTo(page, 'studio');
+    await navigateTo(page, 'dashboard');
+    await expect(page.locator('#dashDreamGoalCard')).toContainText(dream);
+    await expect(page.locator('#dashShortGoalCard')).toContainText(focus);
+
     await page.reload({ waitUntil: 'networkidle' });
     // Reloads briefly route to Home until the session restores, then back.
     await expect(page.locator('#view-dashboard')).toBeVisible({ timeout: 15000 });
