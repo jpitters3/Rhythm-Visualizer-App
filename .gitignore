@@ -9,6 +9,7 @@ blob-report/
 dist/
 .env
 .env.local
+.env.prod
 *.local
 .env.test
 .env.*.bak
