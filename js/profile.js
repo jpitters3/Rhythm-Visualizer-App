@@ -175,6 +175,8 @@ async function createDefaultProfile() {
   const defaultUser = {
     user_id: currentUser.id,
     username: currentUser.email.split('@')[0], // heuristic
+    first_name: currentUser.user_metadata?.first_name || null,
+    last_name: currentUser.user_metadata?.last_name || null,
     bio: '',
     role: currentUser.user_metadata?.is_admin ? 'admin' : 'student',
     updated_at: new Date(),

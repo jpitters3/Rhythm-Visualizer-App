@@ -479,17 +479,15 @@ export async function initAuth() {
       return;
     }
     authHint.textContent = 'Creating account…';
-    const { data, error } = await supabase.auth.signUp({ email, password });
+    // Names go in user metadata: there's no session until the email is
+    // confirmed, so a direct profiles write here is rejected by RLS.
+    // createDefaultProfile() copies them over on first login.
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { data: { first_name: firstName, last_name: lastName } },
+    });
     if (error) { authHint.textContent = error.message; return; }
-
-    // Save name to profile (upsert in case trigger already created the row)
-    if (data?.user) {
-      await supabase.from('profiles').upsert({
-        user_id: data.user.id,
-        first_name: firstName,
-        last_name: lastName,
-      }, { onConflict: 'user_id' });
-    }
 
     authHint.textContent = 'Account created! Please check your email to confirm, then log in.';
     authPass.value = '';
