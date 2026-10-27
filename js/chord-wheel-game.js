@@ -1,16 +1,13 @@
 // Chord Wheel — Harmony domain game. Spin a wheel for 4 chords, reorder, send to Studio.
 import { rootQualitySignature, chordSignature, getInversionLabel } from './chord-analyzer.js';
-import { getScaleChordPool, highlightChordNotes, playChordNotes, notesToLabels } from './chord-playback.js';
+import { getScaleChordPool, highlightChordNotes, playChordNotes } from './chord-playback.js';
 import { setHandpanSide } from './handpanmap.js';
-import { assignChordToSelectedCell, applySelection, renderAllMeasures, getEffectiveHand } from './notegrid.js';
-import { measureRange } from './measure-actions.js';
+import { getEffectiveHand } from './notegrid.js';
 import { activeGrid, currentUser, getSelectedScaleName } from './state.js';
 import { makeSortable } from './sortable.js';
 import { navigate } from './router.js';
 import { Bus, BUS_EVENT } from './bus.js';
-import { guardBeforeReplacingGrid } from './lesson-settings.js';
-import { HistoryManager } from './history.js';
-import { updateCurrentPhraseName } from './controls.js';
+import { abbreviateChord, writeChordsOverMeasures, sendChordsToStudio } from './progression-to-grid.js';
 
 const ROOTS = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 const QUALITIES = ['Major', 'Minor'];
@@ -31,11 +28,6 @@ const WHEEL_LIGHTNESS = 70;
 const MOBILE_BREAKPOINT = 640; // matches css/handpan-games.css's own mobile cutoff for this game
 
 // --- Pure helpers (no instance state) ---
-
-// "G Minor" -> "Gm", "F Major" -> "F"
-function abbreviateChord(chord) {
-  return chord.quality === 'Minor' ? `${chord.root}m` : chord.root;
-}
 
 function chordToggleLabel(c) {
   return c.inversion ? `${c.name} (${getInversionLabel(c.inversion)})` : c.name;
@@ -413,40 +405,14 @@ class ChordWheelGame {
     // — substitute each measure's first beat with its chord instead of
     // wiping/resizing the grid to 4 blank measures.
     if (this.rhythmHandoff) {
-      const ctx = activeGrid;
-      HistoryManager?.pushState();
-      this.slots.forEach((chord, i) => {
-        const { start } = measureRange(i, ctx);
-        applySelection(start, ctx);
-        assignChordToSelectedCell(notesToLabels(chord.notes), ctx);
-      });
-      renderAllMeasures(ctx);
+      writeChordsOverMeasures(this.slots);
       this.teardown();
       navigate('studio');
       return;
     }
 
-    if (!await guardBeforeReplacingGrid('You have unsaved changes. Discard them and replace the grid with this progression?')) return;
-
-    const ctx = activeGrid;
-    HistoryManager?.pushState();
-    ctx.setMeasures(this.slots.length); // one measure per chord, fully cleared
-    ctx.step = 0;
-
-    this.slots.forEach((chord, i) => {
-      const { start } = measureRange(i, ctx);
-      applySelection(start, ctx);
-      const labels = notesToLabels(chord.notes); // silent — no audio on Send to Studio
-      assignChordToSelectedCell(labels, ctx);
-    });
-
-    renderAllMeasures(ctx);
-    // ex. "Chords Am Dm Dm II C" — abbreviated like the wheel, inversions
-    // spelled out ("Dm II") since there's no second line to wrap onto here.
-    const chordLabels = this.slots.map((chord) => (
-      chord.inversion ? `${abbreviateChord(chord)} ${getInversionLabel(chord.inversion)}` : abbreviateChord(chord)
-    ));
-    updateCurrentPhraseName(`Chords ${chordLabels.join(' ')}`);
+    // Phrase name ex. "Chords Am Dm Dm II C"
+    if (!await sendChordsToStudio(this.slots)) return;
     this.teardown(); // restore the handpan/scale-select to Studio before leaving
     navigate('studio');
   }

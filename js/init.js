@@ -25,6 +25,7 @@ import { initMeasureActions } from './measure-actions.js';
 import { initPanelResize } from './panel-resize.js';
 import { HistoryManager } from './history.js';
 import ChordUI from './chord-ui.js';
+import { initChordPanel } from './chord-sidepanel.js';
 import { initPOTW } from './pattern-of-the-week.js';
 import { initHandpanMap, initScale } from './handpanmap.js';
 import { initPanHero } from './pan-hero.js';
@@ -88,6 +89,7 @@ async function init() {
     initPOTW();
     HistoryManager.init();
     ChordUI.init();
+    initChordPanel();
     initHandpanMap();
     initPanHero();
     initDraggableDrawers();

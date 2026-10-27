@@ -81,10 +81,6 @@
   padding: 12px;
 }
 
-#chordDrawer.modal-overlay {
-  background: rgba(0, 0, 0, 0.05);
-}
-
 .hp-drawer-modal .drawer-content,
 .hp-drawer-modal #hpCustomizeControls {
   padding: 16px;
@@ -727,7 +723,6 @@ button#subdivKeepBtn {
   }
 
   #handpanSettingsDrawer,
-  #chordDrawer,
   #customizeDrawer {
     align-items: flex-start;
     padding-top: 70px;

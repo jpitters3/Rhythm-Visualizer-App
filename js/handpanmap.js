@@ -2108,7 +2108,7 @@ export function initHandpanMap() {
 
   // Modal Manager for handpan drawers
   const drawerModals = {};
-  ['handpanSettingsDrawer', 'chordDrawer', 'customizeDrawer'].forEach(id => {
+  ['handpanSettingsDrawer', 'customizeDrawer'].forEach(id => {
     const el = document.getElementById(id);
     if (!el) return;
     const modal = new Modal(el, {

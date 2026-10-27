@@ -13,17 +13,18 @@ const POSITIONS = {
 };
 
 function noteKeyForLabel(label) {
-  if (label === '0' || label === 'Ding') return 'Ding';
+  if (label === '0' || label === 'Ding' || label === 'D') return 'Ding';
   if (/^[1-8]$/.test(label || '')) return label;
   return null; // Tak/Slap/empty/ghost — not shown on the diagram
 }
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
-export function createChordShapeDiagramEl() {
+// flat: the standalone purple variant used by the Chords panel and stage.
+export function createChordShapeDiagramEl({ flat = false } = {}) {
   const svg = document.createElementNS(SVG_NS, 'svg');
   svg.setAttribute('viewBox', '0 0 100 100');
-  svg.setAttribute('class', 'chord-shape-diagram');
+  svg.setAttribute('class', flat ? 'chord-shape-diagram chord-shape-flat' : 'chord-shape-diagram');
 
   const outline = document.createElementNS(SVG_NS, 'circle');
   outline.setAttribute('class', 'pan-outline');

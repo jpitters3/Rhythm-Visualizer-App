@@ -71,6 +71,7 @@
   <link rel="stylesheet" href="./css/handpan-games.css">
   <link rel="stylesheet" href="./css/create-rhythm-game.css">
   <link rel="stylesheet" href="./css/chord-play-along.css">
+  <link rel="stylesheet" href="./css/chord-sidepanel.css">
   <link rel="stylesheet" href="./css/dashboard.css">
   <link rel="stylesheet" href="./css/onboarding-tour.css">
 
@@ -481,7 +482,7 @@
               <span style="font-size: 11px; opacity: 0.7; margin-bottom: -2px;">Scale Options</span>
               <div class="tab-btn-row" style="display: flex; gap: 12px;">
                 <button class="tab-btn" data-tab="handpanSettingsDrawer" title="Settings">🛸</button>
-                <button class="tab-btn" data-tab="chordDrawer" title="Chords">🎶</button>
+                <button class="tab-btn" data-chord-panel title="Chords">🎶</button>
                 <button class="tab-btn" data-tab="customizeDrawer" title="Customize">⚙️</button>
                 <button class="tab-btn" data-pan-hero title="Pan Hero">🎯</button>
                 <button class="tab-btn" id="flipSideBtnDesktop" style="display:none;" title="Flip to Bottom">🔄</button>
@@ -507,7 +508,7 @@
           <button id="handpanOptionsBtn" class="hp-corner-btn hp-corner-right mobile-only" title="Options">⋯</button>
           <div id="handpanOptionsMenu" class="dropdown-content hp-options-menu">
             <button class="tab-btn" data-tab="handpanSettingsDrawer" title="Settings">🛸 Settings</button>
-            <button class="tab-btn" data-tab="chordDrawer" title="Chords">🎶 Chords</button>
+            <button class="tab-btn" data-chord-panel title="Chords">🎶 Chords</button>
             <button class="tab-btn" data-tab="customizeDrawer" title="Customize">⚙️ Customize</button>
             <button class="hp-options-menu-item" data-pan-hero title="Pan Hero">🎯 Pan Hero</button>
             <button id="flipSideBtn" class="flip-btn hp-options-menu-item" style="display:none;" title="Flip to Bottom"><span class="hp-flip-icon">🔄</span><span class="hp-flip-label">Flip to Bottom</span></button>
@@ -1757,6 +1758,44 @@
     </div>
   </div>
 
+  <!-- Chords Sidebar (js/chord-sidepanel.js) -->
+  <div id="chordSidebar" class="sidebar chord-sidebar" aria-hidden="true" data-panel-type="sidepanel">
+    <div class="sidebar-header">
+      <h3>🎶 Chords</h3>
+      <button id="closeChordSidebar" class="close-btn" title="Close">&times;</button>
+    </div>
+    <div class="cs-body">
+      <section class="cs-library">
+        <div class="cs-label"><span>On your scale</span><span class="cs-count"><span id="chordCount">0</span> chords</span></div>
+        <p class="cs-hint">Hover to see it on the pan · tap to play · drag into a slot (or tap +)</p>
+        <div id="chordList" class="cs-chord-list"></div>
+      </section>
+
+      <section class="cs-builder">
+        <div class="cs-label"><span>Song builder</span>
+          <button type="button" id="csNewSongBtn" class="cs-link-btn">New song</button>
+        </div>
+        <input type="text" id="csSongTitle" class="cs-song-title" maxlength="60" placeholder="Song title (optional)">
+        <datalist id="csSectionNameOptions">
+          <option value="Intro"></option>
+          <option value="Verse A"></option>
+          <option value="Verse B"></option>
+          <option value="Pre-Chorus"></option>
+          <option value="Chorus"></option>
+          <option value="Bridge"></option>
+          <option value="Outro"></option>
+        </datalist>
+        <div id="csSections" class="cs-sections"></div>
+        <button type="button" id="csAddSectionBtn" class="cs-add-section-btn">+ Add section</button>
+      </section>
+    </div>
+    <div class="cs-actions">
+      <button type="button" id="csPlayBtn" class="cs-action-btn">▶ Play</button>
+      <button type="button" id="csStageBtn" class="cs-action-btn">⛶ Full screen</button>
+      <button type="button" id="csSendBtn" class="cs-action-btn cs-action-primary">→ Send to Studio</button>
+    </div>
+  </div>
+
   <!-- Practice Sidebar -->
   <div id="practiceSidebar" class="sidebar" aria-hidden="true" data-panel-type="sidepanel">
     <div class="sidebar-header">
@@ -2201,21 +2240,6 @@
           <label>Play ghost notes:</label>
           <input type="checkbox" id="ghostNotesToggle" title="Play a soft touch sound and highlight the T tonefield on empty steps" style="width:auto;">
         </div>
-      </div>
-    </div>
-  </div>
-
-  <div id="chordDrawer" class="modal-overlay" aria-hidden="true">
-    <div class="modal-content hp-drawer-modal">
-      <div class="modal-header">
-        <h3 class="modal-title">Chords</h3>
-        <button class="close-modal-btn">&times;</button>
-      </div>
-      <div id="chordList" class="drawer-content">
-        <!-- Chords injected here -->
-      </div>
-      <div class="drawer-meta" style="text-align:center; font-size:12px; margin-top:8px; opacity:0.7">
-        <span id="chordCount">0</span> chords available
       </div>
     </div>
   </div>

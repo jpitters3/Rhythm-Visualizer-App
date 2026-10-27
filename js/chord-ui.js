@@ -6,23 +6,24 @@ import { ChordAnalyzer } from './chord-analyzer.js';
 import { assignChordToSelectedCell } from './notegrid.js';
 import { setChordHighlight, getPitchPositionMap } from './handpanmap.js';
 import { annotatePlayability } from './chord-playability.js';
-import { getAllCurrentNotes, highlightChordNotes, playChordNotes } from './chord-playback.js';
+import { getAllCurrentNotes, highlightChordNotes, playChordNotes, notesToLabels } from './chord-playback.js';
+import { createChordShapeDiagramEl, updateChordShapeDiagram } from './chord-shape-diagram.js';
+
+export const CHORD_DRAG_TYPE = 'application/x-panafide-chord';
 
 const ChordUI = (function () {
 
   let currentChords = [];
   let favoriteChords = new Set();
   const FAV_KEY = 'groovepan_favorite_chords';
-  let drawer, header, list, countLabel, toggleIcon;
+  let list, countLabel;
+  let addHandler = null;
 
   function init() {
-    drawer = document.getElementById('chordDrawer');
-    header = document.getElementById('chordDrawerHeader');
     list = document.getElementById('chordList');
     countLabel = document.getElementById('chordCount');
-    toggleIcon = document.querySelector('#chordDrawer .toggle-icon');
 
-    if (!drawer) return;
+    if (!list) return;
 
     // Load Favorites
     try {
@@ -105,8 +106,12 @@ const ChordUI = (function () {
     let activeChordId = null;
 
     chords.forEach(chord => {
+      const item = document.createElement('div');
+      item.className = 'cs-chord-item';
+      item.draggable = true;
       const chip = document.createElement('div');
       const cId = chord.notes.join(','); // unique ID based on notes
+      item.dataset.chordId = cId;
       const isFav = favoriteChords.has(cId);
 
       chip.className = `chord-chip ${chord.quality.toLowerCase()}`;
@@ -132,59 +137,69 @@ const ChordUI = (function () {
         toggleFavorite(cId);
       });
 
+      const shape = createChordShapeDiagramEl({ flat: true });
+      updateChordShapeDiagram(shape, notesToLabels(chord.notes));
+
+      const addBtn = document.createElement('button');
+      addBtn.type = 'button';
+      addBtn.className = 'cs-chord-add-btn';
+      addBtn.title = 'Add to progression';
+      addBtn.textContent = '+';
+      addBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        addHandler?.(chord);
+      });
+
       const activate = () => {
-        // Clear previous active chip if any
+        // Clear previous active item if any
         if (activeChordId && activeChordId !== cId) {
-          const prev = list.querySelector('.chord-chip.active');
-          if (prev) prev.classList.remove('active');
-          // Clear globals
+          list.querySelector('.cs-chord-item.active')?.classList.remove('active');
           setChordHighlight([], false);
         }
 
         activeChordId = cId;
-        chip.classList.add('active');
+        item.classList.add('active');
         highlightChord(chord, true);
       };
 
       const deactivate = () => {
         if (activeChordId === cId) {
           activeChordId = null;
-          chip.classList.remove('active');
+          item.classList.remove('active');
           highlightChord(chord, false);
         }
       };
 
-      // Desktop Hover: Activates immediately
-      chip.addEventListener('mouseenter', () => {
+      item.addEventListener('mouseenter', activate);
+      item.addEventListener('mouseleave', deactivate);
+
+      // Card or shape: play + highlight, on desktop and touch alike.
+      item.addEventListener('click', (e) => {
+        e.stopPropagation(); // Prevent unselecting grid cell
         activate();
+        playChord(chord.notes);
+        item.classList.remove('pressed');
+        void item.offsetWidth; // restart the press animation
+        item.classList.add('pressed');
       });
-      chip.addEventListener('mouseleave', () => {
+
+      item.addEventListener('dragstart', (e) => {
+        e.dataTransfer.setData(CHORD_DRAG_TYPE, cId);
+        e.dataTransfer.effectAllowed = 'copy';
         deactivate();
       });
 
-      // Click / Tap Logic
-      chip.addEventListener('click', (e) => {
-        e.stopPropagation(); // Prevent unselecting grid cell
-
-        // On Desktop: mouseenter already ran, so it is active -> Plays immediately.
-        // On Mobile: mouseenter didn't run.
-
-        if (activeChordId === cId) {
-          // Already highlighted -> Play
-          playChord(chord.notes);
-
-
-          // Visual pop
-          chip.style.transform = "scale(0.95)";
-          setTimeout(() => chip.style.transform = "", 100);
-        } else {
-          // Not active -> Highlight (Mobile First Tap)
-          activate();
-        }
-      });
-
-      list.appendChild(chip);
+      item.append(chip, shape, addBtn);
+      list.appendChild(item);
     });
+  }
+
+  function getChord(cId) {
+    return currentChords.find(c => c.notes.join(',') === cId) || null;
+  }
+
+  function setAddHandler(fn) {
+    addHandler = fn;
   }
 
   function highlightChord(chord, active) {
@@ -198,7 +213,9 @@ const ChordUI = (function () {
 
   return {
     init: init,
-    update: updateLibraryFromState
+    update: updateLibraryFromState,
+    getChord,
+    setAddHandler,
   };
 
 })();
