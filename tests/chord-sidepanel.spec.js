@@ -130,6 +130,13 @@ test.describe('Chords sidepanel', () => {
     const lineTop = (await stage.locator('.cs-stage-group').nth(0).locator('.cs-stage-cards').boundingBox()).y;
     expect(cardTop).toBeGreaterThan(lineTop);
 
+    // Theme toggles between Tron (default) and Zen.
+    const startTheme = await stage.getAttribute('data-stage-theme');
+    await stage.locator('[data-stage="theme"]').click();
+    await expect(stage).not.toHaveAttribute('data-stage-theme', startTheme || '');
+    await stage.locator('[data-stage="theme"]').click();
+    await expect(stage).toHaveAttribute('data-stage-theme', startTheme || 'tron');
+
     // Metronome toggles with M; auto-advance moves on to the next chord.
     await page.keyboard.press('m');
     await expect(stage.locator('[data-stage="metro"]')).toHaveClass(/on/);

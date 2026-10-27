@@ -11,6 +11,8 @@ import { ensureAudio, getAudioCtx, metroClick, getMetronomeSound, setMetronomeSo
 const BEAT_OPTIONS = [2, 3, 4, 6, 8];
 const LOOKAHEAD_S = 0.1; // schedule clicks this far ahead on the audio clock
 const SCHEDULE_MS = 25;
+const THEMES = { tron: { next: 'zen', icon: '🌿', label: 'Zen theme' }, zen: { next: 'tron', icon: '⚡', label: 'Tron theme' } };
+const THEME_KEY = 'chord_stage_theme';
 
 let stageEl = null;
 let rowEl = null;
@@ -27,6 +29,7 @@ let metroSubdiv = false;
 let nextBeatTime = 0;
 let beatsScheduled = 0;
 let visualTimers = [];
+let theme = 'tron';
 
 function buildStage() {
   stageEl = document.createElement('div');
@@ -56,6 +59,7 @@ function buildStage() {
         </select>
         <input type="range" data-stage="metroVol" min="0" max="1" step="0.05" title="Metronome volume" aria-label="Metronome volume">
       </span>
+      <button type="button" class="cs-stage-btn cs-stage-theme" data-stage="theme"></button>
       <button type="button" class="cs-stage-btn cs-stage-exit" data-stage="exit" title="Exit (Esc)">✕ Exit</button>
     </div>
     <div class="cs-stage-help">← → step · Space play/pause · M metronome · click a chord to jump · Esc exit</div>
@@ -72,21 +76,25 @@ function buildStage() {
     else if (act === 'play') togglePlay();
     else if (act === 'metro') setMetro(!metroOn);
     else if (act === 'sub') { metroSubdiv = !metroSubdiv; syncMetroControls(); }
+    else if (act === 'theme') applyTheme(THEMES[theme].next, { save: true });
     else if (act === 'exit') closeChordStage();
   });
 
   stageEl.querySelector('[data-stage="bpm"]').addEventListener('change', (e) => {
     bpm = Math.min(240, Math.max(30, parseInt(e.target.value, 10) || bpm));
     e.target.value = bpm; // the scheduler reads bpm live, no restart needed
+    e.target.blur(); // hand ← → Space back to the stage
   });
   stageEl.querySelector('[data-stage="beats"]').addEventListener('change', (e) => {
     beatsPerChord = parseInt(e.target.value, 10);
     beat = 0;
     if (timer) startTimer(); // restart on a downbeat
     update();
+    e.target.blur();
   });
   stageEl.querySelector('[data-stage="metroSound"]').addEventListener('change', (e) => {
     setMetronomeSound(e.target.value);
+    e.target.blur();
   });
   stageEl.querySelector('[data-stage="metroVol"]').addEventListener('input', (e) => {
     setVolume('metronome', parseFloat(e.target.value));
@@ -105,7 +113,8 @@ function buildStage() {
 
 function onKeydown(e) {
   if (!stageEl || stageEl.hidden) return;
-  const inField = e.target.closest?.('input, select');
+  // Only fields that use the keys themselves; a ticked checkbox mustn't swallow ← → Space.
+  const inField = e.target.matches?.('input[type="number"], input[type="range"], select');
   const key = e.key;
   let handled = true;
   if (key === 'Escape') closeChordStage();
@@ -196,6 +205,30 @@ function update() {
   });
 
   stageEl.querySelector('[data-stage="play"]').textContent = timer ? '⏸' : '▶';
+}
+
+function loadTheme() {
+  try {
+    const saved = localStorage.getItem(THEME_KEY);
+    return THEMES[saved] ? saved : 'tron';
+  } catch {
+    return 'tron';
+  }
+}
+
+// The button shows the theme it switches *to*.
+function applyTheme(name, { save = false } = {}) {
+  theme = name;
+  stageEl.dataset.stageTheme = name;
+  const btn = stageEl.querySelector('[data-stage="theme"]');
+  btn.textContent = THEMES[name].icon;
+  btn.title = `Switch to ${THEMES[name].label}`;
+  if (!save) return;
+  try {
+    localStorage.setItem(THEME_KEY, name);
+  } catch {
+    // ignore (private browsing, quota, etc.)
+  }
 }
 
 function setMetro(on) {
@@ -306,6 +339,7 @@ export function openChordStage(song) {
   stageEl.querySelector('[data-stage="metroSound"]').value = getMetronomeSound();
   stageEl.querySelector('[data-stage="metroVol"]').value = String(getVolume('metronome'));
   syncMetroControls();
+  applyTheme(loadTheme());
 
   stageEl.hidden = false;
   document.body.classList.add('chord-stage-open');
