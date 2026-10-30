@@ -69,6 +69,7 @@
   <link rel="stylesheet" href="./css/method.css">
   <link rel="stylesheet" href="./css/exercises.css">
   <link rel="stylesheet" href="./css/handpan-games.css">
+  <link rel="stylesheet" href="./css/clients.css">
   <link rel="stylesheet" href="./css/create-rhythm-game.css">
   <link rel="stylesheet" href="./css/chord-play-along.css">
   <link rel="stylesheet" href="./css/chord-sidepanel.css">
@@ -233,6 +234,7 @@
               <button id="adminMenuBtn" class="admin-menu-btn" style="color:var(--accent-glow);">⚙️ Admin Tools ▾</button>
               <div id="adminSubmenu" class="admin-submenu">
                 <div class="admin-submenu-inner">
+                  <button id="openClientsAdminBtn">👥 Clients</button>
                   <button id="openCourseModalBtn">➕ Create Course</button>
                   <button id="openCourseCopierAdminBtn">📋 Manage Courses</button>
                   <button id="exportBtn" title="Copy phrase JSON to clipboard">Export JSON</button>
@@ -1020,6 +1022,9 @@
 
     <!-- Handpan Games hub (populated by js/handpan-games.js) -->
     <div id="view-games" class="route-view games-view"></div>
+
+    <!-- Clients, admin only (populated by js/clients.js) -->
+    <div id="view-clients" class="route-view clients-view"></div>
 
   </div> <!-- End Container -->
 
