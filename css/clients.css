@@ -1,0 +1,349 @@
+/* Clients (route #clients, #view-clients). See js/clients.js. */
+
+.clients-view {
+  align-items: center;
+}
+
+.cl-container {
+  max-width: 1200px;
+  width: 100%;
+  padding: 32px 32px 80px;
+}
+
+.cl-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.cl-eyebrow {
+  margin: 0 0 4px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent-glow);
+}
+
+.cl-title {
+  margin: 0;
+  font-size: 32px;
+  color: var(--text);
+}
+
+.clients-view button.cl-refresh {
+  min-width: 0;
+  height: auto;
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--panel-border);
+  background: var(--panel);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.cl-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.cl-chips {
+  display: flex;
+  gap: 6px;
+}
+
+.clients-view button.cl-chip {
+  min-width: 0;
+  height: auto;
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--panel-border);
+  background: transparent;
+  color: var(--text);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.clients-view button.cl-chip.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.cl-sort {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text);
+  opacity: 0.8;
+}
+
+.cl-sort select {
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--panel-border);
+  background: var(--panel);
+  color: var(--text);
+}
+
+.cl-error,
+.cl-empty {
+  padding: 16px;
+  border-radius: 10px;
+  background: var(--panel);
+  color: var(--text);
+}
+
+.cl-error {
+  border: 1px solid #c0504d;
+}
+
+.cl-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 20px;
+}
+
+.cl-card {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 16px;
+  border: 1px solid var(--panel-border);
+  background: var(--panel);
+  color: var(--text);
+}
+
+.cl-photo {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  display: block;
+  background: var(--panel-border);
+}
+
+.cl-photo-initials {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 64px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--accent-glow);
+}
+
+.cl-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px 18px 18px;
+  flex: 1;
+}
+
+.cl-name-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.cl-name {
+  margin: 0;
+  font-size: 20px;
+}
+
+.cl-badges {
+  display: flex;
+  gap: 4px;
+}
+
+.cl-badge {
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
+  color: var(--accent-glow);
+}
+
+.cl-badge[data-program="group"] {
+  background: color-mix(in srgb, #8b9a68 28%, transparent);
+  color: #a9ba80;
+}
+
+.cl-dates {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  font-size: 14px;
+}
+
+.cl-dates div {
+  display: flex;
+  gap: 10px;
+}
+
+.cl-dates dt {
+  width: 36px;
+  flex-shrink: 0;
+  font-weight: 700;
+  opacity: 0.6;
+}
+
+.cl-dates dd {
+  margin: 0;
+}
+
+.cl-muted {
+  opacity: 0.55;
+}
+
+.clients-view button.cl-summary,
+.cl-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  height: auto;
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--panel-border);
+  background: color-mix(in srgb, var(--text) 4%, transparent);
+  color: var(--text);
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+
+.cl-summary-none {
+  cursor: default;
+  opacity: 0.55;
+  font-size: 13px;
+}
+
+.cl-summary-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  opacity: 0.6;
+}
+
+.cl-summary-text {
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-size: 13px;
+  line-height: 1.45;
+  white-space: pre-line;
+}
+
+.cl-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: auto;
+}
+
+.cl-action {
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--panel-border);
+  color: var(--text);
+  font-size: 13px;
+  text-decoration: none;
+}
+
+.cl-action:hover {
+  border-color: var(--accent-glow);
+}
+
+.cl-action-off {
+  opacity: 0.45;
+}
+
+/* Summary reader: centred sheet on desktop, full screen on phones. */
+.cl-reader {
+  width: min(760px, calc(100vw - 32px));
+  max-height: calc(100vh - 64px);
+  padding: 0;
+  border: 1px solid var(--panel-border);
+  border-radius: 16px;
+  background: var(--panel);
+  color: var(--text);
+}
+
+.cl-reader[open] {
+  display: flex;
+  flex-direction: column;
+}
+
+.cl-reader::backdrop {
+  background: rgb(0 0 0 / 0.6);
+}
+
+.cl-reader-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 20px 24px 12px;
+  border-bottom: 1px solid var(--panel-border);
+}
+
+.cl-reader-title {
+  margin: 0;
+  font-size: 20px;
+}
+
+.clients-view button.cl-reader-close {
+  min-width: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  font-size: 18px;
+  cursor: pointer;
+}
+
+.cl-reader-body {
+  overflow-y: auto;
+  padding: 16px 24px 28px;
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.cl-reader-body a {
+  color: var(--accent-glow);
+}
+
+@media (max-width: 640px) {
+  .cl-container {
+    padding: 20px 16px 60px;
+  }
+
+  .cl-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .cl-reader {
+    width: 100vw;
+    max-width: 100vw;
+    height: 100dvh;
+    max-height: 100dvh;
+    margin: 0;
+    border-radius: 0;
+    border: none;
+  }
+}
