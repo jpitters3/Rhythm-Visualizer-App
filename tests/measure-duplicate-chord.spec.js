@@ -1,5 +1,5 @@
 const { test, expect } = require('@playwright/test');
-const { gotoStudio, clearGrid } = require('./helpers');
+const { gotoStudio, clearGrid, closeMobileControlsIfNeeded } = require('./helpers');
 
 // Regression: a chord/multi cell's label is an array. Duplicating a measure
 // (measure-actions.js duplicateSelection) and history snapshots (pattern-crud.js
@@ -51,24 +51,23 @@ test('undo restores a chord sub-note edit', async ({ page }) => {
   await gotoStudio(page);
   await page.waitForSelector('.measure-row');
   await clearGrid(page, 'A');
+  await closeMobileControlsIfNeeded(page);
 
-  const result = await page.evaluate(async () => {
-    const entryUrl = document.querySelector('script[type="module"][src*="main"]').src;
-    const { gridA, renderAllMeasures, HistoryManager } = await import(entryUrl);
+  // Through the UI, not app internals: a production build only exports
+  // HistoryManager from the entry chunk by accident of code splitting.
+  // Each typed note pushes an undo snapshot, then edits the chord in place.
+  const cell = page.locator('.cell').nth(0);
+  const subDots = cell.locator('.sub-dot');
+  await cell.dblclick();
+  await subDots.nth(0).click();
+  await page.keyboard.press('1');
+  await subDots.nth(2).click();
+  await page.keyboard.press('3');
+  await subDots.nth(0).click();
+  await page.keyboard.press('9');
+  await expect(subDots.nth(0)).toHaveText('9');
 
-    gridA.innerLabels[0] = ['1', '', '3', ''];
-    renderAllMeasures(gridA);
-
-    HistoryManager.pushState();       // snapshot with chord [1,3]
-    gridA.innerLabels[0][0] = '9';    // in-place sub-note edit -> [9,3]
-    const afterEdit = JSON.stringify(gridA.innerLabels[0]);
-
-    await HistoryManager.undo();
-    const afterUndo = JSON.stringify(gridA.innerLabels[0]);
-    return { afterEdit, afterUndo };
-  });
-
-  console.log(JSON.stringify(result));
-  expect(result.afterEdit).toBe('["9","","3",""]');
-  expect(result.afterUndo).toBe('["1","","3",""]'); // undo actually reverts it
+  await page.keyboard.press('ControlOrMeta+z');
+  await expect(subDots.nth(0)).toHaveText('1'); // undo actually reverts it
+  await expect(subDots.nth(2)).toHaveText('3');
 });

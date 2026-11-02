@@ -50,7 +50,9 @@ for (const asAdmin of [false, true]) {
       const lessonLink = page.locator(`.lesson-link[data-id="${lesson.id}"]`);
       await lessonLink.click();
 
-      await expect(page.locator('#lessonContent')).toBeVisible();
+      // loadLesson() awaits the student's lesson-settings query first; a cold
+      // staging DB has taken ~6s for it in CI.
+      await expect(page.locator('#lessonContent')).toBeVisible({ timeout: 15000 });
       // pattern preview canvas is created near the end of loadLesson()
       await expect(page.locator('#lessonPatternPreview')).toBeVisible({ timeout: 15000 });
       await expect(page.locator('#videoContainer iframe')).toHaveCount(1);
