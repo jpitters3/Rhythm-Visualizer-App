@@ -3,10 +3,11 @@ import { currentUser } from './state.js';
 import { Modal } from './modal.js';
 import { supabase } from './supabase-client.js';
 import { Bus, BUS_EVENT } from './bus.js';
+import { currentProfile } from './profile.js';
 import { requiredTier } from './gated-feature.js';
 import { show, hide } from './dom.js';
 
-let upgradeModal, congratsModal, upgradePanel, congratsPanel, upgradeTitleText;
+let upgradeModal, congratsModal, upgradePanel, congratsPanel, congratsText, upgradeTitleText;
 
 export function initMonetization() {
     // Late-bound DOM references
@@ -31,6 +32,8 @@ export function initMonetization() {
     });
 
     Bus.on(BUS_EVENT.SHOW_CONGRATS_MODAL, openCongratsModal);
+    Bus.on(BUS_EVENT.PROFILE_LOADED, (e) => showProgramWelcome(e.detail?.profile));
+    showProgramWelcome(currentProfile); // the profile can load before this init runs
 
     closeUpgradeBtn?.addEventListener('click', closeUpgradeModal);
     closeCongratsBtn?.addEventListener('click', closeCongratsModal);
@@ -89,7 +92,44 @@ function closeUpgradeModal() {
     upgradePanel?.close();
 }
 
+function congratsElements() {
+    return {
+        title: congratsModal?.querySelector('.modal-title'),
+        intro: congratsModal?.querySelector('.upgrade-intro'),
+    };
+}
+
 function openCongratsModal() {
+    // Restore the Stripe-upgrade wording if the program welcome changed it.
+    const { title, intro } = congratsElements();
+    if (congratsText && title && intro) {
+        title.textContent = congratsText.title;
+        intro.textContent = congratsText.intro;
+    }
+    congratsPanel?.open();
+}
+
+// Once per user: Plus that came with a group or private program.
+function showProgramWelcome(profile) {
+    const tier = profile?.subscription_tier;
+    if (profile?.subscription_source !== 'tekmatix' || (tier !== 'player_plus' && tier !== 'pro')) return;
+    if (!profile.subscription_expires_at || new Date(profile.subscription_expires_at) <= new Date()) return;
+    if (congratsModal?.classList.contains('open')) return;
+
+    const key = `plus_program_welcome_${profile.user_id}`;
+    try {
+        if (localStorage.getItem(key)) return;
+        localStorage.setItem(key, new Date().toISOString());
+    } catch { /* storage blocked: show it anyway */ }
+
+    const { title, intro } = congratsElements();
+    if (!title || !intro) return;
+    congratsText ??= { title: title.textContent, intro: intro.textContent };
+    const tierName = tier === 'pro' ? 'Pro' : 'Player+';
+    title.textContent = `${tierName} is included with your program! 🎉`;
+    intro.textContent = tier === 'pro'
+        ? 'As a private student, you have everything in Pro for as long as you\'re enrolled, including the AI Assistant and early access to new features. Here\'s what else you\'ve unlocked:'
+        : 'As a group student, you have everything in Player+ for as long as you\'re enrolled. Here\'s what you\'ve unlocked:';
     congratsPanel?.open();
 }
 

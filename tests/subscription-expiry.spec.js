@@ -133,6 +133,32 @@ test.describe('Subscription Expiry', () => {
     await expect(page.locator('#upgradeModal')).toHaveClass(/open/, { timeout: 5000 });
   });
 
+  test('program access: welcome once, then program wording on the banner', async ({ page }) => {
+    const soon = new Date(Date.now() + 5 * 86400000);
+    await setSubscription(testUser.user.id, { tier: 'player_plus', expiresAt: soon, source: 'tekmatix' });
+    // Checked before reloadOnStudio's second navigation, which WebKit can
+    // turn into a full reload, after which the once-only welcome is gone.
+    await page.reload({ waitUntil: 'networkidle' });
+
+    const welcome = page.locator('#congratsModal');
+    await expect(welcome).toHaveClass(/open/, { timeout: 10000 });
+    await expect(welcome.locator('.modal-title')).toContainText('included with your program');
+    await page.locator('#startGroovingBtn').click();
+    await expect(welcome).not.toHaveClass(/open/);
+    await page.goto('/#studio');
+    await page.waitForSelector('.measure-row');
+
+    await expect(page.locator('#subscriptionBannerTitle')).toContainText('from your program ends in 5 day');
+    await expect(page.locator('#subscriptionBannerSub')).toContainText('continues automatically');
+
+    await expect(page.locator('#subscriptionBannerBtn')).toHaveText('Become a Member');
+
+    // Shown once per user.
+    await reloadOnStudio(page);
+    await expect(page.locator('#subscriptionBanner')).toBeVisible({ timeout: 10000 });
+    await expect(welcome).not.toHaveClass(/open/);
+  });
+
   test('Pro features: Player+ sees early access, Pro gets in', async ({ page }) => {
     const future = new Date(Date.now() + 30 * 86400000);
     const openAi = () => page.evaluate(() => document.querySelector('[data-action="toggle-ai"]')?.click());

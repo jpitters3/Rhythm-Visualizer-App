@@ -374,13 +374,25 @@ export function initSubscriptionBanner(profile) {
     }
   }
 
+  // Plus granted by a group or private program (Tekmatix client tags).
+  const viaProgram = profile.subscription_source === 'tekmatix';
+  const tierName = tier === 'pro' ? 'Pro' : 'Player+';
+
   if (isExpired) {
     banner.classList.add('subscription-banner--expired');
-    title.textContent = 'Your Panafide access has expired';
-    sub.textContent   = 'Renew to keep your compositions and full course access.';
-    btn.textContent   = 'Renew Now';
+    title.textContent = viaProgram ? `${tierName} from your program has ended` : 'Your Panafide access has expired';
+    sub.textContent   = viaProgram
+      ? 'Become a member to keep it, and save on every future program.'
+      : 'Renew to keep your compositions and full course access.';
+    btn.textContent   = viaProgram ? 'Become a Member' : 'Renew Now';
     if (dismissLabel) dismissLabel.style.display = '';
     if (dismissCheck) dismissCheck.checked = false;
+  } else if (viaProgram) {
+    banner.classList.remove('subscription-banner--expired');
+    title.textContent = `${tierName} from your program ends in ${daysLeft} day${daysLeft === 1 ? '' : 's'}`;
+    sub.textContent   = 'Joining the next group or booking more lessons? It continues automatically. Otherwise, become a member and save on every future program.';
+    btn.textContent   = 'Become a Member';
+    if (dismissLabel) dismissLabel.style.display = 'none';
   } else {
     banner.classList.remove('subscription-banner--expired');
     title.textContent = `Your access expires in ${daysLeft} day${daysLeft === 1 ? '' : 's'}`;
