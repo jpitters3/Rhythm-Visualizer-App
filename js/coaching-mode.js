@@ -17,6 +17,7 @@ import { loadCalibrationProfile, hasCalibrationForCurrentScale, turnOnMic, micSt
 import { closeSidebar } from './courses.js';
 import { alert } from './alert.js';
 import { Sidepanel, updateBodySidebarClass, setLastSidebarType, registerPanelOpener } from './sidepanel.js';
+import { canAccess, FEATURE } from './gated-feature.js';
 
 // Session state
 let coachingSession = null;
@@ -108,6 +109,11 @@ export async function enterCoachingMode(ctx = activeGrid) {
   // Toggle behavior
   if (isCoachingUIOpen) {
     exitCoachingMode();
+    return;
+  }
+
+  if (!canAccess(FEATURE.COACHING_MODE)) {
+    Bus.emit(BUS_EVENT.SHOW_UPGRADE_MODAL, { feature: FEATURE.COACHING_MODE });
     return;
   }
 

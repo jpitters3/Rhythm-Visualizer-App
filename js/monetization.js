@@ -3,8 +3,10 @@ import { currentUser } from './state.js';
 import { Modal } from './modal.js';
 import { supabase } from './supabase-client.js';
 import { Bus, BUS_EVENT } from './bus.js';
+import { requiredTier } from './gated-feature.js';
+import { show, hide } from './dom.js';
 
-let upgradeModal, congratsModal, upgradePanel, congratsPanel;
+let upgradeModal, congratsModal, upgradePanel, congratsPanel, upgradeTitleText;
 
 export function initMonetization() {
     // Late-bound DOM references
@@ -64,8 +66,19 @@ function openUpgradeModal(payload) {
     }
 
     // Update title or description based on feature
+    const title = upgradeModal.querySelector('.modal-title');
     const intro = upgradeModal.querySelector('.upgrade-intro');
-    if (intro && featureName) {
+    upgradeTitleText ??= title?.textContent;
+
+    // Pro isn't sold yet: Pro features are granted by hand during early access.
+    const isPro = !!feature && requiredTier(feature) === 'pro';
+    const plusOnly = upgradeModal.querySelectorAll('.pro-bundle-header, .feature-list, .upgrade-cta');
+    plusOnly.forEach(el => (isPro ? hide(el) : show(el)));
+    if (title) title.textContent = isPro ? 'Panafide Pro: Early Access' : upgradeTitleText;
+
+    if (intro && isPro) {
+        intro.innerHTML = `<strong>${featureName}</strong> is part of <strong>Pro</strong>, which is in early access. Get in touch and we'll set you up.`;
+    } else if (intro && featureName) {
         intro.innerHTML = `Get instant access to <strong>${featureName}</strong>, and everything else in <strong>Player+</strong> by upgrading today!`;
     }
 

@@ -51,10 +51,7 @@ class AiAssistant {
   toggleChat(forceState) {
     if (!canAccess(FEATURE.AI_ASSISTANT)) {
       // Trigger upgrade modal via Bus
-      Bus.emit(BUS_EVENT.SHOW_UPGRADE_MODAL, {
-        feature: FEATURE.AI_ASSISTANT,
-        featureId: 'feat-composition'
-      });
+      Bus.emit(BUS_EVENT.SHOW_UPGRADE_MODAL, { feature: FEATURE.AI_ASSISTANT });
       return;
     }
 

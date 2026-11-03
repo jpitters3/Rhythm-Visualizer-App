@@ -133,6 +133,47 @@ test.describe('Subscription Expiry', () => {
     await expect(page.locator('#upgradeModal')).toHaveClass(/open/, { timeout: 5000 });
   });
 
+  test('Pro features: Player+ sees early access, Pro gets in', async ({ page }) => {
+    const future = new Date(Date.now() + 30 * 86400000);
+    const openAi = () => page.evaluate(() => document.querySelector('[data-action="toggle-ai"]')?.click());
+    const upgrade = page.locator('#upgradeModal');
+
+    await setSubscription(testUser.user.id, { tier: 'player_plus', expiresAt: future });
+    await reloadOnStudio(page);
+    await expect(async () => {
+      await openAi();
+      await expect(upgrade).toHaveClass(/open/, { timeout: 1000 });
+    }).toPass({ timeout: 5000, intervals: [200, 500, 1000] });
+    await expect(upgrade.locator('.modal-title')).toContainText('Early Access');
+    await expect(page.locator('#checkoutBtn')).toBeHidden();
+
+    await setSubscription(testUser.user.id, { tier: 'pro', expiresAt: future });
+    await reloadOnStudio(page);
+    await openAi();
+    await page.waitForTimeout(500);
+    await expect(upgrade).not.toHaveClass(/open/);
+  });
+
+  // Coach Mode's button is admin-only while it's WIP; this covers the Player+
+  // gate it will ship with.
+  test('Coach Mode: free users get the upgrade prompt, Player+ gets in', async ({ page }) => {
+    const openCoach = () => page.evaluate(() => document.getElementById('coachModeBtn')?.click());
+    const upgrade = page.locator('#upgradeModal');
+
+    await expect(async () => {
+      await openCoach();
+      await expect(upgrade).toHaveClass(/open/, { timeout: 1000 });
+    }).toPass({ timeout: 5000, intervals: [200, 500, 1000] });
+    await expect(upgrade.locator('.upgrade-intro')).toContainText('Coach Mode');
+    await expect(page.locator('#checkoutBtn')).toBeVisible();
+
+    await setSubscription(testUser.user.id, { tier: 'player_plus', expiresAt: new Date(Date.now() + 30 * 86400000) });
+    await reloadOnStudio(page);
+    await openCoach();
+    await page.waitForTimeout(500);
+    await expect(upgrade).not.toHaveClass(/open/);
+  });
+
   test('no banner shown when expiry is more than 14 days away', async ({ page }) => {
     const future = new Date(Date.now() + 20 * 86400000); // 20 days out
     await setSubscription(testUser.user.id, { tier: 'player_plus', expiresAt: future });

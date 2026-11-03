@@ -125,7 +125,7 @@ export function updateAccountUI() {
     if (myScalesBtn) myScalesBtn.style.display = 'block';
 
     const coachModeBtn = document.getElementById('coachModeBtn');
-    if (coachModeBtn && isAdmin) coachModeBtn.style.display = 'block';
+    if (coachModeBtn && isAdmin) coachModeBtn.style.display = 'block'; // WIP: admin-only until ready, then Player+
 
     const freeRecordBtn = document.getElementById('freeRecordBtn');
     if (freeRecordBtn && isAdmin) freeRecordBtn.style.display = 'block';

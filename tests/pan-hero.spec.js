@@ -10,6 +10,8 @@ const { gotoStudio, clearGrid, closeMobileControlsIfNeeded } = require('./helper
 async function seedPattern(page) {
   await gotoStudio(page);
   await page.waitForSelector('.measure-row');
+  // Pan Hero is a Player+ feature; these tests cover the feature, not the paywall.
+  await page.evaluate(() => document.documentElement.setAttribute('data-gp-test-mode', 'true'));
   await clearGrid(page, 'A');
   // Restore the handpan panel — clearGrid needed the controls panel open on
   // mobile, which relocates into #panelControlsSlot and hides .handpan-tabs
@@ -40,6 +42,17 @@ async function openPanHero(page) {
     await page.click('.handpan-tabs [data-pan-hero]');
   }
 }
+
+test('Pan Hero: free users get the Player+ upgrade prompt', async ({ page }) => {
+  await gotoStudio(page);
+  await page.waitForSelector('.measure-row');
+  await closeMobileControlsIfNeeded(page);
+  await openPanHero(page);
+  await expect(page.locator('#upgradeModal')).toHaveClass(/open/);
+  await expect(page.locator('#upgradeModal .upgrade-intro')).toContainText('Pan Hero');
+  await expect(page.locator('#checkoutBtn')).toBeVisible();
+  await expect(page.locator('#panHeroOverlay')).toHaveCount(0);
+});
 
 test('Pan Hero: desktop menu → open, re-parent + pin pan, auto-play', async ({ page, isMobile }) => {
   const gridA = await seedPattern(page);
@@ -101,6 +114,7 @@ test('Pan Hero: mobile options menu opens it and closes the menu', async ({ page
   await page.setViewportSize({ width: 390, height: 780 });
   await gotoStudio(page);
   await page.waitForSelector('.measure-row');
+  await page.evaluate(() => document.documentElement.setAttribute('data-gp-test-mode', 'true'));
   await page.click('#handpanOptionsBtn');
   await page.waitForSelector('#handpanOptionsMenu.show');
   await page.click('#handpanOptionsMenu [data-pan-hero]');

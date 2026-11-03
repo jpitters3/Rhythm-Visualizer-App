@@ -17,6 +17,8 @@ import {
   setHandpanSide, getHandpanSide,
 } from './handpanmap.js';
 import { show, hide } from './dom.js';
+import { canAccess, FEATURE } from './gated-feature.js';
+import { Bus, BUS_EVENT } from './bus.js';
 
 let active = false;
 let rafId = null;
@@ -57,6 +59,10 @@ export function initPanHero() {
   document.querySelectorAll('[data-pan-hero]').forEach(btn => {
     btn.addEventListener('click', () => {
       document.getElementById('handpanOptionsMenu')?.classList.remove('show');
+      if (!canAccess(FEATURE.PAN_HERO)) {
+        Bus.emit(BUS_EVENT.SHOW_UPGRADE_MODAL, { feature: FEATURE.PAN_HERO });
+        return;
+      }
       openPanHero();
     });
   });
