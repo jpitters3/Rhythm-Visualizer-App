@@ -63,7 +63,9 @@ export function initPanelResize() {
     const row = measuresEl?.querySelector('.measure-row');
     if (!row) return 0;
     const cs = getComputedStyle(row);
-    const rowMargins = parseFloat(cs.marginTop || 0) + parseFloat(cs.marginBottom || 0);
+    // Margins plus the measure card's own padding and border.
+    const rowMargins = ['marginTop', 'marginBottom', 'paddingTop', 'paddingBottom', 'borderTopWidth', 'borderBottomWidth']
+      .reduce((sum, prop) => sum + (parseFloat(cs[prop]) || 0), 0);
 
     const header = row.querySelector('.measure-header');
     const firstLabels = row.querySelector('.labels');
@@ -219,7 +221,14 @@ export function initPanelResize() {
   // receive plain rendered (total, border-box) heights, matching what
   // getBoundingClientRect() naturally gives them — the content/total split
   // is an internal-only concern.
+  // Controls or selection open: the panel shows a card instead of the pan, so
+  // sizing it now would treat that card as chrome and grow the panel.
+  function panelShowsCard() {
+    return panel.classList.contains('controls-mode') || panel.classList.contains('selection-mode');
+  }
+
   function applyHeight(desiredTotalPx) {
+    if (panelShowsCard()) return panel.getBoundingClientRect().height;
     const reserve = transportBarHeight();
     const chrome = measureChromeHeight();
     const padV = wrapVerticalPadding();
@@ -330,6 +339,14 @@ export function initPanelResize() {
   });
 
   restoreSavedHeight();
+
+  // Re-size once the card closes, in case the grid changed meanwhile (e.g. zoom).
+  let showedCard = false;
+  new MutationObserver(() => {
+    const showsCard = panelShowsCard();
+    if (showedCard && !showsCard && mq.matches) restoreSavedHeight();
+    showedCard = showsCard;
+  }).observe(panel, { attributes: true, attributeFilter: ['class'] });
 
   // The image may not have decoded yet at init (aspect defaults to 1:1
   // until it has) — once it has, redo the sizing with its real aspect
