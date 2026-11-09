@@ -90,7 +90,8 @@ body.pan-hero-open {
 
 body.pan-hero-open .controls-transport,
 body.pan-hero-open #aiFab,
-body.pan-hero-open #aiFabMobile {
+body.pan-hero-open #aiFabMobile,
+body.pan-hero-open #mobileControlsBtn {
   display: none !important;
 }
 

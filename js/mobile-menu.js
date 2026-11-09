@@ -12,6 +12,9 @@ export function initMobileMenu() {
     const panel = document.querySelector('.handpan-panel');
     const slot = document.getElementById('panelControlsSlot');
     if (panel && slot && primaryControlsWrapper.parentElement !== slot) {
+      // Pin the ghost row (and its controls toggle) where it is, so the toggle stays under the thumb.
+      const ghostRow = document.getElementById('ghostNoteSection');
+      if (ghostRow) panel.style.setProperty('--ghost-row-top', `${ghostRow.offsetTop}px`);
       primaryControlsWrapper._origParent = primaryControlsWrapper.parentElement;
       primaryControlsWrapper._origNext = primaryControlsWrapper.nextSibling;
       slot.appendChild(primaryControlsWrapper);
@@ -31,6 +34,7 @@ export function initMobileMenu() {
       primaryControlsWrapper._origNext = null;
     }
     panel?.classList.remove('controls-mode');
+    panel?.style.removeProperty('--ghost-row-top');
     mobileControlsBtn?.setAttribute('aria-expanded', 'false');
   }
 

@@ -478,38 +478,75 @@ div.under-handpan {
   z-index: 10;
 }
 
-/* :not(.flip-btn) — the flip button lives in this row for layout purposes
-   (see .flip-btn below) but isn't part of the ◂ ghost ▸ pill itself, so it's
-   excluded from the pill's shared button styling (which would otherwise
-   force it static-positioned and rectangular). Uses the class rather than
-   :not(#flipSideBtn) so the exclusion doesn't drag ID-level specificity into
-   this selector (that would then outrank #ghostBackBtn's own rule below). */
-div.under-handpan.pill-group button:not(.flip-btn) {
-  height: 100%;
-  margin: 0;
-  border-radius: 0;
-  border-right: 1px solid rgba(255, 255, 255, 0.1);
-  width: auto;
-  min-width: 60px;
-  max-width: 100px;
-  padding: 0 20px;
-  position: static;
-  transform: none;
-  font-size: 20px;
+/* Shared surface for the handpan panel's controls: corner buttons and the ghost pill */
+.handpan-panel {
+  --hp-ctl-bg: rgba(255, 255, 255, 0.72);
+  --hp-ctl-hover: rgba(255, 255, 255, 0.95);
+  --hp-ctl-border: rgba(0, 0, 0, 0.07);
+  --hp-ctl-shadow: 0 1px 2px rgba(0, 0, 0, 0.05), 0 4px 12px rgba(0, 0, 0, 0.06);
+}
+
+body.dark .handpan-panel {
+  --hp-ctl-bg: rgba(255, 255, 255, 0.08);
+  --hp-ctl-hover: rgba(255, 255, 255, 0.16);
+  --hp-ctl-border: rgba(255, 255, 255, 0.12);
+  --hp-ctl-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+}
+
+.hp-corner-btn,
+.hp-controls-btn,
+.ghost-pill {
+  background: var(--hp-ctl-bg);
+  border: 1px solid var(--hp-ctl-border);
+  box-shadow: var(--hp-ctl-shadow);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   color: var(--text);
+}
+
+/* ◂ ghost ▸: one rounded surface with hairline dividers */
+.ghost-pill {
+  display: flex;
+  height: 36px;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.ghost-pill button {
+  height: 100%;
+  min-width: 56px;
+  margin: 0;
+  padding: 0 18px;
+  border: none;
+  border-right: 1px solid var(--hp-ctl-border);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  color: var(--text);
+  font-size: 18px;
   display: flex;
   justify-content: center;
   align-items: center;
 }
 
-div.under-handpan.pill-group button:last-child {
+.ghost-pill button:last-child {
   border-right: none;
 }
 
-#ghostBackBtn {
-  border-top-left-radius: 999px;
-  border-bottom-left-radius: 999px;
-  padding-left: 25px;
+.ghost-pill button:hover:not(:disabled),
+.ghost-pill button:active:not(:disabled) {
+  background: var(--hp-ctl-hover);
+  box-shadow: none;
+  transform: none;
+}
+
+.ghost-pill button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.ghost-pill button img {
+  height: 26px;
 }
 
 @media (min-width: 901px) {
@@ -519,22 +556,6 @@ div.under-handpan.pill-group button:last-child {
   #handpanOptionsMenu {
     display: none !important;
   }
-}
-
-div.under-handpan.pill-group button:last-child {
-  border-top-right-radius: 999px;
-  border-bottom-right-radius: 999px;
-  padding-right: 25px;
-}
-
-div.under-handpan.pill-group button:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-
-div.under-handpan button img {
-  height: 100%;
 }
 
 /* Locked handpan and ghost note sections for mobile */
@@ -701,8 +722,7 @@ body.dark .icon-btn.active {
   position: absolute;
   top: 8px;
   z-index: 50;
-  background: rgba(255, 255, 255, 0.2);
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  padding: 0;
   border-radius: 50%;
   width: 36px;
   height: 36px;
@@ -715,17 +735,8 @@ body.dark .icon-btn.active {
   transition: background 0.2s;
 }
 
-.hp-corner-btn::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background: rgba(255, 255, 255, 0.5);
-  z-index: -1;
-}
-
 .hp-corner-btn:hover {
-  background: rgba(255, 255, 255, 0.4);
+  background: var(--hp-ctl-hover);
 }
 
 .hp-corner-btn:active {
@@ -733,11 +744,11 @@ body.dark .icon-btn.active {
 }
 
 .hp-corner-left {
-  left: 8px;
+  left: 0;
 }
 
 .hp-corner-right {
-  right: 8px;
+  right: 0;
 }
 
 @media (max-width: 900px) {
@@ -777,7 +788,7 @@ body.dark .icon-btn.active {
      place this far below the button rather than right under it. 8px top +
      36px button height + 8px gap = 52px. */
   top: 52px;
-  right: 8px;
+  right: 0;
   left: auto;
   margin-top: 0;
   margin-bottom: 0;
@@ -1180,6 +1191,44 @@ body.dark .hp-loader {
 
 .flip-btn:hover {
   background: rgba(255, 255, 255, 0.4);
+}
+
+/* Mobile controls toggle: bottom-left of the ghost-note row, mirroring the AI
+   button on the right. Shown on mobile only via .mobile-controls-btn. */
+.hp-controls-btn {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  margin-left: 0;
+  z-index: 100;
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  padding: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+}
+
+/* Keep the centring transform through the global button hover/press effects */
+.hp-controls-btn:hover:not(:disabled) {
+  transform: translateY(-50%);
+}
+
+.hp-controls-btn:active:not(:disabled) {
+  transform: translateY(-50%) scale(0.96);
+}
+
+/* Taps leave :hover stuck on phones, so it mustn't override the open state */
+.hp-controls-btn:not([aria-expanded="true"]):hover {
+  background: var(--hp-ctl-hover);
+}
+
+.hp-controls-btn[aria-expanded="true"] {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
 }
 
 .flip-btn:hover:not(:disabled) {

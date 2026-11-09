@@ -379,7 +379,7 @@ body.dark #aiInput:focus {
     position: absolute;
     right: 0;
     top: 50%;
-    margin-right: 10px;
+    margin-right: 0;
     transform: translateY(-50%);
     width: 36px;
     height: 36px;

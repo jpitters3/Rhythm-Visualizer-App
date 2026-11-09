@@ -232,9 +232,23 @@
   .handpan-panel.controls-mode .handpan-tabs,
   .handpan-panel.controls-mode .handpan-wrap,
   .handpan-panel.controls-mode #handpanWrapBottom,
-  .handpan-panel.controls-mode #ghostNoteSection,
   .handpan-panel.controls-mode .hp-corner-btn {
     display: none !important;
+  }
+
+  /* Controls open: the ghost row keeps its place but only its controls button
+     shows, so the same button closes them again. */
+  .handpan-panel.controls-mode #ghostNoteSection {
+    visibility: hidden;
+    position: absolute;
+    top: var(--ghost-row-top);
+    left: 0;
+    right: 0;
+    margin-top: 0;
+  }
+
+  .handpan-panel.controls-mode #mobileControlsBtn {
+    visibility: visible;
   }
 
   #panelControlsSlot {

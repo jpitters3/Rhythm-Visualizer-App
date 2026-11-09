@@ -284,7 +284,7 @@ body {
   z-index: 5000;
 }
 
-/* Mobile controls toggle button (hidden on desktop) */
+/* Mobile controls toggle (bottom-left of the handpan panel; hidden on desktop) */
 .mobile-controls-btn {
   display: none;
 }
