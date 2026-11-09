@@ -1,6 +1,8 @@
 /* ===== RESET / BASE ===== */
 * {
   box-sizing: border-box;
+  /* No grey flash on tap (mobile browser default); buttons have their own pressed states */
+  -webkit-tap-highlight-color: transparent;
 }
 
 body {

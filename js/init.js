@@ -151,7 +151,8 @@ function updateMetroUI() {
 
 
 export function restorePrefs() {
-  if (localStorage.getItem('theme') === 'dark') {
+  // Dark is the default; light is opt-in
+  if (localStorage.getItem('theme') !== 'light') {
     document.body.classList.add('dark');
   }
 
