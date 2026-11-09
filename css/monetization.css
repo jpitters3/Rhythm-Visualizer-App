@@ -568,6 +568,14 @@ body.dark .plans-table thead th {
     display: none;
 }
 
+@media (max-width: 768px) {
+    .logo-plus {
+        width: 24px;
+        height: 24px;
+        margin-left: 4px;
+    }
+}
+
 .logo-plus-start { stop-color: #1e3a8a; }
 .logo-plus-end { stop-color: #c026d3; }
 

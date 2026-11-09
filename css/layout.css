@@ -222,6 +222,15 @@ body.dark .app-header {
     box-sizing: border-box;
   }
 
+  /* The account initial is also a .nav-link, but stays a circle, not a menu row */
+  .nav-account-btn {
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+    padding: 0;
+    border-radius: 50%;
+  }
+
   .nav-divider {
     width: auto;
     height: 1px;
