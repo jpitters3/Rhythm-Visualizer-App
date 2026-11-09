@@ -159,7 +159,7 @@ test.describe('Subscription Expiry', () => {
     await expect(welcome).not.toHaveClass(/open/);
   });
 
-  test('Pro features: Panafide+ sees early access, Pro gets in', async ({ page }) => {
+  test('Pro features: Panafide+ sees coming soon, Pro gets in', async ({ page }) => {
     const future = new Date(Date.now() + 30 * 86400000);
     const openAi = () => page.evaluate(() => document.querySelector('[data-action="toggle-ai"]')?.click());
     const upgrade = page.locator('#upgradeModal');
@@ -170,7 +170,7 @@ test.describe('Subscription Expiry', () => {
       await openAi();
       await expect(upgrade).toHaveClass(/open/, { timeout: 1000 });
     }).toPass({ timeout: 5000, intervals: [200, 500, 1000] });
-    await expect(upgrade.locator('.modal-title')).toContainText('Early Access');
+    await expect(upgrade.locator('.modal-title')).toContainText('Coming Soon');
     await expect(page.locator('#checkoutBtn')).toBeHidden();
 
     await setSubscription(testUser.user.id, { tier: 'pro', expiresAt: future });
@@ -213,6 +213,25 @@ test.describe('Subscription Expiry', () => {
     await setSubscription(testUser.user.id, { tier: 'player_plus', expiresAt: new Date(Date.now() + 30 * 86400000) });
     await reloadOnStudio(page);
     await expect.poll(() => canAddScale(5)).toBe(true);
+  });
+
+  test('plans: compare tiers from the menu, current plan marked', async ({ page }) => {
+    const plans = page.locator('#plansModal');
+    await page.evaluate(() => document.getElementById('plansBtn')?.click());
+    await expect(plans).toHaveClass(/open/);
+    await expect(plans.locator('.plan-card.is-current h3')).toHaveText('Free');
+    await expect(plans.locator('.plans-table tbody tr')).not.toHaveCount(0);
+    await expect(page.locator('#plansUpgradeBtn')).toBeVisible();
+    await page.locator('#closePlansBtn').click();
+    await expect(plans).not.toHaveClass(/open/);
+
+    await setSubscription(testUser.user.id, { tier: 'player_plus', expiresAt: new Date(Date.now() + 30 * 86400000) });
+    await reloadOnStudio(page);
+    await expect(async () => {
+      await page.evaluate(() => document.getElementById('plansBtn')?.click());
+      await expect(plans.locator('.plan-card.is-current h3')).toHaveText('Panafide+', { timeout: 1000 });
+    }).toPass({ timeout: 5000 });
+    await expect(page.locator('#plansUpgradeBtn')).toBeHidden();
   });
 
   test('no banner shown when expiry is more than 14 days away', async ({ page }) => {

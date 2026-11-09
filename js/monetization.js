@@ -6,6 +6,7 @@ import { Bus, BUS_EVENT } from './bus.js';
 import { currentProfile } from './profile.js';
 import { requiredTier } from './gated-feature.js';
 import { show, hide } from './dom.js';
+import { initPlans } from './plans.js';
 
 let upgradeModal, congratsModal, upgradePanel, congratsPanel, congratsText, upgradeTitleText;
 
@@ -41,6 +42,7 @@ export function initMonetization() {
 
 
     checkoutBtn?.addEventListener('click', () => handleUpgradeClick(checkoutBtn));
+    initPlans({ onUpgrade: handleUpgradeClick });
 
     // Check for success redirect
     checkUpgradeSuccess();
@@ -73,14 +75,14 @@ function openUpgradeModal(payload) {
     const intro = upgradeModal.querySelector('.upgrade-intro');
     upgradeTitleText ??= title?.textContent;
 
-    // Pro isn't sold yet: Pro features are granted by hand during early access.
+    // Pro isn't sold yet; private clients get it through their program.
     const isPro = !!feature && requiredTier(feature) === 'pro';
     const plusOnly = upgradeModal.querySelectorAll('.pro-bundle-header, .feature-list, .upgrade-cta');
     plusOnly.forEach(el => (isPro ? hide(el) : show(el)));
-    if (title) title.textContent = isPro ? 'Panafide Pro: Early Access' : upgradeTitleText;
+    if (title) title.textContent = isPro ? 'Panafide Pro: Coming Soon' : upgradeTitleText;
 
     if (intro && isPro) {
-        intro.innerHTML = `<strong>${featureName}</strong> is part of <strong>Panafide Pro</strong>, which is in early access. Get in touch and we'll set you up.`;
+        intro.innerHTML = `<strong>${featureName}</strong> is part of <strong>Panafide Pro</strong>, which is coming soon.`;
     } else if (intro && featureName) {
         intro.innerHTML = `Get instant access to <strong>${featureName}</strong>, and everything else in <strong>Panafide+</strong> by upgrading today!`;
     }
@@ -142,6 +144,11 @@ function checkUpgradeSuccess() {
     if (params.get('upgrade') === 'success') {
         openCongratsModal();
         Bus.emit(BUS_EVENT.PROFILE_LOAD_NEEDED);
+    } else if (params.get('upgrade') === 'cancel') {
+        // Back from Stripe without paying: just tidy the URL.
+        const url = new URL(window.location);
+        url.searchParams.delete('upgrade');
+        window.history.replaceState({}, '', url);
     }
 }
 
@@ -153,6 +160,7 @@ async function handleUpgradeClick(btn) {
         return;
     }
 
+    const label = btn?.textContent;
     if (btn) {
         btn.disabled = true;
         btn.textContent = "Connecting to Stripe...";
@@ -179,7 +187,7 @@ async function handleUpgradeClick(btn) {
         await alert("Sorry, we couldn't start the checkout process. Please try again later.");
         if (btn) {
             btn.disabled = false;
-            btn.textContent = "Upgrade to Panafide+";
+            btn.textContent = label;
         }
     }
 }

@@ -232,3 +232,264 @@ body.dark .price-notice {
         box-shadow: 0 0 0 0 rgba(168, 85, 247, 0);
     }
 }
+/* Plans comparison */
+.plans-link {
+    background: none;
+    border: none;
+    color: var(--accent);
+    font-size: 14px;
+    text-decoration: underline;
+    cursor: pointer;
+    padding: 4px;
+}
+
+/* .modal.plans-modal: modal.css is also imported from main.js, so it loads last */
+.modal.plans-modal {
+    width: min(900px, 100%);
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+    overflow: hidden;
+    background: rgb(var(--panel-rgb));
+    border-radius: 24px;
+    color: var(--text);
+}
+
+.plans-header {
+    padding: 24px 28px 12px;
+    margin-bottom: 0;
+}
+
+.plans-scroll {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 8px 28px 28px;
+}
+
+.plans-cards {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-bottom: 32px;
+}
+
+.plan-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 24px 20px;
+    border: 1px solid var(--panel-border);
+    border-radius: 20px;
+}
+
+.plan-card--featured {
+    border: 2px solid var(--accent);
+    box-shadow: 0 12px 30px -12px rgba(var(--accent-rgb), 0.45);
+}
+
+.plan-card h3 {
+    margin: 0;
+    font-size: 22px;
+}
+
+.plan-tagline {
+    margin: 0;
+    font-size: 14px;
+    opacity: 0.7;
+}
+
+.plan-price {
+    font-size: 36px;
+    font-weight: 800;
+    margin: 8px 0;
+}
+
+.plan-price small {
+    font-size: 15px;
+    font-weight: 600;
+    opacity: 0.6;
+    margin-left: 4px;
+}
+
+.plan-alt-price {
+    font-size: 13px;
+    opacity: 0.7;
+    margin: -6px 0 6px;
+}
+
+.plan-price--soon {
+    font-size: 24px;
+    opacity: 0.7;
+}
+
+.plan-card .pro-btn {
+    font-size: 16px;
+    padding: 12px;
+}
+
+.plan-card .price-notice {
+    text-align: center;
+}
+
+.plan-current {
+    display: none;
+    position: absolute;
+    top: -11px;
+    left: 20px;
+    padding: 3px 10px;
+    border-radius: 999px;
+    background: linear-gradient(135deg, var(--accent), #a855f7);
+    color: white;
+    font-size: 11px;
+    font-weight: 800;
+}
+
+.plan-card.is-current .plan-current {
+    display: block;
+}
+
+.plans-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 15px;
+}
+
+.plans-table thead th {
+    position: sticky;
+    top: -8px; /* sits flush with the scroll area's top padding */
+    z-index: 1;
+    background: rgb(var(--panel-rgb));
+    padding: 12px 8px;
+    border-bottom: 1px solid var(--panel-border);
+    font-size: 15px;
+}
+
+.plans-table thead small {
+    display: block;
+    font-weight: 500;
+    opacity: 0.6;
+    font-size: 12px;
+}
+
+.plans-table th[scope="row"] {
+    text-align: left;
+    font-weight: 500;
+    padding: 14px 8px 14px 0;
+}
+
+.plans-table th[scope="row"] small {
+    display: block;
+    font-weight: 400;
+    font-size: 12px;
+    opacity: 0.6;
+    margin-top: 2px;
+}
+
+.plans-table td {
+    text-align: center;
+    padding: 14px 8px;
+    width: 18%;
+}
+
+.plans-table tbody tr:not(.plans-section) > * {
+    border-bottom: 1px solid var(--panel-border);
+}
+
+.plans-table .is-current {
+    background: rgba(var(--accent-rgb), 0.06);
+}
+
+.plans-table thead .is-current {
+    background: rgb(var(--panel-rgb));
+    color: var(--accent);
+}
+
+.plans-section th {
+    text-align: left;
+    padding: 24px 0 8px;
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--accent);
+}
+
+.plans-yes {
+    color: #16a34a;
+    font-size: 20px;
+    font-weight: 800;
+}
+
+.plans-no {
+    opacity: 0.35;
+}
+
+.plans-text {
+    font-weight: 700;
+    font-size: 14px;
+}
+
+body.dark .modal.plans-modal {
+    background: rgb(20, 20, 25);
+    color: white;
+}
+
+body.dark .plans-section th,
+body.dark .plans-table thead .is-current {
+    color: #c4b5fd;
+}
+
+body.dark .plans-table thead th {
+    background: rgb(20, 20, 25);
+}
+
+@media (max-width: 768px) {
+    .modal.plans-modal {
+        max-width: 100%;
+        border-radius: 20px;
+    }
+
+    .plans-header {
+        padding: 18px 18px 8px;
+    }
+
+    .plans-scroll {
+        padding: 8px 16px 20px;
+    }
+
+    .plans-cards {
+        grid-template-columns: 1fr;
+        gap: 18px;
+    }
+
+    .plan-card {
+        padding: 18px;
+        gap: 4px;
+    }
+
+    .plan-price {
+        font-size: 28px;
+        margin: 4px 0;
+    }
+
+    .plans-table {
+        font-size: 14px;
+    }
+
+    .plans-table td {
+        padding: 12px 4px;
+        width: 21%;
+    }
+
+    .plans-table thead th {
+        padding: 10px 4px;
+        font-size: 13px;
+    }
+
+    .plans-text {
+        font-size: 12px;
+    }
+}

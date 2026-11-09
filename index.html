@@ -229,6 +229,7 @@
             <button id="coachModeBtn" style="display:none;">🎯 Coach</button>
             <button id="gamesModeBtn" style="display:none;">⚄ Games</button>
             <button id="myScalesBtn" style="display:none;">🛸 My Scales</button>
+            <button id="plansBtn" data-open-plans>⭐ Plans</button>
             <div class="dropdown-divider"></div>
             <div id="adminSection" class="admin-only" style="display:none;">
               <button id="adminMenuBtn" class="admin-menu-btn" style="color:var(--accent-glow);">⚙️ Admin Tools ▾</button>
@@ -2921,8 +2922,55 @@
 
         <div class="upgrade-cta">
           <button id="checkoutBtn" class="primary-btn pro-btn">Upgrade to Panafide+</button>
-          <span class="price-notice">$9/month • Cancel anytime</span>
+          <span class="price-notice">$12 CAD or $9 USD per month • Cancel anytime</span>
+          <button type="button" class="plans-link" data-open-plans>Compare plans</button>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Plans comparison Modal -->
+  <div id="plansModal" class="modal-overlay" aria-hidden="true">
+    <div class="modal plans-modal glass-panel" role="dialog" aria-labelledby="plansTitle">
+      <div class="upgrade-header plans-header">
+        <h2 id="plansTitle" class="modal-title vibrant-text">Plans</h2>
+        <button id="closePlansBtn" class="close-btn" aria-label="Close">&times;</button>
+      </div>
+      <div class="plans-scroll">
+        <div class="plans-cards">
+          <div class="plan-card" data-plan-rank="0">
+            <span class="plan-current">Your plan</span>
+            <h3>Free</h3>
+            <p class="plan-tagline">Learn and explore.</p>
+            <div class="plan-price">$0</div>
+          </div>
+          <div class="plan-card plan-card--featured" data-plan-rank="1">
+            <span class="plan-current">Your plan</span>
+            <h3>Panafide+</h3>
+            <p class="plan-tagline">Practise on your own pan.</p>
+            <div class="plan-price">$12<small>CAD/month</small></div>
+            <span class="plan-alt-price">or $9 USD per month</span>
+            <button id="plansUpgradeBtn" class="primary-btn pro-btn">Upgrade to Panafide+</button>
+            <span class="price-notice">Cancel anytime</span>
+          </div>
+          <div class="plan-card" data-plan-rank="2">
+            <span class="plan-current">Your plan</span>
+            <h3>Panafide Pro</h3>
+            <p class="plan-tagline">Create with AI, and try new features first.</p>
+            <div class="plan-price plan-price--soon">Coming Soon</div>
+          </div>
+        </div>
+
+        <table class="plans-table">
+          <thead>
+            <tr>
+              <th scope="col" aria-label="Feature"></th>
+              <th scope="col" data-plan-rank="0">Free<small>$0</small></th>
+              <th scope="col" data-plan-rank="1">Panafide+<small>$12 CAD</small><small>$9 USD</small></th>
+              <th scope="col" data-plan-rank="2">Pro<small>Coming soon</small></th>
+            </tr>
+          </thead>
+        </table>
       </div>
     </div>
   </div>
