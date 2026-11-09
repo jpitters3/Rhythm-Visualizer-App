@@ -30,6 +30,8 @@ const MIN_LEFT_HEIGHT = 160;  // absolute floor if a measure row can't be measur
 const MAX_ROW_HEIGHT_FOR_MIN = 220; // see measureOneRowHeight()
 const STORAGE_KEY = 'gp_handpanPanelHeight';
 const KEYBOARD_STEP = 24;
+// Smallest the pan may get (wrap width): numbers stay readable and notes tappable.
+const MIN_PAN_WIDTH = 240;
 
 export function initPanelResize() {
   const handle = document.getElementById('panelResizeHandle');
@@ -119,6 +121,12 @@ export function initPanelResize() {
   function imageAspect() {
     // height / width — square fallback if the image's real size isn't known yet.
     return (img && img.naturalWidth && img.naturalHeight) ? img.naturalHeight / img.naturalWidth : 1;
+  }
+
+  function minPanImageHeight() {
+    const panelWidth = panel.getBoundingClientRect().width;
+    const minWrap = Math.min(MIN_PAN_WIDTH, panelWidth || MIN_PAN_WIDTH);
+    return Math.max(0, minWrap - wrapHorizontalPadding()) * imageAspect();
   }
 
   function wrapVerticalPadding() {
@@ -215,12 +223,10 @@ export function initPanelResize() {
     const reserve = transportBarHeight();
     const chrome = measureChromeHeight();
     const padV = wrapVerticalPadding();
-    // The tabs row + ghost-note row must always fit — the pan is what
-    // shrinks (down to 0 if it truly has to) to make room, never the other
-    // way around. Without this floor, "leave the grid some room" below
-    // could squeeze the panel shorter than chrome itself needs, clipping
-    // the ghost row instead of just shrinking the pan.
-    const floorTotal = Math.max(MIN_PANEL_HEIGHT, chrome + padV) + reserve;
+    // Chrome plus a playable pan must always fit; when space is tight the grid
+    // gives way (it scrolls), never the pan. A small saved height used to
+    // restore a tiny pan on every visit.
+    const floorTotal = Math.max(MIN_PANEL_HEIGHT, chrome + padV + minPanImageHeight()) + reserve;
     const ceilingTotal = Math.max(floorTotal, Math.min(
       (cachedMaxHeight ?? refreshMaxHeight()) + reserve,
       main.getBoundingClientRect().height - minLeftHeightNeeded(),
