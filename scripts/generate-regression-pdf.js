@@ -183,8 +183,8 @@ const html = `<!DOCTYPE html>
   <ul>
     <li><div class="checkbox"></div>Signed out: attempt to save → auth prompt appears (not a JS error or blank screen)</li>
     <li><div class="checkbox"></div>Free user: save 5 patterns, attempt a 6th → upgrade modal appears, mentions "Unlimited Cloud Storage"</li>
-    <li><div class="checkbox"></div>Upgrade modal: "Upgrade to Player+" button redirects to Stripe checkout (do not complete purchase)</li>
-    <li><div class="checkbox"></div>Player+ user with active subscription: no expiry banner visible</li>
+    <li><div class="checkbox"></div>Upgrade modal: "Upgrade to Panafide+" button redirects to Stripe checkout (do not complete purchase)</li>
+    <li><div class="checkbox"></div>Panafide+ user with active subscription: no expiry banner visible</li>
   </ul>
 </section>
 

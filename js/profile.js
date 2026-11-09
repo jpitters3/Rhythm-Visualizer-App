@@ -376,7 +376,7 @@ export function initSubscriptionBanner(profile) {
 
   // Plus granted by a group or private program (Tekmatix client tags).
   const viaProgram = profile.subscription_source === 'tekmatix';
-  const tierName = tier === 'pro' ? 'Pro' : 'Player+';
+  const tierName = tier === 'pro' ? 'Panafide Pro' : 'Panafide+';
 
   if (isExpired) {
     banner.classList.add('subscription-banner--expired');

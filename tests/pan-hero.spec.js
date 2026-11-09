@@ -10,7 +10,7 @@ const { gotoStudio, clearGrid, closeMobileControlsIfNeeded } = require('./helper
 async function seedPattern(page) {
   await gotoStudio(page);
   await page.waitForSelector('.measure-row');
-  // Pan Hero is a Player+ feature; these tests cover the feature, not the paywall.
+  // Pan Hero is a Panafide+ feature; these tests cover the feature, not the paywall.
   await page.evaluate(() => document.documentElement.setAttribute('data-gp-test-mode', 'true'));
   await clearGrid(page, 'A');
   // Restore the handpan panel — clearGrid needed the controls panel open on
@@ -43,7 +43,7 @@ async function openPanHero(page) {
   }
 }
 
-test('Pan Hero: free users get the Player+ upgrade prompt', async ({ page }) => {
+test('Pan Hero: free users get the Panafide+ upgrade prompt', async ({ page }) => {
   await gotoStudio(page);
   await page.waitForSelector('.measure-row');
   await closeMobileControlsIfNeeded(page);

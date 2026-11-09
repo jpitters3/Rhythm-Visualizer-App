@@ -159,7 +159,7 @@ test.describe('Subscription Expiry', () => {
     await expect(welcome).not.toHaveClass(/open/);
   });
 
-  test('Pro features: Player+ sees early access, Pro gets in', async ({ page }) => {
+  test('Pro features: Panafide+ sees early access, Pro gets in', async ({ page }) => {
     const future = new Date(Date.now() + 30 * 86400000);
     const openAi = () => page.evaluate(() => document.querySelector('[data-action="toggle-ai"]')?.click());
     const upgrade = page.locator('#upgradeModal');
@@ -180,9 +180,9 @@ test.describe('Subscription Expiry', () => {
     await expect(upgrade).not.toHaveClass(/open/);
   });
 
-  // Coach Mode's button is admin-only while it's WIP; this covers the Player+
+  // Coach Mode's button is admin-only while it's WIP; this covers the Panafide+
   // gate it will ship with.
-  test('Coach Mode: free users get the upgrade prompt, Player+ gets in', async ({ page }) => {
+  test('Coach Mode: free users get the upgrade prompt, Panafide+ gets in', async ({ page }) => {
     const openCoach = () => page.evaluate(() => document.getElementById('coachModeBtn')?.click());
     const upgrade = page.locator('#upgradeModal');
 

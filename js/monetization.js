@@ -80,9 +80,9 @@ function openUpgradeModal(payload) {
     if (title) title.textContent = isPro ? 'Panafide Pro: Early Access' : upgradeTitleText;
 
     if (intro && isPro) {
-        intro.innerHTML = `<strong>${featureName}</strong> is part of <strong>Pro</strong>, which is in early access. Get in touch and we'll set you up.`;
+        intro.innerHTML = `<strong>${featureName}</strong> is part of <strong>Panafide Pro</strong>, which is in early access. Get in touch and we'll set you up.`;
     } else if (intro && featureName) {
-        intro.innerHTML = `Get instant access to <strong>${featureName}</strong>, and everything else in <strong>Player+</strong> by upgrading today!`;
+        intro.innerHTML = `Get instant access to <strong>${featureName}</strong>, and everything else in <strong>Panafide+</strong> by upgrading today!`;
     }
 
     upgradePanel.open();
@@ -125,11 +125,11 @@ function showProgramWelcome(profile) {
     const { title, intro } = congratsElements();
     if (!title || !intro) return;
     congratsText ??= { title: title.textContent, intro: intro.textContent };
-    const tierName = tier === 'pro' ? 'Pro' : 'Player+';
+    const tierName = tier === 'pro' ? 'Panafide Pro' : 'Panafide+';
     title.textContent = `${tierName} is included with your program! 🎉`;
     intro.textContent = tier === 'pro'
-        ? 'As a private student, you have everything in Pro for as long as you\'re enrolled, including the AI Assistant and early access to new features. Here\'s what else you\'ve unlocked:'
-        : 'As a group student, you have everything in Player+ for as long as you\'re enrolled. Here\'s what you\'ve unlocked:';
+        ? 'As a private student, you have everything in Panafide Pro for as long as you\'re enrolled, including the AI Assistant and early access to new features. Here\'s what else you\'ve unlocked:'
+        : 'As a group student, you have everything in Panafide+ for as long as you\'re enrolled. Here\'s what you\'ve unlocked:';
     congratsPanel?.open();
 }
 
@@ -147,7 +147,7 @@ function checkUpgradeSuccess() {
 
 async function handleUpgradeClick(btn) {
     if (!currentUser) {
-        await alert("Please sign in or register to upgrade to Player+.");
+        await alert("Please sign in or register to upgrade to Panafide+.");
         Bus.emit(BUS_EVENT.OPEN_AUTH_MODAL);
         closeUpgradeModal();
         return;
@@ -179,7 +179,7 @@ async function handleUpgradeClick(btn) {
         await alert("Sorry, we couldn't start the checkout process. Please try again later.");
         if (btn) {
             btn.disabled = false;
-            btn.textContent = "Upgrade to Player+";
+            btn.textContent = "Upgrade to Panafide+";
         }
     }
 }

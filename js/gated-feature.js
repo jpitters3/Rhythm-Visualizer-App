@@ -18,7 +18,7 @@ class GatedFeature {
 export const FEATURE = {
   AI_ASSISTANT: new GatedFeature('ai_assistant', 'AI Assistant', 'pro'),
   CUSTOM_SCALES: new GatedFeature('custom_scales', 'Custom Handpan Scales'),
-  UNLIMITED_PATTERNS: new GatedFeature('unlimited_patterns', 'Unlimited Cloud Patterns'),
+  UNLIMITED_PATTERNS: new GatedFeature('unlimited_patterns', 'Unlimited Phrases'),
   MIDI_EXPORT: new GatedFeature('midi_export', 'MIDI Export'),
   DOWNLOAD_WAV: new GatedFeature('download_wav', 'Download Audio'),
   UNLIMITED_COMPOSITIONS: new GatedFeature('unlimited_compositions', 'Unlimited Compositions'),

@@ -12,7 +12,7 @@ const now = new Date('2026-11-02T12:00:00Z');
 const days = n => new Date(now.getTime() + n * 86400000).toISOString();
 const free = { subscription_tier: 'player', subscription_source: null, subscription_expires_at: null };
 
-test('group grant gives Player+ for 8 weeks, private Pro for 6', () => {
+test('group grant gives Panafide+ for 8 weeks, private Pro for 6', () => {
   expect(planAccessChange(free, { action: 'grant', program: 'group' }, now)).toEqual({
     subscription_tier: 'player_plus',
     subscription_status: 'active',
@@ -41,7 +41,7 @@ test('a private student who joins a group keeps Pro', () => {
     subscription_tier: 'pro',
     subscription_expires_at: days(56),
   });
-  // Once their Pro has lapsed, a group grant gives Player+.
+  // Once their Pro has lapsed, a group grant gives Panafide+.
   const lapsed = { ...privateStudent, subscription_expires_at: days(-1) };
   expect(planAccessChange(lapsed, { action: 'grant', program: 'group' }, now)?.subscription_tier).toBe('player_plus');
   expect(() => planAccessChange(free, { action: 'grant', program: 'group', tier: 'gold' }, now)).toThrow();

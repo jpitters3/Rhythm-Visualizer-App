@@ -157,7 +157,7 @@ test.describe('Monetization Save Gating', () => {
     await page.screenshot({ path: 'upgrade_modal_highlight.png' });
     console.log('[TEST] Captured screenshot: upgrade_modal_highlight.png');
 
-    await expect(upgradeModal).toContainText('Unlock Player+ Features');
+    await expect(upgradeModal).toContainText('Unlock Panafide+ Features');
     await expect(upgradeModal).toContainText('Unlimited Cloud Storage');
 
     console.log('[TEST] Verified: 6th pattern save triggered upgrade modal with feature highlight.');

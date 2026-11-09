@@ -7,7 +7,7 @@
  * Custom Data supplies:
  *   secret   must match TEKMATIX_PLUS_SECRET
  *   action   'grant' | 'revoke'
- *   program  'group' (Player+, 8 weeks) | 'private' (Pro, 6 weeks), or
+ *   program  'group' (Panafide+, 8 weeks) | 'private' (Panafide Pro, 6 weeks), or
  *   weeks / until / tier to override the length or tier
  * Rules live in access.ts. Deploy with --no-verify-jwt.
  */

@@ -15,7 +15,7 @@ Deno.serve(async (req) => {
     const { userId, email, returnUrl } = await req.json()
     
     const stripeKey = Deno.env.get('STRIPE_SECRET_KEY')
-    const priceId = Deno.env.get('STRIPE_PRICE_ID_PRO')
+    const priceId = Deno.env.get('STRIPE_PRICE_ID_PLUS')
 
     if (!stripeKey || !priceId) {
       throw new Error('Missing Stripe configuration')
