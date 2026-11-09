@@ -555,3 +555,34 @@ body.dark .plans-table thead th {
     background: rgba(var(--accent-rgb), 0.1);
     font-weight: 600;
 }
+
+/* Plus badge next to the header logo: a touch shorter than the 40px logo */
+.logo-plus {
+    width: 34px;
+    height: 34px;
+    margin-left: 6px;
+    flex-shrink: 0;
+}
+
+.logo-plus[hidden] {
+    display: none;
+}
+
+.logo-plus-start { stop-color: #1e3a8a; }
+.logo-plus-end { stop-color: #c026d3; }
+
+/* Brighter so navy doesn't vanish into the dark header */
+body.dark .logo-plus-start { stop-color: #3b5bdb; }
+body.dark .logo-plus-end { stop-color: #d03be0; }
+
+/* Member header: navy-to-fuchsia wash and edge line, fading out at both ends */
+.app-header.app-header--plus {
+    background: linear-gradient(90deg, transparent, rgba(30, 58, 138, 0.09) 15%, rgba(192, 38, 211, 0.09) 85%, transparent);
+    border-bottom: 2px solid transparent;
+    border-image: linear-gradient(90deg, transparent, #1e3a8a 15%, #c026d3 85%, transparent) 1;
+}
+
+body.dark .app-header.app-header--plus {
+    background: linear-gradient(90deg, transparent, rgba(59, 91, 219, 0.16) 15%, rgba(208, 59, 224, 0.16) 85%, transparent);
+    border-image: linear-gradient(90deg, transparent, #3b5bdb 15%, #d03be0 85%, transparent) 1;
+}

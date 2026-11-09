@@ -4,7 +4,7 @@ import { Modal } from './modal.js';
 import { supabase } from './supabase-client.js';
 import { Bus, BUS_EVENT } from './bus.js';
 import { currentProfile } from './profile.js';
-import { requiredTier } from './gated-feature.js';
+import { activeTierRank, requiredTier } from './gated-feature.js';
 import { show, hide } from './dom.js';
 import { initPlans } from './plans.js';
 import { hasStripeSubscription, openManageSubscription } from './manage-subscription.js';
@@ -36,6 +36,9 @@ export function initMonetization() {
     Bus.on(BUS_EVENT.SHOW_CONGRATS_MODAL, openCongratsModal);
     Bus.on(BUS_EVENT.PROFILE_LOADED, (e) => showProgramWelcome(e.detail?.profile));
     showProgramWelcome(currentProfile); // the profile can load before this init runs
+    Bus.on(BUS_EVENT.PROFILE_LOADED, updatePlusBadge);
+    Bus.on(BUS_EVENT.AUTH_LOGOUT, () => updatePlusBadge({ signedOut: true }));
+    updatePlusBadge();
 
     closeUpgradeBtn?.addEventListener('click', closeUpgradeModal);
     closeCongratsBtn?.addEventListener('click', closeCongratsModal);
@@ -47,6 +50,18 @@ export function initMonetization() {
 
     // Check for success redirect
     checkUpgradeSuccess();
+}
+
+// Purple "+" by the logo and a tinted header for anyone with paid access right now.
+function updatePlusBadge({ signedOut = false } = {}) {
+    const badge = document.getElementById('logoPlusBadge');
+    if (!badge) return;
+    const rank = currentUser && !signedOut ? activeTierRank() : 0;
+    badge.toggleAttribute('hidden', rank < 1); // SVG has no .hidden property
+    document.querySelector('.app-header')?.classList.toggle('app-header--plus', rank >= 1);
+    const label = rank >= 2 ? 'Panafide Pro' : 'Panafide+';
+    badge.querySelector('title').textContent = label;
+    badge.setAttribute('aria-label', `${label} member`);
 }
 
 function openUpgradeModal(payload) {
