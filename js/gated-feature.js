@@ -2,7 +2,10 @@ import { currentUser, isAdminUser } from './state.js';
 import { currentProfile } from './profile.js';
 
 // Paid tiers in order; a tier unlocks everything below it.
-const TIER_RANK = { player: 0, player_plus: 1, pro: 2 };
+export const TIER_RANK = { player: 0, player_plus: 1, pro: 2 };
+
+// How many a free member can save; the plans table shows the same numbers.
+export const FREE_LIMIT = { unlimited_patterns: 5, unlimited_compositions: 1, custom_scales: 1 };
 
 class GatedFeature {
   constructor(slug, name, tier = 'player_plus') {
@@ -32,7 +35,7 @@ export function requiredTier(feature) {
   return Object.values(FEATURE).find(f => f.slug === slug)?.tier ?? 'player_plus';
 }
 
-function activeTierRank() {
+export function activeTierRank() {
   const tier = currentProfile?.subscription_tier || 'player';
   const expiresAt = currentProfile?.subscription_expires_at;
   if (expiresAt && new Date(expiresAt) < new Date()) return 0;
@@ -52,13 +55,13 @@ export function canAccess(feature, context = {}) {
 
   const accessMap = {
     'ai_assistant': false,
-    'custom_scales': false,
     'midi_export': false,
     'download_wav': false,
     'coaching_mode': false,
     'pan_hero': false,
-    'unlimited_patterns': (context.count || 0) < 5,
-    'unlimited_compositions': (context.count || 0) < 1,
+    'custom_scales': (context.count || 0) < FREE_LIMIT.custom_scales,
+    'unlimited_patterns': (context.count || 0) < FREE_LIMIT.unlimited_patterns,
+    'unlimited_compositions': (context.count || 0) < FREE_LIMIT.unlimited_compositions,
   };
 
   return accessMap[slug] ?? true;

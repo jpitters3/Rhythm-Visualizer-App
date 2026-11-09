@@ -200,6 +200,21 @@ test.describe('Subscription Expiry', () => {
     await expect(upgrade).not.toHaveClass(/open/);
   });
 
+  test('custom scales: free members get one, Panafide+ gets unlimited', async ({ page }) => {
+    const canAddScale = (count) => page.evaluate(async (n) => {
+      const entryUrl = document.querySelector('script[type="module"][src*="main"]').src;
+      const { canAccess, FEATURE } = await import(new URL('js/gated-feature.js', entryUrl).href);
+      return canAccess(FEATURE.CUSTOM_SCALES, { count: n });
+    }, count);
+
+    expect(await canAddScale(0)).toBe(true);
+    expect(await canAddScale(1)).toBe(false);
+
+    await setSubscription(testUser.user.id, { tier: 'player_plus', expiresAt: new Date(Date.now() + 30 * 86400000) });
+    await reloadOnStudio(page);
+    await expect.poll(() => canAddScale(5)).toBe(true);
+  });
+
   test('no banner shown when expiry is more than 14 days away', async ({ page }) => {
     const future = new Date(Date.now() + 20 * 86400000); // 20 days out
     await setSubscription(testUser.user.id, { tier: 'player_plus', expiresAt: future });

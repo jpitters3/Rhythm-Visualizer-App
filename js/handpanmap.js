@@ -673,7 +673,7 @@ function renderMyScalesList() {
   createBtn.className = 'primary-btn small-btn';
   createBtn.textContent = '+ Create New Handpan';
   createBtn.onclick = () => {
-    if (!canAccess(FEATURE.CUSTOM_SCALES)) {
+    if (!canAccess(FEATURE.CUSTOM_SCALES, { count: customHandpansCache.length })) {
       Bus.emit(BUS_EVENT.SHOW_UPGRADE_MODAL, {
         feature: FEATURE.CUSTOM_SCALES,
         featureId: 'feat-scales'
@@ -745,7 +745,8 @@ function renderMyScalesList() {
     mapBtn.textContent = 'Map';
     mapBtn.className = 'edit-map-btn';
     mapBtn.onclick = () => {
-      if (!canAccess(FEATURE.CUSTOM_SCALES)) {
+      // Free members can map their first scale.
+      if (!canAccess(FEATURE.CUSTOM_SCALES, { count: index })) {
         Bus.emit(BUS_EVENT.SHOW_UPGRADE_MODAL, {
           feature: FEATURE.CUSTOM_SCALES,
           featureId: 'feat-scales'
