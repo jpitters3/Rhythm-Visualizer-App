@@ -16,7 +16,8 @@ let profileLoad = null;
 
 // Fetch attributes for the *current* user. Other modules read fields from the
 // resulting currentProfile rather than querying `profiles` themselves.
-export async function loadCurrentProfile() {
+// refresh: refetch even if loaded, e.g. after a subscription change.
+export async function loadCurrentProfile({ refresh = false } = {}) {
   if (!currentUser) {
     currentProfile = null;
     return;
@@ -24,7 +25,7 @@ export async function loadCurrentProfile() {
 
   // Cached only if it's this user's: after a sign-out and a different sign-in
   // (no reload), the previous user's profile would otherwise be reused.
-  if (currentProfile?.user_id === currentUser.id) return;
+  if (!refresh && currentProfile?.user_id === currentUser.id) return;
   if (profileLoad?.userId === currentUser.id) return profileLoad.promise;
 
   const promise = fetchCurrentProfile();
@@ -333,7 +334,7 @@ saveProfileBtn?.addEventListener('click', async () => {
 
 // Event Bus Listener: Profile Load
 Bus.on(BUS_EVENT.PROFILE_LOAD_NEEDED, async () => {
-  await loadCurrentProfile();
+  await loadCurrentProfile({ refresh: true });
 });
 
 // ===== SUBSCRIPTION EXPIRY BANNER =====
