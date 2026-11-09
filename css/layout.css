@@ -420,7 +420,9 @@ div.container {
   padding-top: 16px;
   min-height: 72px;
   margin-top: 4px;
-  border-top: 1px solid var(--panel-border);
+  /* Separator fades out at both ends, matching the header and controls bar */
+  border-top: 1px solid transparent;
+  border-image: linear-gradient(90deg, transparent, var(--panel-border) 15%, var(--panel-border) 85%, transparent) 1;
   border-radius: 0 0 12px 12px;
   background: linear-gradient(to bottom, transparent, rgba(0, 0, 0, 0.02));
   flex-shrink: 0;

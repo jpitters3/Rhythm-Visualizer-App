@@ -22,8 +22,10 @@
   border-left: none;
   border-right: none;
   border-top: none;
-  border-bottom: 1px solid var(--panel-border);
-  background: rgba(var(--panel-rgb, 255,255,255), 0.6);
+  /* Strip and edge fade out at both ends, matching the header */
+  border-bottom: 1px solid transparent;
+  border-image: linear-gradient(90deg, transparent, var(--panel-border) 15%, var(--panel-border) 85%, transparent) 1;
+  background: linear-gradient(90deg, transparent, rgba(var(--panel-rgb, 255,255,255), 0.6) 15%, rgba(var(--panel-rgb, 255,255,255), 0.6) 85%, transparent);
   padding: 6px 24px;
   gap: 6px;
   flex-wrap: nowrap;
