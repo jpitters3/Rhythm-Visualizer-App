@@ -220,6 +220,7 @@ test.describe('Subscription Expiry', () => {
     await page.evaluate(() => document.getElementById('plansBtn')?.click());
     await expect(plans).toHaveClass(/open/);
     await expect(plans.locator('.plan-card.is-current h3')).toHaveText('Free');
+    await expect(plans.locator('.plan-card--featured h3')).toHaveText('Panafide+');
     await expect(plans.locator('.plans-table tbody tr')).not.toHaveCount(0);
     await expect(page.locator('#plansUpgradeBtn')).toBeVisible();
     await page.locator('#closePlansBtn').click();
@@ -232,6 +233,16 @@ test.describe('Subscription Expiry', () => {
       await expect(plans.locator('.plan-card.is-current h3')).toHaveText('Panafide+', { timeout: 1000 });
     }).toPass({ timeout: 5000 });
     await expect(page.locator('#plansUpgradeBtn')).toBeHidden();
+    await page.locator('#closePlansBtn').click();
+
+    // The highlight follows the member's own plan.
+    await setSubscription(testUser.user.id, { tier: 'pro', expiresAt: new Date(Date.now() + 30 * 86400000) });
+    await reloadOnStudio(page);
+    await expect(async () => {
+      await page.evaluate(() => document.getElementById('plansBtn')?.click());
+      await expect(plans.locator('.plan-card.is-current h3')).toHaveText('Panafide Pro', { timeout: 1000 });
+    }).toPass({ timeout: 5000 });
+    await expect(plans.locator('.plan-card--featured h3')).toHaveText('Panafide Pro');
   });
 
   test('no banner shown when expiry is more than 14 days away', async ({ page }) => {
