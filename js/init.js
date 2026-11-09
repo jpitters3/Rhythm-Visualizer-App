@@ -56,6 +56,7 @@ import { initGlossary } from './glossary.js';
 import { initGridAutoscroll } from './grid-autoscroll.js';
 import { initGridZoom } from './grid-zoom-controls.js';
 import { initMonetization } from './monetization.js';
+import { initManageSubscription } from './manage-subscription.js';
 import { initScrollIndicators } from './scroll-indicators.js';
 import { initMethod, wireMethodEvents } from './method.js';
 import { initExercises } from './exercises.js';
@@ -127,6 +128,7 @@ async function init() {
     initComposeWizard();
     initGlossary();
     initMonetization();
+    initManageSubscription();
     initMethod();
     wireMethodEvents();
     initExercises();

@@ -339,6 +339,9 @@ Bus.on(BUS_EVENT.PROFILE_LOAD_NEEDED, async () => {
 
 // ===== SUBSCRIPTION EXPIRY BANNER =====
 
+let bannerState = {};
+let bannerWired = false;
+
 export function initSubscriptionBanner(profile) {
   const banner       = document.getElementById('subscriptionBanner');
   const title        = document.getElementById('subscriptionBannerTitle');
@@ -365,6 +368,14 @@ export function initSubscriptionBanner(profile) {
   }
 
   const isExpired = daysLeft <= 0;
+  const status = profile.subscription_status;
+  const viaStripe = profile.subscription_source === 'stripe';
+
+  // Stripe renews by itself; only flag a cancel, a pause or a missed payment.
+  if (viaStripe && status === 'active' && !isExpired) {
+    banner.style.display = 'none';
+    return;
+  }
 
   // Check if user dismissed this specific expiry period
   if (isExpired) {
@@ -379,7 +390,30 @@ export function initSubscriptionBanner(profile) {
   const viaProgram = profile.subscription_source === 'tekmatix';
   const tierName = tier === 'pro' ? 'Panafide Pro' : 'Panafide+';
 
-  if (isExpired) {
+  let manage = false;
+  const endDate = new Date(expiresAt).toLocaleDateString(undefined, { month: 'long', day: 'numeric' });
+
+  if (viaStripe && ['canceling', 'paused', 'active'].includes(status)) {
+    manage = true;
+    banner.classList.toggle('subscription-banner--expired', isExpired);
+    if (status === 'canceling') {
+      title.textContent = 'Your subscription has been cancelled';
+      sub.textContent   = `Your Panafide+ benefits end on ${endDate}.`;
+      btn.textContent   = 'Keep Panafide+';
+    } else if (status === 'paused') {
+      title.textContent = 'Panafide+ is paused';
+      sub.textContent   = isExpired
+        ? 'Everything you made is still saved. Resume any time.'
+        : `You keep your benefits until ${endDate}.`;
+      btn.textContent   = isExpired ? 'Resume' : 'Manage';
+    } else {
+      title.textContent = 'Your last payment didn\'t go through';
+      sub.textContent   = 'Update your card to keep Panafide+.';
+      btn.textContent   = 'Update Card';
+    }
+    if (dismissLabel) dismissLabel.style.display = isExpired ? '' : 'none';
+    if (dismissCheck) dismissCheck.checked = false;
+  } else if (isExpired) {
     banner.classList.add('subscription-banner--expired');
     title.textContent = viaProgram ? `${tierName} from your program has ended` : 'Your Panafide access has expired';
     sub.textContent   = viaProgram
@@ -403,13 +437,19 @@ export function initSubscriptionBanner(profile) {
   }
 
   banner.style.display = '';
+  bannerState = { manage, isExpired, expiresAt };
+  if (bannerWired) return;
+  bannerWired = true;
+
+  // Wired once and read bannerState on click, so every click works and re-renders don't stack listeners.
   btn.addEventListener('click', () => {
-    Bus.emit(BUS_EVENT.SHOW_UPGRADE_MODAL, { feature: 'renewal' });
-  }, { once: true });
+    if (bannerState.manage) Bus.emit(BUS_EVENT.SHOW_MANAGE_SUBSCRIPTION);
+    else Bus.emit(BUS_EVENT.SHOW_UPGRADE_MODAL, { feature: 'renewal' });
+  });
   closeBtn?.addEventListener('click', () => {
-    if (isExpired && dismissCheck?.checked) {
-      localStorage.setItem('subscription_banner_dismissed', expiresAt);
+    if (bannerState.isExpired && dismissCheck?.checked) {
+      localStorage.setItem('subscription_banner_dismissed', bannerState.expiresAt);
     }
     banner.style.display = 'none';
-  }, { once: true });
+  });
 }

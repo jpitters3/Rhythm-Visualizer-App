@@ -230,6 +230,7 @@
             <button id="gamesModeBtn" style="display:none;">⚄ Games</button>
             <button id="myScalesBtn" style="display:none;">🛸 My Scales</button>
             <button id="plansBtn" data-open-plans>⭐ Plans</button>
+            <button id="manageSubBtn" data-open-manage-sub hidden>💳 Subscription</button>
             <div class="dropdown-divider"></div>
             <div id="adminSection" class="admin-only" style="display:none;">
               <button id="adminMenuBtn" class="admin-menu-btn" style="color:var(--accent-glow);">⚙️ Admin Tools ▾</button>
@@ -2951,6 +2952,7 @@
             <div class="plan-price">$12<small>CAD/month</small></div>
             <span class="plan-alt-price">or $9 USD per month</span>
             <button id="plansUpgradeBtn" class="primary-btn pro-btn">Upgrade to Panafide+</button>
+            <button id="plansManageBtn" class="manage-sub-btn" data-open-manage-sub hidden>Manage subscription</button>
             <span class="price-notice">Cancel anytime</span>
           </div>
           <div class="plan-card" data-plan-rank="2">
@@ -2971,6 +2973,38 @@
             </tr>
           </thead>
         </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Manage subscription Modal -->
+  <div id="manageSubModal" class="modal-overlay" aria-hidden="true">
+    <div class="modal upgrade-modal manage-sub-modal glass-panel" role="dialog" aria-labelledby="manageSubTitle">
+      <div class="upgrade-header">
+        <h2 id="manageSubTitle" class="modal-title vibrant-text">Your subscription</h2>
+        <button id="closeManageSubBtn" class="close-btn" aria-label="Close">&times;</button>
+      </div>
+      <div class="upgrade-content">
+        <div data-sub-view="main" class="manage-sub-view">
+          <p id="manageSubStatus" class="upgrade-intro"></p>
+          <button data-sub-action="renew" class="primary-btn pro-btn">Keep Panafide+</button>
+          <button data-sub-action="resume" class="primary-btn pro-btn">Resume Panafide+</button>
+          <button data-sub-action="portal" class="manage-sub-btn">Update card or see invoices</button>
+          <button data-sub-view-open="pause" data-sub-when="active" class="manage-sub-btn">Pause my subscription</button>
+          <button data-sub-view-open="pause" data-sub-when="active" class="plans-link">Cancel subscription</button>
+        </div>
+        <div data-sub-view="pause" class="manage-sub-view" hidden>
+          <p class="upgrade-intro">Need a break? Pause instead of cancelling. Your phrases, compositions and scales stay saved, and billing restarts on its own.</p>
+          <div class="manage-sub-months" role="group" aria-label="Pause length">
+            <button type="button" data-pause-months="1" aria-pressed="true">1 month</button>
+            <button type="button" data-pause-months="2" aria-pressed="false">2 months</button>
+            <button type="button" data-pause-months="3" aria-pressed="false">3 months</button>
+          </div>
+          <p id="manageSubPauseNote" class="price-notice"></p>
+          <button data-sub-action="pause" class="primary-btn pro-btn">Pause billing</button>
+          <button data-sub-action="cancel" class="plans-link">No thanks, cancel my subscription</button>
+          <button data-sub-view-open="main" class="plans-link">Back</button>
+        </div>
       </div>
     </div>
   </div>

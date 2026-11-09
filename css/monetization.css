@@ -493,3 +493,65 @@ body.dark .plans-table thead th {
         font-size: 12px;
     }
 }
+
+/* Manage subscription */
+.manage-sub-modal {
+    max-width: 440px;
+}
+
+.manage-sub-view {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    text-align: center;
+}
+
+.manage-sub-view[hidden] {
+    display: none;
+}
+
+/* controls.css fixes every button at 36px, which pushes padded text off-centre. */
+.manage-sub-btn,
+.manage-sub-months button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: auto;
+    line-height: 1.2;
+}
+
+.manage-sub-btn {
+    width: 100%;
+    padding: 12px 20px;
+    border: 1px solid var(--panel-border);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--text);
+    font-size: 15px;
+}
+
+.manage-sub-btn:hover {
+    border-color: var(--accent);
+}
+
+.manage-sub-months {
+    display: flex;
+    gap: 8px;
+    width: 100%;
+}
+
+.manage-sub-months button {
+    flex: 1;
+    padding: 10px 0;
+    border: 1px solid var(--panel-border);
+    border-radius: 12px;
+    background: transparent;
+    color: var(--text);
+}
+
+.manage-sub-months button[aria-pressed="true"] {
+    border: 2px solid var(--accent);
+    background: rgba(var(--accent-rgb), 0.1);
+    font-weight: 600;
+}

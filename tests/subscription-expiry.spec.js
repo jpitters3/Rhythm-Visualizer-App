@@ -7,14 +7,15 @@ const { gotoStudio } = require('./helpers');
  * Sets subscription fields directly on the profile row.
  * Uses the service role key so RLS is bypassed.
  */
-async function setSubscription(userId, { tier, expiresAt, source = 'mentorship' }) {
+async function setSubscription(userId, { tier, expiresAt, source = 'mentorship', status, extra = {} }) {
   const { error } = await supabaseAdmin
     .from('profiles')
     .update({
       subscription_tier: tier,
       subscription_expires_at: expiresAt ? expiresAt.toISOString() : null,
       subscription_source: source,
-      subscription_status: tier === 'player_plus' ? 'active' : 'inactive',
+      subscription_status: status ?? (tier === 'player_plus' ? 'active' : 'inactive'),
+      ...extra,
     })
     .eq('user_id', userId);
 
@@ -243,6 +244,73 @@ test.describe('Subscription Expiry', () => {
       await expect(plans.locator('.plan-card.is-current h3')).toHaveText('Panafide Pro', { timeout: 1000 });
     }).toPass({ timeout: 5000 });
     await expect(plans.locator('.plan-card--featured h3')).toHaveText('Panafide Pro');
+  });
+
+  test('Stripe member: no renewal nag, can open pause and cancel', async ({ page }) => {
+    await setSubscription(testUser.user.id, {
+      tier: 'player_plus', source: 'stripe', status: 'active',
+      expiresAt: new Date(Date.now() + 5 * 86400000), extra: { stripe_customer_id: 'cus_test' },
+    });
+    await reloadOnStudio(page);
+
+    // Stripe renews by itself, so a near expiry isn't a warning.
+    await expect(page.locator('#manageSubBtn')).not.toHaveAttribute('hidden', '', { timeout: 10000 });
+    await expect(page.locator('#subscriptionBanner')).toBeHidden();
+
+    const manage = page.locator('#manageSubModal');
+    await page.evaluate(() => document.getElementById('manageSubBtn').click());
+    await expect(manage).toHaveClass(/open/);
+    await expect(page.locator('#manageSubStatus')).toContainText('renews on');
+    await expect(manage.locator('[data-sub-action="resume"]')).toBeHidden();
+    await expect(manage.locator('[data-sub-action="renew"]')).toBeHidden();
+
+    // Cancelling offers a pause first.
+    await manage.getByRole('button', { name: 'Cancel subscription' }).click();
+    await expect(manage.locator('[data-sub-view="pause"]')).toBeVisible();
+    await manage.locator('[data-pause-months="3"]').click();
+    await expect(manage.locator('[data-pause-months="3"]')).toHaveAttribute('aria-pressed', 'true');
+    await expect(manage.locator('[data-sub-action="cancel"]')).toBeVisible();
+  });
+
+  test('Stripe member who cancelled: told when benefits end, can keep Panafide+', async ({ page }) => {
+    const expiresAt = new Date(Date.now() + 5 * 86400000);
+    await setSubscription(testUser.user.id, {
+      tier: 'player_plus', source: 'stripe', status: 'canceling', expiresAt,
+      extra: { stripe_customer_id: 'cus_test' },
+    });
+    await reloadOnStudio(page);
+
+    await expect(page.locator('#subscriptionBannerTitle')).toHaveText('Your subscription has been cancelled', { timeout: 10000 });
+    await page.locator('#subscriptionBannerBtn').click();
+    await expect(page.locator('#manageSubModal')).toHaveClass(/open/);
+    // The banner button keeps working after the modal is closed.
+    await page.locator('#closeManageSubBtn').click();
+    await page.locator('#subscriptionBannerBtn').click();
+    await expect(page.locator('#manageSubModal')).toHaveClass(/open/);
+    await expect(page.locator('#manageSubStatus')).toContainText('Your Panafide+ benefits end on');
+    await expect(page.locator('#manageSubModal [data-sub-action="renew"]')).toBeVisible();
+    await expect(page.locator('#manageSubModal [data-sub-view-open="pause"]').first()).toBeHidden();
+  });
+
+  test('paused Stripe member past paid time: free access, resume instead of a second checkout', async ({ page }) => {
+    await setSubscription(testUser.user.id, {
+      tier: 'player_plus', source: 'stripe', status: 'paused',
+      expiresAt: new Date(Date.now() - 86400000),
+      extra: { stripe_customer_id: 'cus_test', subscription_resumes_at: new Date(Date.now() + 40 * 86400000).toISOString() },
+    });
+    await reloadOnStudio(page);
+
+    await expect(page.locator('#subscriptionBannerTitle')).toHaveText('Panafide+ is paused', { timeout: 10000 });
+    await expect(page.locator('#subscriptionBannerBtn')).toHaveText('Resume');
+
+    const plans = page.locator('#plansModal');
+    await page.evaluate(() => document.getElementById('plansBtn').click());
+    await expect(plans.locator('.plan-card.is-current h3')).toHaveText('Free');
+    await expect(page.locator('#plansUpgradeBtn')).toBeHidden();
+    await page.locator('#plansManageBtn').click();
+    await expect(page.locator('#manageSubModal')).toHaveClass(/open/);
+    await expect(page.locator('#manageSubStatus')).toContainText('Your subscription has been paused until');
+    await expect(page.locator('#manageSubModal [data-sub-action="resume"]')).toBeVisible();
   });
 
   test('no banner shown when expiry is more than 14 days away', async ({ page }) => {

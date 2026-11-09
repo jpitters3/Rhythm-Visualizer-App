@@ -1,6 +1,7 @@
 // stripe-webhook/index.ts
 // Zero-dependency implementation for signing verification and database updates
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { periodEnd, stripeRequest, subscriptionChanges, toIso } from '../_shared/stripe.ts'
 
 Deno.serve(async (req) => {
   const stripeKey = Deno.env.get('STRIPE_SECRET_KEY')
@@ -69,12 +70,7 @@ Deno.serve(async (req) => {
     console.log('[stripe-webhook] Processing event type:', event.type)
 
     const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SERVICE_ROLE_KEY')!)
-    const getSubscription = async (id: string) => {
-      const res = await fetch(`https://api.stripe.com/v1/subscriptions/${id}`, {
-        headers: { 'Authorization': `Bearer ${stripeKey}` }
-      })
-      return res.json()
-    }
+    const getSubscription = (id: string) => stripeRequest(`subscriptions/${id}`)
 
     if (event.type === 'checkout.session.completed') {
       const session = event.data.object
@@ -105,12 +101,14 @@ Deno.serve(async (req) => {
     }
 
     // Only a successful payment extends access, so paused or unpaid periods never do.
+    // subscription_update is the immediate charge when a lapsed pause is resumed early.
     if (event.type === 'invoice.payment_succeeded') {
       const invoice = event.data.object
       const customerId = invoice.customer
       const subscriptionId = invoice.subscription ?? invoice.parent?.subscription_details?.subscription
 
-      if (invoice.billing_reason === 'subscription_cycle' && customerId && subscriptionId) {
+      const renewal = ['subscription_cycle', 'subscription_update'].includes(invoice.billing_reason)
+      if (renewal && customerId && subscriptionId) {
         const expiresAt = toIso(periodEnd(await getSubscription(subscriptionId)))
 
         if (expiresAt) {
@@ -133,18 +131,8 @@ Deno.serve(async (req) => {
     // Only Stripe-sourced rows: a Tekmatix program grant must survive a lapsed Stripe sub.
     if (event.type === 'customer.subscription.updated') {
       const sub = event.data.object
-      if (sub.status === 'active' || sub.status === 'trialing') {
-        const changes: Record<string, unknown> = { stripe_subscription_id: sub.id, subscription_resumes_at: null }
-        if (sub.pause_collection) {
-          changes.subscription_status = 'paused'
-          changes.subscription_resumes_at = toIso(sub.pause_collection.resumes_at)
-        } else if (sub.cancel_at_period_end || sub.cancel_at) {
-          changes.subscription_status = 'canceling'
-          changes.subscription_expires_at = toIso(sub.cancel_at ?? periodEnd(sub))
-        } else {
-          changes.subscription_status = 'active'
-        }
-
+      const changes = subscriptionChanges(sub)
+      if (changes) {
         const { error } = await matchSubscription(
           supabase.from('profiles').update(changes).eq('subscription_source', 'stripe'), sub.customer, sub.id)
         if (error) throw error
@@ -176,15 +164,6 @@ Deno.serve(async (req) => {
     return new Response(`Error: ${err.message}`, { status: 400 })
   }
 })
-
-// Newer Stripe API versions moved the period end onto the subscription item.
-function periodEnd(sub: any): number | null {
-  return sub?.current_period_end ?? sub?.items?.data?.[0]?.current_period_end ?? null
-}
-
-function toIso(seconds: number | null | undefined): string | null {
-  return seconds ? new Date(seconds * 1000).toISOString() : null
-}
 
 // Rows saved before stripe_subscription_id existed match on the customer alone.
 function matchSubscription(query: any, customerId: string, subscriptionId: string) {

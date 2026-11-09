@@ -7,6 +7,7 @@ import { currentProfile } from './profile.js';
 import { requiredTier } from './gated-feature.js';
 import { show, hide } from './dom.js';
 import { initPlans } from './plans.js';
+import { hasStripeSubscription, openManageSubscription } from './manage-subscription.js';
 
 let upgradeModal, congratsModal, upgradePanel, congratsPanel, congratsText, upgradeTitleText;
 
@@ -157,6 +158,11 @@ async function handleUpgradeClick(btn) {
         await alert("Please sign in or register to upgrade to Panafide+.");
         Bus.emit(BUS_EVENT.OPEN_AUTH_MODAL);
         closeUpgradeModal();
+        return;
+    }
+    if (hasStripeSubscription()) {
+        closeUpgradeModal();
+        openManageSubscription();
         return;
     }
 

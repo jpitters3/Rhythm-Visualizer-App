@@ -1,6 +1,7 @@
 /* Plans: Free, Panafide+ and Panafide Pro side by side */
 import { Modal } from './modal.js';
 import { FREE_LIMIT, activeTierRank } from './gated-feature.js';
+import { hasStripeSubscription } from './manage-subscription.js';
 
 const YES = true;
 const NO = false;
@@ -63,7 +64,10 @@ export function openPlansModal() {
   plansModal.querySelectorAll('.plan-card').forEach(card => {
     card.classList.toggle('plan-card--featured', Number(card.dataset.planRank) === featuredRank);
   });
-  document.getElementById('plansUpgradeBtn')?.toggleAttribute('hidden', rank >= 1);
+  // A paused member past their paid time is rank 0 but must resume, not buy a second subscription.
+  const subscribed = hasStripeSubscription();
+  document.getElementById('plansUpgradeBtn')?.toggleAttribute('hidden', rank >= 1 || subscribed);
+  document.getElementById('plansManageBtn')?.toggleAttribute('hidden', !subscribed);
   plansPanel.open();
 }
 
