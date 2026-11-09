@@ -88,7 +88,7 @@
 .market-filter-pill.active {
   background: var(--accent);
   border-color: var(--accent);
-  color: #fff;
+  color: var(--accent-ink);
 }
 
 .market-grid {
@@ -220,7 +220,7 @@
 
 .market-btn.get {
   background: var(--accent);
-  color: white;
+  color: var(--accent-ink);
 }
 
 .market-btn.get:hover {

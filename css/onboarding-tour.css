@@ -115,7 +115,7 @@
   background: var(--accent);
   border: none;
   border-radius: 8px;
-  color: #fff;
+  color: var(--accent-ink);
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
@@ -130,7 +130,7 @@
   background: var(--accent);
   border: none;
   border-radius: 8px;
-  color: #fff;
+  color: var(--accent-ink);
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
@@ -232,7 +232,7 @@
   background: var(--accent);
   border: none;
   border-radius: 10px;
-  color: #fff;
+  color: var(--accent-ink);
   font-size: 15px;
   font-weight: 600;
   cursor: pointer;

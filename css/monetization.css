@@ -17,8 +17,8 @@
 
 .vibrant-badge {
     padding: 4px 8px;
-    background: linear-gradient(135deg, var(--accent), #a855f7);
-    color: white;
+    background: linear-gradient(135deg, var(--plus-start), var(--plus-end));
+    color: #fff;
     font-size: 10px;
     font-weight: 800;
     border-radius: 6px;
@@ -61,7 +61,7 @@ body.dark .upgrade-modal {
 }
 
 .vibrant-text {
-    background: linear-gradient(135deg, var(--accent), #a855f7, #ec4899);
+    background: linear-gradient(135deg, var(--plus-start), var(--plus-end));
     -webkit-background-clip: text;
     background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -167,10 +167,10 @@ body.dark .feature-details span {
     padding: 16px;
     font-size: 18px;
     font-weight: 700;
-    background: linear-gradient(135deg, var(--accent), #a855f7);
+    background: linear-gradient(135deg, var(--plus-start), var(--plus-end));
     border: none;
     border-radius: 12px;
-    color: white;
+    color: #fff;
     cursor: pointer;
     transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
@@ -196,7 +196,7 @@ body.dark .price-notice {
     position: relative;
     border: 2px solid transparent;
     background-image: linear-gradient(var(--panel-bg), var(--panel-bg)),
-        linear-gradient(135deg, var(--accent), #a855f7, #ec4899);
+        linear-gradient(135deg, var(--plus-start), var(--plus-end));
     background-origin: border-box;
     background-clip: content-box, border-box;
     animation: border-rotate 4s linear infinite;
@@ -340,8 +340,8 @@ body.dark .price-notice {
     left: 20px;
     padding: 3px 10px;
     border-radius: 999px;
-    background: linear-gradient(135deg, var(--accent), #a855f7);
-    color: white;
+    background: linear-gradient(135deg, var(--plus-start), var(--plus-end));
+    color: #fff;
     font-size: 11px;
     font-weight: 800;
 }
@@ -576,21 +576,6 @@ body.dark .plans-table thead th {
     }
 }
 
-.logo-plus-start { stop-color: #1e3a8a; }
-.logo-plus-end { stop-color: #c026d3; }
-
-/* Brighter so navy doesn't vanish into the dark header */
-body.dark .logo-plus-start { stop-color: #3b5bdb; }
-body.dark .logo-plus-end { stop-color: #d03be0; }
-
-/* Member header: navy-to-fuchsia wash and edge line, fading out at both ends */
-.app-header.app-header--plus {
-    background: linear-gradient(90deg, transparent, rgba(30, 58, 138, 0.09) 15%, rgba(192, 38, 211, 0.09) 85%, transparent);
-    border-bottom: 2px solid transparent;
-    border-image: linear-gradient(90deg, transparent, #1e3a8a 15%, #c026d3 85%, transparent) 1;
-}
-
-body.dark .app-header.app-header--plus {
-    background: linear-gradient(90deg, transparent, rgba(59, 91, 219, 0.16) 15%, rgba(208, 59, 224, 0.16) 85%, transparent);
-    border-image: linear-gradient(90deg, transparent, #3b5bdb 15%, #d03be0 85%, transparent) 1;
-}
+/* Brand gradient tokens (theme.css): brighter in dark mode so the navy doesn't vanish */
+.logo-plus-start { stop-color: var(--plus-start); }
+.logo-plus-end { stop-color: var(--plus-end); }

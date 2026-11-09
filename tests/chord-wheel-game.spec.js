@@ -1,4 +1,5 @@
 const { test, expect } = require('@playwright/test');
+const { phraseAction } = require('./helpers');
 require('dotenv').config();
 const { createTestUser, deleteTestUser, loginAsTestUser } = require('./utils/auth-helper');
 
@@ -166,11 +167,7 @@ test('Chord Wheel: spin, reorder, click-to-play, Any Chords mode, send to Studio
 
     // Phrase name reflects the sent chords, and pre-populates the Save modal.
     await expect(page.locator('#currentPhraseName')).toHaveText(expectedPhraseName);
-    await page.click('#accountBtn');
-    await page.waitForSelector('#accountDropdownMenu.show', { timeout: 3000 });
-    await page.click('#phraseMenuBtn');
-    await page.waitForSelector('#phraseSubmenu.open', { timeout: 3000 });
-    await page.click('#saveBtn');
+    await phraseAction(page, 'Save phrase');
     await expect(page.locator('#confirmInput')).toHaveValue(expectedPhraseName);
     await page.click('#confirmCancelBtn');
 

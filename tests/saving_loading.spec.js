@@ -1,5 +1,5 @@
 const { test, expect } = require('@playwright/test');
-const { gotoStudio, openMobileControlsIfNeeded } = require('./helpers');
+const { gotoStudio, openMobileControlsIfNeeded, phraseAction } = require('./helpers');
 const { createTestUser, deleteTestUser, loginAsTestUser } = require('./utils/auth-helper');
 
 test.describe('Pattern Management', () => {
@@ -20,30 +20,6 @@ test.describe('Pattern Management', () => {
       await deleteTestUser(testUser.user.id);
     }
   });
-
-  // Opens account dropdown + phrase submenu idempotently
-  async function openPhraseMenu(page) {
-    // On mobile: open hamburger menu first
-    if (await page.locator('#mobileMenuBtn').isVisible()) {
-      const menu = page.locator('#appNav');
-      if (!await menu.evaluate(el => el.classList.contains('open'))) {
-        await page.click('#mobileMenuBtn');
-        await expect(menu).toHaveClass(/open/, { timeout: 2000 });
-      }
-    }
-    // Open account dropdown (only toggle if not already shown)
-    const accountDropdown = page.locator('#accountDropdownMenu');
-    if (!await accountDropdown.evaluate(el => el.classList.contains('show'))) {
-      await page.click('#accountBtn');
-      await expect(accountDropdown).toHaveClass(/show/, { timeout: 3000 });
-    }
-    // Open phrase submenu (only click if not already open)
-    const phraseSubmenu = page.locator('#phraseSubmenu');
-    if (!await phraseSubmenu.evaluate(el => el.classList.contains('open'))) {
-      await page.click('#phraseMenuBtn');
-      await expect(phraseSubmenu).toHaveClass(/open/, { timeout: 3000 });
-    }
-  }
 
   async function closeAccountMenu(page) {
     // Close account dropdown if showing
@@ -74,8 +50,7 @@ test.describe('Pattern Management', () => {
     await expect(cell0.locator('.inner')).toHaveText('1');
 
     // 2. Save Pattern
-    await openPhraseMenu(page);
-    await page.click('#saveBtn');
+    await phraseAction(page, 'Save phrase');
 
     // Handle Custom Modal Prompt
     const saveModal = page.locator('#confirmModal');
@@ -105,8 +80,7 @@ test.describe('Pattern Management', () => {
     // with no click handler at all — the real "load" entry point is
     // #openPhraseBtn's modal (js/controls.js's showOpenPhraseModal()),
     // listing saved patterns to pick from by name.
-    await openPhraseMenu(page);
-    await page.click('#openPhraseBtn');
+    await phraseAction(page, 'Open Phrase');
 
     const openModal = page.locator('#openPhraseModal');
     await expect(openModal).toHaveClass(/open/);
@@ -145,8 +119,7 @@ test.describe('Pattern Management', () => {
   }
 
   async function savePhraseAs(page, name) {
-    await openPhraseMenu(page);
-    await page.click('#saveBtn');
+    await phraseAction(page, 'Save phrase');
     const saveModal = page.locator('#confirmModal');
     await expect(saveModal).toHaveClass(/open/);
     await expect(page.locator('#confirmTitle')).toHaveText('Save Phrase');
@@ -157,8 +130,7 @@ test.describe('Pattern Management', () => {
   }
 
   async function loadPhrase(page, name) {
-    await openPhraseMenu(page);
-    await page.click('#openPhraseBtn');
+    await phraseAction(page, 'Open Phrase');
     const openModal = page.locator('#openPhraseModal');
     await expect(openModal).toHaveClass(/open/);
     await page.locator('.phrase-list-item', { hasText: name }).click();
@@ -207,8 +179,7 @@ test.describe('Pattern Management', () => {
     const uniqueName = `Delete Me ${Date.now()}`;
 
     // 1. Save dummy pattern
-    await openPhraseMenu(page);
-    await page.click('#saveBtn');
+    await phraseAction(page, 'Save phrase');
 
     // Custom Modal
     await page.fill('#confirmInput', uniqueName);
@@ -216,8 +187,7 @@ test.describe('Pattern Management', () => {
     await expect(page.locator('#confirmModal')).not.toHaveClass(/open/);
 
     // 2. Click Delete
-    await openPhraseMenu(page);
-    await page.click('#deleteBtn');
+    await phraseAction(page, 'Delete phrase');
 
     // Handle Delete Confirm Modal
     const deleteModal = page.locator('#confirmModal');

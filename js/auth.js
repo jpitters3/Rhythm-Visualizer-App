@@ -105,6 +105,8 @@ export function updateAccountUI() {
     if (accountStatus) accountStatus.textContent = ''; // Clear "Not signed in"
     // Set button text to first letter of email
     if (accountBtn) accountBtn.textContent = currentUser.email.charAt(0).toUpperCase();
+    const accountMenuEmail = document.getElementById('accountMenuEmail');
+    if (accountMenuEmail) accountMenuEmail.textContent = currentUser.email;
 
     // Signed In Mode
     if (authLogout) authLogout.style.display = 'none';
@@ -119,19 +121,19 @@ export function updateAccountUI() {
 
     // Dropdown Links
     const profileBtn = document.getElementById('openProfileBtn');
-    if (profileBtn) profileBtn.style.display = 'block';
+    if (profileBtn) profileBtn.style.display = '';
 
     const myScalesBtn = document.getElementById('myScalesBtn');
-    if (myScalesBtn) myScalesBtn.style.display = 'block';
+    if (myScalesBtn) myScalesBtn.style.display = '';
 
     const coachModeBtn = document.getElementById('coachModeBtn');
-    if (coachModeBtn && isAdmin) coachModeBtn.style.display = 'block'; // WIP: admin-only until ready, then Panafide+
+    if (coachModeBtn && isAdmin) coachModeBtn.style.display = ''; // WIP: admin-only until ready, then Panafide+
 
     const freeRecordBtn = document.getElementById('freeRecordBtn');
     if (freeRecordBtn && isAdmin) freeRecordBtn.style.display = 'block';
 
     const signOutBtn = document.getElementById('signOutBtn') || document.getElementById('authLogoutDropdown');
-    if (signOutBtn) signOutBtn.style.display = 'block';
+    if (signOutBtn) signOutBtn.style.display = '';
 
     const authBtnLink = document.getElementById('authBtn');
     if (authBtnLink) authBtnLink.style.display = 'none';
@@ -148,7 +150,7 @@ export function updateAccountUI() {
 
     // Ensure "Account Settings" is visible when logged in
     const accSetBtn = document.getElementById('openAccountAuthBtn');
-    if (accSetBtn) accSetBtn.style.display = 'block';
+    if (accSetBtn) accSetBtn.style.display = '';
 
 
     const pr = document.getElementById('authPasswordRow');

@@ -77,7 +77,7 @@ function injectAdminButton() {
     if (!adminSubmenu) return;
     const isOpen = adminSubmenu.classList.contains('open');
     adminSubmenu.classList.toggle('open', !isOpen);
-    adminMenuBtn.textContent = isOpen ? '⚙️ Admin Tools ▾' : '⚙️ Admin Tools ▴';
+    adminMenuBtn.setAttribute('aria-expanded', String(!isOpen));
   });
 
   document.getElementById('openCourseCopierAdminBtn')?.addEventListener('click', () => {

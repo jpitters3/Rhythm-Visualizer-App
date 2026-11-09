@@ -110,7 +110,7 @@
 
 .cp-use-btn:hover {
   background: var(--accent);
-  color: #fff;
+  color: var(--accent-ink);
 }
 
 .cp-del-btn:hover {

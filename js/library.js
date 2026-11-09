@@ -224,7 +224,7 @@ async function renderLibrary() {
   if (!currentUser) {
     if (foldersSection) foldersSection.innerHTML = '';
     if (breadcrumb) { breadcrumb.innerHTML = ''; breadcrumb.hidden = true; }
-    if (newFolderBtn) newFolderBtn.style.display = 'none';
+    if (newFolderBtn) newFolderBtn.style.visibility = 'hidden';
     grid.innerHTML = `
       <div class="library-empty">
         <p>Sign in to view your phrases and compositions.</p>
@@ -234,8 +234,9 @@ async function renderLibrary() {
     return;
   }
 
+  // visibility, not display: the button keeps its space so the header doesn't reflow between tabs
   const hideFolderBtn = currentTab === 'archive' || currentTab === 'shared' || currentTab === 'clips';
-  if (newFolderBtn) newFolderBtn.style.display = hideFolderBtn ? 'none' : '';
+  if (newFolderBtn) newFolderBtn.style.visibility = hideFolderBtn ? 'hidden' : '';
 
   const searchRow = document.querySelector('.library-search-row');
   if (searchRow) searchRow.style.visibility = (currentTab === 'archive' || currentTab === 'clips') ? 'hidden' : '';

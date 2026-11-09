@@ -6,8 +6,8 @@
   margin-bottom: 12px;
   max-width: 900px;
   font-size: 24px;
-  font-weight: 500;
-  opacity: 0.8;
+  font-weight: 600;
+  color: var(--ui-ink);
   text-align: center;
   pointer-events: none;
 }
@@ -182,7 +182,7 @@
 
 .chord-shape-diagram .pan-outline {
   fill: none;
-  stroke: var(--cell-border);
+  stroke: var(--ui-faint);
   stroke-width: 2;
   opacity: 0.5;
 }
@@ -352,15 +352,6 @@ body.present .cell.play {
   color: white;
 }
 
-@media (max-width: 768px) {
-  .measures {
-    /* box-shadow: 0 18px 18px 0px rgba(101, 101, 101, 0.35); */
-    /* grey fade ☝🏽 */
-    box-shadow: 0 18px 18px 0px rgba(255, 255, 255, 0.45);
-    /* white fade ☝🏽 */
-  }
-}
-
 /* ===== MULTI-MEASURE WRAP ===== */
 .measures {
   max-width: 900px;
@@ -378,20 +369,6 @@ body.present .cell.play {
   --sb-thumb-color: rgba(128, 128, 128, 0.4);
 }
 
-
-/* Handpan watermark — light mode only */
-body:not(.dark) .measures::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background-image: url('../public/assets/images/handpan-for-groovepan.png');
-  background-repeat: no-repeat;
-  background-position: center center;
-  background-size: 55%;
-  opacity: 0.06;
-  pointer-events: none;
-  z-index: 0;
-}
 
 body.dark .measures {
   --sb-thumb-color: rgba(255, 255, 255, 0.25);
@@ -441,13 +418,8 @@ body.dark .measures {
 
 /* Selection ring */
 .cell.selected {
-  border-color: rgba(234, 234, 240, 0.9);
-  box-shadow: 0 0 0 6px rgba(234, 234, 240, 0.12);
-}
-
-body:not(.dark) .cell.selected {
-  border-color: rgba(47, 47, 47, 0.85);
-  box-shadow: 0 0 0 10px rgba(74, 74, 74, 0.22);
+  border-color: var(--ui-ring);
+  box-shadow: 0 0 0 6px var(--ui-ring-halo);
 }
 
 /* ON highlight only when unlabeled */
@@ -466,10 +438,8 @@ body:not(.dark) .cell.selected {
 }
 
 body.dark {
-  --down-fill: #fd0380;
-  /* keep gold in dark mode too */
-  --up-fill: rgb(30, 121, 232);
-  /* slightly softer green for dark */
+  --down-fill: #e46aa6;
+  --up-fill: #6f9bff;
 }
 
 /* Mixing strength */
@@ -479,17 +449,7 @@ body.dark {
 
 .cell.has-label {
   --mix: 78%;
-  box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.22),
-              inset 0 -2px 5px rgba(0, 0, 0, 0.18),
-              0 2px 6px rgba(0, 0, 0, 0.1),
-              0 0 18px var(--beat-glow, transparent);
-}
-
-body.dark .cell.has-label {
-  box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.1),
-              inset 0 -2px 5px rgba(0, 0, 0, 0.35),
-              0 2px 8px rgba(0, 0, 0, 0.35),
-              0 0 20px var(--beat-glow, transparent);
+  box-shadow: 0 0 18px var(--beat-glow, transparent);
 }
 
 .cell.label-q .inner {
@@ -537,8 +497,6 @@ body.handSplit .cell.has-label {
 /* Split mode OFF: fill whole circle */
 body:not(.handSplit) .cell.has-label:not(.multi-mode) {
   background: color-mix(in srgb, var(--beat-fill) var(--mix), var(--cell-bg));
-  background: color-mix(in srgb, var(--beat-fill) var(--mix), var(--cell-bg));
-
 }
 
 /* ===== GHOST NOTE DOT (default when no inner label) ===== */

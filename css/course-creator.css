@@ -37,21 +37,30 @@ body.dark .course-modal .modal-header {
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
-.close-btn {
-  background: transparent;
+/* Modal/panel close: tinted rounded square, like the header buttons */
+.close-btn,
+.close-modal-btn {
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--ui-tint);
   border: none;
-  font-size: 24px;
-  color: var(--text);
-  opacity: 0.5;
+  border-radius: 12px;
+  color: var(--ui-icon);
+  font-size: 22px;
+  line-height: 1;
   cursor: pointer;
-  transition: opacity 0.2s;
-  padding: 4px;
-  border-radius: 50%;
+  transition: background 0.15s;
 }
 
-.close-btn:hover {
-  opacity: 1;
-  background: rgba(0, 0, 0, 0.05);
+.close-btn:hover,
+.close-modal-btn:hover {
+  background: var(--ui-tint-hover);
+  color: var(--ui-icon);
 }
 
 .course-form {
@@ -227,17 +236,15 @@ button {
 }
 
 /* Save Course (Primary) */
+/* Primary actions: the facelift "on" fill (navy, brass in dark) */
 .primary-btn {
-  background: var(--primary-color);
-  /* Gold/Yellow from mockup */
-  color: #3b3005;
+  background: var(--ui-on);
+  color: var(--ui-on-ink);
   border: none;
   padding: 8px 20px;
-  border-radius: 999px;
+  border-radius: var(--ui-radius-md);
   font-size: 16px;
   font-weight: 600;
-  box-shadow: 0 4px 15px rgba(241, 196, 15, 0.4);
-  /* width: auto; removed full width to sit next to add section */
   margin-top: 0;
   display: inline-flex;
   align-items: center;
@@ -246,14 +253,9 @@ button {
 }
 
 .primary-btn:hover {
-  background: #f3ce38;
-  transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(241, 196, 15, 0.5);
-}
-
-body.dark .primary-btn {
-  background: #f1c40f;
-  color: #000;
+  background: var(--ui-on);
+  filter: brightness(1.08);
+  box-shadow: none;
 }
 
 /* Inner Buttons: Add Lesson & Update Pattern */

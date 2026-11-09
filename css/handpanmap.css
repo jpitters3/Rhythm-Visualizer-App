@@ -200,7 +200,7 @@
     width: 40px;
     height: 4px;
     border-radius: 3px;
-    background: var(--panel-border, rgba(128, 128, 128, 0.4));
+    background: var(--ui-tint-hover);
     transition: background 0.15s ease;
   }
 
@@ -471,70 +471,63 @@ div.under-handpan {
   justify-content: center;
   align-items: center;
   margin-top: 5px;
-  padding-bottom: 10px;
+  /* Margin, not padding: the corner buttons centre on this box, so padding
+     would sit them lower than the ghost pill. */
+  margin-bottom: 10px;
   /* Space between notes and transport */
   flex-shrink: 0;
   z-index: 10;
 }
 
-/* Shared surface for the handpan panel's controls: corner buttons and the ghost pill */
-.handpan-panel {
-  --hp-ctl-bg: rgba(255, 255, 255, 0.72);
-  --hp-ctl-hover: rgba(255, 255, 255, 0.95);
-  --hp-ctl-border: rgba(0, 0, 0, 0.07);
-  --hp-ctl-shadow: 0 1px 2px rgba(0, 0, 0, 0.05), 0 4px 12px rgba(0, 0, 0, 0.06);
-}
-
-body.dark .handpan-panel {
-  --hp-ctl-bg: rgba(255, 255, 255, 0.08);
-  --hp-ctl-hover: rgba(255, 255, 255, 0.16);
-  --hp-ctl-border: rgba(255, 255, 255, 0.12);
-  --hp-ctl-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
-}
-
+/* Handpan panel controls (corner buttons, controls toggle, ghost pill, scale tabs): tinted, flat */
 .hp-corner-btn,
 .hp-controls-btn,
-.ghost-pill {
-  background: var(--hp-ctl-bg);
-  border: 1px solid var(--hp-ctl-border);
-  box-shadow: var(--hp-ctl-shadow);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  color: var(--text);
+.ghost-pill,
+.tab-btn {
+  background: var(--ui-tint);
+  border: none;
+  border-radius: var(--ui-radius-md);
+  box-shadow: none;
+  color: var(--ui-icon);
 }
 
-/* ◂ ghost ▸: one rounded surface with hairline dividers */
+.hp-corner-btn:hover,
+.hp-controls-btn:not([aria-expanded="true"]):hover,
+.tab-btn:hover {
+  background: var(--ui-tint-hover);
+}
+
+/* ◂ ghost ▸ */
 .ghost-pill {
   display: flex;
-  height: 36px;
-  border-radius: 999px;
-  overflow: hidden;
+  align-items: center;
+  gap: 4px;
+  height: var(--ui-ctl);
+  padding: 0 4px;
 }
 
 .ghost-pill button {
-  height: 100%;
-  min-width: 56px;
+  /* Background only: the global button transition (all) would also fade
+     visibility, so the icons lingered after the controls opened. */
+  transition: background 0.15s;
+  height: 36px;
+  min-width: 52px;
   margin: 0;
-  padding: 0 18px;
+  padding: 0 16px;
   border: none;
-  border-right: 1px solid var(--hp-ctl-border);
-  border-radius: 0;
+  border-radius: var(--ui-radius-sm);
   background: transparent;
   box-shadow: none;
-  color: var(--text);
+  color: var(--ui-icon);
   font-size: 18px;
   display: flex;
   justify-content: center;
   align-items: center;
 }
 
-.ghost-pill button:last-child {
-  border-right: none;
-}
-
 .ghost-pill button:hover:not(:disabled),
 .ghost-pill button:active:not(:disabled) {
-  background: var(--hp-ctl-hover);
+  background: var(--ui-tint-hover);
   box-shadow: none;
   transform: none;
 }
@@ -700,6 +693,14 @@ body.dark .icon-btn.active {
   margin-top: 5px;
 }
 
+.handpan-tabs-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ui-muted);
+}
+
 @media (max-width: 900px) {
   /* Scale Options now lives in #handpanOptionsMenu (see .hp-options-menu
      below) and the measures live in the corner buttons (see
@@ -722,20 +723,14 @@ body.dark .icon-btn.active {
   top: 8px;
   z-index: 50;
   padding: 0;
-  border-radius: 50%;
-  width: 36px;
-  height: 36px;
-  min-width: 36px;
+  width: var(--ui-ctl);
+  height: var(--ui-ctl);
+  min-width: var(--ui-ctl);
   align-items: center;
   justify-content: center;
   cursor: pointer;
   font-size: 18px;
-  color: var(--text);
   transition: background 0.2s;
-}
-
-.hp-corner-btn:hover {
-  background: var(--hp-ctl-hover);
 }
 
 .hp-corner-btn:active {
@@ -785,8 +780,8 @@ body.dark .icon-btn.active {
      grid + transport column, since that's the nearest positioned
      ancestor), not #handpanOptionsBtn itself, so a percentage anchor would
      place this far below the button rather than right under it. 8px top +
-     36px button height + 8px gap = 52px. */
-  top: 52px;
+     44px button height + 8px gap = 60px. */
+  top: 60px;
   right: 0;
   left: auto;
   margin-top: 0;
@@ -801,26 +796,27 @@ body.dark .icon-btn.active {
   display: flex;
 }
 
-.hp-options-menu .tab-btn,
-.hp-options-menu .flip-btn {
+.hp-options-menu button {
   width: 100%;
   height: auto;
   min-width: 0;
   border: none;
-  border-radius: 8px;
+  border-radius: var(--ui-radius-sm);
   background: transparent;
+  color: var(--ui-ink);
   position: static;
   transform: none;
+  display: flex;
+  align-items: center;
   justify-content: flex-start;
-  gap: 8px;
+  gap: 10px;
   padding: 10px 12px;
   font-size: 14px;
   font-weight: 600;
 }
 
-.hp-options-menu .tab-btn:hover,
-.hp-options-menu .flip-btn:hover {
-  background: rgba(0, 0, 0, 0.06);
+.hp-options-menu button:hover {
+  background: var(--ui-tint);
   transform: none;
 }
 
@@ -829,14 +825,12 @@ body.dark .icon-btn.active {
 }
 
 .tab-btn {
-  background: var(--panel);
-  border: 1px solid var(--panel-border);
-  border-radius: 8px;
-  padding: 10px 14px;
+  width: var(--ui-ctl);
+  height: var(--ui-ctl);
+  padding: 0;
   font-size: 20px;
   cursor: pointer;
-  transition: all 0.2s;
-  color: var(--text);
+  transition: background 0.2s;
   line-height: 1;
   display: flex;
   align-items: center;
@@ -859,16 +853,9 @@ body.dark .icon-btn.active {
   }
 }
 
-.tab-btn:hover {
-  background: var(--btn-bg);
-  transform: translateY(-1px);
-}
-
 .tab-btn.active {
-  background: var(--btn-active);
-  border-color: var(--primary);
-  color: #fff;
-  box-shadow: 0 4px 12px rgba(var(--accent-rgb), 0.3);
+  background: var(--ui-on);
+  color: var(--ui-on-ink);
 }
 
 .tab-pane {
@@ -1201,13 +1188,12 @@ body.dark .hp-loader {
   transform: translateY(-50%);
   margin-left: 0;
   z-index: 100;
-  width: 36px;
-  height: 36px;
-  min-width: 36px;
+  width: var(--ui-ctl);
+  height: var(--ui-ctl);
+  min-width: var(--ui-ctl);
   padding: 0;
   align-items: center;
   justify-content: center;
-  border-radius: 50%;
 }
 
 /* Keep the centring transform through the global button hover/press effects */
@@ -1219,15 +1205,10 @@ body.dark .hp-loader {
   transform: translateY(-50%) scale(0.96);
 }
 
-/* Taps leave :hover stuck on phones, so it mustn't override the open state */
-.hp-controls-btn:not([aria-expanded="true"]):hover {
-  background: var(--hp-ctl-hover);
-}
-
+/* Open state. (Hover is excluded above: taps leave :hover stuck on phones.) */
 .hp-controls-btn[aria-expanded="true"] {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: #fff;
+  background: var(--ui-on);
+  color: var(--ui-on-ink);
 }
 
 .flip-btn:hover:not(:disabled) {

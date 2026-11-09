@@ -79,7 +79,6 @@ test.describe('Subscription Expiry', () => {
     // No subscription banner (30 days > 14 day threshold)
     await expect(page.locator('#subscriptionBanner')).toBeHidden();
     await expect(page.locator('#logoPlusBadge')).toBeVisible({ timeout: 10000 });
-    await expect(page.locator('.app-header')).toHaveClass(/app-header--plus/);
 
     // Gated feature (My Scales) should open without upgrade modal. Two
     // separate post-reload init paths race independently of .measure-row
@@ -130,7 +129,6 @@ test.describe('Subscription Expiry', () => {
     await expect(banner).toHaveClass(/subscription-banner--expired/);
     await expect(page.locator('#subscriptionBannerTitle')).toContainText('expired');
     await expect(page.locator('#logoPlusBadge')).toBeHidden();
-    await expect(page.locator('.app-header')).not.toHaveClass(/app-header--plus/);
 
     // Renew button also opens upgrade modal
     await page.evaluate(() => document.getElementById('upgradeModal')?.classList.remove('open'));

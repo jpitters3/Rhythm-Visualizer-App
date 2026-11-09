@@ -832,7 +832,7 @@ body.dark .composer-save-status.saved {
 body:not(.dark) .composer-new-btn {
   background: linear-gradient(135deg, var(--accent-dark) 0%, var(--accent-light) 100%);
   border-color: transparent;
-  color: #fff;
+  color: var(--accent-ink);
   font-weight: 600;
 }
 
@@ -875,7 +875,7 @@ body:not(.dark) .add-section-btn {
 
 body:not(.dark) .add-section-btn:hover {
   border-color: var(--accent);
-  color: #fff;
+  color: var(--accent-ink);
   background: var(--accent);
 }
 
@@ -891,7 +891,7 @@ body:not(.dark) .playbar-controls button {
 
 body:not(.dark) .playbar-controls button:hover {
   border-color: var(--accent);
-  color: #fff;
+  color: var(--accent-ink);
   background: var(--accent);
 }
 
@@ -906,7 +906,7 @@ body:not(.dark) .trim-btn {
 
 body:not(.dark) .trim-btn:hover {
   border-color: var(--accent);
-  color: #fff;
+  color: var(--accent-ink);
   background: var(--accent);
 }
 
@@ -918,7 +918,7 @@ body:not(.dark) .trim-btn-primary {
 
 body:not(.dark) .trim-btn-primary:hover {
   background: var(--accent);
-  color: #fff;
+  color: var(--accent-ink);
 }
 
 body:not(.dark) .note-editor textarea:focus {

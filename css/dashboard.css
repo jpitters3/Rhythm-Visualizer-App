@@ -120,18 +120,16 @@
   display: none;
   flex-shrink: 0;
   padding: 8px 18px;
-  border-radius: 999px;
-  background: var(--btn-active);
-  color: var(--text);
+  border-radius: var(--ui-radius-md);
+  background: var(--ui-on);
+  color: var(--ui-on-ink);
   font-weight: 600;
   font-size: 14px;
   text-decoration: none;
-  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.12);
-  transition: transform 0.15s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.15s ease;
+  transition: transform 0.15s cubic-bezier(0.22, 1, 0.36, 1), filter 0.15s ease;
 }
 .dash-studio-btn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.16);
+  filter: brightness(1.08);
 }
 .dash-studio-btn:active {
   transform: translateY(0) scale(0.96);
@@ -572,7 +570,7 @@
 .reminder-day-pill.active {
   background: rgb(var(--accent-rgb));
   border-color: rgb(var(--accent-rgb));
-  color: white;
+  color: var(--accent-ink);
 }
 
 /* ── Goals Edit Modal ─────────────────────────────────── */
@@ -662,7 +660,7 @@
   background: var(--accent);
   border: none;
   border-radius: 8px;
-  color: #fff;
+  color: var(--accent-ink);
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
@@ -688,7 +686,7 @@
   background: var(--accent);
   border: none;
   border-radius: 10px;
-  color: #fff;
+  color: var(--accent-ink);
   font-size: 15px;
   font-weight: 600;
   cursor: pointer;

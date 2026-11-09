@@ -1,7 +1,8 @@
 const { test, expect } = require('@playwright/test');
 const { gotoStudio, openMobileControlsIfNeeded } = require('./helpers');
 
-test.describe('Dual Grid Playback Leak', () => {
+// Dual grid has no control any more (the controls bar shows the light/dark toggle); skipped until it returns.
+test.describe.skip('Dual Grid Playback Leak', () => {
   test.beforeEach(async ({ page }) => {
     await gotoStudio(page);
     await page.waitForSelector('.cell');

@@ -52,13 +52,12 @@ export function initMonetization() {
     checkUpgradeSuccess();
 }
 
-// Purple "+" by the logo and a tinted header for anyone with paid access right now.
+// Purple "+" by the logo for anyone with paid access right now.
 function updatePlusBadge({ signedOut = false } = {}) {
     const badge = document.getElementById('logoPlusBadge');
     if (!badge) return;
     const rank = currentUser && !signedOut ? activeTierRank() : 0;
     badge.toggleAttribute('hidden', rank < 1); // SVG has no .hidden property
-    document.querySelector('.app-header')?.classList.toggle('app-header--plus', rank >= 1);
     const label = rank >= 2 ? 'Panafide Pro' : 'Panafide+';
     badge.querySelector('title').textContent = label;
     badge.setAttribute('aria-label', `${label} member`);

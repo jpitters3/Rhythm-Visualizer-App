@@ -146,7 +146,8 @@ test.describe('Presentation Mode', () => {
       await expect(mainBpmInput).toHaveValue('110');
     });
 
-  test('should hide Context B controls in presentation mode', async ({ page }) => {
+  // Dual grid has no control any more (the controls bar shows the light/dark toggle); skipped until it returns.
+  test.skip('should hide Context B controls in presentation mode', async ({ page }) => {
     await openMobileControlsIfNeeded(page);
     await page.click('#dualModeBtn');
     await expect(page.locator('#controls-B')).toBeVisible();

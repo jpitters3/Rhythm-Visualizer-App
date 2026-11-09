@@ -1,7 +1,8 @@
 const { test, expect } = require('@playwright/test');
 const { gotoStudio, openMobileControlsIfNeeded } = require('./helpers');
 
-test.describe('Dual Grid Persistence', () => {
+// Dual grid has no control any more (the controls bar shows the light/dark toggle); skipped until it returns.
+test.describe.skip('Dual Grid Persistence', () => {
   test.beforeEach(async ({ page }) => {
     await gotoStudio(page);
     await page.evaluate(() => localStorage.clear());

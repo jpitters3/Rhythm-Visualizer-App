@@ -48,7 +48,7 @@
 .patterns-category-pill.active {
   background: var(--accent);
   border-color: var(--accent);
-  color: #fff;
+  color: var(--accent-ink);
 }
 
 /* Preview thumb replaces the plain image/gradient .card-thumb normally uses */

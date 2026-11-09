@@ -52,6 +52,16 @@ async function clickMetroToggle(page, containerSelector = '#mainTransport-A') {
  * toggle, so clicking it a second time would close the panel instead.
  * Call this before interacting with anything inside that wrapper.
  */
+/**
+ * Runs a phrase action (Save phrase, Open Phrase, New phrase, Delete phrase,
+ * Share phrase…) from the phrase title dropdown above the grid, the one place
+ * these live now.
+ */
+async function phraseAction(page, label) {
+  await page.click('#gridPhraseNameBtn');
+  await page.locator('#gridPhraseContextMenu button', { hasText: label }).click();
+}
+
 async function openMobileControlsIfNeeded(page) {
   const btn = page.locator('#mobileControlsBtn').first();
   if (!(await btn.isVisible().catch(() => false))) return;
@@ -200,4 +210,4 @@ async function toggleItemCard(card) {
   await card.locator('[data-action="item-toggle"]').evaluate((/** @type {HTMLElement} */ el) => el.click());
 }
 
-module.exports = { clearGrid, gotoStudio, openMobileControlsIfNeeded, closeMobileControlsIfNeeded, setBpm, clickMetroToggle, openNavIfNeeded, toggleItemCard, navigateTo, openNavPanel };
+module.exports = { phraseAction, clearGrid, gotoStudio, openMobileControlsIfNeeded, closeMobileControlsIfNeeded, setBpm, clickMetroToggle, openNavIfNeeded, toggleItemCard, navigateTo, openNavPanel };

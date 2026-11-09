@@ -2,32 +2,18 @@
    TRANSPORT CONTROL STYLES
    ============================================= */
 
-/* --- Glassmorphic container base --- */
+/* --- Container: a flat surface card --- */
 .transport-container {
-  background: rgba(var(--panel-rgb), 0.72);
+  background: var(--ui-surface);
   display: flex;
-  padding: 10px 18px;
+  padding: 10px;
   margin-bottom: 20px;
-  border-radius: 20px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.15);
+  border-radius: var(--ui-radius-lg);
+  border: 1px solid var(--ui-edge);
   position: relative;
   z-index: 10;
   justify-content: center;
   justify-self: center;
-}
-
-.transport-container::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  z-index: -1;
-  transform: translateZ(0);
-  will-change: transform;
-  pointer-events: none;
 }
 
 /* --- Bottom row: transport + measure tools side by side --- */
@@ -50,20 +36,16 @@
     padding-bottom: 0 !important;
   }
 
+  /* The bottom sheet below is the surface on mobile */
   .transport-container {
-    padding: 8px 12px;
+    padding: 0;
     margin-bottom: 0;
+    background: none;
+    border: none;
+    /* No rounding here: with overflow hidden it clipped the end tiles rounder */
+    border-radius: 0;
     box-sizing: border-box;
     overflow: hidden;
-    border-radius: 16px;
-  }
-
-  .transport-container .transport-group button {
-    padding: 0 6px;
-    height: 32px;
-    font-size: 12px;
-    min-width: 0;
-    width: 44px;
   }
 
   body.present #presentationControls {
@@ -87,11 +69,13 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 6px 12px env(safe-area-inset-bottom, 10px);
-    background: rgba(var(--panel-rgb), 0.92);
+    /* env() resolves to 0 where there's no home indicator, so keep a floor */
+    padding: 14px 16px max(20px, env(safe-area-inset-bottom));
+    background: var(--ui-surface);
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
-    border-top: 1px solid var(--panel-border);
+    border-top: 1px solid var(--ui-edge);
+    border-radius: 24px 24px 0 0;
     z-index: 1200;
     pointer-events: all;
     transform: none;
@@ -182,29 +166,4 @@ body.present #presentationControls {
 .t-metro-menu .t-metro-toggle-row.active,
 .t-metro-menu .t-subdiv-btn.active {
   color: var(--accent-glow, var(--accent-light));
-}
-
-/* --- Metronome Sound States --- */
-.t-metro-btn.metro-beeps {
-  background: rgba(var(--accent-rgb), 0.18) !important;
-  color: var(--accent-light) !important;
-  border-color: var(--accent-light) !important;
-}
-
-.t-metro-btn.metro-shaker {
-  background: rgba(97, 10, 66, 0.18) !important;
-  color: #d4689a !important;
-  border-color: #d4689a !important;
-}
-
-body:not(.dark) .t-metro-btn.metro-beeps {
-  background: rgba(var(--accent-rgb), 0.10) !important;
-  color: var(--accent-dark) !important;
-  border-color: var(--accent) !important;
-}
-
-body:not(.dark) .t-metro-btn.metro-shaker {
-  background: rgba(97, 10, 66, 0.10) !important;
-  color: #610a42 !important;
-  border-color: #610a42 !important;
 }

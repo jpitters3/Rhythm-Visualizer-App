@@ -105,7 +105,8 @@ function setupGridControls(ctx) {
 function updateNotationUI() {
   const btn = document.getElementById('labelNotationBtn');
   if (!btn) return;
-  btn.textContent = (labelNotation === 'musical') ? '1 2 3' : '1 & 2';
+  const glyph = btn.querySelector('.ctl-glyph') || btn;
+  glyph.textContent = (labelNotation === 'musical') ? '1 2 3' : '1 & 2';
   btn.title = (labelNotation === 'musical') ? 'Switch to Numeric Notation' : 'Switch to Musical Notation';
 }
 
@@ -307,12 +308,8 @@ export function syncVirtualHandpanControls() {
 
 function closeAccountDropdown() {
   document.getElementById('accountDropdownMenu')?.classList.remove('show');
-  document.getElementById('phraseSubmenu')?.classList.remove('open');
-  const btn = document.getElementById('phraseMenuBtn');
-  if (btn) btn.textContent = '📂 Phrase ▾';
   document.getElementById('adminSubmenu')?.classList.remove('open');
-  const adminBtn = document.getElementById('adminMenuBtn');
-  if (adminBtn) adminBtn.textContent = '⚙️ Admin Tools ▾';
+  document.getElementById('adminMenuBtn')?.setAttribute('aria-expanded', 'false');
 }
 
 export function updateCurrentPhraseName(name) {
@@ -352,6 +349,7 @@ function showPhraseContextMenu(anchorEl) {
     { label: 'Rename phrase', action: renameCurrentPhrase },
     { label: 'Share phrase', action: () => document.getElementById('shareBtn')?.click() },
     { label: 'Move phrase', action: moveCurrentPhrase },
+    { label: 'Delete phrase', action: () => document.getElementById('deleteBtn')?.click() },
     { divider: true },
     { label: 'New phrase', action: createNewPhrase },
     { label: 'Open Phrase', action: showOpenPhraseModal },
@@ -617,6 +615,29 @@ export function initControls() {
   setupGridControls(gridA);
   setupGridControls(gridB);
 
+  // Light/dark toggles (controls bar, account menu); same storage as Account Settings' switch.
+  // Icon and label name the mode each one switches to.
+  const themeToggles = document.querySelectorAll('[data-theme-toggle]');
+  if (themeToggles.length) {
+    const syncThemeToggles = () => {
+      const dark = document.body.classList.contains('dark');
+      themeToggles.forEach(btn => {
+        btn.querySelector('.theme-icon-moon').toggleAttribute('hidden', dark);
+        btn.querySelector('.theme-icon-sun').toggleAttribute('hidden', !dark);
+        btn.querySelector('.ctl-label').textContent = dark ? 'Light mode' : 'Dark mode';
+        btn.title = dark ? 'Switch to light mode' : 'Switch to dark mode';
+      });
+    };
+    themeToggles.forEach(btn => btn.addEventListener('click', () => {
+      const on = !document.body.classList.contains('dark');
+      document.body.classList.toggle('dark', on);
+      localStorage.setItem('theme', on ? 'dark' : 'light');
+    }));
+    // Follows the theme however it changes (these toggles or Account Settings)
+    new MutationObserver(syncThemeToggles).observe(document.body, { attributes: true, attributeFilter: ['class'] });
+    syncThemeToggles();
+  }
+
   document.getElementById('dualModeBtn')?.addEventListener('click', () => {
     const visible = document.getElementById('measures-B').style.display !== 'none';
     setDualGrid(!visible);
@@ -683,22 +704,6 @@ export function initControls() {
     updatePatternButtons();
   });
 
-  // Phrase Menu Toggle
-  document.getElementById('phraseMenuBtn')?.addEventListener('click', (e) => {
-    e.stopPropagation();
-    const submenu = document.getElementById('phraseSubmenu');
-    const btn = document.getElementById('phraseMenuBtn');
-    if (!submenu) return;
-    const isOpen = submenu.classList.contains('open');
-    submenu.classList.toggle('open', !isOpen);
-    if (btn) btn.textContent = isOpen ? '📂 Phrase ▾' : '📂 Phrase ▴';
-  });
-
-  // Close phrase submenu when account dropdown closes
-  document.getElementById('accountBtn')?.addEventListener('click', () => {
-    // Reset submenu state when dropdown closes (handled via accountDropdownMenu hide)
-  });
-
   // New Phrase
   document.getElementById('newPhraseBtn')?.addEventListener('click', async (e) => {
     e.stopPropagation();
@@ -737,12 +742,8 @@ export function initControls() {
   document.addEventListener('click', (e) => {
     const dropdown = document.getElementById('accountDropdownMenu');
     if (!dropdown?.classList.contains('show')) {
-      document.getElementById('phraseSubmenu')?.classList.remove('open');
-      const btn = document.getElementById('phraseMenuBtn');
-      if (btn) btn.textContent = '📂 Phrase ▾';
       document.getElementById('adminSubmenu')?.classList.remove('open');
-      const adminBtn = document.getElementById('adminMenuBtn');
-      if (adminBtn) adminBtn.textContent = '⚙️ Admin Tools ▾';
+      document.getElementById('adminMenuBtn')?.setAttribute('aria-expanded', 'false');
     }
   });
 

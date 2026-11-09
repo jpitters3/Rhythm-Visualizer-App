@@ -7,7 +7,8 @@ test.describe('Virtual Handpan Synchronization', () => {
     await page.waitForSelector('.cell');
   });
 
-  test('Handpan pulses and virtual hands should ONLY follow Grid A', async ({ page, isMobile }) => {
+  // Dual grid has no control any more (the controls bar shows the light/dark toggle); skipped until it returns.
+  test.skip('Handpan pulses and virtual hands should ONLY follow Grid A', async ({ page, isMobile }) => {
     // Dual grid is a half-baked feature; handpan overlaps Grid B's controls
     // on mobile viewports (Needs Code Update, not a test bug).
     test.skip(isMobile, 'Dual grid is half-baked — mobile layout overlap not worth chasing yet');

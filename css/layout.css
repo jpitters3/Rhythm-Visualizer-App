@@ -23,15 +23,9 @@
   gap: 24px;
   padding: 0 24px;
   height: var(--header-h);
-  border-bottom: 1px solid var(--panel-border);
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
   position: relative;
   flex-shrink: 0;
   z-index: 2000;
-}
-
-body.dark .app-header {
-  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.3);
 }
 
 .app-logo {
@@ -66,27 +60,28 @@ body.dark .app-header {
   align-items: center;
   padding: 6px 14px;
   height: auto;
-  border-radius: 8px;
+  border-radius: var(--ui-radius-sm);
   font-size: 14px;
   font-weight: 500;
-  color: var(--text);
+  color: var(--ui-ink);
   background: transparent;
   border: none;
   cursor: pointer;
   text-decoration: none;
-  opacity: 0.65;
+  opacity: 0.75;
   transition: opacity 0.15s, background 0.15s;
   white-space: nowrap;
 }
 
 .nav-link:hover {
   opacity: 1;
-  background: var(--btn-active, rgba(0,0,0,0.06));
+  background: var(--ui-tint);
 }
 
 .nav-link.active {
   opacity: 1;
-  background: var(--btn-active, rgba(0,0,0,0.08));
+  background: var(--ui-on);
+  color: var(--ui-on-ink);
   font-weight: 600;
 }
 
@@ -121,17 +116,24 @@ body.dark .app-header {
   -webkit-mask-repeat: no-repeat;
           mask-repeat: no-repeat;
 }
-.nav-panel-btn:hover::after,
-.nav-panel-btn.active::after {
+.nav-panel-btn:hover::before,
+.nav-panel-btn.active::before {
   opacity: 0.9;
 }
 
 /* Always-visible header actions (hamburger + account + notif bell) */
 .header-actions {
+  /* Column 3 explicitly: on mobile the nav leaves the grid and these would slide into the middle */
+  grid-column: 3;
   display: flex;
   align-items: center;
   justify-self: end;
   gap: 8px;
+}
+
+/* Account initial sits last, right of the bell */
+.header-actions .nav-account {
+  order: 1;
 }
 
 /* Account button sits at the right end */
@@ -143,16 +145,18 @@ body.dark .app-header {
   opacity: 1;
   justify-content: center;
   font-weight: 600;
-  background: var(--accent);
-  color: #fff !important;
-  border-radius: 20px;
-  padding: 6px 16px;
-  min-width: 36px;
-  text-align: center;
+  background: var(--ui-on);
+  color: var(--ui-on-ink);
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  padding: 0;
+  border-radius: 50%;
 }
 
 .nav-account-btn:hover {
-  background: var(--accent-dark) !important;
+  background: var(--ui-on);
+  filter: brightness(1.1);
   opacity: 1;
 }
 
@@ -191,13 +195,16 @@ body.dark .app-header {
     display: none;
     position: fixed;
     top: 64px;
-    left: 0;
-    right: 0;
+    left: 12px;
+    right: 12px;
+    /* A grid child: without this, justify-self:center shrinks it to fit its links */
+    justify-self: stretch;
     transform: none;
     flex-direction: column;
     align-items: stretch;
-    background: var(--panel);
-    border-bottom: 1px solid var(--panel-border);
+    background: var(--ui-surface-solid);
+    border: 1px solid var(--ui-edge);
+    border-radius: var(--ui-radius-lg);
     padding: 8px;
     gap: 2px;
     z-index: 5000;
@@ -205,6 +212,11 @@ body.dark .app-header {
     max-height: calc(100dvh - 64px);
     max-height: calc(var(--app-height, 100dvh) - 64px);
     overflow-y: auto;
+  }
+
+  .app-nav:not(.open) {
+    opacity: 0;
+    translate: 0 -6px;
   }
 
   .app-nav.open {
@@ -224,10 +236,8 @@ body.dark .app-header {
 
   /* The account initial is also a .nav-link, but stays a circle, not a menu row */
   .nav-account-btn {
-    width: 36px;
-    height: 36px;
-    min-width: 36px;
-    padding: 0;
+    width: 40px;
+    height: 40px;
     border-radius: 50%;
   }
 
@@ -242,26 +252,17 @@ body.dark .app-header {
     width: 100%;
   }
 
+  /* Mobile: a full-width card under the header, like the nav menu */
   #accountDropdownMenu {
     position: fixed;
-    left: 0;
-    right: 0;
-    top: auto;
-    width: 100%;
-    border-radius: 0;
-    border-left: none;
-    border-right: none;
-    box-sizing: border-box;
+    top: 64px;
+    left: 12px;
+    right: 12px;
+    width: auto;
+    margin-top: 0;
+    border-radius: var(--ui-radius-lg);
   }
 
-  #accountDropdownMenu button {
-    text-align: center;
-    justify-content: center;
-  }
-
-  .hamburger-btn {
-    display: flex !important;
-  }
 }
 
 /* ===== GLOBAL LAYOUT & HEADER ===== */
@@ -279,8 +280,8 @@ body {
 }
 
 #accountDropdownMenu {
-  max-height: 700px;
-  overflow-y: scroll;
+  max-height: min(700px, calc(100dvh - 80px));
+  overflow-y: auto;
   z-index: 5000;
 }
 
@@ -289,33 +290,28 @@ body {
   display: none;
 }
 
-/* Hamburger Button (Hidden on Desktop) */
+/* Header icon buttons: hamburger and sidebar toggle (mobile only) */
 .hamburger-btn {
   display: none;
-  background: transparent;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  background: var(--ui-tint);
   border: none;
+  border-radius: 12px;
+  color: var(--ui-icon);
   cursor: pointer;
-  padding: 8px;
-  color: var(--text);
-  border-radius: 8px;
   align-items: center;
   justify-content: center;
 }
 
 .hamburger-btn:hover {
-  background: rgba(0, 0, 0, 0.05);
+  background: var(--ui-tint-hover);
 }
 
-/* Mobile Responsive */
 @media (max-width: 768px) {
-
-  /* Style items to match other menu buttons — mobile nav */
-  .nav-account .dropdown-content button {
-    text-align: left;
-    padding: 12px;
-    background: rgba(0, 0, 0, 0.03);
-    /* Slight background to distinguish */
-    border-radius: 8px;
+  .hamburger-btn {
+    display: flex;
   }
 }
 
@@ -366,11 +362,6 @@ div.container {
   height: 98vh;
   min-height: 600px;
   padding: 0;
-  /* max-width: 1400px; */
-  /* background: rgba(var(--panel-rgb), 0.7);
-  border: 1px solid rgba(255, 255, 255, 0.4);
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25),
-    0 0 0 1px rgba(255, 255, 255, 0.2) inset; */
   z-index: 1000;
   display: flex;
   flex-direction: column;
@@ -429,11 +420,6 @@ div.container {
   padding-top: 16px;
   min-height: 72px;
   margin-top: 4px;
-  /* Separator fades out at both ends, matching the header and controls bar */
-  border-top: 1px solid transparent;
-  border-image: linear-gradient(90deg, transparent, var(--panel-border) 15%, var(--panel-border) 85%, transparent) 1;
-  border-radius: 0 0 12px 12px;
-  background: linear-gradient(to bottom, transparent, rgba(0, 0, 0, 0.02));
   flex-shrink: 0;
   position: relative;
 }
@@ -444,11 +430,6 @@ div.container {
   align-items: center;
 }
 
-body.dark .grid-bottom-row {
-  background: linear-gradient(to bottom, transparent, rgba(0, 0, 0, 0.12));
-  border-top-color: var(--panel-border);
-}
-
 .left {
   display: flex;
   flex-direction: column;
@@ -456,12 +437,23 @@ body.dark .grid-bottom-row {
   min-height: 0;
 }
 
+/* Title centred in the middle column; save button and status sit to its right */
 .grid-phrase-name-row {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  column-gap: 10px;
+  padding-bottom: 20px;
+}
+
+.grid-phrase-name-btn {
+  grid-column: 2;
+}
+
+.grid-phrase-name-extras {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding-bottom: 20px;
-  justify-content: center;
 }
 
 /* Pill button wrapping the name + chevron — signals "click to switch phrase",
@@ -474,18 +466,15 @@ body.dark .grid-bottom-row {
   height: auto;
   padding: 6px 12px;
   border-radius: 999px;
-  border: 1px solid transparent;
+  border: none;
   background: transparent;
-  color: var(--text-secondary, #4d4d4d);
-  opacity: 0.7;
+  color: var(--ui-ink);
   cursor: pointer;
-  transition: opacity 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+  transition: background 0.15s ease;
 }
 
 .grid-phrase-name-btn:hover {
-  opacity: 1;
-  background: var(--btn-bg);
-  border-color: var(--panel-border);
+  background: var(--ui-tint);
 }
 
 .grid-phrase-name {
@@ -498,7 +487,7 @@ body.dark .grid-bottom-row {
 
 .grid-phrase-name-chevron {
   flex-shrink: 0;
-  opacity: 0.7;
+  color: var(--ui-muted);
 }
 
 .quick-save-btn {
@@ -536,29 +525,6 @@ body.dark .grid-bottom-row {
   transform: translateZ(0);
   will-change: transform;
   pointer-events: none;
-}
-
-.container::before {
-  content: "";
-  position: absolute;
-  opacity: 0;
-  z-index: -1;
-  pointer-events: none;
-  will-change: transform;
-  transform: translateZ(0);
-  border: 1px solid white;
-}
-
-body.dark .container::before {
-  background-image: url('../public/assets/images/backgrounds/starry-sky.jpg');
-  opacity: 0.35;
-}
-
-body.dark div.container {
-  background: rgba(22, 22, 31, 0.7);
-  border-color: rgba(255, 255, 255, 0.1);
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5),
-    0 0 0 1px rgba(255, 255, 255, 0.05) inset;
 }
 
 @media (max-width: 768px) {
@@ -636,25 +602,7 @@ body.dark div.container {
     flex-shrink: 0;
   }
 
-  /* Make top controls scroll horizontally to save vertical space! */
-  .controls-primary {
-    flex-wrap: nowrap !important;
-    overflow-x: auto !important;
-    justify-content: flex-start !important;
-    /* Fixes left-side clipping when overflowing */
-    scroll-behavior: smooth;
-    /* Hide scrollbar for clean UI but keep it scrollable */
-    scrollbar-width: none;
-    -ms-overflow-style: none;
-    padding-bottom: 5px;
-  }
-
-  .controls-primary::-webkit-scrollbar {
-    display: none;
-  }
-
-  /* Expanded Floating Controls Drawer */
-  #primaryControlsWrapper,
+  /* Floating selection drawer (the controls open in the handpan panel instead, js/mobile-menu.js) */
   .measure-tools {
     display: none;
     width: 93vw;
@@ -674,14 +622,8 @@ body.dark div.container {
     /* Contain scrolling content */
   }
 
-  /* Reset some inner paddings for the floating menu */
-  #primaryControlsWrapper .scrollable-controls-wrapper,
   .measure-tools .selection-group {
     padding: 0;
-  }
-
-  #primaryControlsWrapper.open {
-    display: block;
   }
 
   /* Push handpan above transport controls at bottom */
@@ -708,7 +650,6 @@ body.dark div.container {
   }
 
   .grid-phrase-name-row {
-    justify-content: center;
     padding-bottom: 5px;
     padding-top: 10px;
   }
@@ -721,91 +662,33 @@ select#patternSelect {
 /* ===== ROUTE-SPECIFIC GLOBAL STYLING ===== */
 
 
-/* ===== PHRASE MENU IN ACCOUNT DROPDOWN ===== */
-.phrase-current-name {
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  opacity: 0.5;
-  padding: 4px 14px 2px;
+/* Account menu: email, then flat icon rows (base row style: .dropdown-content button) */
+#accountDropdownMenu {
+  min-width: 240px;
+  padding: 6px;
+}
+
+.acct-menu-email {
+  padding: 8px 12px 10px;
+  font-size: 12px;
+  color: var(--ui-muted);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 220px;
-  pointer-events: none;
-  text-align: left;
 }
 
-.phrase-menu-btn {
-  display: block;
-  width: 100%;
-  text-align: left;
-  padding: 8px 14px;
-  font-weight: 500;
-  font-size: 14px;
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  color: var(--text);
-  border-radius: 6px;
-  min-width: auto;
+.acct-menu-email:empty {
+  display: none;
 }
 
-.phrase-menu-btn:hover {
-  background: rgba(0, 0, 0, 0.05);
+/* Admin tools: collapsible group, caret flips via aria-expanded (js/admin.js) */
+.acct-caret {
+  margin-left: auto;
+  transition: rotate 0.2s ease;
 }
 
-body.dark .phrase-menu-btn:hover {
-  background: rgba(255, 255, 255, 0.05);
-}
-
-/* Animated submenu using CSS grid trick */
-.phrase-submenu {
-  display: grid;
-  grid-template-rows: 0fr;
-  transition: grid-template-rows 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.phrase-submenu.open {
-  grid-template-rows: 1fr;
-}
-
-.phrase-submenu-inner {
-  overflow: hidden;
-  padding: 0 6px;
-}
-
-.phrase-submenu button {
-  background: rgba(255, 255, 255, 0.4) !important;
-}
-
-.phrase-submenu button:hover {
-  background-color: var(--btn-active) !important;
-  color: #000;
-}
-
-/* Admin submenu — same animated grid trick, separate class */
-.admin-menu-btn {
-  display: block;
-  width: 100%;
-  text-align: left;
-  padding: 8px 14px;
-  font-weight: 500;
-  font-size: 14px;
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  border-radius: 6px;
-  min-width: auto;
-}
-
-.admin-menu-btn:hover {
-  background: rgba(0, 0, 0, 0.05);
-}
-
-body.dark .admin-menu-btn:hover {
-  background: rgba(255, 255, 255, 0.05);
+.admin-menu-btn[aria-expanded="true"] .acct-caret {
+  rotate: 180deg;
 }
 
 .admin-submenu {
@@ -820,16 +703,7 @@ body.dark .admin-menu-btn:hover {
 
 .admin-submenu-inner {
   overflow: hidden;
-  padding: 0 6px;
-}
-
-.admin-submenu button {
-  background: rgba(255, 255, 255, 0.4) !important;
-}
-
-.admin-submenu button:hover {
-  background-color: var(--btn-active) !important;
-  color: #000;
+  padding-left: 8px;
 }
 
 /* Dropdown Content (Hidden by Default) */
@@ -844,20 +718,55 @@ body.dark .admin-menu-btn:hover {
   position: absolute;
   top: 100%;
   left: 0;
-  background-color: var(--panel);
+  background-color: var(--ui-surface-solid);
   min-width: 160px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
-  border-radius: 12px;
+  border-radius: var(--ui-radius-md);
   z-index: 4000;
   padding: 8px;
-  border: 1px solid var(--panel-border);
+  border: 1px solid var(--ui-edge);
   margin-top: 8px;
 }
 
 /* Show the dropdown menu (use JS to add this class) */
 .dropdown-content.show {
   display: block;
-  animation: fadeIn 0.1s ease-out;
+}
+
+/* Menus fade and settle in, and fade out on close. allow-discrete lets display
+   animate; older browsers just snap. translate/scale (not transform) so menus
+   positioned with transform keep their offset. */
+.dropdown-content,
+.app-nav,
+.notif-panel {
+  transition: opacity 0.16s ease, translate 0.16s ease, scale 0.16s ease,
+    display 0.16s allow-discrete, overlay 0.16s allow-discrete;
+  transform-origin: top;
+}
+
+.dropdown-content:not(.show),
+.notif-panel:not(.open) {
+  opacity: 0;
+  translate: 0 -6px;
+  scale: 0.98;
+}
+
+@starting-style {
+  .dropdown-content.show,
+  .app-nav.open,
+  .notif-panel.open {
+    opacity: 0;
+    translate: 0 -6px;
+    scale: 0.98;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dropdown-content,
+  .app-nav,
+  .notif-panel {
+    transition: none;
+  }
 }
 
 @keyframes fadeIn {
@@ -873,24 +782,38 @@ body.dark .admin-menu-btn:hover {
 }
 
 /* Links inside the dropdown */
+/* Menu rows: optional icon + label, tinted on hover */
 .dropdown-content button {
-  color: var(--text);
-  padding: 10px 16px;
+  color: var(--ui-ink);
+  padding: 10px 12px;
   text-decoration: none;
-  display: block;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
   width: 100%;
+  height: auto;
   text-align: left;
+  font-size: 14px;
+  font-weight: 500;
   background: transparent;
-  border-radius: 8px;
+  border-radius: var(--ui-radius-sm);
   margin-bottom: 2px;
   border: none;
-  align-items: center !important;
+}
+
+.dropdown-content button svg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  color: var(--ui-icon);
 }
 
 /* Change color of dropdown links on hover */
-.dropdown-content button:hover {
-  background-color: var(--btn-active);
-  color: #000;
+.dropdown-content button:hover:not(:disabled) {
+  background-color: var(--ui-tint);
+  box-shadow: none;
+  transform: none;
 }
 
 .dropdown-divider {

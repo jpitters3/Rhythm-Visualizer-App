@@ -321,7 +321,6 @@ export class TransportUI {
       this.metroBtn.classList.toggle('metro-beeps', isOn && sound === 'Click');
       this.metroBtn.classList.toggle('metro-shaker', isOn && sound === 'Shaker');
       if (isOn) this.metroBtn.classList.remove('no-hover');
-      this.metroBtn.style.opacity = isOn ? '1' : '0.5';
       this.metroBtn.title = isOn ? `Metronome: ${sound}` : 'Metronome: Off';
     }
 

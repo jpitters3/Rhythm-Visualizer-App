@@ -1,28 +1,7 @@
 // @ts-check
 const { test, expect } = require('@playwright/test');
-const { gotoStudio, clearGrid } = require('./helpers');
+const { gotoStudio, clearGrid, phraseAction } = require('./helpers');
 const { createTestUser, deleteTestUser, loginAsTestUser } = require('./utils/auth-helper');
-
-// #phraseMenuBtn/#phraseSubmenu (Save/Import/Export/Share) live inside
-// #navAccountWrapper, which is display:none until signed in — this has been
-// true since the app's original routing redesign, not a recent regression.
-// Reaching this menu at all requires being authenticated first.
-async function openPhraseMenu(page) {
-  if (await page.locator('#mobileMenuBtn').isVisible()) {
-    const menu = page.locator('#appNav');
-    if (!await menu.evaluate(el => el.classList.contains('open'))) {
-      await page.click('#mobileMenuBtn');
-    }
-  }
-  const accountDropdown = page.locator('#accountDropdownMenu');
-  if (!await accountDropdown.evaluate(el => el.classList.contains('show'))) {
-    await page.click('#accountBtn');
-  }
-  const phraseSubmenu = page.locator('#phraseSubmenu');
-  if (!await phraseSubmenu.evaluate(el => el.classList.contains('open'))) {
-    await page.click('#phraseMenuBtn');
-  }
-}
 
 // #importBtn now lives inside the "Admin Tools" submenu (js/admin.js's
 // adminMenuBtn/adminSubmenu toggle) rather than the Phrase submenu —
@@ -127,19 +106,13 @@ test.describe('Undo/Redo Features', () => {
       await page.click('#confirmCancelBtn'); // Cancel without importing
     });
 
-    /*
-     * Share Pattern — authenticated flow. The Phrase menu (and so #shareBtn)
-     * is unreachable as a guest at all, so this no longer tests "clicking
-     * Share while signed out" (see openPhraseMenu's comment above); it now
-     * covers the real success path — name prompt → share link modal.
-     */
+    /* Share Pattern, signed in: name prompt → share link modal (via the phrase title dropdown). */
     test('Share Pattern: generates a link', async ({ page }) => {
       // Give the pattern some content so there's something to share.
       await page.locator('.cell').nth(0).click();
       await page.keyboard.press('1');
 
-      await openPhraseMenu(page);
-      await page.click('#shareBtn');
+      await phraseAction(page, 'Share phrase');
 
       // "Share pattern name:" custom prompt modal
       await page.locator('#confirmModal.open').waitFor({ timeout: 5000 });

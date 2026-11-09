@@ -7,9 +7,9 @@
   right: 30px;
   width: 60px;
   height: 60px;
-  background: var(--btn-active, #f1c40f);
+  background: var(--ui-brass);
   border-radius: 50%;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 6px 18px rgba(201, 160, 82, 0.4);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -24,17 +24,13 @@
 
 #aiFab:hover {
   transform: scale(1.1);
-  box-shadow: 0 8px 25px rgba(241, 196, 15, 0.4);
+  box-shadow: 0 8px 25px rgba(201, 160, 82, 0.5);
 }
 
 #aiFab svg {
   width: 32px;
   height: 32px;
-  fill: #3b3005;
-}
-
-body.dark #aiFab svg {
-  fill: #000;
+  fill: var(--ui-brass-ink);
 }
 
 /* Chat Container */
@@ -381,24 +377,19 @@ body.dark #aiInput:focus {
     top: 50%;
     margin-right: 0;
     transform: translateY(-50%);
-    width: 36px;
-    height: 36px;
-    background: var(--btn-active, #f1c40f);
-    border-radius: 50%;
+    width: var(--ui-ctl);
+    height: var(--ui-ctl);
+    background: var(--ui-brass);
+    border-radius: var(--ui-radius-md);
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
   }
 
   #aiFabMobile svg {
-    width: 20px;
-    height: 20px;
-    fill: #3b3005;
-  }
-
-  body.dark #aiFabMobile svg {
-    fill: #000;
+    width: 22px;
+    height: 22px;
+    fill: var(--ui-brass-ink);
   }
 
   #aiChatContainer {

@@ -1,31 +1,24 @@
 .secondary-controls {
   margin-top: 20px;
-  background: rgba(255, 255, 255, 0.05);
-  padding: 10px;
-  border-radius: 8px;
+  background: var(--ui-surface);
+  border: 1px solid var(--ui-edge);
+  padding: 12px;
+  border-radius: var(--ui-radius-lg);
   display: flex;
   align-items: center;
   gap: 15px;
 }
 
 .instance-label {
-  font-weight: bold;
-  font-size: 0.9em;
-  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  letter-spacing: 1px;
+  color: var(--ui-muted);
 }
 
 .secondary-measures {
-  margin-top: 10px;
-  border-top: 1px dashed rgba(255, 255, 255, 0.1);
-  padding-top: 10px;
-}
-
-.bpm-control {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+  margin-top: 12px;
 }
 
 .mute-btn {

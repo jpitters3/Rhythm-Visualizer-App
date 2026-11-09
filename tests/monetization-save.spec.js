@@ -1,7 +1,7 @@
 // @ts-check
 const { test, expect } = require('@playwright/test');
 const { createTestUser, deleteTestUser, loginAsTestUser } = require('./utils/auth-helper');
-const { gotoStudio } = require('./helpers');
+const { gotoStudio, phraseAction } = require('./helpers');
 
 
 /**
@@ -12,27 +12,6 @@ const { gotoStudio } = require('./helpers');
  * 4. Save 5 patterns successfully.
  * 5. Attempt to save a 6th pattern -> Prompted to upgrade to Pro.
  */
-async function openPhraseMenu(page) {
-  // On mobile the nav is hidden behind a hamburger — open #appNav first
-  if (await page.locator('#mobileMenuBtn').isVisible()) {
-    const appNav = page.locator('#appNav');
-    const isOpen = await appNav.evaluate(/** @param {HTMLElement} el */ el => el.classList.contains('open'));
-    if (!isOpen) await page.click('#mobileMenuBtn');
-  }
-
-  // #accountBtn lives inside #navAccountWrapper (display:none until signed in)
-  await page.locator('#accountBtn').waitFor({ state: 'visible', timeout: 15000 });
-
-  const accountDropdown = page.locator('#accountDropdownMenu');
-  if (!await accountDropdown.evaluate(el => el.classList.contains('show'))) {
-    await page.click('#accountBtn');
-  }
-  const phraseSubmenu = page.locator('#phraseSubmenu');
-  if (!await phraseSubmenu.evaluate(el => el.classList.contains('open'))) {
-    await page.click('#phraseMenuBtn');
-  }
-}
-
 test.describe('Monetization Save Gating', () => {
 
   let testUser;
@@ -120,8 +99,7 @@ test.describe('Monetization Save Gating', () => {
       console.log(`[TEST] Saving pattern ${i}/5...`);
       const patternName = `Sample Pattern ${i}`;
 
-      await openPhraseMenu(page);
-      await page.click('#saveBtn');
+      await phraseAction(page, 'Save phrase');
 
       // Wait for Custom Confirm Modal (Prompt mode)
       await expect(confirmModal).toHaveClass(/open/);
@@ -136,8 +114,7 @@ test.describe('Monetization Save Gating', () => {
 
     // 7. Attempt to save 6th pattern -> Upgrade Modal should appear
     console.log('[TEST] Attempting to save 6th pattern (over the limit)...');
-    await openPhraseMenu(page);
-    await page.click('#saveBtn');
+    await phraseAction(page, 'Save phrase');
 
     // Custom Modal (Prompt mode for 6th save)
     await expect(confirmModal).toHaveClass(/open/);

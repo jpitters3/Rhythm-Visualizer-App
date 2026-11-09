@@ -1666,26 +1666,22 @@ body.dark .student-inbox-url-input {
 
 .notif-bell-btn {
   position: relative;
-  background: transparent;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  background: var(--ui-tint);
   border: none;
+  border-radius: 12px;
+  color: var(--ui-icon);
   cursor: pointer;
-  padding: 6px 8px;
-  border-radius: 8px;
-  color: var(--text);
-  opacity: 0.7;
-  transition: opacity 0.15s, background 0.15s;
+  transition: background 0.15s;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .notif-bell-btn:hover {
-  opacity: 1;
-  background: rgba(0,0,0,0.06);
-}
-
-body.dark .notif-bell-btn:hover {
-  background: rgba(255,255,255,0.08);
+  background: var(--ui-tint-hover);
 }
 
 .notif-badge {
@@ -1718,11 +1714,10 @@ body.dark .notif-bell-btn:hover {
   top: calc(100% + 8px);
   right: 0;
   max-height: 400px;
-  overflow-y: scroll;
   width: 340px;
-  background: var(--panel);
-  border: 1px solid var(--panel-border);
-  border-radius: 16px;
+  background: var(--ui-surface-solid);
+  border: 1px solid var(--ui-edge);
+  border-radius: var(--ui-radius-lg);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
   z-index: 5000;
   display: none;
@@ -1736,15 +1731,25 @@ body.dark .notif-panel {
 
 .notif-panel.open {
   display: flex;
-  animation: fadeIn 0.15s ease-out;
+}
+
+/* Mobile: a full-width card under the header, like the nav menu */
+@media (max-width: 768px) {
+  .notif-panel {
+    position: fixed;
+    top: 64px;
+    left: 12px;
+    right: 12px;
+    width: auto;
+  }
 }
 
 .notif-panel-header {
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.07em;
-  opacity: 0.45;
+  letter-spacing: 0.08em;
+  color: var(--ui-muted);
   padding: 14px 16px 10px;
   flex-shrink: 0;
   border-bottom: 1px solid var(--panel-border);
@@ -1754,7 +1759,7 @@ body.dark .notif-panel {
   padding: 32px 16px;
   text-align: center;
   font-size: 13px;
-  opacity: 0.45;
+  color: var(--ui-muted);
 }
 
 .notif-items-list {
@@ -1777,11 +1782,7 @@ body.dark .notif-panel {
 }
 
 .notif-item:hover {
-  background: rgba(0, 0, 0, 0.03);
-}
-
-body.dark .notif-item:hover {
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--ui-tint);
 }
 
 .notif-item.unread {

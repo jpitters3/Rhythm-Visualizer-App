@@ -54,7 +54,7 @@
 
 .prog-phrase-row.selected .prog-phrase-badge {
   background: var(--accent);
-  color: #fff;
+  color: var(--accent-ink);
 }
 
 .prog-phrase-preview-star {

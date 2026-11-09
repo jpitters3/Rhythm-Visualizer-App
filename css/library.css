@@ -29,8 +29,11 @@
   margin: 0;
 }
 
+/* Sort comes first in the markup. Desktop shows it at the right edge, mobile at the left,
+   so the New Folder slot (visibility-hidden on some tabs, js/library.js) never moves it. */
 .library-controls {
   display: flex;
+  flex-direction: row-reverse;
   align-items: center;
   gap: 10px;
 }
@@ -39,101 +42,85 @@
 .library-sort-order-btn {
   height: 36px;
   padding: 0 14px;
-  border-radius: 8px;
-  border: 1px solid var(--panel-border);
-  background: var(--panel);
-  color: var(--text);
+  border-radius: var(--ui-radius-sm);
+  border: none;
+  background: var(--ui-tint);
+  color: var(--ui-ink);
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
   white-space: nowrap;
-  transition: background 0.15s ease, border-color 0.15s ease;
+  transition: background 0.15s ease;
 }
 
 .library-new-folder-btn:hover,
 .library-sort-order-btn:hover {
-  border-color: var(--text);
+  background: var(--ui-tint-hover);
+  box-shadow: none;
+  transform: none;
 }
 
-/* Tabs */
+/* Tabs: flat segmented row; the selected tab gets a tinted fill (colours from theme tokens) */
 .library-tabs {
   display: flex;
-  align-items: flex-end;
-  gap: 0;
-  padding: 20px 32px 0;
-  border-bottom: 1px solid var(--panel-border);
+  align-items: center;
+  gap: 4px;
+  padding: 20px 32px 12px;
   flex-shrink: 0;
   position: relative;
 }
 
 .library-tab {
-  background: none;
+  height: auto;
+  padding: 8px 14px;
   border: none;
-  padding: 10px 18px;
+  border-radius: var(--ui-radius-sm);
+  background: transparent;
+  color: var(--ui-muted);
   font-size: 14px;
   font-weight: 600;
-  color: var(--text);
-  opacity: 0.5;
   cursor: pointer;
-  position: relative;
-  transition: opacity 0.15s ease;
+  transition: background 0.15s ease, color 0.15s ease;
 }
 
-.library-tab::after {
-  content: '';
-  position: absolute;
-  bottom: -1px;
-  left: 0;
-  right: 0;
-  height: 2px;
-  background: var(--text);
-  border-radius: 2px 2px 0 0;
-  opacity: 0;
-  transition: opacity 0.15s ease;
+/* Beats the global button hover lift/shadow and button.active's white text */
+.library-tab:hover:not(.active) {
+  background: var(--ui-tint);
+  color: var(--ui-ink);
+  box-shadow: none;
+  transform: none;
 }
 
-.library-tab:hover { opacity: 0.8; }
-
-.library-tab.active {
-  opacity: 1;
-  background: none;
+.library-tab.active,
+.library-tab.active:hover {
+  background: var(--ui-tint-hover);
+  color: var(--ui-ink);
+  box-shadow: none;
+  transform: none;
 }
-
-.library-tab.active::after { opacity: 1; }
 
 /* Search */
+/* Search: in the tab row's flow, pushed to the right (it used to be centred
+   absolutely over the row and covered the last tab) */
 .library-search-row {
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-  bottom: 6px;
-  pointer-events: none;
-  transition: left 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-body.sidebar-open .library-search-row {
-  left: calc(50% + 180px);
-}
-
-.library-search-row input {
-  pointer-events: all;
+  margin-left: auto;
 }
 
 .library-search-input {
-  width: 460px;
-  height: 30px;
-  padding: 0 10px 0 30px;
-  border-radius: 20px;
-  border: 1px solid var(--panel-border);
-  background: var(--panel) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='13' height='13' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cline x1='21' y1='21' x2='16.65' y2='16.65'/%3E%3C/svg%3E") no-repeat 9px center;
-  color: var(--text);
+  width: 320px;
+  height: 36px;
+  padding: 0 12px 0 32px;
+  border-radius: var(--ui-radius-sm);
+  border: none;
+  background: var(--ui-tint) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='13' height='13' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cline x1='21' y1='21' x2='16.65' y2='16.65'/%3E%3C/svg%3E") no-repeat 9px center;
+  color: var(--ui-ink);
   font-size: 13px;
   outline: none;
-  transition: border-color 0.15s ease, width 0.2s ease;
+  transition: box-shadow 0.15s ease;
 }
 
 .library-search-input:focus {
-  border-color: var(--text);
+  box-shadow: 0 0 0 2px var(--ui-ring);
 }
 
 .library-search-input::placeholder { opacity: 0.4; }
@@ -662,6 +649,12 @@ body.dark .library-card:hover {
 
 /* Responsive */
 @media (max-width: 768px) {
+  .library-controls {
+    flex-direction: row;
+  }
+}
+
+@media (max-width: 768px) {
   .library-header {
     padding: 20px 16px 0;
     flex-wrap: wrap;
@@ -669,17 +662,13 @@ body.dark .library-card:hover {
   }
 
   .library-tabs {
-    padding: 16px 16px 0;
+    padding: 16px 16px 12px;
     flex-wrap: wrap;
-    align-items: center;
   }
 
   .library-search-row {
-    position: static;
-    transform: none;
     width: 100%;
-    padding: 10px 0 8px;
-    pointer-events: auto;
+    padding: 10px 0 0;
   }
 
   .library-search-input {

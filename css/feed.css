@@ -50,7 +50,7 @@
 
 .feed-main-tab.active {
   background: var(--accent);
-  color: white;
+  color: var(--accent-ink);
   opacity: 1;
   box-shadow: 0 2px 8px rgba(var(--accent-rgb), 0.4);
 }
@@ -250,7 +250,7 @@
   align-items: center;
   justify-content: center;
   font-weight: bold;
-  color: white;
+  color: var(--accent-ink);
   flex-shrink: 0;
 }
 
@@ -354,7 +354,7 @@
   height: 40px;
   border-radius: 50%;
   background: linear-gradient(135deg, var(--accent), var(--accent-light));
-  color: #fff;
+  color: var(--accent-ink);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -531,7 +531,7 @@
 
 .pp-play-btn {
   background: var(--accent);
-  color: white;
+  color: var(--accent-ink);
   border: none;
   padding: 6px 12px;
   border-radius: 6px;

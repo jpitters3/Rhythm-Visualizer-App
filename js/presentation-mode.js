@@ -137,7 +137,6 @@ export async function setPresentation(on) {
 
   if (presentBtn) {
     presentBtn.classList.toggle('active', on);
-    presentBtn.textContent = on ? '⛶' : '⛶';
   }
 
   if (exitPresent) {

@@ -2,7 +2,8 @@
 const { test, expect } = require('@playwright/test');
 const { gotoStudio, clearGrid, openMobileControlsIfNeeded, closeMobileControlsIfNeeded, setBpm } = require('./helpers');
 
-test.describe('Dual Grid Functionality', () => {
+// Dual grid has no control any more (the controls bar shows the light/dark toggle); skipped until it returns.
+test.describe.skip('Dual Grid Functionality', () => {
 
   test.beforeEach(async ({ page }) => {
     await gotoStudio(page);

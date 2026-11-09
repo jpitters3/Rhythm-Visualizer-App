@@ -24,7 +24,6 @@
   flex-direction: column;
   background: rgba(255,255,255,0.97);
   border-left: 1px solid rgba(0,0,0,0.08);
-  box-shadow: -10px 0 40px rgba(0,0,0,0.12);
   color: var(--text);
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
   transform: translateX(100%);
@@ -34,10 +33,17 @@
 body.dark .stmgmt-sidebar {
   background: rgba(20, 20, 28, 0.99);
   border-left-color: rgba(255,255,255,0.08);
-  box-shadow: -10px 0 40px rgba(0,0,0,0.4);
 }
 
-.stmgmt-sidebar.open { transform: translateX(0); }
+/* Shadow only when open, or the closed panel darkens the screen's right edge */
+.stmgmt-sidebar.open {
+  transform: translateX(0);
+  box-shadow: -10px 0 40px rgba(0,0,0,0.12);
+}
+
+body.dark .stmgmt-sidebar.open {
+  box-shadow: -10px 0 40px rgba(0,0,0,0.4);
+}
 
 /* ===== HEADER ===== */
 

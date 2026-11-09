@@ -1,4 +1,5 @@
 const { test, expect } = require('@playwright/test');
+const { phraseAction } = require('./helpers');
 require('dotenv').config();
 const { createClient } = require('@supabase/supabase-js');
 const { createTestUser, deleteTestUser, loginAsTestUser } = require('./utils/auth-helper');
@@ -116,21 +117,6 @@ test.describe('Lesson Settings (Reset/Restore)', () => {
     await expect(page.locator('#courseSidebar.open')).toBeVisible();
   }
 
-  // Opens account dropdown + phrase submenu, for the non-lesson Studio flows
-  // (mirrors saving_loading.spec.js's own helper).
-  async function openPhraseMenu(page) {
-    const accountDropdown = page.locator('#accountDropdownMenu');
-    if (!await accountDropdown.evaluate(el => el.classList.contains('show'))) {
-      await page.click('#accountBtn');
-      await expect(accountDropdown).toHaveClass(/show/, { timeout: 3000 });
-    }
-    const phraseSubmenu = page.locator('#phraseSubmenu');
-    if (!await phraseSubmenu.evaluate(el => el.classList.contains('open'))) {
-      await page.click('#phraseMenuBtn');
-      await expect(phraseSubmenu).toHaveClass(/open/, { timeout: 3000 });
-    }
-  }
-
   test('BPM-only change: save prompt, override persists, Reset/Restore round-trip', { tag: '@core' }, async ({ page, isMobile }) => {
     await openLesson(page, lesson, isMobile);
 
@@ -242,8 +228,7 @@ test.describe('Lesson Settings (Reset/Restore)', () => {
     await page.keyboard.press('1');
     await expect(cell0.locator('.inner')).toHaveText('1');
 
-    await openPhraseMenu(page);
-    await page.click('#newPhraseBtn');
+    await phraseAction(page, 'New phrase');
 
     await expect(page.locator('#lessonSaveChangesModal')).not.toHaveClass(/open/);
     const discardModal = page.locator('#confirmModal');

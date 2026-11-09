@@ -7,16 +7,23 @@ export function initMobileMenu() {
 
   if (!mobileMenuBtn || !appNav) return;
 
+  const CLOSE_MS = 180; // matches the slot transition in css/measure-actions.css
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+  let origParent = null;
+  let origNext = null;
+  let closeTimer = null;
+
   function openControls() {
     if (!primaryControlsWrapper) return;
+    if (closeTimer) finishClose(); // reopened mid-close
     const panel = document.querySelector('.handpan-panel');
     const slot = document.getElementById('panelControlsSlot');
     if (panel && slot && primaryControlsWrapper.parentElement !== slot) {
       // Pin the ghost row (and its controls toggle) where it is, so the toggle stays under the thumb.
       const ghostRow = document.getElementById('ghostNoteSection');
       if (ghostRow) panel.style.setProperty('--ghost-row-top', `${ghostRow.offsetTop}px`);
-      primaryControlsWrapper._origParent = primaryControlsWrapper.parentElement;
-      primaryControlsWrapper._origNext = primaryControlsWrapper.nextSibling;
+      origParent = primaryControlsWrapper.parentElement;
+      origNext = primaryControlsWrapper.nextSibling;
       slot.appendChild(primaryControlsWrapper);
       panel.classList.add('controls-mode');
     }
@@ -24,16 +31,30 @@ export function initMobileMenu() {
     mobileControlsBtn?.setAttribute('aria-expanded', 'true');
   }
 
+  // Fade the card out first, then restore the handpan.
   function closeControls() {
-    if (!primaryControlsWrapper) return;
+    if (!primaryControlsWrapper?.classList.contains('mobile-open') || closeTimer) return;
+    const panel = document.querySelector('.handpan-panel');
+    mobileControlsBtn?.setAttribute('aria-expanded', 'false');
+    if (!panel?.classList.contains('controls-mode') || reduceMotion.matches) {
+      finishClose();
+      return;
+    }
+    panel.classList.add('controls-closing');
+    closeTimer = setTimeout(finishClose, CLOSE_MS);
+  }
+
+  function finishClose() {
+    clearTimeout(closeTimer);
+    closeTimer = null;
     const panel = document.querySelector('.handpan-panel');
     primaryControlsWrapper.classList.remove('mobile-open');
-    if (primaryControlsWrapper._origParent) {
-      primaryControlsWrapper._origParent.insertBefore(primaryControlsWrapper, primaryControlsWrapper._origNext || null);
-      primaryControlsWrapper._origParent = null;
-      primaryControlsWrapper._origNext = null;
+    if (origParent) {
+      origParent.insertBefore(primaryControlsWrapper, origNext);
+      origParent = null;
+      origNext = null;
     }
-    panel?.classList.remove('controls-mode');
+    panel?.classList.remove('controls-mode', 'controls-closing');
     panel?.style.removeProperty('--ghost-row-top');
     mobileControlsBtn?.setAttribute('aria-expanded', 'false');
   }
@@ -50,7 +71,7 @@ export function initMobileMenu() {
       e.stopPropagation();
       appNav.classList.remove('open');
       mobileMenuBtn.setAttribute('aria-expanded', 'false');
-      if (primaryControlsWrapper.classList.contains('mobile-open')) {
+      if (primaryControlsWrapper.classList.contains('mobile-open') && !closeTimer) {
         closeControls();
       } else {
         openControls();
@@ -61,7 +82,7 @@ export function initMobileMenu() {
   appNav.addEventListener('click', (e) => {
     const btn = e.target.closest('button, a');
     if (!btn) return;
-    if (btn.id === 'accountBtn' || btn.id === 'phraseMenuBtn' || btn.id === 'adminMenuBtn') return;
+    if (btn.id === 'accountBtn' || btn.id === 'adminMenuBtn') return;
     appNav.classList.remove('open');
     mobileMenuBtn.setAttribute('aria-expanded', 'false');
   });

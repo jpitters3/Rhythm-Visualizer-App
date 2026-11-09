@@ -2,14 +2,29 @@
   align-self: flex-start;
   display: inline-flex;
   align-items: center;
-  padding: 6px;
+  padding: 8px 10px;
   margin-bottom: 15px;
   margin-left: 10px;
-  border-radius: 20px;
-  background: var(--panel);
-  border: 1px solid var(--panel-border);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  border-radius: var(--ui-radius-lg);
+  /* Solid: the open selection toolbar overlaps the transport */
+  background: var(--ui-surface-solid);
+  border: 1px solid var(--ui-edge);
   z-index: 501;
+}
+
+/* Measure +/− and the selection toolbar: tinted tiles like the rest of the studio */
+.measure-tools button {
+  border: none;
+  border-radius: var(--ui-radius-md);
+  background: var(--ui-tint);
+  color: var(--ui-icon);
+  font-weight: 600;
+}
+
+.measure-tools button:hover:not(:disabled) {
+  background: var(--ui-tint-hover);
+  box-shadow: none;
+  transform: none;
 }
 
 .measure-group {
@@ -86,39 +101,36 @@
   flex: 1 1 auto;
   height: 36px;
   padding: 0 14px;
-  border-radius: 10px;
-  border: 1px solid var(--panel-border);
-  background: var(--panel);
-  color: var(--text);
   font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  white-space: nowrap;
-  /* Hover/active feedback comes from the global button:hover/:active rules
-     in css/controls.css — no need to redeclare it here. */
 }
 
 .insert-measure-row .sel-delete-measure-btn {
   color: #b3261e;
-  border-color: rgba(179, 38, 30, 0.4);
+  background: rgba(179, 38, 30, 0.08);
 }
 
-.insert-measure-row .sel-delete-measure-btn:hover {
-  background: rgba(179, 38, 30, 0.08);
+.insert-measure-row .sel-delete-measure-btn:hover:not(:disabled) {
+  background: rgba(179, 38, 30, 0.14);
+}
+
+body.dark .insert-measure-row .sel-delete-measure-btn {
+  color: #ff8a80;
 }
 
 .separator {
   width: 2px;
   height: 20px;
-  background: var(--panel-border);
+  background: var(--ui-tint-hover);
   margin: 0 5px;
   opacity: 0.8;
 }
 
 .measure-tools-label {
-  font-size: 12px;
-  font-weight: 650;
-  opacity: 0.75;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ui-muted);
   margin: 0 auto;
 }
 
@@ -140,10 +152,21 @@
   min-width: 0;
 }
 
+/* Each measure sits on a flat card (not in presentation mode, which lays rows out itself) */
+body:not(.present) .measure-row {
+  padding: 14px 12px 16px;
+  border: 1px solid var(--ui-edge);
+  border-radius: var(--ui-radius-lg);
+  background: var(--ui-surface);
+}
+
 .measure-header {
-  font-size: 12px;
-  opacity: 0.65;
-  margin: 0 0 8px 2px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ui-muted);
+  margin: 0 0 10px 2px;
 }
 
 .mobile-only {
@@ -257,17 +280,45 @@
 
   .handpan-panel.selection-mode #panelControlsSlot,
   .handpan-panel.controls-mode #panelControlsSlot {
+    transition: opacity 0.18s ease, translate 0.18s ease;
     display: flex;
     flex-direction: column;
     align-items: stretch;
     width: 100%;
-    background: var(--panel);
-    border: 1px solid var(--panel-border);
-    border-radius: 16px;
+    background: var(--ui-surface);
+    border: 1px solid var(--ui-edge);
+    border-radius: var(--ui-radius-lg);
     box-shadow: none;
     padding: 12px;
     box-sizing: border-box;
     overflow: visible;
+  }
+
+  @starting-style {
+    .handpan-panel.selection-mode #panelControlsSlot,
+    .handpan-panel.controls-mode #panelControlsSlot {
+      opacity: 0;
+      translate: 0 8px;
+    }
+  }
+
+  /* Closing: js/mobile-menu.js holds controls-mode for this fade, then restores the pan */
+  .handpan-panel.controls-closing #panelControlsSlot {
+    opacity: 0;
+    translate: 0 8px;
+  }
+
+  /* ...which fades back in */
+  .handpan-panel .handpan-wrap,
+  .handpan-panel .hp-corner-btn {
+    transition: opacity 0.18s ease, background 0.2s;
+  }
+
+  @starting-style {
+    .handpan-panel .handpan-wrap,
+    .handpan-panel .hp-corner-btn {
+      opacity: 0;
+    }
   }
 
   .handpan-panel.selection-mode,
@@ -281,44 +332,36 @@
     padding: 12px;
   }
 
-  /* Strip every .pattern-row.player constraint from the wrapper */
+  /* Controls moved into the panel: a 3×3 grid of icon + label tiles.
+     Two IDs outrank the desktop bar's #primaryControlsWrapper rules, so no !important. */
   #panelControlsSlot #primaryControlsWrapper {
-    display: flex !important;
-    position: static !important;
-    height: auto !important;
-    min-height: 0 !important;
-    max-height: none !important;
-    flex-wrap: wrap !important;
-    overflow: visible !important;
-    background: none !important;
-    border: none !important;
-    box-shadow: none !important;
-    padding: 0 !important;
-    border-radius: 0 !important;
-    width: 100% !important;
-    gap: 8px !important;
-    justify-content: center !important;
-    align-items: center !important;
+    display: block;
+    height: auto;
+    padding: 0;
+    overflow: visible;
   }
 
-  #panelControlsSlot .scrollable-controls-wrapper {
-    width: 100% !important;
-    overflow: visible !important;
+  #panelControlsSlot .scroll-indicator,
+  #panelControlsSlot .controls-primary > .dropdown {
+    display: none;
   }
 
-  #panelControlsSlot .scroll-indicator {
-    display: none !important;
+  #panelControlsSlot .controls-primary {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
   }
 
-  #panelControlsSlot .scrollable-controls-content {
-    flex-wrap: wrap !important;
-    overflow: visible !important;
-    white-space: normal !important;
-    justify-content: center !important;
-    gap: 8px !important;
-    padding: 0 !important;
-    width: 100% !important;
-    scrollbar-width: none !important;
+  #panelControlsSlot .ctl-btn {
+    flex-direction: column;
+    height: 72px;
+    gap: 6px;
+    font-size: 12px;
+  }
+
+  #panelControlsSlot .ctl-btn svg {
+    width: 20px;
+    height: 20px;
   }
 
   .handpan-panel.selection-mode #measureTools {

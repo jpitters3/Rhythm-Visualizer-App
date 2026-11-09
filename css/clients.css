@@ -73,7 +73,7 @@
 .clients-view button.cl-chip.active {
   background: var(--accent);
   border-color: var(--accent);
-  color: #fff;
+  color: var(--accent-ink);
 }
 
 .cl-sort {

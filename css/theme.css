@@ -9,7 +9,7 @@ body {
   margin: 0;
   padding: 5px;
   font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-  background: linear-gradient(160deg, #fdf8ee 0%, #ece7f5 60%, #f5eef8 100%);
+  background: var(--ui-ground);
   color: var(--text);
   min-height: 100dvh;
   min-height: var(--app-height, 100dvh);
@@ -17,15 +17,9 @@ body {
   position: relative;
 }
 
-/* Subtle fixed atmosphere layer.
-   Light mode: soft colour blooms (a photo here reads as a visible vignette
-   at any opacity low enough not to fight the grid, so gradients instead).
-   Dark mode: the starry-sky photo works because stars are sparse, low-contrast. */
-body::after {
+/* Dark mode only: faint starry sky behind the app (sparse, so it never fights the grid). */
+body.dark::after {
   content: "";
-  background-image:
-    radial-gradient(ellipse 60% 45% at 12% 8%, rgba(255, 209, 102, 0.16), transparent 70%),
-    radial-gradient(ellipse 55% 45% at 90% 95%, rgba(var(--accent-rgb), 0.10), transparent 70%);
   position: fixed;
   /* Fixed layer, painted once — no scroll-driven repaint cost */
   inset: 0;
@@ -33,14 +27,7 @@ body::after {
   pointer-events: none;
   will-change: transform;
   transform: translateZ(0);
-  /* Force its own GPU compositing layer */
-}
-
-body.dark::after {
-  background-image: url('../public/assets/images/backgrounds/starry-sky.jpg');
-  background-position: center top;
-  background-size: cover;
-  background-repeat: no-repeat;
+  background: url('../public/assets/images/backgrounds/starry-sky.jpg') center top / cover no-repeat;
   opacity: 0.12;
 }
 
@@ -64,42 +51,90 @@ h2 {
   --accent-dark:  #013270;
   --accent-light: #1e79e8;
   --accent-rgb:   2, 68, 150;
+  --accent-ink:   #ffffff; /* text on an accent background */
+
+  /* Panafide+ brand gradient (logo "+", upgrade buttons, badges) */
+  --plus-start: #1e3a8a;
+  --plus-end:   #c026d3;
 
   /* LIGHT MODE */
-  --bg: #f9f6ef;
-  --panel: #f4f1e8;
-  --panel-rgb: 244, 241, 232;
-  --panel-border: #dbd5c8;
-  --offwhite: #faf8f2;
+  /* App-wide surfaces, in the studio facelift palette */
+  --bg: #f2eef7;
+  --panel: #f7f5fa;
+  --panel-rgb: 247, 245, 250;
+  --panel-border: #e0dcea;
+  --offwhite: #faf9fc;
   --text: #2f2f2f;
-  --cell-bg: #fffef8;
-  --cell-border: #dbd5c8;
-  --cell-on: #eaeaea;
+  --cell-bg: rgba(var(--accent-rgb), 0.07);
+  --cell-border: transparent;
+  --cell-on: #ffffff;
   --play-glow: rgba(var(--accent-rgb), 0.35);
   --down-glow: rgba(97, 10, 66, 0.22);
   --up-glow: rgba(2, 68, 150, 0.22);
-  --btn-bg: #e8e5dc;
+  --btn-bg: #e9e6f2;
   --btn-active: #f1cd00;
   --primary-color: #f1cd00;
+
+  /* ── Studio UI (plan/studio-facelift.md): soft tonal ── */
+  --ui-ground: linear-gradient(180deg, #f2eef7 0%, #e7e2f1 100%);
+  --ui-surface: rgba(255, 255, 255, 0.6);
+  --ui-surface-solid: var(--panel);
+  --ui-tint: rgba(var(--accent-rgb), 0.08);
+  --ui-tint-hover: rgba(var(--accent-rgb), 0.14);
+  --ui-ink: #1f2f52;
+  --ui-icon: #1f3a68;
+  --ui-muted: #4b5878;
+  --ui-faint: #6b7591;
+  --ui-on: #1f3a68;
+  --ui-on-ink: #ffffff;
+  --ui-play: var(--accent);
+  --ui-play-ink: #ffffff;
+  --ui-ring: #1f3a68;
+  --ui-ring-halo: rgba(31, 58, 104, 0.12);
+  --ui-edge: transparent;
+  --ui-brass: linear-gradient(180deg, #e2c27d 0%, #c9a052 100%);
+  --ui-brass-solid: #d7b46a;
+  --ui-brass-ink: #1b2033;
+  --ui-radius-sm: 10px;
+  --ui-radius-md: 14px;
+  --ui-radius-lg: 20px;
+  --ui-ctl: 44px;
 }
 
 body.dark {
-  background: linear-gradient(160deg, #0f0f14 0%, #12101a 100%);
   /* DARK MODE */
-  --bg: #0f0f14;
-  --panel: #16161f;
-  --panel-rgb: 22, 22, 31;
-  --panel-border: #2f2f45;
-  --offwhite: #1a1a24;
+  --bg: #0f1220;
+  --panel: #1d2236;
+  --panel-rgb: 29, 34, 54;
+  --panel-border: #2e3550;
+  --offwhite: #1a1f33;
   --text: #eaeaf0;
-  --cell-bg: #222233;
-  --cell-border: #2f2f45;
-  --cell-on: #5b8cff;
+  --cell-bg: rgba(255, 255, 255, 0.07);
+  --cell-border: transparent;
+  --cell-on: #2a3150;
   --play-glow: rgba(253, 3, 128, 0.45);
   --down-glow: rgba(253, 3, 128, 0.28);
   --up-glow: rgba(30, 121, 232, 0.28);
-  --btn-bg: #2a2a38;
+  --btn-bg: #272d45;
   --btn-active: #5b8cff;
+
+  /* Studio UI, dark: C layout with ink + brass colours */
+  --ui-ground: linear-gradient(180deg, #0f1220 0%, #151a2b 100%);
+  --ui-surface: var(--panel);
+  --ui-surface-solid: var(--panel);
+  --ui-tint: rgba(255, 255, 255, 0.06);
+  --ui-tint-hover: rgba(255, 255, 255, 0.1);
+  --ui-ink: #f4ecda;
+  --ui-icon: #f4ecda;
+  --ui-muted: #b9a476;
+  --ui-faint: #9c97a8;
+  --ui-on: var(--ui-brass);
+  --ui-on-ink: #1b2033;
+  --ui-play: var(--ui-brass);
+  --ui-play-ink: #1b2033;
+  --ui-ring: #d7b46a;
+  --ui-ring-halo: rgba(215, 180, 106, 0.18);
+  --ui-edge: rgba(215, 180, 106, 0.22);
 }
 
 /* ── Accent colour presets ──
@@ -112,11 +147,21 @@ body.accent-purple {
   --accent-rgb:   74, 46, 140;
 }
 
-/* Mobile Background: Fill vertically */
+/* Dark mode: brass is the accent, whatever the preset (presets are light-mode only).
+   After the presets so it wins at equal specificity. */
+body.dark {
+  --accent:       #d7b46a;
+  --accent-dark:  #c9a052;
+  --accent-light: #e2c27d;
+  --accent-rgb:   215, 180, 106;
+  --accent-ink:   #1b2033;
+  --plus-start:   #3b5bdb;
+  --plus-end:     #d03be0;
+}
+
+/* Mobile: centre the stars vertically */
 @media (max-width: 768px) {
-  body::after {
-    background-size: cover;
-    background-repeat: no-repeat;
-    background-position: center center;
+  body.dark::after {
+    background-position: center;
   }
 }

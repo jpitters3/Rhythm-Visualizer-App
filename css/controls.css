@@ -15,17 +15,12 @@
   border: 1px solid var(--panel-border);
 }
 
-/* Primary controls bar — flush below header, semi-transparent strip */
+/* Primary controls bar — flush below header, on the page ground */
 #primaryControlsWrapper.pattern-row.player {
   height: 58px;
+  border: none;
   border-radius: 0;
-  border-left: none;
-  border-right: none;
-  border-top: none;
-  /* Strip and edge fade out at both ends, matching the header */
-  border-bottom: 1px solid transparent;
-  border-image: linear-gradient(90deg, transparent, var(--panel-border) 15%, var(--panel-border) 85%, transparent) 1;
-  background: linear-gradient(90deg, transparent, rgba(var(--panel-rgb, 255,255,255), 0.6) 15%, rgba(var(--panel-rgb, 255,255,255), 0.6) 85%, transparent);
+  background: none;
   padding: 6px 24px;
   gap: 6px;
   flex-wrap: nowrap;
@@ -82,9 +77,10 @@ button:active:not(:disabled) {
   transition: transform 0.07s ease-out;
 }
 
+/* Active / primary buttons use the facelift "on" fill (navy, brass in dark) */
 button.active {
-  background: var(--btn-active);
-  box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.15);
+  background: var(--ui-on);
+  color: var(--ui-on-ink);
 }
 
 button:disabled {
@@ -92,17 +88,64 @@ button:disabled {
   cursor: not-allowed;
 }
 
-button.compose-btn {
-  font-size: 20px;
+/* Studio controls: icon + label chips (a 3×3 tile grid on mobile, css/measure-actions.css) */
+.ctl-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 40px;
+  padding: 0 12px;
+  border-radius: var(--ui-radius-md);
+  background: var(--ui-tint);
+  color: var(--ui-icon);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.ctl-btn:hover:not(:disabled) {
+  background: var(--ui-tint-hover);
+  box-shadow: none;
+  transform: none;
+}
+
+.ctl-btn.active,
+.ctl-btn.active:hover:not(:disabled) {
+  background: var(--ui-on);
+  color: var(--ui-on-ink);
+  box-shadow: none;
+}
+
+.ctl-btn svg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.ctl-glyph {
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.ctl-dots {
+  display: flex;
+  gap: 3px;
+}
+
+.ctl-dots span {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--down-fill);
+}
+
+.ctl-dots span + span {
+  background: var(--up-fill);
 }
 
 button#metronomeBtn svg {
   width: 30px;
   height: 30px;
-}
-
-button#presentBtn {
-  font-size: 20px;
 }
 
 select {
@@ -117,7 +160,6 @@ select {
 
 .bpm-control input[type=range] {
   width: 140px;
-  accent-color: var(--accent-glow, var(--accent));
 }
 
 /* Dropdown Container */
@@ -191,148 +233,85 @@ select {
   justify-content: center;
 }
 
-/* --- Transport buttons: match composer playbar aesthetic --- */
+/* Transport: tinted tiles; Play is the one bright control */
 .transport-group .t-play-btn,
 .transport-group .t-metro-btn,
 .transport-group .t-subdiv-btn,
-.transport-group .t-countdown-btn {
-  background: none;
-  border: 1px solid var(--panel-border);
-  border-radius: 8px;
-  padding: 6px 14px;
-  height: 36px;
+.transport-group .t-countdown-btn,
+.transport-group .t-tap-btn,
+.transport-group .t-ts-wrapper,
+.bpm-control {
+  height: var(--ui-ctl);
+  min-width: var(--ui-ctl);
+  padding: 0 14px;
+  border: none;
+  border-radius: var(--ui-radius-md);
+  background: var(--ui-tint);
+  color: var(--ui-icon);
   font-size: 14px;
-  font-weight: 500;
-  color: var(--text);
-  transition: border-color 0.15s, color 0.15s, background 0.15s;
+  font-weight: 600;
+  box-shadow: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
+}
+
+/* Low specificity on purpose: the "on" states and Play below must win over hover */
+.transport-group button:hover,
+.transport-group .t-ts-wrapper:hover {
+  background: var(--ui-tint-hover);
+  box-shadow: none;
+  transform: none;
 }
 
 .transport-group .t-subdiv-btn {
-  font-size: 11px;
-  font-weight: 700;
+  font-size: 12px;
   letter-spacing: 0.5px;
-  padding: 6px 10px;
-}
-
-.transport-group .t-play-btn:hover,
-.transport-group .t-metro-btn:hover,
-.transport-group .t-subdiv-btn:hover,
-.transport-group .t-countdown-btn:hover {
-  border-color: var(--accent-glow, var(--accent-light));
-  color: var(--accent-glow, var(--accent-light));
-}
-
-.transport-group .t-metro-btn.no-hover:hover,
-.transport-group .t-subdiv-btn.no-hover:hover,
-.transport-group .t-countdown-btn.no-hover:hover {
-  border-color: var(--panel-border);
-  color: var(--text);
-  background: none;
-}
-
-.transport-group .t-play-btn.active {
-  background: rgba(var(--accent-rgb), 0.12);
-  border-color: var(--accent-glow, var(--accent-light));
-  color: var(--accent-glow, var(--accent-light));
 }
 
 .transport-group .t-subdiv-btn.active,
-.transport-group .t-countdown-btn.active {
-  background: rgba(var(--accent-rgb), 0.12);
-  border-color: var(--accent-glow, var(--accent-light));
-  color: var(--accent-glow, var(--accent-light));
+.transport-group .t-countdown-btn.active,
+.transport-group .t-tap-btn.tapping,
+.transport-group .t-metro-btn.metro-beeps {
+  background: var(--ui-on);
+  color: var(--ui-on-ink);
 }
 
-/* Light mode overrides */
-body:not(.dark) .transport-group .t-play-btn,
-body:not(.dark) .transport-group .t-metro-btn,
-body:not(.dark) .transport-group .t-subdiv-btn,
-body:not(.dark) .transport-group .t-countdown-btn {
-  border-color: rgba(var(--accent-rgb), 0.25);
-  color: var(--accent-dark);
-}
-
-body:not(.dark) .transport-group .t-play-btn:hover,
-body:not(.dark) .transport-group .t-metro-btn:hover,
-body:not(.dark) .transport-group .t-subdiv-btn:hover,
-body:not(.dark) .transport-group .t-countdown-btn:hover {
-  border-color: var(--accent);
+/* Shaker sound: same "on" fill in the downbeat colour so the two sounds read apart */
+.transport-group .t-metro-btn.metro-shaker {
+  background: var(--down-fill);
   color: #fff;
-  background: var(--accent);
 }
 
-body:not(.dark) .transport-group .t-metro-btn.no-hover:hover,
-body:not(.dark) .transport-group .t-subdiv-btn.no-hover:hover,
-body:not(.dark) .transport-group .t-countdown-btn.no-hover:hover {
-  border-color: rgba(var(--accent-rgb), 0.25);
-  color: var(--accent-dark);
-  background: none;
-}
-
-body:not(.dark) .transport-group .t-play-btn.active {
-  background: rgba(var(--accent-rgb), 0.12);
-  border-color: var(--accent);
-  color: var(--accent-dark);
-}
-
-body:not(.dark) .transport-group .t-subdiv-btn.active,
-body:not(.dark) .transport-group .t-countdown-btn.active {
-  background: rgba(var(--accent-rgb), 0.12);
-  border-color: var(--accent);
-  color: var(--accent-dark);
-}
-
-/* Measure settings (beats × subdivision), relocated into the transport bar —
-   match the transport buttons' look (outlined pill, transparent fill), not
-   the top control strip's filled-pill .ts-wrapper style it came from. */
-.transport-group .t-ts-wrapper {
-  background: none;
-  border: 1px solid var(--panel-border);
-  border-radius: 8px;
-  transition: border-color 0.15s;
-}
-
-.transport-group .t-ts-wrapper:hover {
-  border-color: var(--accent-glow, var(--accent-light));
+.transport-group .t-play-btn,
+.transport-group .t-play-btn:hover:not(:disabled) {
+  min-width: 56px;
+  background: var(--ui-play);
+  color: var(--ui-play-ink);
 }
 
 .transport-group .t-ts-wrapper .ts-select {
-  font-size: 14px;
-  font-weight: 500;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ui-ink);
 }
 
-body:not(.dark) .transport-group .t-ts-wrapper {
-  border-color: rgba(var(--accent-rgb), 0.25);
-}
-
-body:not(.dark) .transport-group .t-ts-wrapper:hover {
-  border-color: var(--accent);
-}
-
-/* --- BPM control: refined card style --- */
 .bpm-control {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: 8px;
-  background: none;
-  padding: 4px 12px;
-  border-radius: 8px;
-  border: 1px solid var(--panel-border);
-  height: 36px;
-  box-sizing: border-box;
+  gap: 10px;
+  cursor: default;
 }
 
-body:not(.dark) .bpm-control {
-  border-color: rgba(var(--accent-rgb), 0.25);
+.bpm-control input[type=range] {
+  accent-color: var(--ui-ring);
 }
 
 .bpm-control label,
 .t-bpm-label {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 600;
-  color: var(--text);
-  opacity: 0.55;
+  letter-spacing: 0.08em;
+  color: var(--ui-muted);
   white-space: nowrap;
 }
 
@@ -341,9 +320,10 @@ body:not(.dark) .bpm-control {
   width: 46px;
   border: none;
   background: transparent;
-  color: var(--text);
-  font-size: 13px;
+  color: var(--ui-ink);
+  font-size: 15px;
   font-weight: 700;
+  font-variant-numeric: tabular-nums;
   text-align: center;
   padding: 0;
   height: auto;
@@ -358,47 +338,10 @@ body:not(.dark) .bpm-control {
 }
 .t-bpm-num:focus {
   outline: none;
-  color: var(--accent-glow, var(--accent-light));
+  color: var(--ui-ring);
 }
 
-/* Tap button */
-.transport-group .t-tap-btn {
-  background: none;
-  border: 1px solid var(--panel-border);
-  border-radius: 8px;
-  padding: 6px 14px;
-  height: 36px;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text);
-  transition: border-color 0.15s, color 0.15s, background 0.15s;
-}
-
-.transport-group .t-tap-btn:hover {
-  border-color: var(--accent-glow, var(--accent-light));
-  color: var(--accent-glow, var(--accent-light));
-}
-
-.transport-group .t-tap-btn.tapping {
-  background: rgba(var(--accent-rgb), 0.18);
-  border-color: var(--accent-glow, var(--accent-light));
-  color: var(--accent-glow, var(--accent-light));
-}
-
-body:not(.dark) .transport-group .t-tap-btn {
-  border-color: rgba(var(--accent-rgb), 0.25);
-  color: var(--accent-dark);
-}
-
-body:not(.dark) .transport-group .t-tap-btn:hover,
-body:not(.dark) .transport-group .t-tap-btn.tapping {
-  border-color: var(--accent);
-  color: #fff;
-  background: var(--accent);
-}
-
-
-/* ===== Scollable Controls Wrapper ===== */
+/* ===== Scrollable Controls Wrapper ===== */
 .scrollable-controls-wrapper {
   position: relative;
   width: 100%;
@@ -439,94 +382,115 @@ body:not(.dark) .transport-group .t-tap-btn.tapping {
   background: linear-gradient(to left, var(--bg) 80%, transparent);
 }
 
-#themeBtn,
-#labelNotationBtn,
-#clearBtn-A,
-#clearBtn-B,
-.compose-btn,
-#stickingBtn {
-  min-width: 52px;
-}
-
 @media (max-width: 768px) {
   .scroll-indicator {
     display: flex;
   }
 
-  .bpm-control input[type=range] {
-    width: 100px;
-  }
-
-  /* Prevent transport from overflowing the panel on mid-size phones */
-  .transport-group {
-    flex-wrap: nowrap;
-    gap: 6px;
-  }
-
-  .transport-group .t-play-btn,
-  .transport-group .t-metro-btn,
-  .transport-group .t-countdown-btn {
-    padding: 6px 7px;
-    font-size: 13px;
-  }
-
-  /* Measure settings now live in the transport bar on mobile too (moved out
-     of #primaryControlsWrapper, which is hidden entirely on mobile — see
-     below) — keep it compact so it fits alongside BPM and the other
-     transport buttons in one row. */
-  .t-ts-wrapper {
-    padding: 0 8px;
-    height: 32px;
-  }
-
-  .t-ts-wrapper .ts-select {
-    font-size: 13px;
-    min-width: 18px;
-  }
-}
-
-/* On small phones hide the BPM slider — the number input + tap covers it */
-@media (max-width: 430px) {
-  .bpm-control input[type=range] {
-    display: none;
-  }
-
-  .transport-group {
-    gap: 5px;
-  }
-
-  .transport-group .t-play-btn,
-  .transport-group .t-metro-btn,
-  .transport-group .t-countdown-btn {
-    padding: 6px 6px;
-    font-size: 12px;
-  }
-
-  .t-ts-wrapper {
-    padding: 0 6px;
-  }
-}
-
-@media (max-width: 768px) {
-  /* Primary controls bar hidden on mobile until toggled */
+  /* Controls open from the handpan panel on mobile (layout.css hides the toggle on desktop) */
   .mobile-controls-btn {
-    display: flex !important;
+    display: flex;
   }
 
   #primaryControlsWrapper {
     display: none;
   }
 
-  .t-bpm-label {
+  /* Transport sheet: tall equal-radius tiles, number over a small label */
+  .controls-transport .transport-container,
+  .controls-transport .transport-group {
+    width: 100%;
+    flex-wrap: nowrap;
+    gap: 8px;
+  }
+
+  .controls-transport .t-metro-btn,
+  .controls-transport .t-countdown-btn,
+  .controls-transport .t-play-btn,
+  .controls-transport .bpm-control,
+  .controls-transport .t-ts-wrapper {
+    height: 52px;
+    padding: 0;
+  }
+
+  .controls-transport .t-metro-btn,
+  .controls-transport .t-countdown-btn {
+    width: 48px;
+  }
+
+  .controls-transport .t-metro-btn svg,
+  .controls-transport .t-countdown-btn svg {
+    width: 24px;
+    height: 24px;
+  }
+
+  .controls-transport .t-play-btn {
+    width: 64px;
+  }
+
+  .controls-transport .bpm-control,
+  .controls-transport .t-ts-wrapper {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .controls-transport .bpm-control {
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .controls-transport .bpm-control input[type=range],
+  .controls-transport .ts-sep {
     display: none;
   }
 
-  .bpm-control {
-    padding: 4px 8px;
-    gap: 4px;
+  /* Same box height for the BPM number and the beat selects, so both labels line up */
+  .controls-transport .t-bpm-num,
+  .controls-transport .t-ts-wrapper .ts-select {
+    height: 20px;
+    padding: 0;
+    font-size: 19px;
+    line-height: 20px;
   }
 
-  .t-bpm-num {
-    width: 36px;
+  .controls-transport .t-bpm-num {
+    order: -1;
+    width: 100%;
+  }
+
+  .controls-transport .t-ts-wrapper {
+    display: grid;
+    grid-template-columns: auto auto;
+    justify-content: center;
+    align-content: center;
+    column-gap: 3px;
+    row-gap: 3px;
+  }
+
+  /* Size each select to its value, not its longest option ("12", "♩³"), so "4 ♪" sits together.
+     Without field-sizing, align the two values toward each other instead. */
+  .controls-transport .t-ts-wrapper .ts-select {
+    min-width: 0;
+    field-sizing: content;
+  }
+
+  .controls-transport .t-beats-select {
+    text-align: right;
+    text-align-last: right;
+  }
+
+  .controls-transport .t-sub-select {
+    text-align: left;
+    text-align-last: left;
+  }
+
+  .controls-transport .t-ts-wrapper::after {
+    content: "BEATS";
+    grid-column: 1 / -1;
+    justify-self: center;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    color: var(--ui-muted);
   }
 }

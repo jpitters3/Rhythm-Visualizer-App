@@ -325,7 +325,7 @@
 .exercise-plan-btn.in-plan {
   border-color: var(--accent);
   background: var(--accent);
-  color: #fff;
+  color: var(--accent-ink);
   font-size: 13px;
 }
 
