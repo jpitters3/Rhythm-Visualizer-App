@@ -6,11 +6,11 @@
  * Dry run by default; pass --send to actually send.
  *
  * Usage:
- *   node scripts/backfill-tekmatix.js --prod                 # count only
- *   node scripts/backfill-tekmatix.js --prod --send --limit 5
- *   node scripts/backfill-tekmatix.js --prod --send
+ *   node scripts/backfill-tekmatix.js                 # count only
+ *   node scripts/backfill-tekmatix.js --send --limit 5
+ *   node scripts/backfill-tekmatix.js --send
  *
- * Requires in .env (or .env.prod with --prod): VITE_SUPABASE_URL,
+ * Requires in .env.prod (or .env with --staging): VITE_SUPABASE_URL,
  * SUPABASE_SERVICE_ROLE_KEY, TEKMATIX_SYNC_SECRET
  */
 

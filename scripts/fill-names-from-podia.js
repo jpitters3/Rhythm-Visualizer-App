@@ -8,10 +8,10 @@
  * Dry run by default; pass --apply to write.
  *
  * Usage:
- *   node scripts/fill-names-from-podia.js <podia.csv> --prod
- *   node scripts/fill-names-from-podia.js <podia.csv> --prod --apply
+ *   node scripts/fill-names-from-podia.js <podia.csv>
+ *   node scripts/fill-names-from-podia.js <podia.csv> --apply
  *
- * Requires in .env (or .env.prod with --prod): VITE_SUPABASE_URL,
+ * Requires in .env.prod (or .env with --staging): VITE_SUPABASE_URL,
  * SUPABASE_SERVICE_ROLE_KEY
  */
 
@@ -27,7 +27,7 @@ const csvPath = args.find(a => !a.startsWith('--'));
 const apply = args.includes('--apply');
 
 if (!SUPABASE_URL || !SERVICE_ROLE_KEY || !csvPath) {
-  console.error('Usage: node scripts/fill-names-from-podia.js <podia.csv> [--prod] [--apply]');
+  console.error('Usage: node scripts/fill-names-from-podia.js <podia.csv> [--apply] [--staging]');
   process.exit(1);
 }
 

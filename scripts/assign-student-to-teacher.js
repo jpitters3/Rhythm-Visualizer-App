@@ -7,41 +7,47 @@
  * Usage:
  *   node scripts/assign-student-to-teacher.js <teacher_email> <student_email>
  *
- * Requires: VITE_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in .env
+ * Runs against production (.env.prod). Add --staging to use .env instead.
+ * Requires: VITE_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in that file.
  */
 
-require('dotenv').config({ path: require('path').resolve(__dirname, '../.env') });
+const { scriptArgs } = require('./load-env');
 
 const SUPABASE_URL     = process.env.VITE_SUPABASE_URL;
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
-  console.error('Missing VITE_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY in .env');
+  console.error('Missing VITE_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY');
   process.exit(1);
 }
 
-const [, , teacherEmail, studentEmail] = process.argv;
+const [teacherEmail, studentEmail] = scriptArgs;
 
 if (!teacherEmail || !studentEmail) {
-  console.error('Usage: node scripts/assign-student-to-teacher.js <teacher_email> <student_email>');
+  console.error('Usage: node scripts/assign-student-to-teacher.js <teacher_email> <student_email> [--staging]');
   process.exit(1);
 }
 
 async function getUserByEmail(email) {
-  const res = await fetch(
-    `${SUPABASE_URL}/auth/v1/admin/users?email=${encodeURIComponent(email.toLowerCase())}`,
-    {
-      headers: {
-        'apikey': SERVICE_ROLE_KEY,
-        'Authorization': `Bearer ${SERVICE_ROLE_KEY}`,
-      },
-    }
-  );
-  const json = await res.json();
-  if (!res.ok) throw new Error(JSON.stringify(json));
-  const user = json.users?.find(u => u.email.toLowerCase() === email.toLowerCase());
-  if (!user) throw new Error(`No user found with email: ${email}`);
-  return user;
+  let page = 1;
+  while (true) {
+    const res = await fetch(
+      `${SUPABASE_URL}/auth/v1/admin/users?page=${page}&per_page=1000`,
+      {
+        headers: {
+          'apikey': SERVICE_ROLE_KEY,
+          'Authorization': `Bearer ${SERVICE_ROLE_KEY}`,
+        },
+      }
+    );
+    const json = await res.json();
+    if (!res.ok) throw new Error(JSON.stringify(json));
+    const user = json.users?.find(u => u.email?.toLowerCase() === email.toLowerCase());
+    if (user) return user;
+    if (!json.users || json.users.length < 1000) break;
+    page++;
+  }
+  throw new Error(`No user found with email: ${email}`);
 }
 
 async function post(path, body, headers = {}) {

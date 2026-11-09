@@ -6,17 +6,18 @@
  * Usage:
  *   node scripts/delete-user.js <email-or-user-id>
  *
- * Requires env vars (or a .env file):
- *   SUPABASE_URL
+ * Runs against production (.env.prod), after a typed confirmation. Add
+ * --staging to use .env instead. Requires in that file:
+ *   SUPABASE_URL (or VITE_SUPABASE_URL)
  *   SUPABASE_SERVICE_ROLE_KEY   ← must be service role, not anon key
  */
 
-require('dotenv').config();
+const { scriptArgs, isProd } = require('./load-env');
 const { createClient } = require('@supabase/supabase-js');
 
-const TARGET = process.argv[2];
+const TARGET = scriptArgs[0];
 if (!TARGET) {
-  console.error('Usage: node scripts/delete-user.js <email-or-user-id>');
+  console.error('Usage: node scripts/delete-user.js <email-or-user-id> [--staging]');
   process.exit(1);
 }
 
@@ -24,7 +25,7 @@ const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-  console.error('Missing env vars. Required in .env:');
+  console.error('Missing env vars. Required:');
   console.error('  SUPABASE_URL (or VITE_SUPABASE_URL)');
   console.error('  SUPABASE_SERVICE_ROLE_KEY');
   process.exit(1);
@@ -63,10 +64,24 @@ async function deleteStorageFolder(bucket, prefix) {
 
 // ─── Main ────────────────────────────────────────────────────────────────────
 
+// Production deletes can't be undone, so they need the target typed back.
+async function confirmProd(emailOrId) {
+  const rl = require('readline').createInterface({ input: process.stdin, output: process.stdout });
+  const answer = await new Promise(resolve =>
+    rl.question(`This permanently deletes ${emailOrId} from PRODUCTION. Type it again to confirm: `, resolve));
+  rl.close();
+  return answer.trim() === emailOrId;
+}
+
 async function deleteUser(emailOrId) {
   console.log(`\nResolving user: ${emailOrId}`);
   const userId = await resolveUserId(emailOrId);
   console.log(`User ID: ${userId}\n`);
+
+  if (isProd && !(await confirmProd(emailOrId))) {
+    console.log('Cancelled. Nothing was deleted.');
+    return;
+  }
 
   // 1. Storage buckets (must go first — files are not DB rows)
   console.log('Deleting storage files...');

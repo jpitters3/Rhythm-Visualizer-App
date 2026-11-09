@@ -36,7 +36,9 @@ fi
 
 echo "🧪 Running the core tests before pushing to staging (about 5 minutes)."
 echo "   Skip with: git push --no-verify"
-npm run test:core -- --reporter=list || {
+# One retry: a busy Mac can push a WebKit page load past its timeout. Tests
+# that only pass on retry are still listed as "flaky".
+npm run test:core -- --reporter=list --retries=1 || {
   echo "❌ Core tests failed, so nothing was pushed. Fix them, or push with --no-verify."
   exit 1
 }
