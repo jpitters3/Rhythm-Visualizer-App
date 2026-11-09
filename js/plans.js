@@ -58,6 +58,11 @@ export function openPlansModal() {
   plansModal.querySelectorAll('[data-plan-rank]').forEach(el => {
     el.classList.toggle('is-current', Number(el.dataset.planRank) === rank);
   });
+  // Free visitors see Panafide+ recommended; members see their own plan.
+  const featuredRank = rank >= 1 ? rank : 1;
+  plansModal.querySelectorAll('.plan-card').forEach(card => {
+    card.classList.toggle('plan-card--featured', Number(card.dataset.planRank) === featuredRank);
+  });
   document.getElementById('plansUpgradeBtn')?.toggleAttribute('hidden', rank >= 1);
   plansPanel.open();
 }
