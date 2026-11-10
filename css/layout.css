@@ -65,6 +65,12 @@
   white-space: nowrap;
   background: var(--ui-tint);
   color: var(--ui-muted);
+  transition: opacity 0.6s ease;
+}
+
+/* "Saved" fades a few seconds after a save (js/save-status.js) */
+.phrase-save-status.is-fading {
+  opacity: 0;
 }
 
 .phrase-save-status[data-state="saved"] {

@@ -4,7 +4,8 @@ const { createTestUser, deleteTestUser } = require('./utils/auth-helper');
 const { gotoStudio, phraseAction } = require('./helpers');
 
 // The status beside the phrase title must only say "Saved" when the grid
-// matches a confirmed save (js/save-status.js).
+// matches a confirmed save, and that confirmation fades after a few seconds
+// (js/save-status.js). Unsaved states stay visible.
 test('phrase save status follows real saves and edits', async ({ page }) => {
   const user = await createTestUser();
   try {
@@ -28,6 +29,8 @@ test('phrase save status follows real saves and edits', async ({ page }) => {
     await page.fill('#confirmInput', `Status ${Date.now()}`);
     await page.click('#confirmOkBtn');
     await expect(status).toHaveText('Saved', { timeout: 10000 });
+    await expect(status).toBeVisible();
+    await expect(status).toBeHidden({ timeout: 6000 });
 
     await page.locator('.measure-row .cell').nth(1).click();
     await page.keyboard.press('2');
