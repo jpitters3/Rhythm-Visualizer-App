@@ -58,8 +58,13 @@ async function clickMetroToggle(page, containerSelector = '#mainTransport-A') {
  * these live now.
  */
 async function phraseAction(page, label) {
-  await page.click('#gridPhraseNameBtn');
-  await page.locator('#gridPhraseContextMenu button', { hasText: label }).click();
+  const item = page.locator('#gridPhraseContextMenu button', { hasText: label });
+  // Mobile Safari sometimes drops the tap; the button toggles, so only re-tap while it's closed.
+  await expect(async () => {
+    if (!await item.isVisible()) await page.click('#gridPhraseNameBtn');
+    await expect(item).toBeVisible({ timeout: 2000 });
+  }).toPass({ timeout: 15000 });
+  await item.click();
 }
 
 async function openMobileControlsIfNeeded(page) {
