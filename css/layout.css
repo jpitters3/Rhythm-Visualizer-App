@@ -227,9 +227,29 @@ body.dark .phrase-save-status[data-state="saved"] {
 
 /* Mobile */
 @media (max-width: 768px) {
+  /* Nav is a dropdown on mobile, so size the logo column to its content and give the rest to the buttons */
   .app-header {
-    padding: 0 16px;
+    grid-template-columns: auto 0 1fr;
+    padding: 0 12px;
     height: 56px;
+    gap: 8px;
+  }
+
+  .header-actions {
+    gap: 6px;
+  }
+
+  .app-logo {
+    gap: 6px;
+  }
+
+  .app-logo .logo-img {
+    height: 30px;
+  }
+
+  .app-wordmark {
+    font-size: 16px;
+    letter-spacing: 0.04em;
   }
 
   .app-nav {
@@ -353,6 +373,27 @@ body {
 @media (max-width: 768px) {
   .hamburger-btn {
     display: flex;
+  }
+
+  /* The controls grid's Sidebar tile covers this on mobile; frees header room */
+  .mobile-sidebar-btn {
+    display: none;
+  }
+}
+
+/* Smallest phones (e.g. 320px): compact header buttons so the account button fits */
+@media (max-width: 360px) {
+  .hamburger-btn,
+  .notif-bell-btn,
+  .nav-account-btn {
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+  }
+
+  .app-wordmark {
+    font-size: 14px;
+    letter-spacing: 0.02em;
   }
 }
 
