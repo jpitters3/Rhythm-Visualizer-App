@@ -11,9 +11,9 @@ const ALWAYS_ALLOWED = [
   // Cross-origin scripts report only this, with no detail to act on
   /^Script error\.?$/,
   // WebKit reports a failed or cancelled cross-origin request as a page error even
-  // when the app catches it (Chromium reports nothing). It can come after a reason
-  // line, e.g. a third-party API answering without CORS headers, so not anchored.
-  /Fetch API cannot load .* due to access control checks/,
+  // when the app catches it (Chromium reports nothing). On CI the "Fetch API cannot
+  // load https:/" start arrives cut off, so match WebKit's fixed ending instead.
+  /due to access control checks\.?$/m,
   /is not allowed by Access-Control-Allow-Origin/,
 ];
 const MARK = '[page-error] ';
