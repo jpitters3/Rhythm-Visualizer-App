@@ -85,6 +85,10 @@ export function setIsCalibrationMode(v) { isCalibrationMode = v; }
 export let currentLesson = null;
 export function setCurrentLesson(l) { currentLesson = l; }
 
+// Free play (js/free-play.js): just the pan; the grid neither plays nor takes notes
+export let freePlay = false;
+export function setFreePlay(on) { freePlay = on; }
+
 // Auth State (Migrated from auth.js/profile.js)
 export let currentUser = null;
 export function setCurrentUser(u) { currentUser = u; }

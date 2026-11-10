@@ -60,6 +60,7 @@ import { initManageSubscription } from './manage-subscription.js';
 import { initSaveStatus } from './save-status.js';
 import { initAutoSave } from './autosave.js';
 import { initNotationGuides } from './notation-guides.js';
+import { initFreePlay } from './free-play.js';
 import { initScrollIndicators } from './scroll-indicators.js';
 import { initMethod, wireMethodEvents } from './method.js';
 import { initExercises } from './exercises.js';
@@ -135,6 +136,7 @@ async function init() {
     initSaveStatus();
     initAutoSave();
     initNotationGuides();
+    initFreePlay();
     initMethod();
     wireMethodEvents();
     initExercises();

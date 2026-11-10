@@ -273,6 +273,7 @@ export function initPanelResize() {
   function applyHeight(desiredTotalPx, { user = false } = {}) {
     if (panelShowsCard()) return panel.getBoundingClientRect().height;
     syncTransportReserve(); // #main's bottom can move without the bar resizing
+    if (document.body.classList.contains('free-play')) return fillForFreePlay();
     const b = heightBounds();
     const floor = user || panel.classList.contains('hp-compact') ? b.floor : b.normalFloor;
     const ceiling = Math.max(floor, b.ceiling);
@@ -283,6 +284,17 @@ export function initPanelResize() {
     syncWrapSize(clampedTotal - b.reserve, b.base + (compact ? 0 : b.rowH), b.padV, imageAspect());
     updateAria(clampedTotal, b.floor, ceiling);
     return clampedTotal;
+  }
+
+  // Free play: no grid, so the panel takes the whole column and the pan is as
+  // big as the width or the height allows (centred by CSS)
+  function fillForFreePlay() {
+    const reserve = transportBarHeight();
+    const total = main.getBoundingClientRect().height;
+    panel.classList.remove('hp-compact');
+    panel.style.height = `${total}px`;
+    syncWrapSize(total - reserve, measureChromeHeight() + topRowHeight(), wrapVerticalPadding(), imageAspect());
+    return total;
   }
 
   // Separator value: 100 = pan at its largest, 0 = grid at its largest
@@ -325,6 +337,12 @@ export function initPanelResize() {
     if (onOpen) panel.classList.remove('hp-compact');
     applyHeight(onOpen ? Math.max(wanted, heightBounds().normalFloor) : wanted);
   }
+
+  Bus.on(BUS_EVENT.FREE_PLAY_CHANGED, (e) => {
+    if (!mq.matches) return;
+    if (e.detail?.on) applyHeight(0);
+    else restoreSavedHeight();
+  });
 
   // Restore saved panel height when studio is opened
   window.addEventListener('routeChanged', (e) => {

@@ -4,7 +4,7 @@ import { setInnerLabel, renderAllMeasures, setActiveSubIndex, updateMultiCursor 
 import { HistoryManager } from './history.js';
 import { isReviewing } from './coaching-mode.js';
 import { COMPOSE_KEY } from './config.js';
-import { isEditMulti, multiEditSessionSlot, advanceMultiEditSessionSlot } from './state.js';
+import { isEditMulti, multiEditSessionSlot, advanceMultiEditSessionSlot, freePlay } from './state.js';
 
 let composeOn = (localStorage.getItem(COMPOSE_KEY) === 'on');
 
@@ -72,6 +72,7 @@ export function writeToSelected(label, { advance = true } = {}, ctx) {
  * session slot and advances the cursor. Otherwise falls back to writeToSelected.
  */
 export function writeToSession(label, { advance = true } = {}, ctx) {
+  if (freePlay) return; // playing the pan, not writing to the grid
   if (isEditMulti && multiEditSessionSlot !== null) {
     if (multiEditSessionSlot >= 4) return;
     setActiveSubIndex(multiEditSessionSlot);

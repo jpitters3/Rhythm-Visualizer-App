@@ -5,7 +5,7 @@ import { supabase } from './supabase-client.js';
 import { currentUser, activeGrid, setActiveGrid } from './state.js';
 import { HistoryManager } from './history.js';
 import { TransportRegistry } from './transport-ui.js';
-import { isListening, getSelectedScaleName, setSelectedScaleName, getScale, setCurrentScale, getCurrentScaleId, playGhostNotes, ghostHandsShown } from './state.js';
+import { isListening, getSelectedScaleName, setSelectedScaleName, getScale, setCurrentScale, getCurrentScaleId, playGhostNotes, ghostHandsShown, freePlay } from './state.js';
 import { SCALE_KEY_LOCAL, SCALE_KEY_REMOTE, AUDIO_DELAY, VISUAL_HEADSTART, BASE_PATH, SCALES } from './config.js';
 import { renderAllMeasures } from './notegrid.js';
 import { coachingSession, isCoaching, isReviewing } from './coaching-mode.js';
@@ -500,9 +500,9 @@ function scheduleAudio(c, step, time) {
     return;
   }
 
-  // 2. PATTERN
+  // 2. PATTERN (silent in free play: only the metronome plays along)
   const realStep = step % c.cells.length;
-  const currentData = c.innerLabels[realStep];
+  const currentData = freePlay ? null : c.innerLabels[realStep];
 
   if (Array.isArray(currentData)) {
     currentData.forEach((label) => {
@@ -516,7 +516,7 @@ function scheduleAudio(c, step, time) {
   }
 
   // Flam: play grace note 30ms before the primary note
-  const flamLabel = c.innerFlams && c.innerFlams[realStep];
+  const flamLabel = !freePlay && c.innerFlams && c.innerFlams[realStep];
   if (flamLabel && typeof flamLabel === 'string') {
     const graceDelay = Math.max(0, delay - 0.050);
     playNoteByLabel(flamLabel, realStep, graceDelay);
@@ -637,8 +637,8 @@ export function tick(ctx, overrideStep = null, audioTime = null, audioStartTime 
   const stepNotes = [];
   const stepHands = [];
 
-  // Only highlight handpan for Grid A
-  const shouldHighlight = (c.id === 'A');
+  // Only highlight handpan for Grid A (and not in free play, where the grid is silent)
+  const shouldHighlight = (c.id === 'A') && !freePlay;
 
   // Highlight Multiple Notes (Visual Only)
   if (Array.isArray(currentData)) {

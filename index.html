@@ -338,16 +338,16 @@
               <svg class="theme-icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" hidden><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></svg>
               <span class="ctl-label">Dark mode</span>
             </button>
-            <button id="clearBtn-A" class="ctl-btn" title="Clear the grid">
+            <button data-compose-only id="clearBtn-A" class="ctl-btn" title="Clear the grid">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"></path></svg>
               <span class="ctl-label">Clear</span>
             </button>
             <button id="grooveBtn" title="Generate a random groove" style="display: none;">Give me a groove!</button>
-            <button id="labelNotationBtn" class="ctl-btn" title="Toggle label notation (Musical vs Numeric)">
+            <button data-compose-only id="labelNotationBtn" class="ctl-btn" title="Toggle label notation (Musical vs Numeric)">
               <span class="ctl-glyph">1 2 3</span>
               <span class="ctl-label">Notation</span>
             </button>
-            <button id="composeBtn" class="compose-btn ctl-btn"
+            <button data-compose-only id="composeBtn" class="compose-btn ctl-btn"
               title="Compose mode: writing advances to the next beat (Alt = write without advance)">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg>
               <span class="ctl-label">Compose</span>
@@ -356,7 +356,7 @@
             <button id="handBtn" style="display: none;" class="active"
               title="Toggle left/right hand coloring">Left/Right:
               Off</button>
-            <button id="stickingBtn" class="ctl-btn" title="Edit Sticking Mode: Click cells to toggle Hand (R/L)">
+            <button data-compose-only id="stickingBtn" class="ctl-btn" title="Edit Sticking Mode: Click cells to toggle Hand (R/L)">
               <span class="ctl-dots" aria-hidden="true"><span></span><span></span></span>
               <span class="ctl-label">Sticking</span>
             </button>
@@ -372,7 +372,7 @@
                  restored with the pattern, just like BPM), not an editing tool
                  or app preference, so they now live beside BPM instead of here. -->
 
-            <button id="undoBtn" class="ctl-btn ctl-desktop" data-undo title="Undo (Cmd+Z)" disabled>
+            <button data-compose-only id="undoBtn" class="ctl-btn ctl-desktop" data-undo title="Undo (Cmd+Z)" disabled>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 14L4 9l5-5"></path><path d="M4 9h10a6 6 0 0 1 0 12h-3"></path></svg>
               <span class="ctl-label">Undo</span>
             </button>
@@ -412,19 +412,19 @@
                 </div>
               </div>
             </div>
-            <button id="zoomOutBtn" class="ctl-btn ctl-desktop" data-zoom-out title="Zoom out (fit more per row)">
+            <button data-compose-only id="zoomOutBtn" class="ctl-btn ctl-desktop" data-zoom-out title="Zoom out (fit more per row)">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-4-4M8 11h6"></path></svg>
               <span class="ctl-label">Zoom out</span>
             </button>
-            <button id="zoomInBtn" class="ctl-btn ctl-desktop" data-zoom-in title="Zoom in (fewer per row)">
+            <button data-compose-only id="zoomInBtn" class="ctl-btn ctl-desktop" data-zoom-in title="Zoom in (fewer per row)">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-4-4M8 11h6M11 8v6"></path></svg>
               <span class="ctl-label">Zoom in</span>
             </button>
-            <button class="ctl-btn ctl-desktop" data-follow-toggle aria-pressed="true" title="Follow playback: scroll the grid with the music">
+            <button data-compose-only class="ctl-btn ctl-desktop" data-follow-toggle aria-pressed="true" title="Follow playback: scroll the grid with the music">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h10M4 12h7M4 18h10"></path><path d="M18 5v14M15 16l3 3 3-3"></path></svg>
               <span class="ctl-label">Follow</span>
             </button>
-            <button id="presentBtn" class="ctl-btn" title="Toggle presentation mode (Esc exits)">
+            <button data-compose-only id="presentBtn" class="ctl-btn" title="Toggle presentation mode (Esc exits)">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V5a1 1 0 0 1 1-1h4M15 4h4a1 1 0 0 1 1 1v4M20 15v4a1 1 0 0 1-1 1h-4M9 20H5a1 1 0 0 1-1-1v-4"></path></svg>
               <span class="ctl-label">Present</span>
             </button>
@@ -432,9 +432,13 @@
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>
               <span class="ctl-label">Chords</span>
             </button>
-            <button class="ctl-btn ctl-mobile" data-pan-hero data-closes-controls title="Pan Hero">
+            <button data-compose-only class="ctl-btn ctl-mobile" data-pan-hero data-closes-controls title="Pan Hero">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><circle cx="12" cy="12" r="5"></circle><circle cx="12" cy="12" r="1"></circle></svg>
               <span class="ctl-label">Pan Hero</span>
+            </button>
+            <button class="ctl-btn" data-free-play data-closes-controls aria-pressed="false" title="Free play: just the handpan, no grid">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><circle cx="12" cy="12" r="3"></circle><path d="M12 3v2M12 19v2M3 12h2M19 12h2"></path></svg>
+              <span class="ctl-label">Free play</span>
             </button>
             <button id="flipSideBtn" class="ctl-btn ctl-mobile" data-closes-controls style="display:none;" title="Flip to Bottom">
               <span class="hp-flip-icon ctl-glyph">🔄</span>
@@ -556,7 +560,7 @@
               <div class="tab-btn-row" style="display: flex; gap: 12px;">
                 <button class="tab-btn" data-tab="handpanSettingsDrawer" title="Scale settings" aria-label="Scale settings"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><circle cx="12" cy="12" r="3"></circle><circle cx="12" cy="6.5" r="1"></circle><circle cx="17" cy="14" r="1"></circle><circle cx="7" cy="14" r="1"></circle></svg></button>
                 <button class="tab-btn" data-chord-panel title="Chords" aria-label="Chords"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg></button>
-                                <button class="tab-btn" data-pan-hero title="Pan Hero" aria-label="Pan Hero"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><circle cx="12" cy="12" r="5"></circle><circle cx="12" cy="12" r="1"></circle></svg></button>
+                                <button data-compose-only class="tab-btn" data-pan-hero title="Pan Hero" aria-label="Pan Hero"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><circle cx="12" cy="12" r="5"></circle><circle cx="12" cy="12" r="1"></circle></svg></button>
                 <button class="tab-btn" id="flipSideBtnDesktop" style="display:none;" title="Flip to Bottom">🔄</button>
               </div>
             </div>
@@ -598,6 +602,7 @@
             <div class="handpan-overlay" id="handpanOverlayBottom"></div>
           </div>
           <div id="ghostNoteSection" class="under-handpan pill-group player">
+            <button type="button" class="free-play-exit" data-free-play aria-pressed="false">Exit free play</button>
             <div class="ghost-pill">
               <button id="ghostBackBtn" title="Move caret left" aria-label="Move caret left" disabled><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg></button>
               <button id="ghostBtn" title="Place ghost note" disabled><img src="./assets/images/ghost.png" /></button>
@@ -633,7 +638,7 @@
       <!-- Measure Actions -->
       <div class="grid-bottom-row player">
         
-        <div class="measure-tools" id="measureTools">
+        <div data-compose-only class="measure-tools" id="measureTools">
           <div class="measure-group desktop-only"
             style="display: flex; flex-direction: column; align-items: flex-start; gap: 2px;">
             <span class="measure-tools-label">Measures</span>

@@ -1475,3 +1475,46 @@ body:not(.dark) .hp-arc-label {
   background: var(--panel-border);
   color: var(--text);
 }
+/* ==== FREE PLAY (js/free-play.js) ==== */
+.free-play-exit {
+  display: none;
+}
+
+body.free-play .main > .left,
+body.free-play #panelResizeHandle,
+body.free-play [data-compose-only],
+body.free-play .ghost-pill {
+  display: none;
+}
+
+body.free-play .free-play-exit {
+  display: flex;
+  align-items: center;
+  height: var(--ui-ctl);
+  padding: 0 18px;
+  border-radius: 999px;
+  background: var(--ui-on);
+  color: var(--ui-on-ink);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+body.free-play .free-play-exit:hover:not(:disabled) {
+  box-shadow: none;
+  transform: none;
+}
+
+@media (max-width: 900px) {
+  /* The panel fills the column (js/panel-resize.js); keep the pan in the middle */
+  body.free-play .handpan-panel {
+    justify-content: center;
+  }
+}
+
+@media (min-width: 901px) {
+  body.free-play .handpan-panel {
+    flex: 1 1 auto;
+    max-width: 760px;
+    margin: 0 auto;
+  }
+}
