@@ -164,7 +164,8 @@ body:not(.present) .measure-row {
   display: flex;
   align-items: center;
   gap: 8px;
-  min-height: 16px;
+  height: 16px; /* fixed, so a header with the legend lines up with the others */
+  white-space: nowrap;
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.08em;
@@ -178,6 +179,7 @@ body:not(.present) .measure-row {
 body:not(.present) .measure-row {
   position: relative;
   isolation: isolate;
+  container-type: inline-size; /* lets the legend hide in narrow measures */
 }
 
 .step-highlight {
@@ -198,6 +200,13 @@ body:not(.present) .measure-row {
   text-transform: none;
   font-weight: 500;
   pointer-events: auto;
+}
+
+/* Measures side by side are too narrow for it: hide rather than wrap the header */
+@container (max-width: 259px) {
+  .notation-legend {
+    display: none;
+  }
 }
 
 .nl-key {
