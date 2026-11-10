@@ -31,7 +31,7 @@ const MAX_ROW_HEIGHT_FOR_MIN = 220; // see measureOneRowHeight()
 const STORAGE_KEY = 'gp_handpanPanelHeight';
 const KEYBOARD_STEP = 24;
 // Smallest the pan may get (wrap width): numbers stay readable and notes tappable.
-const MIN_PAN_WIDTH = 240;
+const MIN_PAN_WIDTH = 215;
 
 export function initPanelResize() {
   const handle = document.getElementById('panelResizeHandle');
