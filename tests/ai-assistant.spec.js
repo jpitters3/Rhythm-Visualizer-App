@@ -1,5 +1,5 @@
 // @ts-check
-const { test, expect } = require('@playwright/test');
+const { test, expect } = require('./fixtures');
 const { waitForPageReady } = require('./utils/page-helper');
 
 test.describe('AI Assistant', () => {

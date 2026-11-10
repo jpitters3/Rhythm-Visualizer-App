@@ -1,5 +1,5 @@
 // @ts-check
-const { test, expect } = require('@playwright/test');
+const { test, expect } = require('./fixtures');
 const { gotoStudio } = require('./helpers');
 
 // js/notation-guides.js: selected-step highlight, its note on the pan, legend/hint.

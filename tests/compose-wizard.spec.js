@@ -1,4 +1,4 @@
-const { test, expect } = require('@playwright/test');
+const { test, expect } = require('./fixtures');
 
 test.describe.skip('Guided Composition Wizard (Creation Current)', () => {
   test.beforeEach(async ({ page }) => {

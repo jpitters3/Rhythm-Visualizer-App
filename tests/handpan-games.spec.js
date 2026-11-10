@@ -1,4 +1,4 @@
-const { test, expect } = require('@playwright/test');
+const { test, expect } = require('./fixtures');
 require('dotenv').config();
 const { createTestUser, deleteTestUser, loginAsTestUser } = require('./utils/auth-helper');
 const { openNavIfNeeded } = require('./helpers');

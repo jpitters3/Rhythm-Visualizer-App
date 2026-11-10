@@ -1,4 +1,4 @@
-const { test, expect } = require('@playwright/test');
+const { test, expect } = require('./fixtures');
 const { gotoStudio, openMobileControlsIfNeeded, phraseAction } = require('./helpers');
 const { createTestUser, deleteTestUser, loginAsTestUser } = require('./utils/auth-helper');
 

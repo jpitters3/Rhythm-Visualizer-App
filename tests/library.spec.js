@@ -1,7 +1,7 @@
 // @ts-check
 // The Library route (js/library.js): browsing, searching, opening, renaming
 // and deleting saved phrases.
-const { test, expect } = require('@playwright/test');
+const { test, expect } = require('./fixtures');
 const { createTestUser, deleteTestUser, loginAsTestUser, supabaseAdmin } = require('./utils/auth-helper');
 const { seedPattern, deleteUserContent } = require('./utils/seed-helper');
 const { navigateTo } = require('./helpers');

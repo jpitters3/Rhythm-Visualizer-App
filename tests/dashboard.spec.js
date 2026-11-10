@@ -1,7 +1,7 @@
 // @ts-check
 // The signed-in student's Dashboard (js/dashboard.js): greeting, active
 // courses, practice plan, and the editable goals.
-const { test, expect } = require('@playwright/test');
+const { test, expect } = require('./fixtures');
 const { createTestUser, deleteTestUser, loginAsTestUser } = require('./utils/auth-helper');
 const { seedCourse, enroll, deleteCourse } = require('./utils/seed-helper');
 const { navigateTo } = require('./helpers');

@@ -1,4 +1,4 @@
-const { test, expect } = require('@playwright/test');
+const { test, expect } = require('./fixtures');
 const { gotoStudio, clearGrid, openMobileControlsIfNeeded, closeMobileControlsIfNeeded } = require('./helpers');
 
 // main.js re-exports gridA/renderAllMeasures (see its own comment on why) —

@@ -20,7 +20,7 @@
  *   2. assign to already-published assignment → email also fired
  */
 
-const { test, expect } = require('@playwright/test');
+const { test, expect } = require('./fixtures');
 require('dotenv').config();
 
 const { createTestUser, deleteTestUser, loginAsTestUser, supabaseAdmin } = require('./utils/auth-helper');

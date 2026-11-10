@@ -1,4 +1,4 @@
-const { test, expect } = require('@playwright/test');
+const { test, expect } = require('./fixtures');
 const { gotoStudio, clearGrid, closeMobileControlsIfNeeded, setBpm } = require('./helpers');
 
 test.describe('Handpan Pulse Animations', () => {

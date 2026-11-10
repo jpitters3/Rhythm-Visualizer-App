@@ -1,5 +1,5 @@
 // @ts-check
-const { test, expect } = require('@playwright/test');
+const { test, expect } = require('./fixtures');
 const { gotoStudio, openMobileControlsIfNeeded } = require('./helpers');
 
 // Free play (js/free-play.js): just the pan; the grid hides and takes no notes.

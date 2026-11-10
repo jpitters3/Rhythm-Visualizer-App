@@ -1,5 +1,5 @@
 // @ts-check
-const { test, expect } = require('@playwright/test');
+const { test, expect } = require('./fixtures');
 const { planAccessChange } = require('../supabase/functions/tekmatix-plus/access.ts');
 
 // Rules behind the tekmatix-plus edge function: Tekmatix client tags and

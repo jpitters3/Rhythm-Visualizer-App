@@ -2,7 +2,7 @@
 // Student-side course use: browsing an enrolled course in the Courses panel,
 // searching its lessons, and moving through lessons with Next/Previous.
 // Admin course editing is covered separately in course_crud.spec.js.
-const { test, expect } = require('@playwright/test');
+const { test, expect } = require('./fixtures');
 const { createTestUser, deleteTestUser, loginAsTestUser } = require('./utils/auth-helper');
 const { seedCourse, enroll, deleteCourse } = require('./utils/seed-helper');
 const { openNavPanel } = require('./helpers');

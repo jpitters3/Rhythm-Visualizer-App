@@ -1,5 +1,5 @@
 // @ts-check
-const { test, expect } = require('@playwright/test');
+const { test, expect } = require('./fixtures');
 const { gotoStudio } = require('./helpers');
 
 // Follow playback (js/grid-autoscroll.js): the grid scrolls with playback while on;

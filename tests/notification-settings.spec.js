@@ -10,7 +10,7 @@
  *   3. After a page refresh the saved preference is reflected in the UI
  */
 
-const { test, expect } = require('@playwright/test');
+const { test, expect } = require('./fixtures');
 require('dotenv').config();
 
 const { createTestUser, deleteTestUser, loginAsTestUser, supabaseAdmin } = require('./utils/auth-helper');

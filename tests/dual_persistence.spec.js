@@ -1,4 +1,4 @@
-const { test, expect } = require('@playwright/test');
+const { test, expect } = require('./fixtures');
 const { gotoStudio, openMobileControlsIfNeeded } = require('./helpers');
 
 // Dual grid has no control any more (the controls bar shows the light/dark toggle); skipped until it returns.

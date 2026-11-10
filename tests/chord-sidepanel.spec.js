@@ -1,5 +1,5 @@
 // @ts-check
-const { test, expect } = require('@playwright/test');
+const { test, expect } = require('./fixtures');
 const { gotoStudio, openMobileControlsIfNeeded } = require('./helpers');
 
 // Chords sidepanel (js/chord-sidepanel.js) + full-screen stage (js/chord-stage.js).

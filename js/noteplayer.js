@@ -260,10 +260,14 @@ export async function preloadAudioSamples() {
     // Only what the current scale needs is awaited: start() waits on this, and
     // also awaiting every built-in scale's notes (~29 MB) delayed the first Play
     // by several seconds. The rest load in the background afterward.
+    // Callers don't await this (unlockAudio), so a failed load must not reject:
+    // that sound just stays silent, as with the scale samples
+    const quiet = (key, file) => loadSample(key, `${BASE_PATH}assets/audio/${file}`)
+      .catch(e => console.warn(`[Audio] Could not load ${file}`, e));
     const essentials = Promise.all([
-      loadSample(SOUND_TAK, `${BASE_PATH}assets/audio/dkurd_tak.wav`),
-      loadSample(SOUND_SLAP, `${BASE_PATH}assets/audio/dkurd_slap.wav`),
-      loadSample(SOUND_GHOST, `${BASE_PATH}assets/audio/Ghost2.wav`),
+      quiet(SOUND_TAK, 'dkurd_tak.wav'),
+      quiet(SOUND_SLAP, 'dkurd_slap.wav'),
+      quiet(SOUND_GHOST, 'Ghost2.wav'),
       preloadScaleSamples()
     ]);
     essentials.then(preloadAllScaleSamples, preloadAllScaleSamples);

@@ -1,4 +1,4 @@
-const { test, expect } = require('@playwright/test');
+const { test, expect } = require('./fixtures');
 const { createClient } = require('@supabase/supabase-js');
 const { createTestUser, deleteTestUser, supabaseAdmin } = require('./utils/auth-helper');
 const { waitForPageReady } = require('./utils/page-helper');

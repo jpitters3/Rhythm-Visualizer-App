@@ -1,4 +1,4 @@
-const { test, expect } = require('@playwright/test');
+const { test, expect } = require('./fixtures');
 const { gotoStudio, clearGrid, closeMobileControlsIfNeeded } = require('./helpers');
 
 // Regression: a chord/multi cell's label is an array. Duplicating a measure

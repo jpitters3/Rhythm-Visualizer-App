@@ -1,5 +1,5 @@
 // @ts-check
-const { test, expect } = require('@playwright/test');
+const { test, expect } = require('./fixtures');
 const { gotoStudio } = require('./helpers');
 
 // Mobile divider between notation and handpan (js/panel-resize.js).

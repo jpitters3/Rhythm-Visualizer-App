@@ -1,5 +1,5 @@
 // @ts-check
-const { test, expect } = require('@playwright/test');
+const { test, expect } = require('./fixtures');
 const { createTestUser, deleteTestUser, supabaseAdmin } = require('./utils/auth-helper');
 const { gotoStudio } = require('./helpers');
 

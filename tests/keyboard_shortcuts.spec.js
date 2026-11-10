@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 import { gotoStudio, clearGrid, openMobileControlsIfNeeded } from './helpers.js';
 
 test.describe('Keyboard Shortcuts', () => {

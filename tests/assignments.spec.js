@@ -12,7 +12,7 @@
  * (audio/video covered separately in assignments-media.spec.js)
  */
 
-const { test, expect } = require('@playwright/test');
+const { test, expect } = require('./fixtures');
 require('dotenv').config();
 
 const { createTestUser, deleteTestUser, loginAsTestUser, supabaseAdmin } = require('./utils/auth-helper');

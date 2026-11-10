@@ -1,7 +1,7 @@
 // @ts-check
 // The Song Composer panel (js/song-composer.js): building a composition out of
 // saved phrases and note sections, and reaching it again from the Library.
-const { test, expect } = require('@playwright/test');
+const { test, expect } = require('./fixtures');
 const { createTestUser, deleteTestUser, loginAsTestUser, supabaseAdmin } = require('./utils/auth-helper');
 const { DEMO_PATTERN, seedPattern, deleteUserContent } = require('./utils/seed-helper');
 const { navigateTo, openNavPanel } = require('./helpers');

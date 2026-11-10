@@ -11,7 +11,7 @@
  * https://resend.com/docs/dashboard/emails/send-test-emails
  */
 
-const { test, expect } = require('@playwright/test');
+const { test, expect } = require('./fixtures');
 require('dotenv').config();
 
 const FN_URL = `${process.env.VITE_SUPABASE_URL}/functions/v1/send-notification-email`;
