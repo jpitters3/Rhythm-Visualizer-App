@@ -9,7 +9,7 @@ import {
   dbSavePattern, dbDeletePattern, dbRenamePattern, dbLoadPatternByName, dbListPatternNames,
   serializePattern, applyPattern, getSavedPatterns, setSavedPatterns,
   getSelectedPatternName, refreshPatternSelect, updatePatternButtons, ensureHasSelection,
-  LAST_USED_KEY, hasUnsavedChanges, syncPhraseNameDisplay
+  LAST_USED_KEY, hasUnsavedChanges, syncPhraseNameDisplay, detachOpenPhrase
 } from './pattern-crud.js';
 import { setPresentation } from './presentation-mode.js';
 import { getRange } from './range-selection.js';
@@ -119,6 +119,7 @@ export async function createNewPhrase() {
   while (existing.has(defaultName)) defaultName = `New Phrase ${n++}`;
   const name = await prompt('Name your new phrase:', defaultName);
   if (!name?.trim()) return null;
+  detachOpenPhrase();
   resetGridToDefault(gridA);
   await saveCurrentPatternAs(name.trim());
   return name.trim();

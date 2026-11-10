@@ -26,8 +26,11 @@ async function turnOffAutoSave(page) {
   await expect(page.locator('#accountSettingsSidebar')).toHaveClass(/open/, { timeout: 5000 });
   const toggle = page.locator('#acctAutoSaveToggle');
   await expect(toggle).toBeChecked();
+  // Wait for the profile update to land, or a reload right after can cut it off
+  const saved = page.waitForResponse(r => r.url().includes('/rest/v1/profiles') && r.request().method() === 'PATCH');
   await page.locator('label[for="acctAutoSaveToggle"]').click();
   await expect(toggle).not.toBeChecked();
+  await saved;
   await page.locator('#accountSettingsBackdrop').click({ force: true });
 }
 
@@ -46,8 +49,11 @@ test('with auto-save off, Save saves the open phrase without a prompt', async ({
   try {
     await signInToStudio(page, user);
     await turnOffAutoSave(page);
-    // It's a profile setting, so it survives a reload (and other devices)
+    // It's a profile setting, so it survives a reload (and other devices).
+    // It arrives with the profile, so wait for that before editing.
+    const profileLoaded = page.waitForResponse(r => r.url().includes('/rest/v1/profiles') && r.request().method() === 'GET');
     await page.reload();
+    await profileLoaded;
     await page.waitForSelector('.measure-row');
     const status = page.locator('#phraseSaveStatus');
     await saveNewPhrase(page, 'Status');
@@ -83,6 +89,29 @@ test('with auto-save on, edits save themselves with no unsaved badge', async ({ 
     await page.reload();
     await page.waitForSelector('.measure-row');
     await expect(page.locator('.measure-row .cell').nth(1)).toContainText('2', { timeout: 10000 });
+  } finally {
+    await deleteTestUser(user.user.id);
+  }
+});
+
+// Games borrow the Studio grid and clear it; auto-save must not write that into
+// the open phrase (js/autosave.js only saves edits made on the Studio route).
+test('a game clearing the grid never overwrites the open phrase', { tag: '@core' }, async ({ page }) => {
+  const user = await createTestUser();
+  try {
+    await signInToStudio(page, user);
+    await saveNewPhrase(page, 'Keep');
+    await expect(page.locator('#phraseSaveStatus')).toBeHidden({ timeout: 6000 });
+
+    await page.goto('/#games');
+    await page.locator('.hg-tile', { hasText: 'Rhythm' }).first().click();
+    await expect(page.locator('.rg-progress')).toBeVisible({ timeout: 10000 });
+    await page.waitForTimeout(3500); // past the auto-save delay
+
+    await page.goto('/#studio');
+    await page.reload();
+    await page.waitForSelector('.measure-row');
+    await expect(page.locator('.measure-row .cell').first()).toContainText('1', { timeout: 10000 });
   } finally {
     await deleteTestUser(user.user.id);
   }

@@ -178,6 +178,14 @@ export function setSavedPatterns(obj) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(obj));
 }
 
+// Let go of the open phrase before replacing the grid with something else, so
+// nothing (auto-save, Save) can write the new content under the old name
+export function detachOpenPhrase() {
+  const patternSelect = document.getElementById('patternSelect');
+  if (patternSelect) patternSelect.value = '';
+  syncPhraseNameDisplay();
+}
+
 export function getSelectedPatternName() {
   const patternSelect = document.getElementById('patternSelect');
   return patternSelect ? (patternSelect.value || '') : '';
