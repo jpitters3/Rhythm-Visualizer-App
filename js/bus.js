@@ -20,6 +20,7 @@ export const BUS_EVENT = {
   GRID_CHANGED: 'grid:changed',
   PATTERN_SAVED: 'pattern:saved',
   AUTOSAVE_TOGGLED: 'pattern:autosave-toggled',
+  AUTOSAVE_FAILED: 'pattern:autosave-failed',
   CHALLENGE_CORRECTION: 'transcription:challenge-correction',
   SHOW_UPGRADE_MODAL: 'monetization:show-upgrade-modal',
   SHOW_CONGRATS_MODAL: 'monetization:show-congrats-modal',

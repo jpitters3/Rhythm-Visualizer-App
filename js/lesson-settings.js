@@ -18,7 +18,7 @@ import { currentUser, currentLesson } from './state.js';
 import { TransportRegistry } from './transport-ui.js';
 import {
   serializePattern, applyPattern, hasUnsavedChanges, snapshotCurrentState,
-  dbSavePattern, dbLoadPatternByName, dbListPatternNames,
+  dbSavePattern, dbLoadPatternByName, dbListPatternNames, getSelectedPatternName,
 } from './pattern-crud.js';
 import { canAccess, FEATURE } from './gated-feature.js';
 import { Bus, BUS_EVENT } from './bus.js';
@@ -173,7 +173,7 @@ async function savePhraseForLesson(lesson) {
     return false;
   }
 
-  const ok = await dbSavePattern(trimmed, serializePattern());
+  const ok = await dbSavePattern(trimmed, serializePattern(), 'manual', { replace: trimmed === getSelectedPatternName() });
   if (!ok) return false; // user declined an overwrite-confirm, or save failed
 
   await upsertOverride(lesson.id, { custom_pattern_name: trimmed, custom_bpm: null });

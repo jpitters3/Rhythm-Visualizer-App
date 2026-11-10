@@ -270,7 +270,7 @@ export async function saveCurrentPatternAs(name, source = 'manual') {
       return false;
     }
 
-    await dbSavePattern(trimmed, patternSnapshot, source);
+    await dbSavePattern(trimmed, patternSnapshot, source, { replace: trimmed === getSelectedPatternName() });
     localStorage.setItem(LAST_USED_KEY, trimmed);
     await refreshPatternSelect(trimmed);
     updateCurrentPhraseName(trimmed);

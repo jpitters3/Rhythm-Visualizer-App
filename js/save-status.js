@@ -33,9 +33,9 @@ function flashSaved() {
   }, SAVED_SHOW_MS);
 }
 
-// Auto-save couldn't reach the server; stays until the next successful save
-export function showSaveFailed() {
-  if (statusEl) show('unsaved', 'Not saved');
+// Auto-save couldn't reach the server; the next edit retries (and clears this)
+function showSaveFailed() {
+  if (statusEl) show('failed', 'Not saved');
 }
 
 function update({ justSaved = false } = {}) {
@@ -59,6 +59,7 @@ export function initSaveStatus() {
   // Next frame: let the save/load that fired these finish updating its snapshot first
   Bus.on(BUS_EVENT.GRID_CHANGED, () => requestAnimationFrame(() => update()));
   Bus.on(BUS_EVENT.AUTOSAVE_TOGGLED, () => update());
+  Bus.on(BUS_EVENT.AUTOSAVE_FAILED, showSaveFailed);
   Bus.on(BUS_EVENT.PATTERN_SAVED, (e) => {
     const justSaved = !!e.detail?.fromSave;
     requestAnimationFrame(() => update({ justSaved }));

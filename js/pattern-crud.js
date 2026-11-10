@@ -102,9 +102,9 @@ export async function dbSavePattern(name, stateObj, source = 'manual', { replace
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Not authenticated');
 
-  // Re-saving the open phrase just saves; only warn before replacing a different one
-  const isOpenPhrase = replace || name === getSelectedPatternName();
-  const { data: existing } = isOpenPhrase ? { data: null } : await supabase
+  // replace: the caller is re-saving the phrase it has open, so don't ask.
+  // Otherwise warn before an existing phrase with this name is overwritten.
+  const { data: existing } = replace ? { data: null } : await supabase
     .from('patterns')
     .select('name')
     .eq('user_id', user.id)

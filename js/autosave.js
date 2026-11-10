@@ -7,7 +7,6 @@ import {
   dbSavePattern, serializePattern, hasUnsavedChanges,
   getSelectedPatternName, getPhraseNameOverride,
 } from './pattern-crud.js';
-import { showSaveFailed } from './save-status.js';
 import { currentProfile, updateAutoSavePref } from './profile.js';
 
 const IDLE_MS = 2000;
@@ -43,7 +42,7 @@ async function doSave() {
     Bus.emit(BUS_EVENT.PATTERN_SAVED, { name, fromSave: true });
   } catch (err) {
     console.error('Auto-save failed', err);
-    showSaveFailed();
+    Bus.emit(BUS_EVENT.AUTOSAVE_FAILED, { name });
   }
 }
 

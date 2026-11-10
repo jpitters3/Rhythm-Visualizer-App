@@ -695,7 +695,7 @@ async function addPhraseFromGrid(compositionId) {
         try {
           const base = serializePattern(gridA);
           const stateToSave = { ...base, labels, hands, measures: Math.ceil(labels.length / base.steps) };
-          const saved = await dbSavePattern(existingName, stateToSave);
+          const saved = await dbSavePattern(existingName, stateToSave, 'manual', { replace: true });
           if (!saved) return;
         } catch (e) {
           await alert('Could not save phrase. Make sure you are signed in.');

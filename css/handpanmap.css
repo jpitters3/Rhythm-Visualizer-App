@@ -1,3 +1,9 @@
+/* The pan's padding: room for the S/T pucks. The overlays and the rows that
+   overlap it (top row, ghost row) all derive from this one value. */
+:root {
+  --hp-pad: 22px;
+}
+
 /* Handpan Image Section */
 .main {
   display: flex;
@@ -80,7 +86,7 @@
 .handpan-wrap {
   position: relative;
   width: 100%;
-  padding: 22px;
+  padding: var(--hp-pad);
   animation: handpanBreathe 5s ease-in-out infinite alternate;
   will-change: transform;
   transform-origin: center center;
@@ -126,7 +132,7 @@
 .handpan-overlay {
   /* match padding so overlay sits on top of image area */
   position: absolute;
-  inset: 22px;
+  inset: var(--hp-pad);
   pointer-events: none;
   opacity: 1;
   transition: opacity 0.4s ease;
@@ -624,9 +630,9 @@ div.lock-btn {
     margin: 0 auto;
     /* Room for the S/T pucks. Keep it even: the note overlay spans the whole
        box, so uneven padding would shift the notes off the image. */
-    padding: 22px;
-    /* The ghost row may use the empty bottom of that padding, so the pan is bigger */
-    margin-bottom: -12px;
+    padding: var(--hp-pad);
+    /* The ghost row may use the empty bottom of that padding (all but 10px), so the pan is bigger */
+    margin-bottom: calc(10px - var(--hp-pad));
     transform: translateZ(0);
     /* GPU stability */
     backface-visibility: hidden;
@@ -752,7 +758,7 @@ body.dark .icon-btn.active {
   gap: 8px;
   margin-top: 8px;
   /* Overlaps the wrap's empty top padding rather than pushing the pan down */
-  margin-bottom: -22px;
+  margin-bottom: calc(-1 * var(--hp-pad));
   position: relative;
   z-index: 2;
 }
@@ -1114,7 +1120,7 @@ body.dark .chord-chip.minor .chord-root {
 /* Loading Overlay */
 .hp-loading-overlay {
   position: absolute;
-  inset: 22px;
+  inset: var(--hp-pad);
   background: rgba(255, 255, 255, 0.1);
 
 
