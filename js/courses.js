@@ -100,7 +100,7 @@ export async function fetchCourses() {
 function courseStatusSVG(state) {
   if (state === 'complete') return `
     <svg width="20" height="20" viewBox="0 0 20 20" fill="none" class="status-icon">
-      <circle cx="10" cy="10" r="9" fill="#22c55e"/>
+      <circle cx="10" cy="10" r="9" class="course-done-fill"/>
       <path d="M6 10.5l2.5 2.5 5.5-5.5" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
     </svg>`;
   if (state === 'inprogress') return `
@@ -117,7 +117,7 @@ function courseStatusSVG(state) {
 function lessonCompleteSVG() {
   return `
     <svg width="16" height="16" viewBox="0 0 20 20" fill="none" class="lesson-check-icon">
-      <circle cx="10" cy="10" r="9" fill="#22c55e"/>
+      <circle cx="10" cy="10" r="9" class="course-done-fill"/>
       <path d="M6 10.5l2.5 2.5 5.5-5.5" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
     </svg>`;
 }

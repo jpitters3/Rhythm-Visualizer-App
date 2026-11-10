@@ -4,7 +4,8 @@ import { getDisplayPosition, resolveTakSlapNote } from './handpanmap.js';
 import { resolveHand, addTickObserver } from './noteplayer.js';
 import { checkCellIsMultiMode } from './notegrid.js';
 import { BASE_PATH } from './config.js';
-import { playGhostNotes, setPlayGhostNotes, setGhostHandsShown } from './state.js';
+import { playGhostNotes, setPlayGhostNotes, setGhostHandsShown, freePlay } from './state.js';
+import { Bus, BUS_EVENT } from './bus.js';
 
 // BASE_PATH (Vite's import.meta.env.BASE_URL), not a literal './public/...'
 // path — public/ is copied to the site root at build time (its own prefix is
@@ -86,6 +87,7 @@ class VirtualHands {
     }
 
     this.updateVisibility();
+    Bus.on(BUS_EVENT.FREE_PLAY_CHANGED, () => this.updateVisibility());
 
     // Register with NotePlayer
     addTickObserver((ctx) => this.onTick(ctx));
@@ -141,8 +143,9 @@ class VirtualHands {
 
   updateVisibility() {
     if (!this.layer) return;
-    // Respect the manual toggle, but Observer will override if modal is open
-    this.layer.style.display = this.enabled ? 'block' : 'none';
+    // Respect the manual toggle, but Observer will override if modal is open.
+    // Free play shows just the pan, so no ghost hands there.
+    this.layer.style.display = this.enabled && !freePlay ? 'block' : 'none';
     // "Ghost hands style" and "Play ghost notes" only make sense (and are
     // only shown) while ghost hands themselves are visible.
     if (this.styleRow) this.styleRow.style.display = this.enabled ? '' : 'none';

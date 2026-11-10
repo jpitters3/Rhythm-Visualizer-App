@@ -207,9 +207,22 @@ body.dark .sidebar.open {
   overflow: hidden;
 }
 
+/* Completed lessons and progress (check icons in js/courses.js) */
+body {
+  --course-done: #22c55e;
+}
+
+body.accent-zen:not(.dark) {
+  --course-done: var(--ui-on);
+}
+
+.course-done-fill {
+  fill: var(--course-done);
+}
+
 .course-progress-fill {
   height: 100%;
-  background: #22c55e;
+  background: var(--course-done);
   border-radius: 99px;
   transition: width 0.4s ease;
   min-width: 0;

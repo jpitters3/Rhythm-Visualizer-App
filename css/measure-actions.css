@@ -230,11 +230,6 @@ body:not(.present) .measure-row {
   background: var(--down-fill);
 }
 
-.nl-ghost::before {
-  box-sizing: border-box;
-  border: 1.5px dashed var(--ui-muted);
-}
-
 .notation-legend-close {
   width: 20px;
   min-width: 0;

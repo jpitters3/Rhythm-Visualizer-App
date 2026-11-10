@@ -77,7 +77,7 @@ function renderLegend() {
   legend.dataset.mode = empty ? 'hint' : 'legend';
   legend.innerHTML = empty
     ? '<span class="notation-legend-hint">Tap a step, then play a note</span>'
-    : '<span class="nl-key nl-left">Left</span><span class="nl-key nl-right">Right</span><span class="nl-key nl-ghost">Ghost</span>';
+    : '<span class="nl-key nl-left">Left</span><span class="nl-key nl-right">Right</span>';
   const close = document.createElement('button');
   close.type = 'button';
   close.className = 'notation-legend-close';
