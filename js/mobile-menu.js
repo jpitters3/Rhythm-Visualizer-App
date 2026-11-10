@@ -59,6 +59,11 @@ export function initMobileMenu() {
     mobileControlsBtn?.setAttribute('aria-expanded', 'false');
   }
 
+  // Tiles that open something over the pan (Chords, Pan Hero, Flip) close the card
+  primaryControlsWrapper?.addEventListener('click', (e) => {
+    if (e.target.closest('[data-closes-controls]')) closeControls();
+  });
+
   mobileMenuBtn.addEventListener('click', (e) => {
     e.stopPropagation();
     closeControls();

@@ -578,10 +578,47 @@ div.container {
   color: var(--ui-muted);
 }
 
+.notation-tools {
+  display: none;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 4px;
+}
+
+.notation-size,
+.notation-tools-end {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.notation-icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  min-width: 0;
+  height: 32px;
+  padding: 0;
+  border-radius: var(--ui-radius-sm);
+  background: var(--ui-tint);
+  color: var(--ui-icon);
+}
+
+.notation-icon-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+.notation-icon-btn:hover:not(:disabled) {
+  background: var(--ui-tint-hover);
+  box-shadow: none;
+  transform: none;
+}
+
 .notation-measure-btn {
   display: none;
   height: 32px;
-  margin-left: auto;
   padding: 0 12px;
   border-radius: var(--ui-radius-sm);
   background: var(--ui-tint);
@@ -597,6 +634,10 @@ div.container {
 }
 
 @media (max-width: 900px) {
+  .notation-tools {
+    display: flex;
+  }
+
   .notation-measure-add {
     display: inline-flex;
     align-items: center;
@@ -717,7 +758,7 @@ div.container {
     min-height: 0 !important;
     /* Critical */
     overflow-y: auto;
-    margin-top: 10px
+    margin-top: 4px;
   }
 
   #measureTools {
@@ -767,8 +808,8 @@ div.container {
   }
 
   .grid-phrase-name-row {
-    padding-bottom: 5px;
-    padding-top: 10px;
+    padding-bottom: 2px;
+    padding-top: 4px;
   }
 }
 

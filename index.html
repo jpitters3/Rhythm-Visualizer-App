@@ -372,7 +372,7 @@
                  restored with the pattern, just like BPM), not an editing tool
                  or app preference, so they now live beside BPM instead of here. -->
 
-            <button id="undoBtn" class="ctl-btn" title="Undo (Cmd+Z)" disabled>
+            <button id="undoBtn" class="ctl-btn ctl-desktop" data-undo title="Undo (Cmd+Z)" disabled>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 14L4 9l5-5"></path><path d="M4 9h10a6 6 0 0 1 0 12h-3"></path></svg>
               <span class="ctl-label">Undo</span>
             </button>
@@ -412,17 +412,29 @@
                 </div>
               </div>
             </div>
-            <button id="zoomOutBtn" class="ctl-btn" title="Zoom out (fit more per row)">
+            <button id="zoomOutBtn" class="ctl-btn ctl-desktop" data-zoom-out title="Zoom out (fit more per row)">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-4-4M8 11h6"></path></svg>
               <span class="ctl-label">Zoom out</span>
             </button>
-            <button id="zoomInBtn" class="ctl-btn" title="Zoom in (fewer per row)">
+            <button id="zoomInBtn" class="ctl-btn ctl-desktop" data-zoom-in title="Zoom in (fewer per row)">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-4-4M8 11h6M11 8v6"></path></svg>
               <span class="ctl-label">Zoom in</span>
             </button>
             <button id="presentBtn" class="ctl-btn" title="Toggle presentation mode (Esc exits)">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V5a1 1 0 0 1 1-1h4M15 4h4a1 1 0 0 1 1 1v4M20 15v4a1 1 0 0 1-1 1h-4M9 20H5a1 1 0 0 1-1-1v-4"></path></svg>
               <span class="ctl-label">Present</span>
+            </button>
+            <button class="ctl-btn ctl-mobile" data-chord-panel data-closes-controls title="Chords">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>
+              <span class="ctl-label">Chords</span>
+            </button>
+            <button class="ctl-btn ctl-mobile" data-pan-hero data-closes-controls title="Pan Hero">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><circle cx="12" cy="12" r="5"></circle><circle cx="12" cy="12" r="1"></circle></svg>
+              <span class="ctl-label">Pan Hero</span>
+            </button>
+            <button id="flipSideBtn" class="ctl-btn ctl-mobile" data-closes-controls style="display:none;" title="Flip to Bottom">
+              <span class="hp-flip-icon ctl-glyph">🔄</span>
+              <span class="hp-flip-label ctl-label">Flip to Bottom</span>
             </button>
 
             <div id="calibrationStatus" class="calibration-overlay" style="display:none;">
@@ -489,9 +501,19 @@
               <span id="phraseSaveStatus" class="phrase-save-status" role="status" hidden></span>
               <button id="quickSaveBtn" class="quick-save-btn" title="Save phrase" aria-label="Quick save">Save</button>
               <span id="composerSaveStatus" class="composer-save-status"></span>
+            </span>
+          </div>
+          <!-- Mobile notation tools: size on the left, undo and measures on the right -->
+          <div class="notation-tools">
+            <div class="notation-size" role="group" aria-label="Grid size">
+              <button type="button" class="notation-icon-btn" data-zoom-out title="Smaller (fit more per row)" aria-label="Smaller"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-4-4M8 11h6"></path></svg></button>
+              <button type="button" class="notation-icon-btn" data-zoom-in title="Bigger (fewer per row)" aria-label="Bigger"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-4-4M8 11h6M11 8v6"></path></svg></button>
+            </div>
+            <div class="notation-tools-end">
+              <button type="button" class="notation-icon-btn notation-undo" data-undo title="Undo" aria-label="Undo" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 14L4 9l5-5"></path><path d="M4 9h10a6 6 0 0 1 0 12h-3"></path></svg></button>
               <button type="button" class="addMeasureBtn notation-measure-btn notation-measure-add" title="Add a new measure">+ Measure</button>
               <button type="button" class="delMeasureBtn notation-measure-btn notation-measure-del" title="Delete active measure">− Measure</button>
-            </span>
+            </div>
           </div>
           <div id="measures" class="measures player" aria-label="Rhythm grid"></div>
 
@@ -538,7 +560,7 @@
           <!-- Slot for mobile controls/selection panels -->
           <div id="panelControlsSlot"></div>
 
-          <!-- Mobile top row: scale pill (opens Settings), labels toggle, options -->
+          <!-- Mobile top row: scale pill (opens Settings), labels toggle -->
           <div class="hp-top-row">
             <button type="button" id="scalePillBtn" class="hp-corner-btn hp-scale-pill" title="Scale settings">
               <span id="scalePillName" class="hp-scale-pill-name">D Kurd</span>
@@ -549,12 +571,6 @@
               <button type="button" data-label="Numbers" title="Show note numbers">123</button>
               <button type="button" data-label="Pitches" title="Show note names">C D</button>
             </div>
-            <button id="handpanOptionsBtn" class="hp-corner-btn" title="Options">⋯</button>
-          </div>
-          <div id="handpanOptionsMenu" class="dropdown-content hp-options-menu">
-            <button class="tab-btn" data-chord-panel title="Chords"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>Chords</button>
-            <button class="hp-options-menu-item" data-pan-hero title="Pan Hero"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><circle cx="12" cy="12" r="5"></circle><circle cx="12" cy="12" r="1"></circle></svg>Pan Hero</button>
-            <button id="flipSideBtn" class="flip-btn hp-options-menu-item" style="display:none;" title="Flip to Bottom"><span class="hp-flip-icon">🔄</span><span class="hp-flip-label">Flip to Bottom</span></button>
           </div>
 
           <!-- HANDPAN WRAP -->

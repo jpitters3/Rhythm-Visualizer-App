@@ -283,8 +283,8 @@ async function renderCustomOptions() {
   scaleSelect.value = getSelectedScaleName();
 }
 
-// #flipSideBtn (mobile options menu) and #flipSideBtnDesktop (the always-
-// visible desktop tab row) mirror the same flip state.
+// #flipSideBtn (mobile controls tile) and #flipSideBtnDesktop (desktop tab
+// row) mirror the same flip state.
 function getFlipButtons() {
   return document.querySelectorAll('#flipSideBtn, #flipSideBtnDesktop');
 }
@@ -415,10 +415,7 @@ function hasBottomNotes() {
     mountedHandpanData.note_map.some(tf => (tf.side || 'top') === 'bottom');
 }
 
-// #flipSideBtn now lives as a row inside #handpanOptionsMenu (mobile) rather
-// than being a bare icon button, so it needs an icon + text label kept in
-// sync together instead of one textContent write — see the .hp-flip-icon/
-// .hp-flip-label spans in index.html.
+// The mobile tile has icon + label spans; the desktop button is icon-only.
 function updateFlipButtonLabel(icon, label, isFlipped) {
   getFlipButtons().forEach((flipBtn) => {
     flipBtn.title = label;
@@ -2163,28 +2160,6 @@ export function initHandpanMap() {
       }
     });
   });
-
-  // Mobile "Options" menu (Settings/Chords/Customize/Flip consolidated where
-  // the Flip button used to stand alone) — same toggle/outside-click-close
-  // pattern as the account dropdown in js/auth.js.
-  const handpanOptionsBtn = document.getElementById('handpanOptionsBtn');
-  const handpanOptionsMenu = document.getElementById('handpanOptionsMenu');
-  if (handpanOptionsBtn && handpanOptionsMenu) {
-    handpanOptionsBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      handpanOptionsMenu.classList.toggle('show');
-    });
-    handpanOptionsMenu.addEventListener('click', (e) => {
-      if (e.target.tagName === 'BUTTON' || e.target.closest('button')) {
-        handpanOptionsMenu.classList.remove('show');
-      }
-    });
-    window.addEventListener('click', (e) => {
-      if (!handpanOptionsBtn.contains(e.target) && !handpanOptionsMenu.contains(e.target)) {
-        handpanOptionsMenu.classList.remove('show');
-      }
-    });
-  }
 
   // Final initial calls
   registerHighlighter(highlightHandpan);

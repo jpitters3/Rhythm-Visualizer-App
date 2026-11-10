@@ -230,8 +230,7 @@ export class TransportUI {
     // Fixed to the viewport, anchored ABOVE the bell button — the mobile
     // transport bar sits flush against the bottom of the screen
     // (.controls-transport { position:fixed; bottom:0 }), so opening
-    // downward (like #handpanOptionsMenu, whose trigger sits well above the
-    // bottom edge) would push the menu off-screen. Anchoring from `bottom`
+    // downward would push the menu off-screen. Anchoring from `bottom`
     // instead of computing `top: rect.top - menuHeight` means it grows
     // upward correctly regardless of the menu's actual (possibly
     // not-yet-rendered) height.

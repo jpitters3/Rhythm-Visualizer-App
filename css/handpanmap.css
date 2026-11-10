@@ -534,15 +534,6 @@ div.under-handpan {
   height: 26px;
 }
 
-@media (min-width: 901px) {
-  /* Defensive: #handpanOptionsBtn (the only way to toggle .show) is
-     .mobile-only and can't be clicked on desktop, but guard against a
-     lingering .show class from a resize-without-reload. */
-  #handpanOptionsMenu {
-    display: none !important;
-  }
-}
-
 /* Locked handpan and ghost note sections for mobile */
 div.lock-btn {
   display: none;
@@ -808,60 +799,6 @@ body.dark .icon-btn.active {
   .hp-scale-pill-count {
     display: none;
   }
-}
-
-/* ==== MOBILE OPTIONS MENU (Settings/Chords/Customize/Flip) ==== */
-/* Base .dropdown-content/.show styling comes from css/layout.css; this
-   overrides the anchor direction and restyles its buttons as left-aligned
-   icon+label rows instead of the tab row's square icon-only look. */
-.hp-options-menu {
-  /* Anchored with a fixed offset, not top:100%/bottom:100% — .dropdown-
-     content's containing block is .handpan-panel (the whole sticky pan +
-     grid + transport column, since that's the nearest positioned
-     ancestor), not #handpanOptionsBtn itself, so a percentage anchor would
-     place this far below the button rather than right under it. 8px top +
-     44px button height + 8px gap = 60px. */
-  top: 60px;
-  right: 0;
-  left: auto;
-  margin-top: 0;
-  margin-bottom: 0;
-  display: none;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 180px !important;
-}
-
-.hp-options-menu.show {
-  display: flex;
-}
-
-.hp-options-menu button {
-  width: 100%;
-  height: auto;
-  min-width: 0;
-  border: none;
-  border-radius: var(--ui-radius-sm);
-  background: transparent;
-  color: var(--ui-ink);
-  position: static;
-  transform: none;
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 10px;
-  padding: 10px 12px;
-  font-size: 14px;
-  font-weight: 600;
-}
-
-.hp-options-menu button:hover {
-  background: var(--ui-tint);
-  transform: none;
-}
-
-.hp-options-menu .flip-btn::before {
-  content: none;
 }
 
 .tab-btn {

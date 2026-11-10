@@ -37,7 +37,7 @@ export function initPanelResize() {
   const handle = document.getElementById('panelResizeHandle');
   const panel = document.querySelector('.handpan-panel');
   const main = document.getElementById('main');
-  const left = document.querySelector('.left');
+  const left = main?.querySelector(':scope > .left'); // not the first .left on the page
   const measuresEl = document.getElementById('measures');
   const wrap = document.getElementById('handpanWrap');
   const img = document.getElementById('handpanImg');
@@ -67,15 +67,11 @@ export function initPanelResize() {
     const rowMargins = ['marginTop', 'marginBottom', 'paddingTop', 'paddingBottom', 'borderTopWidth', 'borderBottomWidth']
       .reduce((sum, prop) => sum + (parseFloat(cs[prop]) || 0), 0);
 
-    const header = row.querySelector('.measure-header');
-    const firstLabels = row.querySelector('.labels');
+    // Top of the row to the bottom of its first line of cells, so gaps between
+    // header, labels and cells count too (summing their heights missed them).
     const firstGrid = row.querySelector('.grid');
-
     const h = firstGrid
-      ? (header?.getBoundingClientRect().height || 0)
-        + (firstLabels?.getBoundingClientRect().height || 0)
-        + firstGrid.getBoundingClientRect().height
-        + rowMargins
+      ? firstGrid.getBoundingClientRect().bottom - row.getBoundingClientRect().top + rowMargins
       : row.getBoundingClientRect().height + rowMargins;
 
     return Math.min(h, MAX_ROW_HEIGHT_FOR_MIN);

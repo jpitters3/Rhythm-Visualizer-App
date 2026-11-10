@@ -1,6 +1,6 @@
 // @ts-check
 const { test, expect } = require('@playwright/test');
-const { gotoStudio } = require('./helpers');
+const { gotoStudio, openMobileControlsIfNeeded } = require('./helpers');
 
 // Chords sidepanel (js/chord-sidepanel.js) + full-screen stage (js/chord-stage.js).
 
@@ -9,8 +9,8 @@ async function openChordPanel(page) {
   if (await desktopBtn.isVisible()) {
     await desktopBtn.click();
   } else {
-    await page.click('#handpanOptionsBtn');
-    await page.click('#handpanOptionsMenu [data-chord-panel]');
+    await openMobileControlsIfNeeded(page);
+    await page.click('#primaryControlsWrapper [data-chord-panel]');
   }
   await expect(page.locator('#chordSidebar')).toHaveClass(/open/);
   await expect(page.locator('#chordList .cs-chord-item').first()).toBeVisible();

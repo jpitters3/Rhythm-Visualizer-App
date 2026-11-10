@@ -58,7 +58,6 @@ const LEAD_SECONDS_MOBILE = 1.8;
 export function initPanHero() {
   document.querySelectorAll('[data-pan-hero]').forEach(btn => {
     btn.addEventListener('click', () => {
-      document.getElementById('handpanOptionsMenu')?.classList.remove('show');
       if (!canAccess(FEATURE.PAN_HERO)) {
         Bus.emit(BUS_EVENT.SHOW_UPGRADE_MODAL, { feature: FEATURE.PAN_HERO });
         return;

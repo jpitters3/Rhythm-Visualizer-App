@@ -116,6 +116,21 @@ button:disabled {
   box-shadow: none;
 }
 
+/* Mobile-only tiles (desktop has the handpan tab row). Not .mobile-only: its
+   !important would override the inline display that hides Flip. */
+@media (min-width: 901px) {
+  .ctl-btn.ctl-mobile {
+    display: none;
+  }
+}
+
+/* Undo and zoom live in the notation header on mobile */
+@media (max-width: 900px) {
+  .ctl-btn.ctl-desktop {
+    display: none;
+  }
+}
+
 .ctl-btn svg {
   width: 18px;
   height: 18px;

@@ -25,9 +25,9 @@ export const HistoryManager = {
       }
     });
 
-    const undoBtn = document.getElementById('undoBtn');
     const redoBtn = document.getElementById('redoBtn');
-    if (undoBtn) undoBtn.addEventListener('click', () => this.undo());
+    // The controls tile and the mobile notation header both undo
+    document.querySelectorAll('[data-undo]').forEach(b => b.addEventListener('click', () => this.undo()));
     if (redoBtn) redoBtn.addEventListener('click', () => this.redo());
 
     this.updateUI();
@@ -92,10 +92,9 @@ export const HistoryManager = {
   },
 
   updateUI() {
-    const undoBtn = document.getElementById('undoBtn');
     const redoBtn = document.getElementById('redoBtn');
 
-    if (undoBtn) undoBtn.disabled = (this.undoStack.length === 0);
+    document.querySelectorAll('[data-undo]').forEach(b => { b.disabled = this.undoStack.length === 0; });
     if (redoBtn) redoBtn.disabled = (this.redoStack.length === 0);
   }
 };

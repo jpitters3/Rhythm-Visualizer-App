@@ -127,9 +127,10 @@ export function zoomOut(ctx) { stepZoom(ctx, 1); }
 // matching responsive label/cell font-size fixes that raise how far zoom-out
 // can safely go before hitting this floor).
 function syncZoomButtonStates(ctx) {
-  const zoomInBtn = document.getElementById('zoomInBtn');
-  const zoomOutBtn = document.getElementById('zoomOutBtn');
-  if (!zoomInBtn && !zoomOutBtn) return;
+  // Controls tiles and the mobile notation header both carry these
+  const zoomInBtns = document.querySelectorAll('[data-zoom-in]');
+  const zoomOutBtns = document.querySelectorAll('[data-zoom-out]');
+  if (!zoomInBtns.length && !zoomOutBtns.length) return;
 
   const c = ctx || activeGrid;
   const s = c.stepsPerMeasure;
@@ -137,28 +138,28 @@ function syncZoomButtonStates(ctx) {
   const current = getCurrentZoomLevel(c);
   const currentIndex = levels.findIndex(l => l.cellsAcross === current.cellsAcross);
 
-  if (zoomInBtn) zoomInBtn.disabled = currentIndex <= 0;
+  zoomInBtns.forEach(b => { b.disabled = currentIndex <= 0; });
 
-  if (zoomOutBtn) {
-    const nextIndex = currentIndex + 1;
-    if (nextIndex >= levels.length) {
-      zoomOutBtn.disabled = true;
+  let outDisabled;
+  const nextIndex = currentIndex + 1;
+  if (nextIndex >= levels.length) {
+    outDisabled = true;
+  } else {
+    const currentCellWidth = document.querySelector('#measures .cell')?.getBoundingClientRect().width;
+    if (!currentCellWidth) {
+      outDisabled = false; // nothing rendered yet to measure — don't block on a guess
     } else {
-      const currentCellWidth = document.querySelector('#measures .cell')?.getBoundingClientRect().width;
-      if (!currentCellWidth) {
-        zoomOutBtn.disabled = false; // nothing rendered yet to measure — don't block on a guess
-      } else {
-        const nextCellsAcross = levels[nextIndex].cellsAcross;
-        const projectedNextWidth = currentCellWidth * (current.cellsAcross / nextCellsAcross);
-        zoomOutBtn.disabled = projectedNextWidth < MIN_SAFE_CELL_PX;
-      }
+      const nextCellsAcross = levels[nextIndex].cellsAcross;
+      const projectedNextWidth = currentCellWidth * (current.cellsAcross / nextCellsAcross);
+      outDisabled = projectedNextWidth < MIN_SAFE_CELL_PX;
     }
   }
+  zoomOutBtns.forEach(b => { b.disabled = outDisabled; });
 }
 
 export function initGridZoom() {
-  document.getElementById('zoomInBtn')?.addEventListener('click', () => zoomIn(activeGrid));
-  document.getElementById('zoomOutBtn')?.addEventListener('click', () => zoomOut(activeGrid));
+  document.querySelectorAll('[data-zoom-in]').forEach(b => b.addEventListener('click', () => zoomIn(activeGrid)));
+  document.querySelectorAll('[data-zoom-out]').forEach(b => b.addEventListener('click', () => zoomOut(activeGrid)));
 
   // Re-check after every render (zoom change, note edit, measure add/remove
   // — anything that could change cell size) and on resize (container width

@@ -1,5 +1,5 @@
 const { test, expect } = require('@playwright/test');
-const { gotoStudio, clearGrid, closeMobileControlsIfNeeded } = require('./helpers');
+const { gotoStudio, clearGrid, openMobileControlsIfNeeded, closeMobileControlsIfNeeded } = require('./helpers');
 
 // main.js re-exports gridA/renderAllMeasures (see its own comment on why) —
 // importing its actual deployed URL (not the source path, which only
@@ -30,16 +30,14 @@ async function seedPattern(page) {
   return gridA;
 }
 
-// .handpan-tabs [data-pan-hero] is desktop-only — #handpanOptionsBtn
-// ("mobile-only" class, index.html) is the real way to reach it on mobile,
-// via its own #handpanOptionsMenu [data-pan-hero] duplicate.
+// Desktop: the handpan tab row. Mobile: a tile in the controls card.
 async function openPanHero(page) {
-  if (await page.locator('#handpanOptionsBtn').isVisible()) {
-    await page.click('#handpanOptionsBtn');
-    await page.waitForSelector('#handpanOptionsMenu.show');
-    await page.click('#handpanOptionsMenu [data-pan-hero]');
+  const desktopBtn = page.locator('.handpan-tabs [data-pan-hero]');
+  if (await desktopBtn.isVisible()) {
+    await desktopBtn.click();
   } else {
-    await page.click('.handpan-tabs [data-pan-hero]');
+    await openMobileControlsIfNeeded(page);
+    await page.click('#primaryControlsWrapper [data-pan-hero]');
   }
 }
 
@@ -110,15 +108,14 @@ test('Pan Hero: exit button also closes', async ({ page }) => {
   await expect(page.locator('#panHeroOverlay')).toBeHidden();
 });
 
-test('Pan Hero: mobile options menu opens it and closes the menu', async ({ page }) => {
+test('Pan Hero: mobile controls tile opens it and closes the card', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 780 });
   await gotoStudio(page);
   await page.waitForSelector('.measure-row');
   await page.evaluate(() => document.documentElement.setAttribute('data-gp-test-mode', 'true'));
-  await page.click('#handpanOptionsBtn');
-  await page.waitForSelector('#handpanOptionsMenu.show');
-  await page.click('#handpanOptionsMenu [data-pan-hero]');
+  await page.click('#mobileControlsBtn');
+  await page.click('#primaryControlsWrapper [data-pan-hero]');
   await page.waitForTimeout(300);
   await expect(page.locator('#panHeroOverlay')).toBeVisible();
-  await expect(page.locator('#handpanOptionsMenu.show')).toHaveCount(0);
+  await expect(page.locator('#primaryControlsWrapper')).not.toHaveClass(/mobile-open/);
 });

@@ -113,8 +113,7 @@ body.present #presentationControls {
    .t-metro-dropdown wraps the bell button + the menu, exactly like
    css/layout.css's .dropdown/.dropdown-content pattern (position:relative on
    the wrapper is what lets .dropdown-content's default top:100%/left:0 anchor
-   correctly, same trick, no per-page offset tuning needed the way
-   .hp-options-menu required). Base show/hide + panel chrome come from
+   correctly, no per-page offset tuning needed). Base show/hide + panel chrome come from
    .dropdown-content in css/layout.css — this only restyles the rows and
    desktop-hides the trigger/menu split (desktop keeps the old direct-toggle
    bell + inline Sub/Tap buttons; js/transport-ui.js does that layout switch
