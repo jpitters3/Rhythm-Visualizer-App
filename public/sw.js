@@ -27,8 +27,8 @@ self.addEventListener('push', (event) => {
   event.waitUntil(
     self.registration.showNotification(data.title || 'Panafide', {
       body: data.body || '',
-      icon: '/assets/images/icon-192.png',
-      badge: '/assets/images/icon-192.png',
+      icon: '/assets/images/app-icon-192.png',
+      badge: '/assets/images/app-icon-192.png',
       data: { url: data.url || '/' },
     })
   );
