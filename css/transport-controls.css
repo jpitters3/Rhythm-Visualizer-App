@@ -174,3 +174,21 @@ body.present #presentationControls {
 .t-metro-menu .t-subdiv-btn.active {
   color: var(--accent-glow, var(--accent-light));
 }
+
+/* Games mount the Studio transport in their own slot (.game-transport, also
+   .controls-transport so it gets the same look): pinned to the bottom on
+   mobile like the Studio, in flow under the game on desktop. */
+@media (min-width: 901px) {
+  .controls-transport.game-transport {
+    position: static;
+    transform: none;
+    width: auto;
+  }
+}
+
+@media (max-width: 900px) {
+  /* Room so the pinned bar never covers the end of the game */
+  .hg-container:has(.game-transport) {
+    padding-bottom: 120px;
+  }
+}

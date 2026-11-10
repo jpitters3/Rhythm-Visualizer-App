@@ -1206,7 +1206,7 @@ class ChordPlayAlong {
         <div class="cpa-grid-slot"></div>
         <div class="cpa-transport-row">
           <button class="cpa-reset-btn" type="button" hidden>↺ Reset</button>
-          <div class="cpa-transport-slot"></div>
+          <div class="cpa-transport-slot controls-transport game-transport"></div>
         </div>
       </div>
     `;

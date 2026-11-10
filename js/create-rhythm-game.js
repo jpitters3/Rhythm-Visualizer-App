@@ -386,7 +386,7 @@ class CreateRhythmGame {
         <div class="rg-stage"></div>
 
         <div class="rg-grid-slot"></div>
-        <div class="rg-transport-slot"></div>
+        <div class="rg-transport-slot controls-transport game-transport"></div>
       </div>
     `;
 
