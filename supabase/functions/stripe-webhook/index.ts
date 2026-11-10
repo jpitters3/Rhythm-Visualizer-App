@@ -1,5 +1,9 @@
 // stripe-webhook/index.ts
 // Zero-dependency implementation for signing verification and database updates
+//
+// Deploy with --no-verify-jwt: Stripe signs its requests (checked below) and
+// sends no Supabase token, so the gateway would reject every event otherwise.
+//   supabase functions deploy stripe-webhook --no-verify-jwt --project-ref <ref>
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { periodEnd, stripeRequest, subscriptionChanges, toIso } from '../_shared/stripe.ts'
 
