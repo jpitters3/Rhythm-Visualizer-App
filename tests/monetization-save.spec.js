@@ -94,6 +94,10 @@ test.describe('Monetization Save Gating', () => {
     await page.locator('#navAccountWrapper').waitFor({ state: 'visible', timeout: 15000 });
     console.log('[TEST] Signed in successfully.');
 
+    // Sign-in lands on the Dashboard; phrase actions live on the Studio's phrase title.
+    await page.goto('/#studio');
+    await page.waitForSelector('.measure-row');
+
     // 6. Save 5 patterns (the free limit)
     for (let i = 1; i <= 5; i++) {
       console.log(`[TEST] Saving pattern ${i}/5...`);

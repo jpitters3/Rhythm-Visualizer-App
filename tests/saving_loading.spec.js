@@ -186,7 +186,8 @@ test.describe('Pattern Management', () => {
     await page.click('#confirmOkBtn');
     await expect(page.locator('#confirmModal')).not.toHaveClass(/open/);
 
-    // 2. Click Delete
+    // 2. Click Delete, once the saved phrase is selected (#deleteBtn enables then)
+    await expect(page.locator('#deleteBtn')).toBeEnabled();
     await phraseAction(page, 'Delete phrase');
 
     // Handle Delete Confirm Modal

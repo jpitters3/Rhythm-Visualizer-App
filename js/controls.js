@@ -123,6 +123,40 @@ export async function createNewPhrase() {
   return name.trim();
 }
 
+// Shared by #deleteBtn and the phrase title dropdown (which must not go through the
+// button: it stays disabled until the phrase list refreshes after a save).
+export async function deleteCurrentPhrase() {
+  if (!await ensureHasSelection()) return;
+
+  const name = getSelectedPatternName();
+  const ok = await showCustomModal({
+    title: 'Delete Pattern',
+    message: `Are you sure you want to delete "${name}"? This cannot be undone.`,
+    mode: 'confirm'
+  });
+  if (!ok) return;
+
+  try {
+    if (await isAuthed()) {
+      await dbDeletePattern(name);
+    } else {
+      const saved = getSavedPatterns();
+      if (!saved[name]) return;
+      delete saved[name];
+      setSavedPatterns(saved);
+    }
+    if (localStorage.getItem(LAST_USED_KEY) === name) localStorage.removeItem(LAST_USED_KEY);
+    await refreshPatternSelect();
+  } catch (err) {
+    console.error(err);
+    await showCustomModal({
+      title: 'Delete Failed',
+      message: err.message || err,
+      mode: 'alert'
+    });
+  }
+}
+
 export async function renameCurrentPhrase() {
   if (!await ensureHasSelection()) return;
 
@@ -349,7 +383,7 @@ function showPhraseContextMenu(anchorEl) {
     { label: 'Rename phrase', action: renameCurrentPhrase },
     { label: 'Share phrase', action: () => document.getElementById('shareBtn')?.click() },
     { label: 'Move phrase', action: moveCurrentPhrase },
-    { label: 'Delete phrase', action: () => document.getElementById('deleteBtn')?.click() },
+    { label: 'Delete phrase', action: deleteCurrentPhrase },
     { divider: true },
     { label: 'New phrase', action: createNewPhrase },
     { label: 'Open Phrase', action: showOpenPhraseModal },
@@ -752,41 +786,9 @@ export function initControls() {
     await renameCurrentPhrase();
   });
 
-  deleteBtn?.addEventListener('click', async (e) => {
-    if (e) e.stopPropagation();
-
-    if (!await ensureHasSelection()) return;
-
-    const name = getSelectedPatternName();
-    const ok = await showCustomModal({
-      title: 'Delete Pattern',
-      message: `Are you sure you want to delete "${name}"? This cannot be undone.`,
-      mode: 'confirm'
-    });
-
-    if (ok) {
-      try {
-        if (await isAuthed()) {
-          await dbDeletePattern(name);
-          if (localStorage.getItem(LAST_USED_KEY) === name) localStorage.removeItem(LAST_USED_KEY);
-          await refreshPatternSelect();
-        } else {
-          const saved = getSavedPatterns();
-          if (!saved[name]) return;
-          delete saved[name];
-          setSavedPatterns(saved);
-          if (localStorage.getItem(LAST_USED_KEY) === name) localStorage.removeItem(LAST_USED_KEY);
-          await refreshPatternSelect();
-        }
-      } catch (err) {
-        console.error(err);
-        await showCustomModal({
-          title: 'Delete Failed',
-          message: err.message || err,
-          mode: 'alert'
-        });
-      }
-    }
+  deleteBtn?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    deleteCurrentPhrase();
   });
 
   exportBtn?.addEventListener('click', async (e) => {

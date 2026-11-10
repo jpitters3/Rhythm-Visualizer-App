@@ -202,7 +202,9 @@ export function initPanelResize() {
     if (!bar) return 0;
     const cs = getComputedStyle(bar);
     if (cs.position !== 'fixed' || cs.display === 'none') return 0;
-    return Math.max(0, panel.getBoundingClientRect().bottom - bar.getBoundingClientRect().top);
+    // From #main's bottom, not the panel's: the panel's bottom moves as it grows, and on short
+    // screens (min pan size) that fed back into an ever-larger reserve that pushed it over the grid.
+    return Math.max(0, main.getBoundingClientRect().bottom - bar.getBoundingClientRect().top);
   }
 
   function syncTransportReserve() {

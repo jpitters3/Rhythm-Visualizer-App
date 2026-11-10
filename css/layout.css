@@ -644,11 +644,6 @@ div.container {
     overflow: visible;
   }
 
-  /* Also pad the grid itself for phones where handpan is hidden/small */
-  #measures {
-    padding-bottom: calc(72px + env(safe-area-inset-bottom, 10px));
-  }
-
   .grid-phrase-name-row {
     padding-bottom: 5px;
     padding-top: 10px;
