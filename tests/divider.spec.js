@@ -23,8 +23,11 @@ test.describe('Panel divider', () => {
     await expect(handle).toHaveAttribute('aria-valuenow', '0');
     await expect(handle).toHaveAttribute('aria-valuetext', 'Notation larger');
     await expect(hint).toBeHidden();
+    // Smallest: the scale/labels row steps aside for the grid
+    await expect(page.locator('.hp-top-row')).toBeHidden();
     await page.keyboard.press('Home');
     await expect(handle).toHaveAttribute('aria-valuenow', '100');
+    await expect(page.locator('.hp-top-row')).toBeVisible();
 
     // Drag to just short of halfway: it settles on the balanced point
     const panelH = async () => page.locator('.handpan-panel').evaluate(el => el.getBoundingClientRect().height);

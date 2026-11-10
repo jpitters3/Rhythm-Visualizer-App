@@ -843,6 +843,11 @@ body.dark .icon-btn.active {
   .hp-top-row {
     display: flex;
   }
+
+  /* Divider dragged down past the pan's normal minimum (js/panel-resize.js) */
+  .handpan-panel.hp-compact .hp-top-row {
+    display: none;
+  }
 }
 
 /* Narrow phones: the note count goes before the name gets cut */

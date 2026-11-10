@@ -32,8 +32,10 @@ const STORAGE_KEY = 'gp_handpanPanelHeight';
 const KEYBOARD_STEP = 24;
 const SNAP_PX = 28; // release this close to a snap point and it settles there
 const HINT_KEY = 'gp_dividerHintSeen';
-// Smallest the pan may get (wrap width): numbers stay readable and notes tappable.
-const MIN_PAN_WIDTH = 215;
+// Smallest pan (wrap width) with the scale/labels row showing; the Studio opens no smaller.
+const START_PAN_WIDTH = 215;
+// Dragging below that hides the row (.hp-compact) and lets the pan shrink to this.
+const MIN_PAN_WIDTH = 180;
 
 export function initPanelResize() {
   const handle = document.getElementById('panelResizeHandle');
@@ -46,7 +48,20 @@ export function initPanelResize() {
   if (!handle || !panel || !main || !wrap) return;
 
   const mq = window.matchMedia(MOBILE_QUERY);
+  const topRow = panel.querySelector('.hp-top-row');
   let cachedMaxHeight = null;
+  let topRowSpace = 0;
+
+  // The scale/labels row's height, remembered while it's hidden in compact mode
+  function topRowHeight() {
+    if (topRow && !panel.classList.contains('hp-compact')) {
+      const cs = getComputedStyle(topRow);
+      if (cs.display !== 'none') {
+        topRowSpace = topRow.getBoundingClientRect().height + parseFloat(cs.marginTop) + parseFloat(cs.marginBottom);
+      }
+    }
+    return topRowSpace;
+  }
 
   // Everything in .left OTHER than #measures (phrase name row, etc.) — same
   // "measure what's actually there" approach as measureChromeHeight() below.
@@ -98,6 +113,7 @@ export function initPanelResize() {
     let h = 0;
     Array.from(panel.children).forEach(child => {
       if (child === wrap) return; // this is what the reserve is FOR, not part of it
+      if (child === topRow) return; // added separately: hidden in compact mode (topRowHeight)
       const cs = getComputedStyle(child);
       if (cs.display === 'none') return;
       // position:absolute children (the mobile corner +/- and Options
@@ -123,9 +139,9 @@ export function initPanelResize() {
     return (img && img.naturalWidth && img.naturalHeight) ? img.naturalHeight / img.naturalWidth : 1;
   }
 
-  function minPanImageHeight() {
+  function minPanImageHeight(minWidth = MIN_PAN_WIDTH) {
     const panelWidth = panel.getBoundingClientRect().width;
-    const minWrap = Math.min(MIN_PAN_WIDTH, panelWidth || MIN_PAN_WIDTH);
+    const minWrap = Math.min(minWidth, panelWidth || minWidth);
     return Math.max(0, minWrap - wrapHorizontalPadding()) * imageAspect();
   }
 
@@ -163,7 +179,7 @@ export function initPanelResize() {
   // padding the wrap has, which was negligible when that padding was a few
   // px but became a visible gap above the transport bar once it grew.
   function computeNaturalMaxHeight() {
-    const chrome = measureChromeHeight();
+    const chrome = measureChromeHeight() + topRowHeight();
     const width = panel.getBoundingClientRect().width || main.getBoundingClientRect().width;
     const imageWidth = Math.max(0, width - wrapHorizontalPadding());
     return chrome + imageWidth * imageAspect() + wrapVerticalPadding();
@@ -230,25 +246,35 @@ export function initPanelResize() {
   // Smallest and largest panel heights (including the transport reserve).
   // Chrome plus a playable pan must always fit; when space is tight the grid
   // gives way (it scrolls), never the pan.
+  // floor: compact (row hidden, smallest pan). normalFloor: row shown, START_PAN_WIDTH pan.
   function heightBounds() {
     const reserve = transportBarHeight();
-    const chrome = measureChromeHeight();
+    const base = measureChromeHeight();
+    const rowH = topRowHeight();
     const padV = wrapVerticalPadding();
-    const floor = Math.max(MIN_PANEL_HEIGHT, chrome + padV + minPanImageHeight()) + reserve;
-    const ceiling = Math.max(floor, Math.min(
+    const floor = Math.max(MIN_PANEL_HEIGHT, base + padV + minPanImageHeight()) + reserve;
+    const normalFloor = Math.max(MIN_PANEL_HEIGHT, base + rowH + padV + minPanImageHeight(START_PAN_WIDTH)) + reserve;
+    // Never below normalFloor, so dragging all the way up always brings the row back
+    const ceiling = Math.max(normalFloor, Math.min(
       (cachedMaxHeight ?? refreshMaxHeight()) + reserve,
       main.getBoundingClientRect().height - minLeftHeightNeeded(),
     ));
-    return { floor, ceiling, reserve, chrome, padV };
+    return { floor, normalFloor, ceiling, reserve, base, rowH, padV };
   }
 
-  function applyHeight(desiredTotalPx) {
+  // user: a drag or key press, the only way into compact mode, so a short
+  // screen never opens with the scale row hidden.
+  function applyHeight(desiredTotalPx, { user = false } = {}) {
     if (panelShowsCard()) return panel.getBoundingClientRect().height;
-    const { floor, ceiling, reserve, chrome, padV } = heightBounds();
+    const b = heightBounds();
+    const floor = user || panel.classList.contains('hp-compact') ? b.floor : b.normalFloor;
+    const ceiling = Math.max(floor, b.ceiling);
     const clampedTotal = Math.min(ceiling, Math.max(floor, desiredTotalPx));
+    const compact = clampedTotal < b.normalFloor;
+    panel.classList.toggle('hp-compact', compact);
     panel.style.height = `${clampedTotal}px`;
-    syncWrapSize(clampedTotal - reserve, chrome, padV, imageAspect());
-    updateAria(clampedTotal, floor, ceiling);
+    syncWrapSize(clampedTotal - b.reserve, b.base + (compact ? 0 : b.rowH), b.padV, imageAspect());
+    updateAria(clampedTotal, b.floor, ceiling);
     return clampedTotal;
   }
 
@@ -269,7 +295,7 @@ export function initPanelResize() {
     if (gap > SNAP_PX || gap < 1) return total;
     panel.classList.add('panel-snapping');
     setTimeout(() => panel.classList.remove('panel-snapping'), 200);
-    return applyHeight(near);
+    return applyHeight(near, { user: true });
   }
 
   // After a resize, bring the selected step back into view
@@ -282,12 +308,15 @@ export function initPanelResize() {
     handle.classList.remove('show-hint');
   }
 
-  function restoreSavedHeight() {
+  // onOpen: opening the Studio starts the pan at a comfortable size at least
+  function restoreSavedHeight({ onOpen = true } = {}) {
     if (!mq.matches) return;
     syncTransportReserve();
     const maxContent = refreshMaxHeight();
     const saved = parseFloat(localStorage.getItem(STORAGE_KEY));
-    applyHeight(Number.isFinite(saved) ? saved : maxContent + transportBarHeight());
+    const wanted = Number.isFinite(saved) ? saved : maxContent + transportBarHeight();
+    if (onOpen) panel.classList.remove('hp-compact');
+    applyHeight(onOpen ? Math.max(wanted, heightBounds().normalFloor) : wanted);
   }
 
   // Restore saved panel height when studio is opened
@@ -349,7 +378,7 @@ export function initPanelResize() {
 
   function onPointerMove(e) {
     if (!dragging) return;
-    applyHeight(startHeight - (e.clientY - startY));
+    applyHeight(startHeight - (e.clientY - startY), { user: true });
   }
 
   function onPointerUp(e) {
@@ -381,7 +410,7 @@ export function initPanelResize() {
     if (target === undefined) return;
     e.preventDefault();
     dismissHint();
-    localStorage.setItem(STORAGE_KEY, applyHeight(target));
+    localStorage.setItem(STORAGE_KEY, applyHeight(target, { user: true }));
     keepSelectionVisible();
   });
 
@@ -396,7 +425,7 @@ export function initPanelResize() {
   let showedCard = false;
   new MutationObserver(() => {
     const showsCard = panelShowsCard();
-    if (showedCard && !showsCard && mq.matches) restoreSavedHeight();
+    if (showedCard && !showsCard && mq.matches) restoreSavedHeight({ onOpen: false });
     showedCard = showsCard;
   }).observe(panel, { attributes: true, attributeFilter: ['class'] });
 
