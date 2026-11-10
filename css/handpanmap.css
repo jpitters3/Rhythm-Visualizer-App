@@ -180,9 +180,9 @@
     align-items: center;
     justify-content: center;
     flex: none;
-    height: 22px;
-    margin: -6px 0;
-    /* claims a real hit-area without adding visual gap */
+    height: 28px;
+    margin: -9px 0;
+    /* a generous hit area without adding visual gap */
     cursor: row-resize;
     touch-action: none;
     z-index: 5;
@@ -190,8 +190,8 @@
   }
 
   .panel-resize-grip {
-    width: 40px;
-    height: 4px;
+    width: 44px;
+    height: 5px;
     border-radius: 3px;
     background: var(--ui-tint-hover);
     transition: background 0.15s ease;
@@ -206,6 +206,51 @@
   .panel-resize-handle:focus-visible {
     outline: 2px solid var(--accent);
     outline-offset: 2px;
+  }
+
+  /* First-use hint beside the grip (js/panel-resize.js removes it on first use) */
+  .panel-resize-hint {
+    display: none;
+    position: absolute;
+    left: calc(50% + 32px);
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: var(--ui-surface-solid);
+    border: 1px solid var(--ui-edge);
+    color: var(--ui-muted);
+    font-size: 11px;
+    font-weight: 600;
+    white-space: nowrap;
+    pointer-events: none;
+  }
+
+  .panel-resize-handle.show-hint:not(.no-range) .panel-resize-hint {
+    display: block;
+    animation: dividerHintIn 0.4s ease 1s both;
+  }
+
+  .panel-resize-handle.show-hint:not(.no-range) .panel-resize-grip {
+    background: var(--accent);
+  }
+
+  @keyframes dividerHintIn {
+    from { opacity: 0; translate: -4px 0; }
+  }
+
+  /* Settling onto a snap point */
+  .handpan-panel.panel-snapping {
+    transition: height 0.18s ease;
+  }
+
+  .handpan-panel.panel-snapping .handpan-wrap {
+    transition: max-width 0.18s ease, opacity 0.18s ease, background 0.2s;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .handpan-panel.panel-snapping,
+    .handpan-panel.panel-snapping .handpan-wrap {
+      transition: none;
+    }
   }
 }
 

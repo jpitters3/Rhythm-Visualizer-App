@@ -536,8 +536,10 @@
         <!-- Drag handle: mobile-only, resizes .handpan-panel's height (and,
              via flex, how much of .left's grid is visible above it) -->
         <div id="panelResizeHandle" class="panel-resize-handle" role="separator"
-          aria-orientation="horizontal" aria-label="Resize handpan panel" tabindex="0">
+          aria-orientation="horizontal" aria-label="Resize handpan and notation"
+          aria-valuemin="0" aria-valuemax="100" tabindex="0">
           <div class="panel-resize-grip"></div>
+          <span class="panel-resize-hint" aria-hidden="true">Drag to resize</span>
         </div>
 
         <!-- HANDPAN OPTIONS -->

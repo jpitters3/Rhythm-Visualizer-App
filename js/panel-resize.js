@@ -30,6 +30,8 @@ const MIN_LEFT_HEIGHT = 160;  // absolute floor if a measure row can't be measur
 const MAX_ROW_HEIGHT_FOR_MIN = 220; // see measureOneRowHeight()
 const STORAGE_KEY = 'gp_handpanPanelHeight';
 const KEYBOARD_STEP = 24;
+const SNAP_PX = 28; // release this close to a snap point and it settles there
+const HINT_KEY = 'gp_dividerHintSeen';
 // Smallest the pan may get (wrap width): numbers stay readable and notes tappable.
 const MIN_PAN_WIDTH = 215;
 
@@ -225,23 +227,59 @@ export function initPanelResize() {
     return panel.classList.contains('controls-mode') || panel.classList.contains('selection-mode');
   }
 
-  function applyHeight(desiredTotalPx) {
-    if (panelShowsCard()) return panel.getBoundingClientRect().height;
+  // Smallest and largest panel heights (including the transport reserve).
+  // Chrome plus a playable pan must always fit; when space is tight the grid
+  // gives way (it scrolls), never the pan.
+  function heightBounds() {
     const reserve = transportBarHeight();
     const chrome = measureChromeHeight();
     const padV = wrapVerticalPadding();
-    // Chrome plus a playable pan must always fit; when space is tight the grid
-    // gives way (it scrolls), never the pan. A small saved height used to
-    // restore a tiny pan on every visit.
-    const floorTotal = Math.max(MIN_PANEL_HEIGHT, chrome + padV + minPanImageHeight()) + reserve;
-    const ceilingTotal = Math.max(floorTotal, Math.min(
+    const floor = Math.max(MIN_PANEL_HEIGHT, chrome + padV + minPanImageHeight()) + reserve;
+    const ceiling = Math.max(floor, Math.min(
       (cachedMaxHeight ?? refreshMaxHeight()) + reserve,
       main.getBoundingClientRect().height - minLeftHeightNeeded(),
     ));
-    const clampedTotal = Math.min(ceilingTotal, Math.max(floorTotal, desiredTotalPx));
+    return { floor, ceiling, reserve, chrome, padV };
+  }
+
+  function applyHeight(desiredTotalPx) {
+    if (panelShowsCard()) return panel.getBoundingClientRect().height;
+    const { floor, ceiling, reserve, chrome, padV } = heightBounds();
+    const clampedTotal = Math.min(ceiling, Math.max(floor, desiredTotalPx));
     panel.style.height = `${clampedTotal}px`;
     syncWrapSize(clampedTotal - reserve, chrome, padV, imageAspect());
+    updateAria(clampedTotal, floor, ceiling);
     return clampedTotal;
+  }
+
+  // Separator value: 100 = pan at its largest, 0 = grid at its largest
+  function updateAria(total, floor, ceiling) {
+    const pct = ceiling > floor ? Math.round(((total - floor) / (ceiling - floor)) * 100) : 100;
+    handle.setAttribute('aria-valuenow', String(pct));
+    handle.setAttribute('aria-valuetext', pct >= 67 ? 'Handpan larger' : pct <= 33 ? 'Notation larger' : 'Balanced');
+    handle.classList.toggle('no-range', ceiling <= floor); // short screens: nothing to drag
+  }
+
+  // Release near the pan's largest, halfway, or the grid's largest: settle there
+  function snapHeight(total) {
+    const { floor, ceiling } = heightBounds();
+    const points = [floor, (floor + ceiling) / 2, ceiling];
+    const near = points.reduce((a, b) => (Math.abs(b - total) < Math.abs(a - total) ? b : a));
+    const gap = Math.abs(near - total);
+    if (gap > SNAP_PX || gap < 1) return total;
+    panel.classList.add('panel-snapping');
+    setTimeout(() => panel.classList.remove('panel-snapping'), 200);
+    return applyHeight(near);
+  }
+
+  // After a resize, bring the selected step back into view
+  function keepSelectionVisible() {
+    measuresEl?.querySelector('.cell.selected')?.scrollIntoView({ block: 'nearest' });
+  }
+
+  function dismissHint() {
+    try { localStorage.setItem(HINT_KEY, '1'); } catch { /* private mode */ }
+    handle.classList.remove('show-hint');
   }
 
   function restoreSavedHeight() {
@@ -300,6 +338,7 @@ export function initPanelResize() {
 
   function onPointerDown(e) {
     if (!mq.matches) return;
+    dismissHint();
     dragging = true;
     startY = e.clientY;
     startHeight = panel.getBoundingClientRect().height;
@@ -318,7 +357,9 @@ export function initPanelResize() {
     dragging = false;
     handle.classList.remove('dragging');
     handle.releasePointerCapture?.(e.pointerId);
-    localStorage.setItem(STORAGE_KEY, parseFloat(panel.style.height) || '');
+    const settled = snapHeight(parseFloat(panel.style.height) || panel.getBoundingClientRect().height);
+    localStorage.setItem(STORAGE_KEY, settled || '');
+    keepSelectionVisible();
   }
 
   handle.addEventListener('pointerdown', onPointerDown);
@@ -326,15 +367,28 @@ export function initPanelResize() {
   handle.addEventListener('pointerup', onPointerUp);
   handle.addEventListener('pointercancel', onPointerUp);
 
-  // Keyboard: arrow keys nudge the height for anyone not dragging by touch/mouse.
+  // Keyboard: arrows nudge; Home/End jump to the pan's largest/smallest.
   handle.addEventListener('keydown', (e) => {
     if (!mq.matches) return;
-    if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
-    e.preventDefault();
     const current = panel.getBoundingClientRect().height;
-    const next = applyHeight(e.key === 'ArrowUp' ? current + KEYBOARD_STEP : current - KEYBOARD_STEP);
-    localStorage.setItem(STORAGE_KEY, next);
+    const { floor, ceiling } = heightBounds();
+    const target = {
+      ArrowUp: current + KEYBOARD_STEP,
+      ArrowDown: current - KEYBOARD_STEP,
+      Home: ceiling,
+      End: floor,
+    }[e.key];
+    if (target === undefined) return;
+    e.preventDefault();
+    dismissHint();
+    localStorage.setItem(STORAGE_KEY, applyHeight(target));
+    keepSelectionVisible();
   });
+
+  // First visit: a "Drag to resize" hint until the divider is first used
+  try {
+    if (!localStorage.getItem(HINT_KEY)) handle.classList.add('show-hint');
+  } catch { /* private mode: no hint */ }
 
   restoreSavedHeight();
 
