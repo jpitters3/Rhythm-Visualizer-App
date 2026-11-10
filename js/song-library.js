@@ -16,6 +16,7 @@ let librarySongs = [];
 // Better to import it if it is a module.
 // But this file has no imports at the top. It seems to be treated as a module by the bundler/browser if type="module".
 import { alert, confirm } from './alert.js';
+import { Bus, BUS_EVENT } from './bus.js';
 import { Modal } from './modal.js';
 import { renderAllMeasures, checkCellIsMultiMode } from './notegrid.js';
 import { setBeats, setSubdivision } from './noteplayer.js';
@@ -202,11 +203,7 @@ async function loadLibrarySong(id) {
     // 5. Switch to Pitches view automatically? 
     // Since MIDI is absolute pitches, "Numbers" view might show nothing if not mapped.
     // Let's autoswitch to Pitches for UX.
-    const sel = document.getElementById('numberPitchSelect');
-    if (sel && sel.value !== 'Pitches') {
-      sel.value = 'Pitches';
-      sel.dispatchEvent(new Event('change'));
-    }
+    Bus.emit(BUS_EVENT.SET_LABEL_PREF, { value: 'Pitches' });
   }
 };
 

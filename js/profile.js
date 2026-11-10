@@ -56,14 +56,8 @@ async function fetchCurrentProfile() {
       if (currentProfile.label_preference) {
         localStorage.setItem('handpanLabelPref', currentProfile.label_preference);
 
-        // Try to update UI if it exists
-        const sel = document.getElementById('numberPitchSelect');
-        if (sel) {
-          sel.value = currentProfile.label_preference;
-          // Trigger update logic - Assumption: This function triggers internal update
-          const event = new Event('change');
-          sel.dispatchEvent(event);
-        }
+        // Apply it (js/handpanmap.js); not saved back, it came from the profile
+        Bus.emit(BUS_EVENT.SET_LABEL_PREF, { value: currentProfile.label_preference });
       }
 
       // Sync Grid Label Notation Preference

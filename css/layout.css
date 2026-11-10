@@ -936,23 +936,31 @@ select#patternSelect {
    positioned with transform keep their offset. */
 .dropdown-content,
 .app-nav,
-.notif-panel {
+.notif-panel,
+.phrase-menu {
   transition: opacity 0.16s ease, translate 0.16s ease, scale 0.16s ease,
     display 0.16s allow-discrete, overlay 0.16s allow-discrete;
   transform-origin: top;
 }
 
 .dropdown-content:not(.show),
-.notif-panel:not(.open) {
+.notif-panel:not(.open),
+.phrase-menu:not(.open) {
   opacity: 0;
   translate: 0 -6px;
   scale: 0.98;
 }
 
+/* The phrase title drop-down (js/controls.js) */
+.phrase-menu.open {
+  display: block;
+}
+
 @starting-style {
   .dropdown-content.show,
   .app-nav.open,
-  .notif-panel.open {
+  .notif-panel.open,
+  .phrase-menu.open {
     opacity: 0;
     translate: 0 -6px;
     scale: 0.98;
@@ -962,7 +970,8 @@ select#patternSelect {
 @media (prefers-reduced-motion: reduce) {
   .dropdown-content,
   .app-nav,
-  .notif-panel {
+  .notif-panel,
+  .phrase-menu {
     transition: none;
   }
 }

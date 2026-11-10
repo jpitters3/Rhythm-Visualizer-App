@@ -363,17 +363,15 @@ function getOrCreatePhraseContextMenu() {
   if (!phraseContextMenuEl) {
     phraseContextMenuEl = document.createElement('div');
     phraseContextMenuEl.id = 'gridPhraseContextMenu';
-    phraseContextMenuEl.className = 'lib-context-menu';
+    phraseContextMenuEl.className = 'lib-context-menu phrase-menu';
     document.body.appendChild(phraseContextMenuEl);
   }
   return phraseContextMenuEl;
 }
 
+// Fades out (css/layout.css); its items stay until the next open rebuilds them
 function hidePhraseContextMenu() {
-  if (phraseContextMenuEl) {
-    phraseContextMenuEl.style.display = 'none';
-    phraseContextMenuEl.innerHTML = '';
-  }
+  phraseContextMenuEl?.classList.remove('open');
 }
 
 function showPhraseContextMenu(anchorEl) {
@@ -416,7 +414,7 @@ function showPhraseContextMenu(anchorEl) {
     menu.appendChild(btn);
   });
 
-  menu.style.display = 'block';
+  menu.classList.add('open');
   menu.style.visibility = 'hidden';
   const rect = anchorEl.getBoundingClientRect();
   const menuRect = menu.getBoundingClientRect();
@@ -762,7 +760,7 @@ export function initControls() {
 
   document.getElementById('gridPhraseNameBtn')?.addEventListener('click', (e) => {
     e.stopPropagation();
-    const isOpen = phraseContextMenuEl?.style.display === 'block';
+    const isOpen = !!phraseContextMenuEl?.classList.contains('open');
     hidePhraseContextMenu();
     if (!isOpen) showPhraseContextMenu(e.currentTarget);
   });
@@ -771,7 +769,7 @@ export function initControls() {
   document.addEventListener('click', (e) => {
     if (
       phraseContextMenuEl &&
-      phraseContextMenuEl.style.display === 'block' &&
+      phraseContextMenuEl.classList.contains('open') &&
       !e.target.closest('#gridPhraseContextMenu') &&
       !e.target.closest('#gridPhraseNameBtn')
     ) {

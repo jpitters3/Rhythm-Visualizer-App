@@ -99,9 +99,9 @@
 }
 
 /* Desktop: the panel fills .main's height; the wrap shrinks its width so the
-   (square-ish) image never overflows vertically. 160px = tabs (~80px) +
-   ghost section (~63px) + slack. Container query lets the wrap read the
-   panel's cqh and limit itself accordingly. */
+   (square-ish) image never overflows vertically. 190px = tabs (~80px) + the
+   labels toggle row (~30px) + ghost section (~63px) + slack. Container query
+   lets the wrap read the panel's cqh and limit itself accordingly. */
 @media (min-width: 901px) {
   .handpan-panel {
     align-self: stretch;
@@ -111,8 +111,23 @@
   }
 
   .handpan-wrap {
-    max-width: min(100%, calc(100cqh - 160px));
+    max-width: min(100%, calc(100cqh - 190px));
     margin: 0 auto;
+  }
+
+  /* Arcs: the toggle row no longer overlaps the padding, so leave room for it */
+  .handpan-panel.hp-perimeter .handpan-wrap {
+    max-width: min(100%, calc(100cqh - 190px - var(--hp-pad)));
+  }
+
+  /* Only the labels toggle: the scale pill's job is the Settings tab here */
+  .handpan-panel .hp-top-row {
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  .hp-top-row .hp-scale-pill {
+    display: none;
   }
 }
 
@@ -860,13 +875,6 @@ body.dark .icon-btn.active {
   .handpan-panel.hp-compact .hp-top-row {
     display: none;
   }
-}
-
-/* Narrow phones: the note count goes before the name gets cut */
-@media (max-width: 360px) {
-  .hp-scale-pill-count {
-    display: none;
-  }
 
 }
 
@@ -874,6 +882,13 @@ body.dark .icon-btn.active {
 .handpan-panel.hp-perimeter .hp-top-row,
 .handpan-panel.hp-perimeter .handpan-wrap {
   margin-bottom: 0;
+}
+
+/* Narrow phones: the note count goes before the name gets cut */
+@media (max-width: 360px) {
+  .hp-scale-pill-count {
+    display: none;
+  }
 }
 
 .tab-btn {

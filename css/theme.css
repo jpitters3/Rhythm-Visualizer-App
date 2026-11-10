@@ -165,3 +165,65 @@ body.dark {
     background-position: center;
   }
 }
+/* Toggle switch: <span class="ui-switch"><input type="checkbox"><span class="ui-switch-track"></span></span>
+   The real checkbox sits invisibly on top, so clicks, keyboard and labels just work. */
+.ui-switch {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+  width: 42px;
+  height: 24px;
+}
+
+.ui-switch input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.ui-switch-track {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--ui-tint-hover);
+  pointer-events: none;
+  transition: background 0.15s ease;
+}
+
+.ui-switch-track::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  transition: translate 0.15s ease;
+}
+
+.ui-switch input:checked + .ui-switch-track {
+  background: var(--ui-on);
+}
+
+.ui-switch input:checked + .ui-switch-track::after {
+  translate: 18px 0;
+}
+
+.ui-switch input:focus-visible + .ui-switch-track {
+  outline: 2px solid var(--ui-ring);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ui-switch-track,
+  .ui-switch-track::after {
+    transition: none;
+  }
+}

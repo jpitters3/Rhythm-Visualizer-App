@@ -33,6 +33,7 @@ export const BUS_EVENT = {
   PRACTICE_ITEMS_CHANGED: 'practice:items-changed',
   GRID_ZOOM_CHANGED: 'grid:zoom-changed',
   FREE_PLAY_CHANGED: 'studio:free-play-changed',
+  SET_LABEL_PREF: 'handpan:set-label-pref',
 };
 
 /**

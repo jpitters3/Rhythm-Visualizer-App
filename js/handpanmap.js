@@ -17,7 +17,7 @@ import { canAccess, FEATURE } from './gated-feature.js';
 import { alert, confirm } from './alert.js';
 
 // DOM Elements (previously globals)
-let handpanImg, scaleSelect, scaleStatus, handpanColorSelect, numberPitchSelect, showOctaveCheck, showOctaveRow, ghostBtn, ghostBackBtn, ghostFwdBtn, composeBtn, handpanSection, handpanOverlay;
+let handpanImg, scaleSelect, scaleStatus, handpanColorSelect, showOctaveCheck, showOctaveRow, ghostBtn, ghostBackBtn, ghostFwdBtn, composeBtn, handpanSection, handpanOverlay;
 let handpanWrapBottom, handpanImgBottom, handpanOverlayBottom;
 
 /* Mapped to nine-note-handpan-numbered.png */
@@ -1398,8 +1398,7 @@ export function syncStateFromStorage() {
   const val = localStorage.getItem('handpanLabelPref') || 'default';
   currentLabelPref = val;
 
-  // Sync UI if mapped
-  if (numberPitchSelect) numberPitchSelect.value = val;
+  // Sync the numbers/pitches toggle
   document.querySelectorAll('#labelModeToggle button').forEach(b => {
     b.setAttribute('aria-pressed', String(b.dataset.label === (val === 'Pitches' ? 'Pitches' : 'Numbers')));
   });
@@ -1671,7 +1670,6 @@ export function initHandpanMap() {
   handpanImg = document.getElementById('handpanImg');
   scaleStatus = document.getElementById('scaleStatus');
   handpanColorSelect = document.getElementById('handpanColorSelect');
-  numberPitchSelect = document.getElementById('numberPitchSelect');
   showOctaveCheck = document.getElementById('showOctaveCheck');
   showOctaveRow = document.getElementById('showOctaveRow');
   ghostBtn = document.getElementById('ghostBtn');
@@ -2075,10 +2073,8 @@ export function initHandpanMap() {
       updateGridLabels();
     }, 50);
   };
-  // Only save real user changes. profile.js dispatches a synthetic 'change'
-  // after loading this same value from the profile; saving it would just
-  // write it straight back on every sign-in.
-  numberPitchSelect?.addEventListener('change', (e) => applyLabelPref(numberPitchSelect.value, e.isTrusted));
+  // Set from elsewhere (the profile on sign-in, a song import): applied, not saved back
+  Bus.on(BUS_EVENT.SET_LABEL_PREF, (e) => { if (e.detail?.value) applyLabelPref(e.detail.value, false); });
   document.getElementById('labelModeToggle')?.addEventListener('click', (e) => {
     const val = e.target.closest('button[data-label]')?.dataset.label;
     if (val) applyLabelPref(val, true);
