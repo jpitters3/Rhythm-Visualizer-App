@@ -75,6 +75,7 @@ h2 {
   --btn-active: #f1cd00;
   --primary-color: #f1cd00;
   --btn-active-text: #1a1a24; /* text on --btn-active / --primary-color fills */
+  --chord-shape: #251133; /* active notes in the grid's chord shapes (dark plum) */
 
   /* ── Studio UI (plan/studio-facelift.md): soft tonal ── */
   --ui-ground: linear-gradient(180deg, #f2eef7 0%, #e7e2f1 100%);
@@ -117,7 +118,11 @@ body.dark {
   --down-glow: rgba(253, 3, 128, 0.28);
   --up-glow: rgba(30, 121, 232, 0.28);
   --btn-bg: #272d45;
-  --btn-active: #5b8cff;
+  /* Brass, like the rest of dark mode's on-states (was the old blue) */
+  --btn-active: #d7b46a;
+  --primary-color: #d7b46a;
+  --btn-active-text: #1b2033;
+  --chord-shape: #d7b46a;
 
   /* Studio UI, dark: C layout with ink + brass colours */
   --ui-ground: linear-gradient(180deg, #0f1220 0%, #151a2b 100%);
@@ -170,6 +175,7 @@ body.accent-zen:not(.dark) {
   --btn-active: #556b3a;
   --primary-color: #556b3a;
   --btn-active-text: #ffffff;
+  --chord-shape: #3f4a35;
   --cell-bg: rgba(98, 88, 70, 0.08);
 
   --ui-ground: linear-gradient(180deg, #ece9e2 0%, #e3dfd6 100%);

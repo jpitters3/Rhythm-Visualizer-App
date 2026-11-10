@@ -195,7 +195,7 @@
 }
 
 .chord-shape-diagram .note-dot.active {
-  fill: var(--btn-active);
+  fill: var(--chord-shape);
   opacity: 1;
 }
 

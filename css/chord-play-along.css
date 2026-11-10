@@ -448,7 +448,7 @@
 
 .cpa-cta-primary {
   background: var(--btn-active);
-  color: #0b0b12;
+  color: var(--btn-active-text);
   border-color: var(--btn-active);
 }
 
