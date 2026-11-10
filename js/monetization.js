@@ -52,15 +52,13 @@ export function initMonetization() {
     checkUpgradeSuccess();
 }
 
-// Purple "+" by the logo for anyone with paid access right now.
+// "Panafide+" wordmark for anyone with paid access right now.
 function updatePlusBadge({ signedOut = false } = {}) {
-    const badge = document.getElementById('logoPlusBadge');
-    if (!badge) return;
+    const plus = document.getElementById('wordmarkPlus');
+    if (!plus) return;
     const rank = currentUser && !signedOut ? activeTierRank() : 0;
-    badge.toggleAttribute('hidden', rank < 1); // SVG has no .hidden property
-    const label = rank >= 2 ? 'Panafide Pro' : 'Panafide+';
-    badge.querySelector('title').textContent = label;
-    badge.setAttribute('aria-label', `${label} member`);
+    plus.hidden = rank < 1;
+    plus.title = rank >= 2 ? 'Panafide Pro member' : 'Panafide+ member';
 }
 
 function openUpgradeModal(payload) {

@@ -158,7 +158,9 @@
   <div id="gridContainer" class="container">
     <header class="app-header">
       <a href="." class="app-logo">
-        <img class="logo-img" src="./assets/images/logo-big.png" width="640" height="485" />
+        <img class="logo-img" src="./assets/images/logo-icon-only.png" width="467" height="370" alt="" />
+        <span class="app-wordmark">Panafide<span id="wordmarkPlus" class="app-wordmark-plus" hidden>+</span></span>
+        <!-- Retired gradient "+" badge, kept in markup but no longer shown -->
         <svg id="logoPlusBadge" class="logo-plus" viewBox="0 0 24 24" role="img" aria-label="Panafide+ member" hidden>
           <title>Panafide+</title>
           <defs>
@@ -484,6 +486,7 @@
               </svg>
             </button>
             <span class="grid-phrase-name-extras">
+              <span id="phraseSaveStatus" class="phrase-save-status" role="status" hidden></span>
               <button id="quickSaveBtn" class="quick-save-btn" title="Save phrase" aria-label="Quick save">Save</button>
               <span id="composerSaveStatus" class="composer-save-status"></span>
             </span>
