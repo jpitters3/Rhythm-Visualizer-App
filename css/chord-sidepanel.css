@@ -77,6 +77,15 @@ body.accent-zen:not(.dark) .chord-sidebar [data-color="5"] { --section-color: #b
   stroke: var(--cs-purple-dark);
 }
 
+.chord-shape-diagram.chord-shape-flat .note-arc {
+  stroke: var(--cs-field-stroke);
+  opacity: 1;
+}
+
+.chord-shape-diagram.chord-shape-flat .note-arc.active {
+  stroke: var(--cs-purple);
+}
+
 /* ---------- Panel layout ---------- */
 .sidebar.chord-sidebar {
   overflow: hidden;
@@ -596,6 +605,10 @@ body.chord-stage-open {
   stroke: var(--now-stroke);
 }
 
+.chord-stage[data-stage-theme="zen"] .chord-shape-flat .note-arc.active {
+  stroke: var(--now);
+}
+
 .cs-stage-title {
   position: absolute;
   top: 2.5vh;
@@ -774,6 +787,10 @@ body.chord-stage-open {
 .chord-stage .cs-stage-card.is-next .chord-shape-flat .note-dot.active {
   fill: var(--next);
   stroke: var(--next-stroke);
+}
+
+.chord-stage .cs-stage-card.is-next .chord-shape-flat .note-arc.active {
+  stroke: var(--next);
 }
 
 /* Last beat before the change: the next chord pulses hard. */

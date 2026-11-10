@@ -15,6 +15,7 @@ import { setBeatToGhost, renderAllMeasures, updateGridLabels, assignChordToSelec
 import { isAuthed } from './auth.js';
 import { canAccess, FEATURE } from './gated-feature.js';
 import { alert, confirm } from './alert.js';
+import { setChordShapeLayout } from './chord-shape-diagram.js';
 
 // DOM Elements (previously globals)
 let handpanImg, scaleSelect, scaleStatus, handpanColorSelect, showOctaveCheck, showOctaveRow, ghostBtn, ghostBackBtn, ghostFwdBtn, handpanSection, handpanOverlay;
@@ -898,6 +899,8 @@ export function buildHandpanOverlay() {
   }
   // Arcs fill the pan's padding, so rows mustn't overlap it (css/handpanmap.css)
   wrap?.closest('.handpan-panel')?.classList.toggle('hp-perimeter', !!perimSvgEl);
+  // Chord-shape diagrams follow this handpan's layout (incl. bottom notes)
+  setChordShapeLayout(HANDPAN_MAP);
 
   if (overlayPitches || overlayNumbers)
     overlayNumberPitchNotes(); else removeNoteLabels();
@@ -1436,11 +1439,49 @@ function removeNoteLabels() {
   document.querySelectorAll('.hp-label').forEach(el => el.remove());
 }
 
+// The label a note shows: its number or its pitch, per the labels setting
+function noteLabelText(note) {
+  let text = '';
+  if (overlayNumbers) {
+    if (note === 'T_R' || note === 'T_L') text = 'T';
+    else if (note === 'S_R' || note === 'S_L') text = 'S';
+    else text = note;
+  } else if (overlayPitches) {
+    if (typeof noteForLabel === 'function') {
+      const pitch = noteForLabel(note);
+      if (note === 'T_R' || note === 'T_L') { text = 'T'; }
+      else if (note === 'S_R' || note === 'S_L') { text = 'S'; }
+      else if (pitch) {
+        const scale = typeof getScale === 'function' ? getScale() : null;
+        const allPitches = scale?.map ? Object.values(scale.map) : [];
+        const spelled = spellNote(pitch, allPitches);
+        text = localStorage.getItem('handpanShowOctave') === 'true'
+          ? spelled + (pitch.match(/\d+$/)?.[0] ?? '')
+          : spelled;
+      }
+    } else {
+      text = note;
+    }
+  }
+
+  const scale = typeof getScale === 'function' ? getScale() : null;
+  const dingPitch = scale ? scale.ding : 'D3';
+  if (note === 'D' || note === 'Ding' || text.includes('_ding') || text === dingPitch) {
+    text = '';
+  }
+  return text;
+}
+
 function overlayNumberPitchNotes() {
   const isCustom = scaleSelect.value.startsWith('custom:');
 
   for (const [note, el] of handpanDots.entries()) {
-    if (el.isArc) continue; // perimeter arcs carry their own SVG text label
+    // Perimeter arcs (bottom notes) carry an SVG text label
+    if (el.isArc) {
+      const arcText = noteLabelText(note);
+      if (el.text && el.text.textContent !== arcText) el.text.textContent = arcText;
+      continue;
+    }
 
     const p = HANDPAN_MAP[note];
     if (!p) continue;
@@ -1453,34 +1494,7 @@ function overlayNumberPitchNotes() {
       el.appendChild(label);
     }
 
-    let text = '';
-    if (overlayNumbers) {
-      if (note === 'T_R' || note === 'T_L') text = 'T';
-      else if (note === 'S_R' || note === 'S_L') text = 'S';
-      else text = note;
-    } else if (overlayPitches) {
-      if (typeof noteForLabel === 'function') {
-        const pitch = noteForLabel(note);
-        if (note === 'T_R' || note === 'T_L') { text = 'T'; }
-        else if (note === 'S_R' || note === 'S_L') { text = 'S'; }
-        else if (pitch) {
-          const scale = typeof getScale === 'function' ? getScale() : null;
-          const allPitches = scale?.map ? Object.values(scale.map) : [];
-          const spelled = spellNote(pitch, allPitches);
-          text = localStorage.getItem('handpanShowOctave') === 'true'
-            ? spelled + (pitch.match(/\d+$/)?.[0] ?? '')
-            : spelled;
-        }
-      } else {
-        text = note;
-      }
-    }
-
-    const scale = typeof getScale === 'function' ? getScale() : null;
-    const dingPitch = scale ? scale.ding : 'D3';
-    if (note === 'D' || note === 'Ding' || text.includes('_ding') || text === dingPitch) {
-      text = '';
-    }
+    const text = noteLabelText(note);
 
     // Only update if text actually changed to avoid unnecessary churn
     if (label.textContent !== text) {

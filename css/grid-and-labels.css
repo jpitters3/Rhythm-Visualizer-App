@@ -199,6 +199,20 @@
   opacity: 1;
 }
 
+/* Bottom-side notes: arcs on the rim (js/chord-shape-diagram.js) */
+.chord-shape-diagram .note-arc {
+  fill: none;
+  stroke: #000;
+  stroke-width: 6;
+  stroke-linecap: round;
+  opacity: 0.1;
+}
+
+.chord-shape-diagram .note-arc.active {
+  stroke: var(--chord-shape);
+  opacity: 1;
+}
+
 body.chord-shape-view .cell.multi-mode .chord-shape-diagram {
   opacity: 1;
 }
