@@ -847,9 +847,12 @@ div.container {
     overflow: visible;
   }
 
+  /* Title centred between the header buttons and the tools row (about 17px each);
+     same total height as before, so the grid keeps its space */
   .grid-phrase-name-row {
-    padding-bottom: 2px;
-    padding-top: 4px;
+    margin-top: -5px;
+    padding-top: 0;
+    padding-bottom: 11px;
   }
 }
 
