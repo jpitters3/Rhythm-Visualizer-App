@@ -61,6 +61,7 @@ import { initSaveStatus } from './save-status.js';
 import { initAutoSave } from './autosave.js';
 import { initNotationGuides } from './notation-guides.js';
 import { initFreePlay } from './free-play.js';
+import { initErrorReporter } from './error-reporter.js';
 import { initScrollIndicators } from './scroll-indicators.js';
 import { initMethod, wireMethodEvents } from './method.js';
 import { initExercises } from './exercises.js';
@@ -70,6 +71,7 @@ import { initFlashCards } from './technique-flash-cards.js';
  * Main application initializer
  */
 async function init() {
+  initErrorReporter(); // first, so errors during the rest of startup are caught too
   console.log('--- APP INIT START ---');
 
   // The entry script tag (index.html) auto-reloads once if it 404s on a stale
