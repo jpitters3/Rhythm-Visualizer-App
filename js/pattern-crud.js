@@ -9,6 +9,7 @@ import { migratePatternState } from './rhythm-core.js';
 import { renderAllMeasures, clearSelection, setDualGrid } from './notegrid.js';
 import { TransportRegistry } from './transport-ui.js';
 import { Bus, BUS_EVENT } from './bus.js';
+import { MOBILE_MAX_WIDTH } from './config.js';
 
 export const STORAGE_KEY = 'groovepan_patterns';
 export const LAST_USED_KEY = 'groovepan_last_pattern';
@@ -268,7 +269,7 @@ export function serializePattern(ctx = gridA) {
   // original phrase (subdivision restored, BPM divided back down).
   let subdivision = ctx.subdivision;
   let bpm = Number(ctx.bpm);
-  if (window.innerWidth <= 768 && ctx.mobileOriginalSubdivision) {
+  if (window.innerWidth <= MOBILE_MAX_WIDTH && ctx.mobileOriginalSubdivision) {
     subdivision = ctx.mobileOriginalSubdivision;
     bpm = Math.round(bpm / ctx.mobileOriginalSubdivision);
   }
@@ -317,7 +318,7 @@ export function serializePattern(ctx = gridA) {
 // plays at exactly the same duration as the original.
 // e.g. subdivision=2, bpm=120 → subdivision=1, bpm=240
 function normalizeMobileSubdivision(state) {
-  if (window.innerWidth > 768) return;
+  if (window.innerWidth > MOBILE_MAX_WIDTH) return;
   const sub = state.subdivision ?? 2;
   if (sub <= 1) return;
   state.bpm = Math.round((state.bpm ?? 120) * sub);
@@ -343,7 +344,7 @@ export async function applyPattern(state, ctx = gridA) {
   // Mobile: collapse to quarter-note grid, scale BPM to compensate.
   // Store original subdivision from the phrase before normalization so we can
   // reverse it on save.
-  if (window.innerWidth <= 768 && (state.subdivision ?? 2) > 1) {
+  if (window.innerWidth <= MOBILE_MAX_WIDTH && (state.subdivision ?? 2) > 1) {
     ctx.mobileOriginalSubdivision = state.subdivision ?? 2;
   } else {
     ctx.mobileOriginalSubdivision = null;

@@ -2,6 +2,7 @@ import { activeGrid, gridA, gridB } from './grid-context.js';
 import { setLongPressFired } from './state.js';
 import { isReviewing } from './coaching-mode.js';
 import { Bus, BUS_EVENT } from './bus.js';
+import { MOBILE_MAX_WIDTH } from './config.js';
 
 function allCells(ctx) {
   return Array.from((ctx || activeGrid).cells);
@@ -104,7 +105,7 @@ export function showSelectionMenu(ctx) {
     document.body.classList.toggle('has-selection', showBar);
     if (selBarText) selBarText.textContent = `${count} selected`;
 
-    if (window.innerWidth <= 768) {
+    if (window.innerWidth <= MOBILE_MAX_WIDTH) {
       const mt = document.getElementById('measureTools');
       const panel = document.querySelector('.handpan-panel');
       const slot = document.getElementById('panelControlsSlot');

@@ -17,6 +17,7 @@ import { extractYouTubeId } from './utils.js';
 import { renderThumbnail } from './pattern-thumbnail.js';
 import { clearGrid } from './notegrid.js';
 import { getLessonOverride, applyLessonOverride, captureLessonBaseline, guardBeforeReplacingGrid, renderLessonSettingsControl } from './lesson-settings.js';
+import { MOBILE_MAX_WIDTH } from './config.js';
 
 // ===== SIDEBAR LOGIC (OWNED COURSES) =====
 
@@ -599,7 +600,7 @@ export async function loadLesson(lessonId) {
         previewCanvas.height = 180;
         previewCanvas.className = 'lesson-pattern-preview';
 
-        if (window.innerWidth < 768) {
+        if (window.innerWidth <= MOBILE_MAX_WIDTH) {
           const openInStudio = () => {
             closeSidebar();
             if (window.location.hash !== '#studio' && window.location.hash !== '') {
@@ -738,7 +739,7 @@ export async function editCourse(courseId) {
   const course = allCourses.find(c => c.id === courseId);
   if (!course) return;
   loadCourseToEdit(course);
-  if (window.innerWidth < 768) closeSidebar();
+  if (window.innerWidth <= MOBILE_MAX_WIDTH) closeSidebar();
 }
 
 export function closeSidebar(options = {}) {

@@ -1,8 +1,8 @@
 // TransportUI manages a set of transport controls
 import { start, stop, getMetronomeSound, setMetronomeSound, getAudioCtx, handleBeatsSelectChange, handleSubdivisionSelectChange } from './noteplayer.js';
 import { Bus, BUS_EVENT } from './bus.js';
+import { MOBILE_MAX_WIDTH } from './config.js';
 
-const MOBILE_BREAKPOINT = 768; // matches pattern-crud.js's normalizeMobileSubdivision
 
 function suppressHover(btn) {
   btn.classList.add('no-hover');
@@ -37,7 +37,7 @@ export class TransportUI {
     // convention pattern-crud.js's normalizeMobileSubdivision already uses.
     // Not reactive to resize (nothing else in the app re-layouts transport
     // controls live either).
-    this.isMobile = window.innerWidth <= MOBILE_BREAKPOINT;
+    this.isMobile = window.innerWidth <= MOBILE_MAX_WIDTH;
 
     // Desktop: .t-subdiv-btn/.t-tap-btn live inline in the bar, exactly as
     // before this feature — the template's default/mobile home for them is

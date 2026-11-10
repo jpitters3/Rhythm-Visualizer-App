@@ -24,6 +24,7 @@
  */
 
 import { isRunningStandalone, isIOS, canPromptInstall, triggerInstallPrompt } from './install-prompt.js';
+import { MOBILE_MAX_WIDTH } from './config.js';
 
 // ── Tour keys ─────────────────────────────────────────────────────────────────
 
@@ -306,7 +307,7 @@ export function startTour(sectionKey = 'dashboard') {
 
 // Same mobile breakpoint used by .app-nav / .hamburger-btn in layout.css.
 function isMobile() {
-  return window.innerWidth <= 768;
+  return window.innerWidth <= MOBILE_MAX_WIDTH;
 }
 
 // A step's mobileTarget takes over on mobile — e.g. nav links live inside a

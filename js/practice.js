@@ -5,6 +5,7 @@ import { applyPattern, syncPhraseNameDisplay } from './pattern-crud.js';
 import { openLessonSidebar, closeSidebar } from './courses.js';
 import { Sidepanel, updateBodySidebarClass, setLastSidebarType, registerPanelOpener } from './sidepanel.js';
 import { navigate } from './router.js';
+import { MOBILE_MAX_WIDTH } from './config.js';
 
 // State
 let practiceItems = [];
@@ -323,5 +324,5 @@ async function loadPracticeItem(type, id) {
     }
   }
 
-  if (window.innerWidth < 768) closePracticeSidebar();
+  if (window.innerWidth <= MOBILE_MAX_WIDTH) closePracticeSidebar();
 }

@@ -31,7 +31,15 @@
   pointer-events: all;
 }
 
-@media (max-width: 768px) {
+/* Narrow desktops: centred, it ran under the Measures box; sit beside it instead */
+@media (min-width: 901px) and (max-width: 1099px) {
+  .grid-bottom-row .controls-transport {
+    position: static;
+    transform: none;
+  }
+}
+
+@media (max-width: 900px) {
   body {
     padding-bottom: 0 !important;
   }

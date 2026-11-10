@@ -232,7 +232,7 @@ body.dark .phrase-save-status[data-state="saved"] {
 }
 
 /* Mobile */
-@media (max-width: 768px) {
+@media (max-width: 900px) {
   /* Nav is a dropdown on mobile, so size the logo column to its content and give the rest to the buttons */
   .app-header {
     grid-template-columns: auto 0 1fr;
@@ -376,7 +376,7 @@ body {
   background: var(--ui-tint-hover);
 }
 
-@media (max-width: 768px) {
+@media (max-width: 900px) {
   .hamburger-btn {
     display: flex;
   }
@@ -538,6 +538,33 @@ div.container {
   grid-column: 2;
 }
 
+/* Sidebar toggle in the title row's empty left column */
+.phrase-sidebar-btn {
+  grid-column: 1;
+  justify-self: start;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  min-width: 0;
+  height: 36px;
+  padding: 0;
+  border-radius: var(--ui-radius-sm);
+  background: var(--ui-tint);
+  color: var(--ui-icon);
+}
+
+.phrase-sidebar-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+.phrase-sidebar-btn:hover:not(:disabled) {
+  background: var(--ui-tint-hover);
+  box-shadow: none;
+  transform: none;
+}
+
 .grid-phrase-name-extras {
   display: flex;
   align-items: center;
@@ -689,6 +716,12 @@ div.container {
     display: flex;
   }
 
+  /* Same size as the tools-row buttons below it */
+  .phrase-sidebar-btn {
+    width: 32px;
+    height: 32px;
+  }
+
   .notation-measure-add {
     display: inline-flex;
     align-items: center;
@@ -741,7 +774,7 @@ div.container {
   pointer-events: none;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 900px) {
   html {
     height: 100dvh;
     overflow: hidden;

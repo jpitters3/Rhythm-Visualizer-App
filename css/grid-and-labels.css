@@ -133,7 +133,7 @@
 
 
 /* Define the mobile-only layout to maximize density */
-@media (max-width: 768px) {
+@media (max-width: 900px) {
 
   /* Allow the full 8 column grid on mobile to shrink cells */
   .grid,

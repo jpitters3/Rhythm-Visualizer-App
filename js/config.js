@@ -62,5 +62,9 @@ export const SCALE_KEY_REMOTE = 'handpan_scale';
 export const AUDIO_DELAY = 0.1; // 100ms scheduling buffer for snappiness
 export const VISUAL_HEADSTART = 0.04; // 40ms visual lead-time to compensate for rAF jitter (~16ms) + output buffer lag
 export const ACCENT_RMS_MULTIPLIER = 2.0; // Accents must be 2x louder than base sensitivity
+// Phone/tablet layout up to this width (the Studio stacks, the transport is a bottom
+// sheet, the header collapses). Matches the CSS breakpoints at 900px.
+export const MOBILE_MAX_WIDTH = 900;
+
 // Auto-advance setting (the stored key keeps its old name so saved choices carry over)
 export const AUTO_ADVANCE_KEY = 'groovepan_compose_mode';

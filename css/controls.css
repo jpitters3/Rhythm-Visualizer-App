@@ -118,6 +118,24 @@ button:disabled {
   box-shadow: none;
 }
 
+/* Desktop bar: always one row (its height is fixed). Narrower desktops show the
+   tiles as icons only; each keeps its title as a tooltip. */
+@media (min-width: 901px) {
+  #primaryControlsWrapper .controls-primary {
+    flex-wrap: nowrap;
+  }
+}
+
+@media (min-width: 901px) and (max-width: 1279px) {
+  #primaryControlsRow .ctl-btn .ctl-label {
+    display: none;
+  }
+
+  #primaryControlsRow .ctl-btn {
+    padding: 0 11px;
+  }
+}
+
 /* Mobile-only tiles (desktop has the handpan tab row). Not .mobile-only: its
    !important would override the inline display that hides Flip. */
 @media (min-width: 901px) {
@@ -131,6 +149,10 @@ button:disabled {
   .ctl-btn.ctl-desktop {
     display: none;
   }
+}
+
+a.ctl-btn {
+  text-decoration: none;
 }
 
 .ctl-btn svg {
@@ -399,7 +421,7 @@ select {
   background: linear-gradient(to left, var(--bg) 80%, transparent);
 }
 
-@media (max-width: 768px) {
+@media (max-width: 900px) {
   .scroll-indicator {
     display: flex;
   }

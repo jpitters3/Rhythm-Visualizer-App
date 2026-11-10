@@ -1,3 +1,5 @@
+import { MOBILE_MAX_WIDTH } from './config.js';
+
 /**
  * Sets up scroll indicators for a specific container and its indicators.
  * @param {HTMLElement} container - The scrollable element.
@@ -9,7 +11,7 @@ export function setupScrollIndicators(container, leftIndicator, rightIndicator) 
 
   function updateIndicators() {
     // Only apply logic on mobile widths where scrolling is active
-    if (window.innerWidth > 768) {
+    if (window.innerWidth > MOBILE_MAX_WIDTH) {
       leftIndicator.classList.remove('active');
       rightIndicator.classList.remove('active');
       return;

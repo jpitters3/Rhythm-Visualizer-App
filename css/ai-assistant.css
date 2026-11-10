@@ -365,7 +365,14 @@ body.dark #aiInput:focus {
   fill: currentColor;
 }
 
-@media (max-width: 768px) {
+/* Narrow desktops: the transport reaches the corner, so float above it */
+@media (min-width: 901px) and (max-width: 1099px) {
+  #aiFab {
+    bottom: 124px;
+  }
+}
+
+@media (max-width: 900px) {
   #aiFab {
     display: none;
   }
