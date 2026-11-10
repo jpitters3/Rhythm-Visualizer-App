@@ -295,10 +295,10 @@ select {
   color: var(--ui-on-ink);
 }
 
-/* Shaker sound: same "on" fill in the downbeat colour so the two sounds read apart */
+/* Shaker sound: the theme's second "on" colour, so the two sounds read apart */
 .transport-group .t-metro-btn.metro-shaker {
-  background: var(--down-fill);
-  color: #fff;
+  background: var(--ui-on-2);
+  color: var(--ui-on-2-ink);
 }
 
 .transport-group .t-play-btn,

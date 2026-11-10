@@ -266,9 +266,19 @@ body.dark .acct-accent-swatch--active {
   background: #024496;
   color: #024496;
 }
-.acct-accent-swatch--purple {
-  background: #4a2e8c;
-  color: #4a2e8c;
+/* Raked Gravel: gravel and moss */
+.acct-accent-swatch--zen {
+  background: linear-gradient(135deg, #ece9e2 0 50%, #556b3a 50% 100%);
+  color: #556b3a;
+  /* outline, so the active ring (box-shadow) still shows */
+  outline: 1px solid rgba(52, 50, 46, 0.25);
+  outline-offset: -1px;
+}
+
+.acct-row-hint {
+  margin: 6px 0 0;
+  font-size: 12px;
+  color: var(--ui-muted);
 }
 
 /* ===== NOTIFICATION TOGGLES ===== */

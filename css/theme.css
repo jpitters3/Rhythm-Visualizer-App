@@ -74,6 +74,7 @@ h2 {
   --btn-bg: #e9e6f2;
   --btn-active: #f1cd00;
   --primary-color: #f1cd00;
+  --btn-active-text: #1a1a24; /* text on --btn-active / --primary-color fills */
 
   /* ── Studio UI (plan/studio-facelift.md): soft tonal ── */
   --ui-ground: linear-gradient(180deg, #f2eef7 0%, #e7e2f1 100%);
@@ -130,6 +131,8 @@ body.dark {
   --ui-faint: #9c97a8;
   --ui-on: var(--ui-brass);
   --ui-on-ink: #1b2033;
+  --ui-on-2: rgba(215, 180, 106, 0.22);
+  --ui-on-2-ink: #e2c27d;
   --ui-play: var(--ui-brass);
   --ui-play-ink: #1b2033;
   --ui-ring: #d7b46a;
@@ -139,12 +142,51 @@ body.dark {
 
 /* ── Accent colour presets ──
    User-selectable in Account Settings > Appearance. Default (no class) is
-   the brand blue defined in :root above. */
-body.accent-purple {
-  --accent:       #4a2e8c;
-  --accent-dark:  #341f66;
-  --accent-light: #7c5cff;
-  --accent-rgb:   74, 46, 140;
+   the brand blue defined in :root above; Raked Gravel (accent-zen) is below. */
+
+/* A second "on" state that must read apart from --ui-on (e.g. metronome shaker vs
+   beeps). On body, not :root, so it picks up the preset's --accent-light. */
+body {
+  --ui-on-2: var(--accent-light);
+  --ui-on-2-ink: #ffffff;
+}
+
+/* Raked Gravel (Zen): a whole light palette, not just an accent. :not(.dark) keeps
+   it out of dark mode whatever the rule order. Hand colours are unchanged. */
+body.accent-zen:not(.dark) {
+  --accent:       #556b3a;
+  --accent-dark:  #3f4a35;
+  --accent-light: #6e8a4e;
+  --accent-rgb:   85, 107, 58;
+  --accent-ink:   #ffffff;
+
+  --bg: #ece9e2;
+  --panel: #f7f5f0;
+  --panel-rgb: 247, 245, 240;
+  --panel-border: #dcd7cd;
+  --offwhite: #f9f8f4;
+  --text: #34322e;
+  --btn-bg: #e0dcd2;
+  --btn-active: #556b3a;
+  --primary-color: #556b3a;
+  --btn-active-text: #ffffff;
+  --cell-bg: rgba(98, 88, 70, 0.08);
+
+  --ui-ground: linear-gradient(180deg, #ece9e2 0%, #e3dfd6 100%);
+  --ui-surface: rgba(255, 255, 255, 0.55);
+  --ui-surface-solid: #f7f5f0;
+  --ui-tint: rgba(98, 88, 70, 0.09);
+  --ui-tint-hover: rgba(98, 88, 70, 0.15);
+  --ui-ink: #34322e;
+  --ui-icon: #3e3b36;
+  --ui-muted: #6c675f;
+  --ui-faint: #858077;
+  --ui-on: #3f4a35;
+  --ui-on-ink: #f4f2ec;
+  --ui-play: #556b3a;
+  --ui-play-ink: #ffffff;
+  --ui-ring: #8b7a52;
+  --ui-ring-halo: rgba(139, 122, 82, 0.18);
 }
 
 /* Dark mode: brass is the accent, whatever the preset (presets are light-mode only).

@@ -305,9 +305,7 @@
 
 .cp-publish-btn {
   background: var(--btn-active, #f59e0b);
-  /* Yellow Accent (Theme dependent) */
-  color: black;
-  /* Contrast text */
+  color: var(--btn-active-text);
   border: none;
   padding: 8px 20px;
   border-radius: 20px;

@@ -81,7 +81,8 @@ async function fetchCurrentProfile() {
       }
 
       // Sync Accent Colour Preference
-      applyAccentColor(currentProfile.accent_color || 'blue');
+      if (!ACCENT_PRESETS.includes(currentProfile.accent_color)) currentProfile.accent_color = 'blue';
+      applyAccentColor(currentProfile.accent_color);
     } else {
       console.log('No profile found, creating default...');
       await createDefaultProfile();
@@ -129,9 +130,14 @@ export async function updateUserGridLabelNotation(newNotation) {
 
 // Apply an accent colour preset to the document + canvas/print contexts,
 // and remember it locally so it survives reload without a flash of blue.
+// Known presets; anything else (e.g. the retired purple) is the default blue
+const ACCENT_PRESETS = ['blue', 'zen'];
+
 function applyAccentColor(color) {
+  if (!ACCENT_PRESETS.includes(color)) color = 'blue';
   localStorage.setItem('accentColor', color);
-  document.body.classList.toggle('accent-purple', color === 'purple');
+  document.body.classList.forEach(c => { if (c.startsWith('accent-')) document.body.classList.remove(c); });
+  if (color && color !== 'blue') document.body.classList.add(`accent-${color}`);
   setAccentPreset(color);
 }
 

@@ -1107,6 +1107,21 @@ body.dark .chord-chip.minor .chord-root {
   /* Indigo 400 */
 }
 
+/* Raked Gravel light mode: terracotta majors, moss minors (as the stage's Zen theme) */
+body.accent-zen:not(.dark) .chord-chip.major {
+  background: linear-gradient(135deg, rgba(166, 124, 92, 0.12), rgba(166, 124, 92, 0.04));
+  border-color: rgba(166, 124, 92, 0.35);
+}
+
+body.accent-zen:not(.dark) .chord-chip.major .chord-root {
+  color: #8a6247;
+}
+
+body.accent-zen:not(.dark) .chord-chip.minor {
+  background: linear-gradient(135deg, rgba(85, 107, 58, 0.12), rgba(85, 107, 58, 0.04));
+  border-color: rgba(85, 107, 58, 0.3);
+}
+
 .chord-chip.diminished {
   background: rgba(0, 0, 0, 0.05);
   border-style: dashed;

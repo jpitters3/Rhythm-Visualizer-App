@@ -347,7 +347,7 @@
   border-radius: 20px;
   border: none;
   background: var(--btn-active);
-  color: #1a1a24;
+  color: var(--btn-active-text);
   font-size: 13px;
   font-weight: 700;
   cursor: pointer;

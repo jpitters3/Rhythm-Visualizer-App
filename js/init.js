@@ -166,9 +166,7 @@ export function restorePrefs() {
     document.body.classList.add('dark');
   }
 
-  if (localStorage.getItem('accentColor') === 'purple') {
-    document.body.classList.add('accent-purple');
-  }
+  if (localStorage.getItem('accentColor') === 'zen') document.body.classList.add('accent-zen');
 
   const handOn = localStorage.getItem('handSplit') === 'on';
   document.body.classList.toggle('handSplit', handOn);

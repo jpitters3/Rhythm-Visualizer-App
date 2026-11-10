@@ -50,8 +50,9 @@ body.dark .assignments-modal {
   color: var(--text);
 }
 
+/* The global button.active fill applies here, so use its matching text colour */
 .asgn-tab-btn.active {
-  color: var(--text);
+  color: var(--ui-on-ink);
   border-bottom-color: var(--primary-color, #f1c40f);
   font-weight: 600;
 }
@@ -1134,7 +1135,7 @@ body.dark .asgn-bulk-folder-select {
   font-size: 12px;
   font-weight: 700;
   font-family: inherit;
-  color: #000;
+  color: var(--btn-active-text);
   cursor: pointer;
   white-space: nowrap;
   transition: opacity 0.15s;

@@ -207,12 +207,15 @@ function update() {
   stageEl.querySelector('[data-stage="play"]').textContent = timer ? '⏸' : '▶';
 }
 
+// A saved choice wins; otherwise Zen when the app is in Raked Gravel light mode
 function loadTheme() {
+  const zenApp = document.body.classList.contains('accent-zen') && !document.body.classList.contains('dark');
+  const fallback = zenApp ? 'zen' : 'tron';
   try {
     const saved = localStorage.getItem(THEME_KEY);
-    return THEMES[saved] ? saved : 'tron';
+    return THEMES[saved] ? saved : fallback;
   } catch {
-    return 'tron';
+    return fallback;
   }
 }
 

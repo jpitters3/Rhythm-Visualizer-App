@@ -17,7 +17,7 @@ import { isAutoSaveOn, setAutoSaveOn } from './autosave.js';
 
 const ACCENT_CHOICES = [
   { id: 'blue',   label: 'Blue' },
-  { id: 'purple', label: 'Purple' },
+  { id: 'zen',    label: 'Raked Gravel' },
 ];
 
 let sidebarEl = null;
@@ -81,10 +81,11 @@ function renderSidebar() {
         <span class="acct-row-label">Theme colour</span>
         <div class="acct-accent-swatches">
           ${ACCENT_CHOICES.map(c => `
-            <button class="acct-accent-swatch acct-accent-swatch--${c.id}" data-accent="${c.id}" title="${c.label}" aria-label="${c.label} accent colour"></button>
+            <button class="acct-accent-swatch acct-accent-swatch--${c.id}" data-accent="${c.id}" title="${c.label}" aria-label="${c.label} theme"></button>
           `).join('')}
         </div>
       </div>
+      <p class="acct-row-hint">Used in light mode. Dark mode always uses the dark theme.</p>
       <label class="acct-toggle-row" for="acctThemeToggle">
         <span class="acct-toggle-label">Dark mode</span>
         <span class="acct-toggle">

@@ -159,7 +159,7 @@ body.present #presentationControls {
 .t-metro-menu .t-metro-toggle-row:hover,
 .t-metro-menu .t-subdiv-btn:hover,
 .t-metro-menu .t-tap-btn:hover {
-  background: rgba(0, 0, 0, 0.06);
+  background: var(--ui-tint);
 }
 
 .t-metro-menu .t-metro-toggle-row.active,

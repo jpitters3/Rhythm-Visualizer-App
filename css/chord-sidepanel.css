@@ -20,6 +20,26 @@ body.dark .chord-sidebar,
   --cs-field-stroke: #4d4868;
 }
 
+/* Raked Gravel light mode (css/theme.css): the drawer and song builder take the
+   garden palette; same section colours as the stage's Zen theme */
+body.accent-zen:not(.dark) .chord-sidebar {
+  --cs-purple: #556b3a;
+  --cs-purple-dark: #3f4a35;
+  --cs-purple-light: #8a9e6c;
+  --cs-next: #a67c5c;
+  --cs-pan-fill: #e3ded1;
+  --cs-pan-stroke: #cfc8b6;
+  --cs-field: #f5f2ea;
+  --cs-field-stroke: #c9c1ad;
+}
+
+body.accent-zen:not(.dark) .chord-sidebar [data-color="0"] { --section-color: #6f8150; }
+body.accent-zen:not(.dark) .chord-sidebar [data-color="1"] { --section-color: #a0694a; }
+body.accent-zen:not(.dark) .chord-sidebar [data-color="2"] { --section-color: #9a8a52; }
+body.accent-zen:not(.dark) .chord-sidebar [data-color="3"] { --section-color: #55704a; }
+body.accent-zen:not(.dark) .chord-sidebar [data-color="4"] { --section-color: #8a7d68; }
+body.accent-zen:not(.dark) .chord-sidebar [data-color="5"] { --section-color: #b0784f; }
+
 [data-color="0"] { --section-color: #7c5cff; }
 [data-color="1"] { --section-color: #e2714a; }
 [data-color="2"] { --section-color: #2bb673; }
@@ -347,7 +367,7 @@ body.dark .chord-sidebar,
 
 .cs-slot.playing {
   border-color: var(--cs-purple);
-  box-shadow: 0 0 0 2px var(--cs-purple), 0 0 14px rgba(124, 92, 255, 0.45);
+  box-shadow: 0 0 0 2px var(--cs-purple), 0 0 14px color-mix(in srgb, var(--cs-purple) 45%, transparent);
 }
 
 .cs-slot .chord-shape-flat {
@@ -812,6 +832,12 @@ body.chord-stage-open {
   border-color: var(--now);
   color: var(--play-text);
   min-width: 56px;
+}
+
+/* Its own hover: the generic button hover turned it white, hiding the white ▶ */
+.cs-stage-play:hover {
+  background: var(--now-light);
+  border-color: var(--now-light);
 }
 
 .cs-stage-exit {

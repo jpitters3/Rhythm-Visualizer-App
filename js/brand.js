@@ -5,7 +5,7 @@
 // live value automatically via ES module bindings.
 const ACCENT_PRESETS = {
   blue:   { accent: '#024496', dark: '#013270', light: '#1e79e8' },
-  purple: { accent: '#4a2e8c', dark: '#341f66', light: '#7c5cff' },
+  zen:    { accent: '#556b3a', dark: '#3f4a35', light: '#6e8a4e' }, // Raked Gravel
 };
 
 // Match the pre-set class already applied to <body> by the anti-flash inline
