@@ -383,6 +383,7 @@ function applyCustomHandpan(handpanData) {
   // Update UI Selectors
   // Set Scale Select to this custom one
   scaleSelect.value = `custom:${handpanData.id}`;
+  updateScalePill();
   scaleStatus.textContent = `Custom Scale: ${handpanData.name}`;
 
   // Force Handpan Select to 'Custom' visual
@@ -815,8 +816,20 @@ async function deleteUserHandpan(id) {
   }
 }
 
+// "D Kurd · 9 notes" (ding + tonefields)
+function updateScalePill() {
+  const nameEl = document.getElementById('scalePillName');
+  if (!nameEl) return;
+  const scale = getScale();
+  const name = scaleSelect?.selectedOptions[0]?.textContent || getSelectedScaleName() || '';
+  const count = Object.keys(scale?.map || {}).length + (scale?.ding ? 1 : 0);
+  nameEl.textContent = name;
+  document.getElementById('scalePillCount').textContent = count ? `${count} notes` : '';
+}
+
 export function buildHandpanOverlay() {
   if (!handpanOverlay) return;
+  updateScalePill();
 
   handpanOverlay.innerHTML = '';
   handpanDots.clear();
@@ -1372,6 +1385,9 @@ export function syncStateFromStorage() {
 
   // Sync UI if mapped
   if (numberPitchSelect) numberPitchSelect.value = val;
+  document.querySelectorAll('#labelModeToggle button').forEach(b => {
+    b.setAttribute('aria-pressed', String(b.dataset.label === (val === 'Pitches' ? 'Pitches' : 'Numbers')));
+  });
 
   // Update internal flags
   if (val === 'Numbers') {
@@ -2008,6 +2024,7 @@ export function initHandpanMap() {
     }
 
     if (setCurrentScale && SCALES) setCurrentScale(SCALES[val]);
+    updateScalePill();
     updateGridLabels();
     await preloadScaleSamples();
   });
@@ -2031,13 +2048,9 @@ export function initHandpanMap() {
   });
 
   let numberPitchTimer = null;
-  numberPitchSelect?.addEventListener('change', async (e) => {
-    const val = numberPitchSelect.value;
+  const applyLabelPref = (val, fromUser) => {
     localStorage.setItem('handpanLabelPref', val);
-    // Only save real user changes. profile.js dispatches a synthetic 'change'
-    // after loading this same value from the profile; saving it would just
-    // write it straight back on every sign-in.
-    if (e.isTrusted) updateUserLabelPreference(val);
+    if (fromUser) updateUserLabelPreference(val);
     syncStateFromStorage();
     buildHandpanOverlay();
 
@@ -2046,6 +2059,14 @@ export function initHandpanMap() {
     numberPitchTimer = setTimeout(() => {
       updateGridLabels();
     }, 50);
+  };
+  // Only save real user changes. profile.js dispatches a synthetic 'change'
+  // after loading this same value from the profile; saving it would just
+  // write it straight back on every sign-in.
+  numberPitchSelect?.addEventListener('change', (e) => applyLabelPref(numberPitchSelect.value, e.isTrusted));
+  document.getElementById('labelModeToggle')?.addEventListener('click', (e) => {
+    const val = e.target.closest('button[data-label]')?.dataset.label;
+    if (val) applyLabelPref(val, true);
   });
 
   const CHORD_SHAPE_KEY = 'handpanChordShapeView';
@@ -2109,7 +2130,7 @@ export function initHandpanMap() {
 
   // Modal Manager for handpan drawers
   const drawerModals = {};
-  ['handpanSettingsDrawer', 'customizeDrawer'].forEach(id => {
+  ['handpanSettingsDrawer'].forEach(id => {
     const el = document.getElementById(id);
     if (!el) return;
     const modal = new Modal(el, {
@@ -2120,8 +2141,12 @@ export function initHandpanMap() {
   });
 
   buildScaleBtn?.addEventListener('click', () => {
-    drawerModals['customizeDrawer'].close();
+    drawerModals['handpanSettingsDrawer'].close();
     openMyScalesModal('list');
+  });
+
+  document.getElementById('scalePillBtn')?.addEventListener('click', () => {
+    drawerModals['handpanSettingsDrawer'].open();
   });
 
   document.querySelectorAll('.tab-btn[data-tab]').forEach(btn => {

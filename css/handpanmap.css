@@ -165,14 +165,7 @@
     overflow: hidden;
     backface-visibility: hidden;
     padding-bottom: 60px;
-    /* NOTE: flex-start (the default, left implicit here) is required so
-       .handpan-wrap sits flush against .hp-corner-btn, which is fixed at
-       the panel's top edge (see css/handpanmap.css .hp-corner-btn) and
-       can't move to track the wrap. If js/panel-resize.js ever lets the
-       panel grow taller than the width-constrained pan actually needs,
-       that slack reappears below #ghostNoteSection instead of above the
-       pan — a real trade-off, not an oversight; flex-end was tried and
-       rejected because it separates the wrap from the corner buttons. */
+    /* flex-start (the default): the pan sits right under .hp-top-row. */
   }
 
   .handpan-wrap {
@@ -702,26 +695,28 @@ body.dark .icon-btn.active {
 }
 
 @media (max-width: 900px) {
-  /* Scale Options now lives in #handpanOptionsMenu (see .hp-options-menu
-     below) and the measures live in the corner buttons (see
-     .hp-corner-btn) — the tab row has nothing left to show on mobile. */
+  /* The tab row's controls live in .hp-top-row on mobile. */
   .handpan-tabs {
     display: none !important;
   }
 }
 
-/* ==== MOBILE CORNER CONTROLS ==== */
-/* Fixed just below the divider, pinned to .handpan-panel's own stable
-   top/left/right edges — NOT .handpan-wrap's, which changes width (and is
-   re-centered via margin:auto) as the pan resizes, which dragged these
-   horizontally too when they lived there. Position stays put; only the pan
-   grows/shrinks beneath them, using the space that would otherwise sit
-   empty to its sides at this row's height. */
-.hp-corner-btn {
+/* ==== MOBILE TOP ROW ==== */
+/* In flow above the pan, so js/panel-resize.js counts it and the pan sits below */
+.hp-top-row {
   display: none; /* mobile-only; shown below */
-  position: absolute;
-  top: 8px;
-  z-index: 50;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  /* Overlaps the wrap's empty top padding rather than pushing the pan down */
+  margin-bottom: -22px;
+  position: relative;
+  z-index: 2;
+}
+
+.hp-corner-btn {
+  display: flex;
+  flex: none;
   padding: 0;
   width: var(--ui-ctl);
   height: var(--ui-ctl);
@@ -737,36 +732,81 @@ body.dark .icon-btn.active {
   transform: scale(0.96);
 }
 
-.hp-corner-left {
-  left: 0;
+/* Scale pill (opens Settings) and numbers/pitches toggle share the corner row */
+.hp-scale-pill {
+  flex: 0 1 auto;
+  width: auto;
+  min-width: 0;
+  gap: 6px;
+  padding: 0 14px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ui-ink);
 }
 
-.hp-corner-right {
-  right: 0;
+.hp-scale-pill-name,
+.hp-scale-pill-count {
+  white-space: nowrap;
+}
+
+.hp-scale-pill-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hp-scale-pill-count {
+  font-weight: 500;
+  color: var(--ui-muted);
+}
+
+.hp-scale-pill-count:not(:empty)::before {
+  content: "· ";
+}
+
+.hp-label-toggle {
+  display: flex;
+  flex: none;
+  margin-left: auto;
+  height: var(--ui-ctl);
+  padding: 4px;
+  gap: 2px;
+  box-sizing: border-box;
+  border-radius: 999px;
+  background: var(--ui-tint);
+}
+
+.hp-label-toggle button {
+  height: 100%;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ui-muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.hp-label-toggle button:hover {
+  box-shadow: none;
+  transform: none;
+  color: var(--ui-ink);
+}
+
+.hp-label-toggle button[aria-pressed="true"] {
+  background: var(--ui-on);
+  color: var(--ui-on-ink);
 }
 
 @media (max-width: 900px) {
-  /* Default: show "+"; the moment the user clicks/taps a cell (body.has-
-     caret, set from BUS_EVENT.CELL_CLICKED in js/measure-actions.js — fires
-     only from the real cell click handler in js/notegrid.js, NOT the many
-     programmatic setCaret() calls elsewhere, and NOT the same thing as a
-     long-press range selection, which instead opens the full selection
-     toolbar) swap to "-" in the same spot. Unselecting (click outside the
-     grid, Escape) swaps back to "+". */
-  .hp-corner-add {
+  .hp-top-row {
     display: flex;
   }
+}
 
-  .hp-corner-del {
+/* Narrow phones: the note count goes before the name gets cut */
+@media (max-width: 360px) {
+  .hp-scale-pill-count {
     display: none;
-  }
-
-  body.has-caret .hp-corner-add {
-    display: none;
-  }
-
-  body.has-caret .hp-corner-del {
-    display: flex;
   }
 }
 

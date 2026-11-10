@@ -242,7 +242,7 @@ export function initMeasureActions() {
     deleteActiveMeasureOrRange(activeGrid);
   });
 
-  // Mobile corner +/- (css/handpanmap.css .hp-corner-add/.hp-corner-del):
+  // Mobile "+ Measure"/"− Measure" in the notation header (css/layout.css):
   // default to "+"; the moment the user actually clicks/taps a cell, swap
   // to "-". CELL_CLICKED (js/notegrid.js) fires only from that real click
   // handler — deliberately NOT the more general CARET_CHANGED, which also

@@ -578,6 +578,40 @@ div.container {
   color: var(--ui-muted);
 }
 
+.notation-measure-btn {
+  display: none;
+  height: 32px;
+  margin-left: auto;
+  padding: 0 12px;
+  border-radius: var(--ui-radius-sm);
+  background: var(--ui-tint);
+  color: var(--ui-icon);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.notation-measure-btn:hover:not(:disabled) {
+  background: var(--ui-tint-hover);
+  box-shadow: none;
+  transform: none;
+}
+
+@media (max-width: 900px) {
+  .notation-measure-add {
+    display: inline-flex;
+    align-items: center;
+  }
+
+  body.has-caret .notation-measure-add {
+    display: none;
+  }
+
+  body.has-caret .notation-measure-del {
+    display: inline-flex;
+    align-items: center;
+  }
+}
+
 .quick-save-btn {
   display: none;
   height: 20px;

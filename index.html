@@ -489,6 +489,8 @@
               <span id="phraseSaveStatus" class="phrase-save-status" role="status" hidden></span>
               <button id="quickSaveBtn" class="quick-save-btn" title="Save phrase" aria-label="Quick save">Save</button>
               <span id="composerSaveStatus" class="composer-save-status"></span>
+              <button type="button" class="addMeasureBtn notation-measure-btn notation-measure-add" title="Add a new measure">+ Measure</button>
+              <button type="button" class="delMeasureBtn notation-measure-btn notation-measure-del" title="Delete active measure">− Measure</button>
             </span>
           </div>
           <div id="measures" class="measures player" aria-label="Rhythm grid"></div>
@@ -525,8 +527,7 @@
               <div class="tab-btn-row" style="display: flex; gap: 12px;">
                 <button class="tab-btn" data-tab="handpanSettingsDrawer" title="Scale settings" aria-label="Scale settings"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><circle cx="12" cy="12" r="3"></circle><circle cx="12" cy="6.5" r="1"></circle><circle cx="17" cy="14" r="1"></circle><circle cx="7" cy="14" r="1"></circle></svg></button>
                 <button class="tab-btn" data-chord-panel title="Chords" aria-label="Chords"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg></button>
-                <button class="tab-btn" data-tab="customizeDrawer" title="Customize" aria-label="Customize"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"></path><circle cx="16" cy="6" r="2"></circle><circle cx="10" cy="12" r="2"></circle><circle cx="18" cy="18" r="2"></circle></svg></button>
-                <button class="tab-btn" data-pan-hero title="Pan Hero" aria-label="Pan Hero"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><circle cx="12" cy="12" r="5"></circle><circle cx="12" cy="12" r="1"></circle></svg></button>
+                                <button class="tab-btn" data-pan-hero title="Pan Hero" aria-label="Pan Hero"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><circle cx="12" cy="12" r="5"></circle><circle cx="12" cy="12" r="1"></circle></svg></button>
                 <button class="tab-btn" id="flipSideBtnDesktop" style="display:none;" title="Flip to Bottom">🔄</button>
               </div>
             </div>
@@ -537,21 +538,21 @@
           <!-- Slot for mobile controls/selection panels -->
           <div id="panelControlsSlot"></div>
 
-          <!-- MOBILE CORNER CONTROLS: fixed just below the divider, pinned
-               to .handpan-panel's own stable left/right/top edges — NOT
-               .handpan-wrap's, which changes width (and is re-centered) as
-               the pan resizes, which would otherwise drag these
-               horizontally too. They stay put; only the pan grows/shrinks
-               beneath them. Measure +/- swaps in place (see
-               css/handpanmap.css) based on whether a cell is selected;
-               Options consolidates Settings/Chords/Customize/Flip. -->
-          <button title="Add a new measure" class="addMeasureBtn hp-corner-btn hp-corner-left hp-corner-add">＋</button>
-          <button title="Delete active measure" class="delMeasureBtn hp-corner-btn hp-corner-left hp-corner-del">−</button>
-          <button id="handpanOptionsBtn" class="hp-corner-btn hp-corner-right mobile-only" title="Options">⋯</button>
+          <!-- Mobile top row: scale pill (opens Settings), labels toggle, options -->
+          <div class="hp-top-row">
+            <button type="button" id="scalePillBtn" class="hp-corner-btn hp-scale-pill" title="Scale settings">
+              <span id="scalePillName" class="hp-scale-pill-name">D Kurd</span>
+              <span id="scalePillCount" class="hp-scale-pill-count">9 notes</span>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+            <div id="labelModeToggle" class="hp-label-toggle" role="group" aria-label="Note labels">
+              <button type="button" data-label="Numbers" title="Show note numbers">123</button>
+              <button type="button" data-label="Pitches" title="Show note names">C D</button>
+            </div>
+            <button id="handpanOptionsBtn" class="hp-corner-btn" title="Options">⋯</button>
+          </div>
           <div id="handpanOptionsMenu" class="dropdown-content hp-options-menu">
-            <button class="tab-btn" data-tab="handpanSettingsDrawer" title="Scale settings"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><circle cx="12" cy="12" r="3"></circle><circle cx="12" cy="6.5" r="1"></circle><circle cx="17" cy="14" r="1"></circle><circle cx="7" cy="14" r="1"></circle></svg>Settings</button>
             <button class="tab-btn" data-chord-panel title="Chords"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>Chords</button>
-            <button class="tab-btn" data-tab="customizeDrawer" title="Customize"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"></path><circle cx="16" cy="6" r="2"></circle><circle cx="10" cy="12" r="2"></circle><circle cx="18" cy="18" r="2"></circle></svg>Customize</button>
             <button class="hp-options-menu-item" data-pan-hero title="Pan Hero"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><circle cx="12" cy="12" r="5"></circle><circle cx="12" cy="12" r="1"></circle></svg>Pan Hero</button>
             <button id="flipSideBtn" class="flip-btn hp-options-menu-item" style="display:none;" title="Flip to Bottom"><span class="hp-flip-icon">🔄</span><span class="hp-flip-label">Flip to Bottom</span></button>
           </div>
@@ -2299,6 +2300,14 @@
           <label>Play ghost notes:</label>
           <input type="checkbox" id="ghostNotesToggle" title="Play a soft touch sound and highlight the T tonefield on empty steps" style="width:auto;">
         </div>
+
+        <!-- Customize (was its own drawer) -->
+        <div id="hpCustomizeControls" class="hp-customize">
+          <div class="hp-customize-title">Customize</div>
+          <button id="calBtn" class="secondary-btn small-btn">Adjust Tonefields</button>
+          <button id="calibrateHandpanBtn" class="secondary-btn small-btn">Calibrate Handpan</button>
+          <button id="buildScaleBtn" class="primary-btn small-btn">Build Custom Scale</button>
+        </div>
       </div>
     </div>
   </div>
@@ -2392,28 +2401,6 @@
           <button type="button" id="reminderDeleteInEditorBtn" class="secondary-btn small-btn" style="width:100%; color:var(--danger, #c0392b);">Delete</button>
           <button type="button" id="reminderCancelBtn" class="secondary-btn small-btn" style="width:100%">Cancel</button>
           <button type="button" id="reminderSaveBtn" class="primary-btn small-btn" style="width:100%">Save</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div id="customizeDrawer" class="modal-overlay" aria-hidden="true">
-    <div class="modal-content hp-drawer-modal">
-      <div class="modal-header">
-        <h3 class="modal-title">Customize</h3>
-        <button class="close-modal-btn">&times;</button>
-      </div>
-      <div id="hpCustomizeControls">
-        <div class="setting-row" style="margin-top: 5px;">
-          <button id="calBtn" class="secondary-btn small-btn" style="width:100%">Adjust Tonefields</button>
-        </div>
-        <div class="setting-row" style="margin-top: 5px;">
-          <button id="calibrateHandpanBtn" class="secondary-btn small-btn" style="width:100%">Calibrate Handpan</button>
-        </div>
-        <div class="setting-row" style="margin-top: 10px; border-top: 1px solid var(--panel-border); padding-top: 10px;">
-          <button id="buildScaleBtn" class="primary-btn small-btn"
-            style="width:100%; background: linear-gradient(135deg, #6366f1, #8b5cf6); border:none; color:white;">Build
-            Custom Scale</button>
         </div>
       </div>
     </div>

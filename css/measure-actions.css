@@ -237,25 +237,16 @@ body:not(.present) .measure-row {
     font-weight: 700;
   }
 
-  /* When controls or selection is active, hide the handpan content.
-     .hp-corner-btn (css/handpanmap.css) is included here too — it's a
-     sibling of .handpan-wrap/#ghostNoteSection, not a child, so without
-     this it would float over the swapped-in #panelControlsSlot toolbar
-     instead of disappearing with the rest of the pan. Also: selection-mode
-     fires from the exact same "a range is selected" condition that would
-     otherwise swap .hp-corner-add for .hp-corner-del, so the delete corner
-     button would never actually be reachable here anyway — #measureTools,
-     shown inside #panelControlsSlot below, already covers add/delete while
-     a selection toolbar is up. */
+  /* Controls or selection open: hide the pan and its top row */
   .handpan-panel.selection-mode .handpan-tabs,
   .handpan-panel.selection-mode .handpan-wrap,
   .handpan-panel.selection-mode #handpanWrapBottom,
   .handpan-panel.selection-mode #ghostNoteSection,
-  .handpan-panel.selection-mode .hp-corner-btn,
+  .handpan-panel.selection-mode .hp-top-row,
   .handpan-panel.controls-mode .handpan-tabs,
   .handpan-panel.controls-mode .handpan-wrap,
   .handpan-panel.controls-mode #handpanWrapBottom,
-  .handpan-panel.controls-mode .hp-corner-btn {
+  .handpan-panel.controls-mode .hp-top-row {
     display: none !important;
   }
 
@@ -310,13 +301,13 @@ body:not(.present) .measure-row {
 
   /* ...which fades back in */
   .handpan-panel .handpan-wrap,
-  .handpan-panel .hp-corner-btn {
+  .handpan-panel .hp-top-row {
     transition: opacity 0.18s ease, background 0.2s;
   }
 
   @starting-style {
     .handpan-panel .handpan-wrap,
-    .handpan-panel .hp-corner-btn {
+    .handpan-panel .hp-top-row {
       opacity: 0;
     }
   }
