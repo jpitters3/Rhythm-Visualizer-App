@@ -24,6 +24,7 @@ import { Bus, BUS_EVENT } from './bus.js';
 import { Modal } from './modal.js';
 import { escapeHtml } from './utils.js';
 import { showProcess } from './process-status.js';
+import { autoSaveHandles, flushAutoSave } from './autosave.js';
 
 // Global references assigned in initControls
 let patternSelect, handBtn, presentBtn, exitPresent, micBtn, saveBtn, renameBtn, deleteBtn, exportBtn, navDashboardBtn, importBtn, loadBtn;
@@ -291,6 +292,7 @@ export async function saveCurrentPatternAs(name, source = 'manual') {
  * Main Load Logic
  */
 export async function loadPatternByName(pattern) {
+  await flushAutoSave(); // keep the outgoing phrase's last edits
   try {
     // CLOUD MODE
     if (await isAuthed()) {
@@ -588,12 +590,17 @@ export function initControls() {
   const quickSaveBtn = document.getElementById('quickSaveBtn');
   if (quickSaveBtn) {
     const updateQuickSave = () => {
-      quickSaveBtn.classList.toggle('visible', hasUnsavedChanges() && !!getSelectedPatternName());
+      quickSaveBtn.classList.toggle('visible',
+        hasUnsavedChanges() && !!getSelectedPatternName() && !autoSaveHandles());
     };
     Bus.on(BUS_EVENT.GRID_CHANGED, updateQuickSave);
     Bus.on(BUS_EVENT.GRID_RENDERED, updateQuickSave);
+    Bus.on(BUS_EVENT.AUTOSAVE_TOGGLED, updateQuickSave);
+    Bus.on(BUS_EVENT.PATTERN_SAVED, () => requestAnimationFrame(updateQuickSave));
+    // Saves the open phrase under its name, no prompt
     quickSaveBtn.addEventListener('click', () => {
-      saveBtn?.click();
+      const name = getSelectedPatternName();
+      if (name) saveCurrentPatternAs(name);
     });
   }
 

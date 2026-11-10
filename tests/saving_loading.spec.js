@@ -64,35 +64,20 @@ test.describe('Pattern Management', () => {
     const select = page.locator('#patternSelect');
     await expect(select).toHaveValue(uniqueName);
 
-    // 3. Clear Grid
-    await closeAccountMenu(page);
-    await openMobileControlsIfNeeded(page);
-    await page.click('#clearBtn-A');
-
-    // Handle Custom Modal Confirm
-    const clearModal = page.locator('#confirmModal');
-    await expect(clearModal).toHaveClass(/open/);
+    // 3. Move to a fresh phrase (clearing a saved phrase would auto-save the empty grid)
+    await phraseAction(page, 'New phrase');
+    await page.fill('#confirmInput', `${uniqueName} B`);
     await page.click('#confirmOkBtn');
-    await expect(clearModal).not.toHaveClass(/open/);
+    await expect(select).toHaveValue(`${uniqueName} B`);
     await expect(cell0.locator('.inner')).toBeEmpty();
 
-    // 4. Load Pattern. #loadBtn is a permanently display:none legacy element
-    // with no click handler at all — the real "load" entry point is
-    // #openPhraseBtn's modal (js/controls.js's showOpenPhraseModal()),
-    // listing saved patterns to pick from by name.
+    // 4. Load Pattern via the Open Phrase modal (#loadBtn is a hidden legacy element)
     await phraseAction(page, 'Open Phrase');
-
     const openModal = page.locator('#openPhraseModal');
     await expect(openModal).toHaveClass(/open/);
-    await page.locator('.phrase-list-item', { hasText: uniqueName }).click();
-
-    // Handle "unsaved changes" confirm (since we cleared the grid) — this
-    // flow's confirm() call omits a title, so it uses the default 'Panafide'.
-    const loadConfirmModal = page.locator('#confirmModal');
-    await expect(loadConfirmModal).toHaveClass(/open/);
-    await expect(page.locator('#confirmMessage')).toContainText('unsaved changes');
-    await page.click('#confirmOkBtn');
-    await expect(loadConfirmModal).not.toHaveClass(/open/);
+    await page.locator('.phrase-list-item')
+      .filter({ has: page.getByText(uniqueName, { exact: true }) }).click();
+    await expect(select).toHaveValue(uniqueName);
 
     // 5. Verify Restoration
     await expect(cell0.locator('.inner')).toHaveText('1');

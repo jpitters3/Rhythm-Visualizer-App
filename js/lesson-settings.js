@@ -25,6 +25,7 @@ import { Bus, BUS_EVENT } from './bus.js';
 import { alert, confirm, prompt } from './alert.js';
 import { Modal } from './modal.js';
 import { escapeHtml } from './utils.js';
+import { autoSaveHandles, flushAutoSave } from './autosave.js';
 
 // ── Diffing ─────────────────────────────────────────────────────────────
 // Fields that make two saved patterns genuinely different PHRASES, not just
@@ -129,6 +130,10 @@ export async function applyLessonOverride(lesson, override) {
 // Save/Discard/Cancel flow instead.
 export async function guardBeforeReplacingGrid(discardMessage = 'You have unsaved changes. Discard them?') {
   if (!hasUnsavedChanges()) return true;
+  if (!currentLesson && autoSaveHandles()) {
+    await flushAutoSave();
+    if (!hasUnsavedChanges()) return true;
+  }
   if (!currentLesson) return await confirm(discardMessage);
 
   const current = serializePattern();

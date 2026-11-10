@@ -13,6 +13,7 @@ import { startTour, resetTour } from './onboarding-tour.js';
 import { currentProfile, updateUserAccentColor } from './profile.js';
 import { navigate } from './router.js';
 import { loadDashboard } from './dashboard.js';
+import { isAutoSaveOn, setAutoSaveOn } from './autosave.js';
 
 const ACCENT_CHOICES = [
   { id: 'blue',   label: 'Blue' },
@@ -94,6 +95,17 @@ function renderSidebar() {
     </div>
 
     <div class="acct-section">
+      <div class="acct-section-title">Studio</div>
+      <label class="acct-toggle-row" for="acctAutoSaveToggle">
+        <span class="acct-toggle-label">Auto-save phrases</span>
+        <span class="acct-toggle">
+          <input type="checkbox" id="acctAutoSaveToggle" />
+          <span class="acct-toggle-slider"></span>
+        </span>
+      </label>
+    </div>
+
+    <div class="acct-section">
       <div class="acct-section-title">Notifications</div>
       <div id="acctNotifSettingsContainer"></div>
     </div>
@@ -127,6 +139,10 @@ function renderSidebar() {
     document.body.classList.toggle('dark', themeToggle.checked);
     localStorage.setItem('theme', themeToggle.checked ? 'dark' : 'light');
   });
+
+  const autoSaveToggle = body.querySelector('#acctAutoSaveToggle');
+  if (autoSaveToggle) autoSaveToggle.checked = isAutoSaveOn();
+  autoSaveToggle?.addEventListener('change', () => setAutoSaveOn(autoSaveToggle.checked));
 
   body.querySelector('#acctChangeEmailBtn')?.addEventListener('click', () => {
     close();

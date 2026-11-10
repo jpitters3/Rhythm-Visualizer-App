@@ -21,6 +21,10 @@ export function setPhraseNameOverride(name) {
   phraseNameOverride = name || null;
 }
 
+export function getPhraseNameOverride() {
+  return phraseNameOverride;
+}
+
 export function syncPhraseNameDisplay(name) {
   if (phraseNameOverride) {
     const ids = ['currentProjectName', 'currentPhraseName', 'gridPhraseName'];
@@ -94,12 +98,13 @@ export async function dbLoadPatternByName(name) {
   return data?.data || null;
 }
 
-export async function dbSavePattern(name, stateObj, source = 'manual') {
+export async function dbSavePattern(name, stateObj, source = 'manual', { replace = false } = {}) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Not authenticated');
 
-  // Check for existing pattern with the same name and warn before overwriting
-  const { data: existing } = await supabase
+  // Re-saving the open phrase just saves; only warn before replacing a different one
+  const isOpenPhrase = replace || name === getSelectedPatternName();
+  const { data: existing } = isOpenPhrase ? { data: null } : await supabase
     .from('patterns')
     .select('name')
     .eq('user_id', user.id)

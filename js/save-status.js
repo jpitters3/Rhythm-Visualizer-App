@@ -3,6 +3,7 @@
    after a save and fades; unsaved states stay visible as a warning. */
 import { Bus, BUS_EVENT } from './bus.js';
 import { hasUnsavedChanges, getSelectedPatternName } from './pattern-crud.js';
+import { autoSaveHandles } from './autosave.js';
 
 const SAVED_SHOW_MS = 2500;
 const FADE_MS = 600; // matches .phrase-save-status transition (css/layout.css)
@@ -32,11 +33,18 @@ function flashSaved() {
   }, SAVED_SHOW_MS);
 }
 
+// Auto-save couldn't reach the server; stays until the next successful save
+export function showSaveFailed() {
+  if (statusEl) show('unsaved', 'Not saved');
+}
+
 function update({ justSaved = false } = {}) {
   if (!statusEl) return;
   const named = !!getSelectedPatternName();
   const changed = hasUnsavedChanges();
-  if (changed) {
+  if (changed && named && autoSaveHandles()) {
+    if (statusEl.dataset.state !== 'saved') hide(); // auto-save will flash "Saved"
+  } else if (changed) {
     show(named ? 'unsaved' : 'new', named ? 'Unsaved changes' : 'Not saved');
   } else if (justSaved && named) {
     flashSaved();
@@ -50,6 +58,7 @@ export function initSaveStatus() {
   if (!statusEl) return;
   // Next frame: let the save/load that fired these finish updating its snapshot first
   Bus.on(BUS_EVENT.GRID_CHANGED, () => requestAnimationFrame(() => update()));
+  Bus.on(BUS_EVENT.AUTOSAVE_TOGGLED, () => update());
   Bus.on(BUS_EVENT.PATTERN_SAVED, (e) => {
     const justSaved = !!e.detail?.fromSave;
     requestAnimationFrame(() => update({ justSaved }));

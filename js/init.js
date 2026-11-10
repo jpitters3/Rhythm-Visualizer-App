@@ -58,6 +58,7 @@ import { initGridZoom } from './grid-zoom-controls.js';
 import { initMonetization } from './monetization.js';
 import { initManageSubscription } from './manage-subscription.js';
 import { initSaveStatus } from './save-status.js';
+import { initAutoSave } from './autosave.js';
 import { initScrollIndicators } from './scroll-indicators.js';
 import { initMethod, wireMethodEvents } from './method.js';
 import { initExercises } from './exercises.js';
@@ -131,6 +132,7 @@ async function init() {
     initMonetization();
     initManageSubscription();
     initSaveStatus();
+    initAutoSave();
     initMethod();
     wireMethodEvents();
     initExercises();

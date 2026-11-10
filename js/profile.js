@@ -157,6 +157,19 @@ export async function updateUserAccentColor(newColor) {
   }
 }
 
+export async function updateAutoSavePref(on) {
+  if (!currentUser) return;
+  if (currentProfile) currentProfile.autosave = on;
+  try {
+    await supabase
+      .from('profiles')
+      .update({ autosave: on, updated_at: new Date() })
+      .eq('user_id', currentUser.id);
+  } catch (e) {
+    console.warn('Failed to save auto-save preference:', e);
+  }
+}
+
 export async function updateDashboardMute(muted) {
   if (!currentUser) return;
   if (currentProfile) currentProfile.dashboard_mute = muted;
