@@ -67,7 +67,8 @@ module.exports = defineConfig({
   fullyParallel: false,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 6 : 4,
+  // One per vCPU on GitHub's 4-core runners: 6 starved the WebKit tail of the run.
+  workers: 4,
   reporter: 'html',
   use: {
     baseURL,
