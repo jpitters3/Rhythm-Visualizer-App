@@ -867,6 +867,13 @@ body.dark .icon-btn.active {
   .hp-scale-pill-count {
     display: none;
   }
+
+}
+
+/* Perimeter arcs (bottom notes) are drawn in the pan's padding: no overlapping it */
+.handpan-panel.hp-perimeter .hp-top-row,
+.handpan-panel.hp-perimeter .handpan-wrap {
+  margin-bottom: 0;
 }
 
 .tab-btn {

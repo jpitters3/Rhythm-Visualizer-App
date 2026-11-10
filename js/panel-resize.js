@@ -387,6 +387,17 @@ export function initPanelResize() {
   });
 
   let dragging = false;
+
+  // Re-apply the current height on the next frame (at most once per frame)
+  let reapplyQueued = false;
+  function queueReapply() {
+    if (reapplyQueued) return;
+    reapplyQueued = true;
+    requestAnimationFrame(() => {
+      reapplyQueued = false;
+      if (mq.matches && panel.contains(wrap)) applyHeight(panel.getBoundingClientRect().height);
+    });
+  }
   let startY = 0;
   let startHeight = 0;
 
@@ -446,12 +457,17 @@ export function initPanelResize() {
 
   restoreSavedHeight();
 
-  // Re-size once the card closes, in case the grid changed meanwhile (e.g. zoom).
+  // Re-size once the card closes, in case the grid changed meanwhile (e.g. zoom),
+  // and when perimeter arcs come or go (they change how much the rows overlap the pan).
   let showedCard = false;
+  let hadArcs = panel.classList.contains('hp-perimeter');
   new MutationObserver(() => {
     const showsCard = panelShowsCard();
+    const hasArcs = panel.classList.contains('hp-perimeter');
     if (showedCard && !showsCard && mq.matches) restoreSavedHeight({ onOpen: false });
+    else if (hasArcs !== hadArcs && mq.matches && !showsCard) applyHeight(panel.getBoundingClientRect().height);
     showedCard = showsCard;
+    hadArcs = hasArcs;
   }).observe(panel, { attributes: true, attributeFilter: ['class'] });
 
   // The image may not have decoded yet at init (aspect defaults to 1:1
@@ -477,8 +493,7 @@ export function initPanelResize() {
       const h = transportBar.getBoundingClientRect().height;
       if (h === lastBarHeight) return;
       lastBarHeight = h;
-      syncTransportReserve();
-      applyHeight(panel.getBoundingClientRect().height);
+      queueReapply();
     });
     barObserver.observe(transportBar);
   }
@@ -486,8 +501,17 @@ export function initPanelResize() {
   // The ghost row and top row can settle after the first sizing (late styles,
   // icons); re-size so the pan and the ghost row still clear the transport bar.
   if ('ResizeObserver' in window) {
-    const chromeObserver = new ResizeObserver(() => {
-      if (mq.matches && panel.contains(wrap) && !dragging) applyHeight(panel.getBoundingClientRect().height);
+    // Heights only: a width change (e.g. the Chords panel opening) mustn't re-size,
+    // and the re-size waits a frame so it never resizes what's being observed mid-callback.
+    const lastHeights = new WeakMap();
+    const chromeObserver = new ResizeObserver((entries) => {
+      const changed = entries.some(e => {
+        const h = Math.round(e.contentRect.height);
+        const was = lastHeights.get(e.target);
+        lastHeights.set(e.target, h);
+        return was !== undefined && was !== h;
+      });
+      if (changed && !dragging) queueReapply();
     });
     [document.getElementById('ghostNoteSection'), topRow].forEach(el => el && chromeObserver.observe(el));
   }

@@ -896,6 +896,8 @@ export function buildHandpanOverlay() {
     wrap.appendChild(svg);
     perimSvgEl = svg;
   }
+  // Arcs fill the pan's padding, so rows mustn't overlap it (css/handpanmap.css)
+  wrap?.closest('.handpan-panel')?.classList.toggle('hp-perimeter', !!perimSvgEl);
 
   if (overlayPitches || overlayNumbers)
     overlayNumberPitchNotes(); else removeNoteLabels();
