@@ -10,9 +10,11 @@ const base = require('@playwright/test');
 const ALWAYS_ALLOWED = [
   // Cross-origin scripts report only this, with no detail to act on
   /^Script error\.?$/,
-  // WebKit's report of a request cancelled by a navigation or reload, even when
-  // the app catches it (Chromium reports nothing for the same steps)
-  /^Fetch API cannot load .* due to access control checks\./,
+  // WebKit reports a failed or cancelled cross-origin request as a page error even
+  // when the app catches it (Chromium reports nothing). It can come after a reason
+  // line, e.g. a third-party API answering without CORS headers, so not anchored.
+  /Fetch API cannot load .* due to access control checks/,
+  /is not allowed by Access-Control-Allow-Origin/,
 ];
 const MARK = '[page-error] ';
 
