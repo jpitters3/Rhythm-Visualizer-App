@@ -420,6 +420,10 @@
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-4-4M8 11h6M11 8v6"></path></svg>
               <span class="ctl-label">Zoom in</span>
             </button>
+            <button class="ctl-btn ctl-desktop" data-follow-toggle aria-pressed="true" title="Follow playback: scroll the grid with the music">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h10M4 12h7M4 18h10"></path><path d="M18 5v14M15 16l3 3 3-3"></path></svg>
+              <span class="ctl-label">Follow</span>
+            </button>
             <button id="presentBtn" class="ctl-btn" title="Toggle presentation mode (Esc exits)">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V5a1 1 0 0 1 1-1h4M15 4h4a1 1 0 0 1 1 1v4M20 15v4a1 1 0 0 1-1 1h-4M9 20H5a1 1 0 0 1-1-1v-4"></path></svg>
               <span class="ctl-label">Present</span>
@@ -509,6 +513,7 @@
               <button type="button" class="notation-icon-btn" data-zoom-out title="Smaller (fit more per row)" aria-label="Smaller"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-4-4M8 11h6"></path></svg></button>
               <button type="button" class="notation-icon-btn" data-zoom-in title="Bigger (fewer per row)" aria-label="Bigger"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-4-4M8 11h6M11 8v6"></path></svg></button>
             </div>
+            <button type="button" class="notation-follow-btn" data-follow-toggle aria-pressed="true" title="Follow playback: scroll the grid with the music"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h10M4 12h7M4 18h10"></path><path d="M18 5v14M15 16l3 3 3-3"></path></svg><span>Follow</span></button>
             <div class="notation-tools-end">
               <button type="button" class="notation-icon-btn notation-undo" data-undo title="Undo" aria-label="Undo" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 14L4 9l5-5"></path><path d="M4 9h10a6 6 0 0 1 0 12h-3"></path></svg></button>
               <button type="button" class="addMeasureBtn notation-measure-btn notation-measure-add" title="Add a new measure">+ Measure</button>

@@ -585,6 +585,46 @@ div.container {
   padding-bottom: 4px;
 }
 
+.notation-follow-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  height: 32px;
+  margin-right: auto;
+  margin-left: 6px;
+  padding: 0 10px;
+  border-radius: var(--ui-radius-sm);
+  background: var(--ui-tint);
+  color: var(--ui-icon);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.notation-follow-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+.notation-follow-btn:hover:not(:disabled) {
+  background: var(--ui-tint-hover);
+  box-shadow: none;
+  transform: none;
+}
+
+.notation-follow-btn[aria-pressed="true"],
+.notation-follow-btn[aria-pressed="true"]:hover {
+  background: var(--ui-on);
+  color: var(--ui-on-ink);
+}
+
+/* Narrow phones: icon only */
+@media (max-width: 360px) {
+  .notation-follow-btn span {
+    display: none;
+  }
+}
+
 .notation-size,
 .notation-tools-end {
   display: flex;

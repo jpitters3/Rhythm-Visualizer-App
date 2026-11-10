@@ -6,10 +6,28 @@
  * in the normal (non-presentation) view only.
  */
 
-import { addTickObserver, getPlaybackPosition } from './noteplayer.js';
+import { addTickObserver } from './noteplayer.js';
+import { gridA } from './grid-context.js';
+
+const FOLLOW_KEY = 'gp_followPlayback';
 
 let lastScrolledMeasure = -1;
 let fixedSlotTop = -1;
+let following = readFollowPref();
+
+function readFollowPref() {
+  try { return localStorage.getItem(FOLLOW_KEY) !== 'off'; } catch { return true; }
+}
+
+// Follow on: the grid scrolls with playback. Off: only the cell pulse moves.
+function setFollowing(on, { remember = true } = {}) {
+  following = on;
+  if (remember) {
+    try { localStorage.setItem(FOLLOW_KEY, on ? 'on' : 'off'); } catch { /* private mode */ }
+  }
+  if (on) lastScrolledMeasure = -1; // catch up with the playing measure on the next tick
+  document.querySelectorAll('[data-follow-toggle]').forEach(b => b.setAttribute('aria-pressed', String(on)));
+}
 
 export function initGridAutoscroll() {
   const measuresEl = document.getElementById('measures');
@@ -30,14 +48,31 @@ export function initGridAutoscroll() {
       showScrollbar(); // Show on manual scroll
     });
 
+    // Scrolling the grid yourself during playback stops following until it's switched back on.
+    // These events only come from people, never from the auto-scroll below.
+    const userScrolled = () => {
+      if (following && gridA.playing) setFollowing(false, { remember: false });
+    };
+    measuresEl.addEventListener('wheel', userScrolled, { passive: true });
+    measuresEl.addEventListener('touchmove', userScrolled, { passive: true });
+    measuresEl.addEventListener('keydown', (e) => {
+      if (['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', ' '].includes(e.key)) userScrolled();
+    });
+
     // We also need to show it on auto-scroll hits
     // We'll wrap the scrollTo in a common function if possible, or just call showScrollbar()
     
   }
 
+  document.querySelectorAll('[data-follow-toggle]').forEach(b => {
+    b.addEventListener('click', () => setFollowing(!following));
+  });
+  setFollowing(following, { remember: false });
+
   addTickObserver((ctx) => {
     // Only act on Grid A and only when NOT in presentation mode
     if (!ctx || ctx.id !== 'A') return;
+    if (!following) return;
     if (document.body.classList.contains('present')) return;
 
     const measuresEl = document.getElementById('measures');

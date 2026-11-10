@@ -110,7 +110,9 @@ button:disabled {
 }
 
 .ctl-btn.active,
-.ctl-btn.active:hover:not(:disabled) {
+.ctl-btn.active:hover:not(:disabled),
+.ctl-btn[aria-pressed="true"],
+.ctl-btn[aria-pressed="true"]:hover:not(:disabled) {
   background: var(--ui-on);
   color: var(--ui-on-ink);
   box-shadow: none;
