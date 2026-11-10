@@ -161,12 +161,86 @@ body:not(.present) .measure-row {
 }
 
 .measure-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 16px;
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--ui-muted);
   margin: 0 0 10px 2px;
+}
+
+/* Selected step: a soft rounded background behind its label and cell
+   (js/notation-guides.js), apart from the playback pulse on the cell itself */
+body:not(.present) .measure-row {
+  position: relative;
+  isolation: isolate;
+}
+
+.step-highlight {
+  position: absolute;
+  z-index: -1;
+  border-radius: 14px;
+  background: var(--ui-tint-hover);
+  pointer-events: none;
+}
+
+/* Legend / first-run hint on the first measure header */
+.notation-legend {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+  letter-spacing: 0;
+  text-transform: none;
+  font-weight: 500;
+  pointer-events: auto;
+}
+
+.nl-key {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.nl-key::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.nl-left::before {
+  background: var(--up-fill);
+}
+
+.nl-right::before {
+  background: var(--down-fill);
+}
+
+.nl-ghost::before {
+  box-sizing: border-box;
+  border: 1.5px dashed var(--ui-muted);
+}
+
+.notation-legend-close {
+  width: 20px;
+  min-width: 0;
+  height: 20px;
+  padding: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--ui-faint);
+  font-size: 11px;
+}
+
+.notation-legend-close:hover:not(:disabled) {
+  background: var(--ui-tint);
+  box-shadow: none;
+  transform: none;
 }
 
 .mobile-only {

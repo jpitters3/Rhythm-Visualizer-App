@@ -1147,14 +1147,26 @@ export function resolveTakSlapNote(note, hand) {
   return note;
 }
 
+// The pan dot a grid label plays (T/S resolve by hand)
+function dotForLabel(note, sticking) {
+  note = resolveTakSlapNote(note, sticking);
+  const key = String(note || '').toUpperCase();
+  return handpanDots.get(key) || handpanDots.get(note) || (key === 'DING' ? handpanDots.get('D') : null);
+}
+
+// Outline the selected step's notes on the pan (null clears)
+export function markStepNotes(labels, stepIndex) {
+  handpanOverlay?.querySelectorAll('.hp-dot.step-note').forEach(d => d.classList.remove('step-note'));
+  if (labels == null) return;
+  const sticking = activeGrid.innerHands?.[stepIndex];
+  (Array.isArray(labels) ? labels : [labels]).forEach(label => {
+    if (label) dotForLabel(label, sticking)?.classList.add('step-note');
+  });
+}
+
 export function highlightHandpan(note, stepIndex, forceHand = null, latency = 0) {
   const sticking = forceHand || (activeGrid.innerHands && activeGrid.innerHands[stepIndex]);
-  note = resolveTakSlapNote(note, sticking);
-
-  let key = String(note || '').toUpperCase();
-  let el = handpanDots.get(key);
-  if (!el) el = handpanDots.get(note);
-  if (!el && key === 'DING') el = handpanDots.get('D');
+  const el = dotForLabel(note, sticking);
   if (!el) return;
 
   // Sticking Override

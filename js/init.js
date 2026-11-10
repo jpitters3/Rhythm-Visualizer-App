@@ -59,6 +59,7 @@ import { initMonetization } from './monetization.js';
 import { initManageSubscription } from './manage-subscription.js';
 import { initSaveStatus } from './save-status.js';
 import { initAutoSave } from './autosave.js';
+import { initNotationGuides } from './notation-guides.js';
 import { initScrollIndicators } from './scroll-indicators.js';
 import { initMethod, wireMethodEvents } from './method.js';
 import { initExercises } from './exercises.js';
@@ -133,6 +134,7 @@ async function init() {
     initManageSubscription();
     initSaveStatus();
     initAutoSave();
+    initNotationGuides();
     initMethod();
     wireMethodEvents();
     initExercises();

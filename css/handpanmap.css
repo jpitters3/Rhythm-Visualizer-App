@@ -325,6 +325,12 @@
   will-change: transform, opacity;
 }
 
+/* The selected step's note (js/notation-guides.js) */
+.hp-dot.step-note .hp-visual {
+  outline: 2px solid var(--ui-ring);
+  outline-offset: 2px;
+}
+
 .hp-dot.active .hp-visual {
   z-index: 50;
 }
