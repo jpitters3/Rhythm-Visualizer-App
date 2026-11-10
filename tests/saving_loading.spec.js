@@ -137,9 +137,11 @@ test.describe('Pattern Management', () => {
     await setMeasureSettings(page, 4, 1);
     await savePhraseAs(page, phrase1Name);
 
-    // Phrase 2: 7 beats per measure, eighth notes — same (empty) grid, just
-    // re-saved under a different name, so no stretch/compress note-data
-    // dialog can fire (that only triggers when the grid actually has notes).
+    // Phrase 2: save it as its own phrase BEFORE changing settings, so auto-save
+    // (which writes edits to the open phrase) can never put them into phrase 1.
+    // The grid stays empty, so no stretch/compress dialog can fire.
+    await savePhraseAs(page, phrase2Name);
+    await expect(page.locator('#patternSelect')).toHaveValue(phrase2Name);
     await setMeasureSettings(page, 7, 2);
     await savePhraseAs(page, phrase2Name);
 

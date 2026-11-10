@@ -33,7 +33,7 @@ const KEYBOARD_STEP = 24;
 const SNAP_PX = 28; // release this close to a snap point and it settles there
 const HINT_KEY = 'gp_dividerHintSeen';
 // Smallest pan (wrap width) with the scale/labels row showing; the Studio opens no smaller.
-const START_PAN_WIDTH = 215;
+const START_PAN_WIDTH = 217;
 // Dragging below that hides the row (.hp-compact) and lets the pan shrink to this.
 const MIN_PAN_WIDTH = 180;
 
@@ -65,15 +65,19 @@ export function initPanelResize() {
 
   // Everything in .left OTHER than #measures (phrase name row, etc.) — same
   // "measure what's actually there" approach as measureChromeHeight() below.
+  // Margins count too (#measures' own top margin included), as does the divider's
+  // net height: leaving them out let the panel overflow #main at its largest.
   function measureLeftChromeHeight() {
     if (!left || !measuresEl) return 0;
     let h = 0;
     Array.from(left.children).forEach(child => {
-      if (child === measuresEl) return;
-      if (getComputedStyle(child).display === 'none') return;
-      h += child.getBoundingClientRect().height;
+      const cs = getComputedStyle(child);
+      if (cs.display === 'none') return;
+      h += parseFloat(cs.marginTop) + parseFloat(cs.marginBottom);
+      if (child !== measuresEl) h += child.getBoundingClientRect().height;
     });
-    return h;
+    const hs = getComputedStyle(handle);
+    return h + handle.getBoundingClientRect().height + parseFloat(hs.marginTop) + parseFloat(hs.marginBottom);
   }
 
   function measureOneRowHeight() {
@@ -145,9 +149,11 @@ export function initPanelResize() {
     return Math.max(0, minWrap - wrapHorizontalPadding()) * imageAspect();
   }
 
+  // Padding plus margins: a negative bottom margin lets the ghost row overlap the padding
   function wrapVerticalPadding() {
     const cs = getComputedStyle(wrap);
-    return parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
+    return parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom)
+      + parseFloat(cs.marginTop) + parseFloat(cs.marginBottom);
   }
 
   function wrapHorizontalPadding() {
@@ -266,6 +272,7 @@ export function initPanelResize() {
   // screen never opens with the scale row hidden.
   function applyHeight(desiredTotalPx, { user = false } = {}) {
     if (panelShowsCard()) return panel.getBoundingClientRect().height;
+    syncTransportReserve(); // #main's bottom can move without the bar resizing
     const b = heightBounds();
     const floor = user || panel.classList.contains('hp-compact') ? b.floor : b.normalFloor;
     const ceiling = Math.max(floor, b.ceiling);
@@ -456,5 +463,14 @@ export function initPanelResize() {
       applyHeight(panel.getBoundingClientRect().height);
     });
     barObserver.observe(transportBar);
+  }
+
+  // The ghost row and top row can settle after the first sizing (late styles,
+  // icons); re-size so the pan and the ghost row still clear the transport bar.
+  if ('ResizeObserver' in window) {
+    const chromeObserver = new ResizeObserver(() => {
+      if (mq.matches && panel.contains(wrap) && !dragging) applyHeight(panel.getBoundingClientRect().height);
+    });
+    [document.getElementById('ghostNoteSection'), topRow].forEach(el => el && chromeObserver.observe(el));
   }
 }

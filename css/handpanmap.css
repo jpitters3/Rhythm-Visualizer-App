@@ -148,6 +148,7 @@
 
   .handpan-panel {
     position: relative;
+    top: auto; /* the desktop sticky offset would shift it 16px down here */
     /* Context for absolute drawer */
     width: 100%;
     flex: none;
@@ -621,11 +622,11 @@ div.lock-btn {
        both predate/fight #panelResizeHandle's "full size by default, drag
        down to shrink" behavior. */
     margin: 0 auto;
-    /* Was "0 8px" — too tight for the bottom-note pucks (S/T) to clear the
-       rim with a comfortable tap target on phones. Matches the base
-       .handpan-wrap padding so mobile gets the same relative gap as desktop
-       instead of being overridden back down to nearly nothing. */
+    /* Room for the S/T pucks. Keep it even: the note overlay spans the whole
+       box, so uneven padding would shift the notes off the image. */
     padding: 22px;
+    /* The ghost row may use the empty bottom of that padding, so the pan is bigger */
+    margin-bottom: -12px;
     transform: translateZ(0);
     /* GPU stability */
     backface-visibility: hidden;
