@@ -3,30 +3,25 @@ import { setCaret, clearRange } from './range-selection.js';
 import { setInnerLabel, renderAllMeasures, setActiveSubIndex, updateMultiCursor } from './notegrid.js';
 import { HistoryManager } from './history.js';
 import { isReviewing } from './coaching-mode.js';
-import { COMPOSE_KEY } from './config.js';
+import { AUTO_ADVANCE_KEY } from './config.js';
 import { isEditMulti, multiEditSessionSlot, advanceMultiEditSessionSlot, freePlay } from './state.js';
 
-let composeOn = (localStorage.getItem(COMPOSE_KEY) === 'on');
+// Auto-advance: after writing a note, the caret moves to the next step
+let autoAdvance = (localStorage.getItem(AUTO_ADVANCE_KEY) === 'on');
 
-const composeBtns = document.querySelectorAll('.compose-btn');
+const autoAdvanceBtns = document.querySelectorAll('.auto-advance-btn');
 
-export function updateComposeUI() {
-  if (!composeBtns) return;
-  composeBtns.forEach(btn => {
-    btn.classList.toggle('active', composeOn);
+export function updateAutoAdvanceUI() {
+  autoAdvanceBtns.forEach(btn => {
+    btn.classList.toggle('active', autoAdvance);
+    btn.setAttribute('aria-pressed', String(autoAdvance));
   });
-  document.body.classList.toggle('composeOn', composeOn);
+  document.body.classList.toggle('auto-advance', autoAdvance);
 }
 
-if (composeBtns) {
-  composeBtns.forEach(btn => {
-    btn.addEventListener('click', () => {
-      composeOn = !composeOn;
-      localStorage.setItem(COMPOSE_KEY, composeOn ? 'on' : 'off');
-      updateComposeUI();
-    });
-  });
-}
+autoAdvanceBtns.forEach(btn => {
+  btn.addEventListener('click', () => setAutoAdvance(!autoAdvance));
+});
 
 function totalSteps(ctx) {
   return (ctx || activeGrid).innerLabels.length;
@@ -63,7 +58,7 @@ export function writeToSelected(label, { advance = true } = {}, ctx) {
   }
 
   // Compose advance unless Alt is held
-  if (composeOn && advance) advanceSelection(1, c);
+  if (autoAdvance && advance) advanceSelection(1, c);
 }
 
 /**
@@ -86,9 +81,9 @@ export function writeToSession(label, { advance = true } = {}, ctx) {
 }
 
 // Expose for other modules
-export function getComposeOn() { return composeOn; }
-export function setComposeOn(val) {
-  composeOn = val;
-  localStorage.setItem(COMPOSE_KEY, val ? 'on' : 'off');
-  updateComposeUI();
+export function getAutoAdvance() { return autoAdvance; }
+export function setAutoAdvance(val) {
+  autoAdvance = val;
+  localStorage.setItem(AUTO_ADVANCE_KEY, val ? 'on' : 'off');
+  updateAutoAdvanceUI();
 }

@@ -2,7 +2,7 @@ import { setCaret } from './range-selection.js';
 import { spellNote } from './utils.js';
 import { Modal } from './modal.js';
 import { updateUserLabelPreference, currentProfile, loadCurrentProfile } from './profile.js';
-import { writeToSession, clampIndex, getComposeOn, advanceSelection } from './compose-mode.js';
+import { writeToSession, clampIndex, getAutoAdvance, advanceSelection } from './compose-mode.js';
 import { preloadScaleSamples, noteForLabel, isDownbeatStep, registerHighlighter, playNoteByLabel, intervalMs } from './noteplayer.js';
 import { SCALES, SCALE_KEY_LOCAL, BASE_PATH } from './config.js';
 import { currentUser, getScale, getSelectedScaleName, setSelectedScaleName, setCurrentScale } from './state.js';
@@ -17,7 +17,7 @@ import { canAccess, FEATURE } from './gated-feature.js';
 import { alert, confirm } from './alert.js';
 
 // DOM Elements (previously globals)
-let handpanImg, scaleSelect, scaleStatus, handpanColorSelect, showOctaveCheck, showOctaveRow, ghostBtn, ghostBackBtn, ghostFwdBtn, composeBtn, handpanSection, handpanOverlay;
+let handpanImg, scaleSelect, scaleStatus, handpanColorSelect, showOctaveCheck, showOctaveRow, ghostBtn, ghostBackBtn, ghostFwdBtn, handpanSection, handpanOverlay;
 let handpanWrapBottom, handpanImgBottom, handpanOverlayBottom;
 
 /* Mapped to nine-note-handpan-numbered.png */
@@ -1675,7 +1675,6 @@ export function initHandpanMap() {
   ghostBtn = document.getElementById('ghostBtn');
   ghostBackBtn = document.getElementById('ghostBackBtn');
   ghostFwdBtn = document.getElementById('ghostFwdBtn');
-  composeBtn = document.getElementById('composeBtn');
   handpanSection = document.getElementById('handpanSection');
   handpanOverlay = document.getElementById('handpanOverlay');
   myScalesBtn = document.getElementById('myScalesBtn');
@@ -1773,7 +1772,7 @@ export function initHandpanMap() {
       writeToSession(notes[0], { advance: true });
     } else {
       assignChordToSelectedCell(notes);
-      if (getComposeOn()) advanceSelection(1, activeGrid);
+      if (getAutoAdvance()) advanceSelection(1, activeGrid);
     }
   }
 
@@ -2098,7 +2097,7 @@ export function initHandpanMap() {
   });
 
   ghostBtn?.addEventListener('click', () => {
-    writeToSession('', { advance: getComposeOn?.() ?? false });
+    writeToSession('', { advance: getAutoAdvance?.() ?? false });
   });
 
   ghostBackBtn?.addEventListener('click', () => {

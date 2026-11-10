@@ -130,7 +130,7 @@ const TOURS = {
         target: '#primaryControlsWrapper',
         mobileTarget: '#mobileControlsBtn',
         title: 'Studio settings ☝️',
-        body: 'Clear the grid, enable compose mode, change time signature, and more.',
+        body: 'Clear the grid, change notation, turn on sticking, and more.',
         position: 'bottom',
       },
       {

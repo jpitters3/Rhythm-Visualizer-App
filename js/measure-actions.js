@@ -247,7 +247,7 @@ export function initMeasureActions() {
   // to "-". CELL_CLICKED (js/notegrid.js) fires only from that real click
   // handler — deliberately NOT the more general CARET_CHANGED, which also
   // fires from plain programmatic setCaret() calls (loading a pattern,
-  // paste, ghost-note nav, compose-mode auto-advance, the initial grid's
+  // paste, ghost-note nav, auto-advance, the initial grid's
   // own construction defaulting caretIndex to 0) that aren't the user
   // selecting anything and were previously making "-" show from load.
   Bus.on(BUS_EVENT.CELL_CLICKED, () => {

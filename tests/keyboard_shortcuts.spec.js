@@ -1,5 +1,5 @@
 import { test, expect } from './fixtures';
-import { gotoStudio, clearGrid, openMobileControlsIfNeeded } from './helpers.js';
+import { gotoStudio, clearGrid } from './helpers.js';
 
 test.describe('Keyboard Shortcuts', () => {
   test.beforeEach(async ({ page }) => {
@@ -85,10 +85,9 @@ test.describe('Keyboard Shortcuts', () => {
     await expect(cell0).not.toHaveClass(/selected/);
   });
 
-  test('D/T/S keys write notes (with compose mode)', async ({ page }) => {
-    // Enable compose mode for auto-advance
-    await openMobileControlsIfNeeded(page);
-    await page.click('#composeBtn');
+  test('D/T/S keys write notes (with auto-advance)', async ({ page }) => {
+    // Enable auto-advance for auto-advance
+    await page.locator('.auto-advance-btn:visible').first().click();
     await page.waitForTimeout(100);
 
     const cell0 = page.locator('.cell').nth(0);
@@ -102,19 +101,18 @@ test.describe('Keyboard Shortcuts', () => {
     await page.keyboard.press('d');
     await expect(cell0).toHaveText('D');
 
-    // Press T for Tak (caret should have advanced in compose mode)
+    // Press T for Tak (caret should have advanced in auto-advance)
     await page.keyboard.press('t');
     await expect(cell1).toHaveText('T');
 
-    // Press S for Slap (caret should have advanced in compose mode)
+    // Press S for Slap (caret should have advanced in auto-advance)
     await page.keyboard.press('s');
     await expect(cell2).toHaveText('S');
   });
 
-  test('Number keys write notes (with compose mode)', async ({ page }) => {
-    // Enable compose mode for auto-advance
-    await openMobileControlsIfNeeded(page);
-    await page.click('#composeBtn');
+  test('Number keys write notes (with auto-advance)', async ({ page }) => {
+    // Enable auto-advance for auto-advance
+    await page.locator('.auto-advance-btn:visible').first().click();
     await page.waitForTimeout(100);
 
     const cell0 = page.locator('.cell').nth(0);
@@ -127,15 +125,14 @@ test.describe('Keyboard Shortcuts', () => {
     await page.keyboard.press('1');
     await expect(cell0).toHaveText('1');
 
-    // Press 5 (caret should have advanced in compose mode)
+    // Press 5 (caret should have advanced in auto-advance)
     await page.keyboard.press('5');
     await expect(cell1).toHaveText('5');
   });
 
   test('Alt+key writes without advancing', async ({ page }) => {
-    // Enable compose mode (so we can test that Alt prevents advance)
-    await openMobileControlsIfNeeded(page);
-    await page.click('#composeBtn');
+    // Enable auto-advance (so we can test that Alt prevents advance)
+    await page.locator('.auto-advance-btn:visible').first().click();
     await page.waitForTimeout(100);
 
     const cell0 = page.locator('.cell').nth(0);
@@ -143,12 +140,12 @@ test.describe('Keyboard Shortcuts', () => {
     // Click cell to select
     await cell0.click();
 
-    // Press Alt+D (should not advance even in compose mode)
+    // Press Alt+D (should not advance even in auto-advance)
     await page.keyboard.press('Alt+d');
     await expect(cell0).toHaveText('D');
     await expect(cell0).toHaveClass(/selected/);
 
-    // Press Alt+1 (should not advance even in compose mode)
+    // Press Alt+1 (should not advance even in auto-advance)
     await page.keyboard.press('Alt+1');
     await expect(cell0).toHaveText('1');
     await expect(cell0).toHaveClass(/selected/);

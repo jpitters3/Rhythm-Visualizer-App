@@ -669,7 +669,7 @@ function attachCellListeners(cell, ctx = activeGrid) {
 
     // Fires for every real user click/tap on a cell (as opposed to the many
     // programmatic setCaret() calls elsewhere — paste, loading a pattern,
-    // ghost-note nav, compose-mode auto-advance — which also move the caret
+    // ghost-note nav, auto-advance — which also move the caret
     // but aren't "the user selected a cell"). Mobile's +/- corner button
     // (js/measure-actions.js) listens for this specifically so it doesn't
     // mistake those for a click.

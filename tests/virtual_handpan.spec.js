@@ -1,5 +1,5 @@
 const { test, expect } = require('./fixtures');
-const { gotoStudio, clearGrid, openMobileControlsIfNeeded, closeMobileControlsIfNeeded } = require('./helpers');
+const { gotoStudio, clearGrid, closeMobileControlsIfNeeded } = require('./helpers');
 
 test.describe('Virtual Handpan Tap-to-Play', () => {
 
@@ -38,11 +38,11 @@ test.describe('Virtual Handpan Tap-to-Play', () => {
     await expect(cell0).toHaveText('1');
   });
 
-  test('Compose mode advances the caret after a tap; without it the caret stays put', async ({ page }) => {
+  test('Auto-advance advances the caret after a tap; without it the caret stays put', async ({ page }) => {
     const cell0 = page.locator('#measures .cell').nth(0);
     const cell1 = page.locator('#measures .cell').nth(1);
 
-    // Compose mode OFF (default): writes but does not advance — a second tap
+    // Auto-advance OFF (default): writes but does not advance — a second tap
     // overwrites cell0 rather than landing in cell1.
     await cell0.click();
     await page.locator('.hp-dot[data-note="2"]').click();
@@ -51,9 +51,8 @@ test.describe('Virtual Handpan Tap-to-Play', () => {
     await expect(cell0).toHaveText('3');
     await expect(cell1).toHaveText('');
 
-    // Compose mode ON: writes and advances, so a second tap lands in cell1.
-    await openMobileControlsIfNeeded(page);
-    await page.click('#composeBtn');
+    // Auto-advance ON: writes and advances, so a second tap lands in cell1.
+    await page.locator('.auto-advance-btn:visible').first().click();
     await closeMobileControlsIfNeeded(page);
     await cell0.click();
     await page.locator('.hp-dot[data-note="1"]').click();
@@ -62,9 +61,8 @@ test.describe('Virtual Handpan Tap-to-Play', () => {
     await expect(cell1).toHaveText('2');
   });
 
-  test('Alt+click writes without advancing, even in compose mode', async ({ page }) => {
-    await openMobileControlsIfNeeded(page);
-    await page.click('#composeBtn');
+  test('Alt+click writes without advancing, even in auto-advance', async ({ page }) => {
+    await page.locator('.auto-advance-btn:visible').first().click();
     await closeMobileControlsIfNeeded(page);
 
     const cell0 = page.locator('#measures .cell').nth(0);

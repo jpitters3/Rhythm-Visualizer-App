@@ -2,7 +2,7 @@
 import { gridA } from './grid-context.js';
 import { currentUser, activeGrid } from './state.js';
 import { cells, renderAllMeasures, initNoteGrid } from './notegrid.js';
-import { ADMIN_EMAILS, COMPOSE_KEY } from './config.js';
+import { ADMIN_EMAILS } from './config.js';
 import { TransportRegistry } from './transport-ui.js';
 import { stop, setBeats, setSubdivision, initNotePlayer, unlockAudio } from './noteplayer.js';
 import { loadSharedFromURL } from './share-patterns.js';
@@ -11,7 +11,7 @@ import { refreshPatternSelect, updatePatternButtons, snapshotCurrentState } from
 import { initCourseCreator } from './course-creator.js';
 import { alert } from './alert.js';
 import { initControls, loadPatternByName, syncVirtualHandpanControls } from './controls.js';
-import { updateComposeUI } from './compose-mode.js';
+import { updateAutoAdvanceUI } from './compose-mode.js';
 import { setPresentation, initPresentation } from './presentation-mode.js';
 import { initAuth } from './auth.js';
 import { initDashboard } from './dashboard.js';
@@ -380,7 +380,7 @@ function safeInit() {
     })();
 
     updatePatternButtons();
-    updateComposeUI();
+    updateAutoAdvanceUI();
 
     if (DEBUG) runSelfTests();
 

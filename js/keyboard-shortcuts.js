@@ -6,7 +6,7 @@ import { clearSelection, deleteSelection, copySelection, pasteSelection, setInne
 import { getRange, clearRange } from './range-selection.js';
 import { setPresentation } from './presentation-mode.js';
 import { TransportRegistry } from './transport-ui.js';
-import { writeToSession, getComposeOn } from './compose-mode.js';
+import { writeToSession, getAutoAdvance } from './compose-mode.js';
 import { Modal } from './modal.js';
 import { Sidepanel } from './sidepanel.js';
 
@@ -182,13 +182,13 @@ export function initShortcuts() {
     if (locked) ensureAudio(); // includes resume logic
 
     // Clear selection when clicking / tapping anywhere except
-    // on the beat cells, or on the handpan notes while Compose mode is ON
+    // on the beat cells, or on the handpan notes while Auto-advance is on
     let shouldClear = true;
 
     if (ev.target.closest('.cell')) shouldClear = false;
 
     // Compose logic
-    if (getComposeOn() && ev.target.closest('.hp-dot')) shouldClear = false;
+    if (getAutoAdvance() && ev.target.closest('.hp-dot')) shouldClear = false;
 
     // Also don't clear if interacting with key UI elements
     if (ev.target.closest('#aiFab') || ev.target.closest('#aiChatContainer')) shouldClear = false;

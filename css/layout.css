@@ -591,7 +591,6 @@ div.container {
   gap: 6px;
   min-width: 0;
   height: 32px;
-  margin-right: auto;
   margin-left: 6px;
   padding: 0 10px;
   border-radius: var(--ui-radius-sm);
@@ -623,6 +622,18 @@ div.container {
   .notation-follow-btn span {
     display: none;
   }
+}
+
+/* Auto-advance sits right after Follow; the push to the right starts after it */
+.notation-auto-advance {
+  margin-left: 6px;
+  margin-right: auto;
+}
+
+.notation-icon-btn.active,
+.notation-icon-btn.active:hover:not(:disabled) {
+  background: var(--ui-on);
+  color: var(--ui-on-ink);
 }
 
 .notation-size,
