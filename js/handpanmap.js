@@ -1156,11 +1156,15 @@ function dotForLabel(note, sticking) {
 
 // Outline the selected step's notes on the pan (null clears)
 export function markStepNotes(labels, stepIndex) {
-  handpanOverlay?.querySelectorAll('.hp-dot.step-note').forEach(d => d.classList.remove('step-note'));
+  // Arcs (perimeter view) live in an SVG beside the overlay, so clear across the wrap
+  const wrap = handpanOverlay?.closest('.handpan-wrap');
+  wrap?.querySelectorAll('.step-note').forEach(d => d.classList.remove('step-note'));
   if (labels == null) return;
   const sticking = activeGrid.innerHands?.[stepIndex];
   (Array.isArray(labels) ? labels : [labels]).forEach(label => {
-    if (label) dotForLabel(label, sticking)?.classList.add('step-note');
+    const el = label && dotForLabel(label, sticking);
+    // Perimeter notes are { isArc, path } proxies, not elements: ring the arc itself
+    (el?.isArc ? el.path : el)?.classList?.add('step-note');
   });
 }
 

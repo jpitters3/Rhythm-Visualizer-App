@@ -338,6 +338,11 @@
   outline-offset: 2px;
 }
 
+.hp-perimeter-svg .hp-arc.step-note {
+  stroke: var(--ui-ring);
+  stroke-width: 6;
+}
+
 .hp-dot.active .hp-visual {
   z-index: 50;
 }
