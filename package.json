@@ -11,6 +11,7 @@
     "test:smoke": "npx playwright test --grep @smoke --project=chromium --project=\"Mobile Chrome\"",
     "test:core": "npx playwright test --grep \"@smoke|@core\" --project=chromium --project=\"Mobile Chrome\" --project=\"Mobile Safari\"",
     "test:report": "npx playwright show-report",
+    "test:unit": "node --test --disable-warning=MODULE_TYPELESS_PACKAGE_JSON \"tests/unit/*.unit.mjs\"",
     "lint": "eslint .",
     "prepare": "husky",
     "db:push:staging": "supabase link --project-ref mececymulqnvmaqbcnok && supabase db push",
