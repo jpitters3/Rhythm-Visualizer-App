@@ -50,8 +50,14 @@ const TAKE_ONSET_RMS = 0.04; // "that was a G" refers to a sound this recent
 
 let view = null;
 let els = {};
-let mode = 'idle'; // 'idle' | 'capture' | 'live'
-let micOn = false;
+// What Listen is doing. Changed only through setInput / setMode / setTask, which
+// refuse combinations that make no sense (recording while a clip plays,
+// teaching a note mid-live…):
+//   input: 'off' | 'mic' | 'clip'          where the sound comes from
+//   mode:  'capture' | 'live' | 'record'   what heard notes do (record: mic only)
+//   task:  null | { kind: 'teach', label, freqs } | { kind: 'sounds', take }
+//          a side job, one at a time, carrying its own data
+const state = { input: 'off', mode: 'capture', task: null };
 let current = []; // labels of the chord being captured
 let captured = []; // [{ labels, chord }]
 let lastCueAt = -Infinity;
@@ -63,20 +69,48 @@ let voiceOn = false;
 let namesOn = true;
 let multiOn = false; // Multi-note (beta): several notes per strike
 let sessionScale = null; // the scale the chords on screen were played on
-let teach = null;
-let source = 'mic'; // where the sound comes from: 'mic', or 'clip' while one is loaded
-let recording = null; // { startedAt, timer } while recording a Clip
+let recording = null; // { startedAt, timer }: set exactly while mode is 'record'
 let clip = null; // the clip being built from: { row, blob, url }
 let clipAudio = null;
 let pendingClip = null; // asked for from the Library before the view was ready
-let soundsOn = false; // Note sounds: record the custom handpan's own note audio
-let take = null; // a note being recorded: { label, phase, recorder, chunks, startedAt, onsetAt, timer, blob, url, heard }
-let savedClip = null; // { row, blob } just recorded, offered for notation // teaching a note: { label, freqs }; label null until it's picked
+let savedClip = null; // { row, blob } just recorded, offered for notation
 let voiceBusy = false; // someone is talking: what the mic hears isn't the pan
 let voiceSettleTimer = null;
 let muteUntil = 0;
 let pending = null; // a question waiting for its answer, e.g. which D
 let replyTimer = null;
+
+// --- State transitions ---
+
+function invalid(what) {
+  throw new Error(`Chord listen: ${what} (input ${state.input}, mode ${state.mode}, task ${state.task?.kind || 'none'})`);
+}
+
+function setInput(input) {
+  state.input = input;
+  if (input === 'off' || (input === 'clip' && state.mode === 'record')) state.mode = 'capture';
+  if (input === 'off' && state.task?.kind === 'teach') state.task = null;
+}
+
+function setMode(next) {
+  if (next !== 'capture' && state.input === 'off') invalid(`${next} needs sound coming in`);
+  if (next === 'record' && state.input !== 'mic') invalid('only the mic can be recorded');
+  if (next !== 'capture' && state.task) invalid(`${next} with a ${state.task.kind} task open`);
+  if ((next === 'record') !== !!recording) invalid('record mode and the recording must start and stop together');
+  state.mode = next;
+}
+
+// task: null, { kind: 'teach', label, freqs } or { kind: 'sounds', take }
+function setTask(task) {
+  if (task && state.mode !== 'capture') invalid(`a ${task.kind} task in ${state.mode} mode`);
+  if (task?.kind === 'teach' && state.input === 'off') invalid('teaching needs sound coming in');
+  state.task = task;
+}
+
+const listening = () => state.input !== 'off';
+const teaching = () => (state.task?.kind === 'teach' ? state.task : null);
+const soundsOpen = () => state.task?.kind === 'sounds';
+const currentTake = () => (state.task?.kind === 'sounds' ? state.task.take : null);
 
 // --- Notes and names ---
 
@@ -193,20 +227,20 @@ function chordCard(entry, { bars = null, playing = false, isNew = false, number 
 }
 
 function renderCurrent() {
-  const labels = mode === 'live' && live?.current != null ? live.candidates[live.current].labels : current;
+  const labels = state.mode === 'live' && live?.current != null ? live.candidates[live.current].labels : current;
   updateChordShapeDiagram(els.bigDiagram, labels);
   const chord = labels.length ? describeChord(labels) : null;
-  if (mode === 'record' && recording) {
+  if (state.mode === 'record' && recording) {
     els.slot.textContent = 'Recording to your Clips';
     els.name.textContent = formatTime((Date.now() - recording.startedAt) / 1000);
     els.notes.textContent = '';
     els.stage.classList.add('has-chord');
     return;
   }
-  els.slot.textContent = mode === 'live' ? ''
+  els.slot.textContent = state.mode === 'live' ? ''
     : editingIndex != null ? `Chord ${editingIndex + 1} · ${current.length ? 'editing' : 'listening'}`
-      : micOn ? `Chord ${captured.length + 1}` : '';
-  els.name.textContent = chord?.short || (mode === 'live' ? 'Listening…' : micOn ? 'Play a note' : '');
+      : listening() ? `Chord ${captured.length + 1}` : '';
+  els.name.textContent = chord?.short || (state.mode === 'live' ? 'Listening…' : listening() ? 'Play a note' : '');
   // Octaves only when a note is doubled, so "remove the lower D" has something to point at
   const names = chord ? chord.notes.map(pitchName) : [];
   const doubled = new Set(names).size < names.length;
@@ -248,7 +282,7 @@ function renderLive() {
   const shown = els.progression.childElementCount;
   const cards = live.changes.map((c, i) => chordCard(live.candidates[c.idx], {
     bars: lengthText(beats[i], live.perBar),
-    playing: mode === 'live' && i === live.changes.length - 1,
+    playing: state.mode === 'live' && i === live.changes.length - 1,
     isNew: i >= shown,
   }));
   els.progression.replaceChildren(...cards);
@@ -283,56 +317,57 @@ function pulseTick() {
 }
 
 function renderMode() {
-  view.dataset.mode = mode;
-  els.micBtn.classList.toggle('on', micOn);
-  els.micBtn.setAttribute('aria-pressed', String(micOn));
-  els.micLabel.textContent = micOn ? 'Stop' : captured.length || live ? 'Listen again' : 'Start listening';
-  els.modeCapture.classList.toggle('active', mode === 'capture' || mode === 'idle');
-  els.modeLive.classList.toggle('active', mode === 'live');
-  els.modeRecord.classList.toggle('active', mode === 'record');
-  els.micBtn.hidden = source === 'clip' || !!recording;
-  els.recordBtn.hidden = source === 'clip';
+  view.dataset.mode = listening() ? state.mode : 'idle'; // the CSS keys off this
+  els.micBtn.classList.toggle('on', listening());
+  els.micBtn.setAttribute('aria-pressed', String(listening()));
+  els.micLabel.textContent = listening() ? 'Stop' : captured.length || live ? 'Listen again' : 'Start listening';
+  els.modeCapture.classList.toggle('active', state.mode === 'capture');
+  els.modeLive.classList.toggle('active', state.mode === 'live');
+  els.modeRecord.classList.toggle('active', state.mode === 'record');
+  els.micBtn.hidden = state.input === 'clip' || !!recording;
+  els.recordBtn.hidden = state.input === 'clip';
   els.recordBtn.classList.toggle('recording', !!recording);
   els.recordLabel.textContent = recording ? 'Stop & save' : 'Record a flow';
-  setVisible(els.clipBar, source === 'clip');
-  setVisible(els.savedBar, !!savedClip && !recording && source !== 'clip');
+  setVisible(els.clipBar, state.input === 'clip');
+  setVisible(els.savedBar, !!savedClip && !recording && state.input !== 'clip');
   // Free record (note-by-note transcription) is admin-only for now
   const canTranscribe = isAdminUser(currentUser);
-  els.transcribeBtn.hidden = !canTranscribe || source !== 'clip';
+  els.transcribeBtn.hidden = !canTranscribe || state.input !== 'clip';
   els.savedTranscribe.hidden = !canTranscribe;
-  els.hint.innerHTML = mode === 'record'
+  els.hint.innerHTML = state.mode === 'record'
     ? 'Just play. Everything is recorded in high quality and saved to your <strong>Clips</strong>, to build the notation from later.'
-    : source === 'clip'
+    : state.input === 'clip'
       ? 'Press play and Panafide follows the chords in your clip, with the tempo and time signature. Fix any chord afterwards by voice or with ✎.'
-      : mode === 'live'
+      : state.mode === 'live'
         ? 'Play your progression in time. <strong>Double clap</strong> to stop.'
-        : micOn
+        : listening()
       ? `Play each note of the chord, or tap it. <strong>Clap or snap</strong> to lock it in, <strong>double clap</strong> to play it live.${voiceOn ? ' Or just <strong>say</strong> what to change.' : ''}`
       : 'Turn on the mic and play a chord one note at a time, or tap the notes.';
-  view.toggleAttribute('data-teach', !!teach);
-  setVisible(els.teachBar, !!teach);
-  if (teach) {
-    els.teachText.textContent = teach.label
-      ? `Teaching ${labelName(teach.label)}: strike it ${TEACH_STRIKES} times (${teach.freqs.length}/${TEACH_STRIKES})`
+  view.toggleAttribute('data-teach', !!teaching());
+  setVisible(els.teachBar, !!teaching());
+  const task = teaching();
+  if (task) {
+    els.teachText.textContent = task.label
+      ? `Teaching ${labelName(task.label)}: strike it ${TEACH_STRIKES} times (${task.freqs.length}/${TEACH_STRIKES})`
       : 'Tap the note you want to teach';
   }
-  els.teachBtn.disabled = !micOn || mode === 'live';
-  view.toggleAttribute('data-sounds', soundsOn);
+  els.teachBtn.disabled = !listening() || state.mode === 'live';
+  view.toggleAttribute('data-sounds', soundsOpen());
   renderSounds();
   els.multiBtn.classList.toggle('on', multiOn);
   els.multiBtn.setAttribute('aria-pressed', String(multiOn));
   els.multiBtn.querySelector('.cl-voice-state').textContent = multiOn ? 'on' : 'off';
-  els.lockBtn.disabled = mode === 'live' || mode === 'record' || !current.length;
-  els.liveBtn.textContent = mode === 'live' ? 'Stop live' : 'Go live';
-  els.liveBtn.disabled = !micOn || mode === 'record';
+  els.lockBtn.disabled = state.mode === 'live' || state.mode === 'record' || !current.length;
+  els.liveBtn.textContent = state.mode === 'live' ? 'Stop live' : 'Go live';
+  els.liveBtn.disabled = !listening() || state.mode === 'record';
   // Mic off, a chord can still be tapped together: Lock shows once it has notes
-  els.lockBtn.hidden = mode === 'record' || (mode === 'idle' && !current.length);
-  els.liveBtn.hidden = mode === 'record';
-  const showLive = mode === 'live' || !!live?.changes.length;
+  els.lockBtn.hidden = state.mode === 'record' || (!listening() && !current.length);
+  els.liveBtn.hidden = state.mode === 'record';
+  const showLive = state.mode === 'live' || !!live?.changes.length;
   setVisible(els.timing, showLive);
   setVisible(els.progressionWrap, showLive);
   const hasResult = captured.length > 0 || !!live?.changes.length;
-  setVisible(els.steps, !hasResult && mode !== 'live');
+  setVisible(els.steps, !hasResult && state.mode !== 'live');
   els.undoBtn.disabled = !undoStack.length;
   els.voiceBtn.hidden = !voiceSupported();
   els.voiceBtn.classList.toggle('on', voiceOn);
@@ -356,20 +391,20 @@ function snapshot() {
   return {
     current: [...current],
     captured: captured.map(e => ({ labels: [...e.labels], chord: e.chord })),
-    editingIndex, live, mode,
+    editingIndex, live, mode: state.mode,
   };
 }
 
-function restore(state) {
-  if (mode === 'live' && state.mode !== 'live') {
+function restore(snap) {
+  if (state.mode === 'live' && snap.mode !== 'live') {
     cancelAnimationFrame(pulseRaf);
     pulseRaf = null;
-    mode = micOn ? 'capture' : 'idle';
+    setMode('capture');
   }
-  current = state.current;
-  captured = state.captured;
-  editingIndex = state.editingIndex;
-  live = state.live;
+  current = snap.current;
+  captured = snap.captured;
+  editingIndex = snap.editingIndex;
+  live = snap.live;
   els.progression.replaceChildren();
   renderAll();
 }
@@ -377,7 +412,7 @@ function restore(state) {
 // Every change goes through here so it can be undone; audio=true marks changes
 // made by what the mic heard, which speech may take back.
 function change(fn, { audio = false } = {}) {
-  undoStack.push({ at: performance.now(), audio, state: snapshot() });
+  undoStack.push({ at: performance.now(), audio, snap: snapshot() });
   if (undoStack.length > HISTORY_MAX) undoStack.shift();
   fn();
   renderAll();
@@ -386,7 +421,7 @@ function change(fn, { audio = false } = {}) {
 function undo() {
   const last = undoStack.pop();
   if (!last) return false;
-  restore(last.state);
+  restore(last.snap);
   return true;
 }
 
@@ -437,6 +472,8 @@ function liveCandidates() {
 }
 
 function startLive({ audio = false } = {}) {
+  cancelTake();
+  if (state.task) setTask(null); // a side job ends when playing in time begins
   lockChord({ audio });
   change(() => {
     editingIndex = null;
@@ -444,7 +481,7 @@ function startLive({ audio = false } = {}) {
     // Plus what's on screen: the metre shown and the beat lit
     live = { ...startFollowing(liveCandidates()), perBar: null, shownBeat: null };
     els.progression.replaceChildren();
-    mode = 'live';
+    setMode('live');
   }, { audio });
   cancelAnimationFrame(pulseRaf);
   pulseTick();
@@ -454,7 +491,7 @@ function stopLive() {
   cancelAnimationFrame(pulseRaf);
   pulseRaf = null;
   stopFollowing(live, (getAudioCtx()?.currentTime ?? 0) * 1000);
-  mode = micOn ? 'capture' : 'idle';
+  setMode('capture');
   els.pulse.querySelectorAll('.on').forEach(d => d.classList.remove('on'));
   renderLive();
   renderMode();
@@ -470,13 +507,13 @@ function liveNote(label, at) {
 // --- Mic ---
 
 function audioMuted() {
-  if (source === 'clip') return false; // talking or the pan's playback isn't in the clip
+  if (state.input === 'clip') return false; // talking or the pan's playback isn't in the clip
   return voiceBusy || performance.now() < muteUntil;
 }
 
 function onSound(sound) {
-  if (take) return;
-  if (teach && !audioMuted()) onTeachSound(sound);
+  if (currentTake()) return;
+  if (teaching() && !audioMuted()) onTeachSound(sound);
 }
 
 function onNote(rawLabel, at) {
@@ -484,27 +521,28 @@ function onNote(rawLabel, at) {
   const label = normLabel(rawLabel);
   els.stage.querySelector(`.cl-big [data-note="${label}"]`)?.classList.add('just-heard');
   setTimeout(() => els.stage.querySelector(`.cl-big [data-note="${label}"]`)?.classList.remove('just-heard'), 350);
+  const take = currentTake();
   if (take) { take.heard.add(label); return; } // a note's sound being recorded
-  if (teach) return; // the strikes being taught aren't chord notes
-  if (mode === 'capture') addNote(label);
-  else if (mode === 'live') liveNote(label, at);
+  if (teaching()) return; // the strikes being taught aren't chord notes
+  if (state.mode === 'capture') addNote(label);
+  else if (state.mode === 'live') liveNote(label, at);
 }
 
 function onCue(at) {
-  if (audioMuted() || teach || take) return;
+  if (audioMuted() || state.task) return;
   const double = at - lastCueAt < DOUBLE_CUE_MS;
   lastCueAt = double ? -Infinity : at;
   flashCue(double ? 'double' : 'single');
-  if (mode === 'capture') {
+  if (state.mode === 'capture') {
     if (double) startLive({ audio: true });
     else lockChord({ audio: true });
-  } else if (mode === 'live' && double && source !== 'clip') { // a clip is followed to its end
+  } else if (state.mode === 'live' && double && state.input !== 'clip') { // a clip is followed to its end
     stopLive();
   }
 }
 
 function onLevel(rms) {
-  if (take?.phase === 'waiting' && rms > TAKE_ONSET_RMS) startTakeCountdown();
+  if (currentTake()?.phase === 'waiting' && rms > TAKE_ONSET_RMS) startTakeCountdown();
   els.stage.style.setProperty('--level', Math.min(1, rms * 12).toFixed(3));
 }
 
@@ -520,8 +558,7 @@ async function startMic() {
     showAlert('Panafide needs the microphone to hear you play. Allow it in your browser settings and try again.');
     return;
   }
-  micOn = true;
-  mode = 'capture';
+  setInput('mic');
   current = [];
   if (voiceOn) beginVoice();
   renderMode();
@@ -529,21 +566,19 @@ async function startMic() {
 
 function stopMic() {
   if (recording) stopRecord(); // what's recorded so far is saved
-  if (source === 'clip') {
+  if (state.input === 'clip') {
     closeClip();
     return;
   }
   stopListening();
   stopVoice();
-  micOn = false;
-  if (mode === 'live') stopLive();
-  mode = 'idle';
+  if (state.mode === 'live') stopLive();
+  cancelTake();
+  setInput('off');
   current = [];
   editingIndex = null;
   voiceBusy = false;
   pending = null;
-  teach = null;
-  cancelTake();
   els.stage.style.setProperty('--level', '0');
   renderAll();
 }
@@ -588,7 +623,7 @@ function resolveTarget(action, { fallbackToLast = false } = {}) {
     if (i == null || !captured[i]) return { error: `There's no chord ${i == null ? '' : i + 1} yet.` };
     return { index: i, labels: [...captured[i].labels] };
   }
-  if (mode === 'live') return { error: 'Stop live mode first, then edit.' };
+  if (state.mode === 'live') return { error: 'Stop live mode first, then edit.' };
   if (!current.length && fallbackToLast && editingIndex == null && captured.length) {
     return { index: captured.length - 1, labels: [...captured.at(-1).labels] };
   }
@@ -793,7 +828,7 @@ function doResolve(action) {
 }
 
 function doNext() {
-  if (mode === 'live') return { text: 'You’re live. Say “stop” to finish.', tone: 'warn' };
+  if (state.mode === 'live') return { text: 'You’re live. Say “stop” to finish.', tone: 'warn' };
   const wasEditing = editingIndex;
   const chord = lockChord();
   if (!chord) return { text: 'Play some notes first.', tone: 'warn' };
@@ -804,7 +839,7 @@ function doNext() {
 function doChordCommand(action) {
   const i = chordIndex(action.chord);
   if (i == null || !captured[i]) return { text: `There's no chord ${i == null ? '' : i + 1} yet.`, tone: 'warn' };
-  if (mode === 'live') return { text: 'Stop live mode first, then edit.', tone: 'warn' };
+  if (state.mode === 'live') return { text: 'Stop live mode first, then edit.', tone: 'warn' };
   const name = captured[i].chord.short;
   if (action.type === 'deleteChord') {
     change(() => {
@@ -824,9 +859,9 @@ function doChordCommand(action) {
 // Opens a captured chord on the big pan: changes go to it, "next" or Lock saves it
 function editChordAt(i) {
   if (!captured[i]) return { text: `There's no chord ${i + 1} yet.`, tone: 'warn' };
-  if (mode === 'live') return { text: 'Stop live mode first, then edit.', tone: 'warn' };
+  if (state.mode === 'live') return { text: 'Stop live mode first, then edit.', tone: 'warn' };
   change(() => { editingIndex = i; current = [...captured[i].labels]; });
-  const how = micOn ? 'Play or say what to change, then say “next” or clap.' : 'Say or tap what to change, then Lock chord.';
+  const how = listening() ? 'Play or say what to change, then say “next” or clap.' : 'Say or tap what to change, then Lock chord.';
   return { text: `Editing chord ${i + 1} (${captured[i].chord.short}). ${how}` };
 }
 
@@ -854,7 +889,7 @@ function doCorrect(action) {
   if (!pick) return { text: `There's no ${say(note)} on your ${getSelectedScaleName() || 'pan'}.`, tone: 'warn' };
   teachSound(pick.label, last.freq);
   // Put the chord right too: the misheard note becomes this one
-  if (mode !== 'live' && micOn) {
+  if (state.mode !== 'live' && listening()) {
     change(() => {
       const wrong = last.label ? normLabel(last.label) : null;
       if (wrong && wrong !== pick.label) current = current.filter(l => l !== wrong);
@@ -866,64 +901,67 @@ function doCorrect(action) {
 }
 
 function startTeach(note = null) {
-  if (!micOn) return { text: 'Turn on the mic first, then teach me the note.', tone: 'warn' };
-  if (mode === 'live') return { text: 'Stop live mode first.', tone: 'warn' };
+  if (!listening()) return { text: 'Turn on the mic first, then teach me the note.', tone: 'warn' };
+  if (state.mode !== 'capture') return { text: `Stop ${state.mode === 'live' ? 'live mode' : 'recording'} first.`, tone: 'warn' };
   const pick = note ? noteForSound(note, null) : null;
   if (note && !pick) return { text: `There's no ${say(note)} on your ${getSelectedScaleName() || 'pan'}.`, tone: 'warn' };
   // "teach D" on a pan with two Ds: tap the right one
   const ambiguous = note && note.octave == null && !note.qual && panMatches(note).length > 1;
-  teach = { label: ambiguous ? null : pick?.label || null, freqs: [] };
+  setTask({ kind: 'teach', label: ambiguous ? null : pick?.label || null, freqs: [] });
   renderMode();
-  if (!teach.label) return { text: ambiguous ? `Tap the ${say(note)} you mean on the pan, then strike it ${TEACH_STRIKES} times.` : `Tap the note on the pan, then strike it ${TEACH_STRIKES} times.`, tone: 'ask' };
-  return { text: `Strike ${labelName(teach.label)} ${TEACH_STRIKES} times.`, tone: 'ask' };
+  const { label } = teaching();
+  if (!label) return { text: ambiguous ? `Tap the ${say(note)} you mean on the pan, then strike it ${TEACH_STRIKES} times.` : `Tap the note on the pan, then strike it ${TEACH_STRIKES} times.`, tone: 'ask' };
+  return { text: `Strike ${labelName(label)} ${TEACH_STRIKES} times.`, tone: 'ask' };
 }
 
 function stopTeach() {
-  teach = null;
+  if (teaching()) setTask(null);
   renderMode();
 }
 
 function onTeachSound(sound) {
-  if (!teach?.label) return;
-  teach.freqs.push(sound.freq);
-  if (teach.freqs.length < TEACH_STRIKES) {
-    reply(`${teach.freqs.length} of ${TEACH_STRIKES}… strike ${labelName(teach.label)} again.`, { tone: 'ask' });
+  const task = teaching();
+  if (!task?.label) return;
+  task.freqs.push(sound.freq);
+  if (task.freqs.length < TEACH_STRIKES) {
+    reply(`${task.freqs.length} of ${TEACH_STRIKES}… strike ${labelName(task.label)} again.`, { tone: 'ask' });
     renderMode();
     return;
   }
-  const sorted = [...teach.freqs].sort((a, b) => a - b);
+  const sorted = [...task.freqs].sort((a, b) => a - b);
   if (sorted.at(-1) / sorted[0] > TEACH_MAX_SPREAD) {
-    teach.freqs = [];
-    reply(`Those strikes didn't sound alike. Strike ${labelName(teach.label)} ${TEACH_STRIKES} more times, letting each ring.`, { tone: 'warn' });
+    task.freqs = [];
+    reply(`Those strikes didn't sound alike. Strike ${labelName(task.label)} ${TEACH_STRIKES} more times, letting each ring.`, { tone: 'warn' });
     renderMode();
     return;
   }
-  const label = teach.label;
-  teachSound(label, sorted[1]);
-  teach = null;
+  teachSound(task.label, sorted[1]);
+  setTask(null);
   renderMode();
-  reply(`Learned ${labelName(label)}. I'll recognise it on this scale from now on.`);
+  reply(`Learned ${labelName(task.label)}. I'll recognise it on this scale from now on.`);
 }
 
-// Tapping a note puts it in the chord or takes it out (or picks the note to teach)
+// Tapping a note puts it in the chord or takes it out (or picks the note for a task)
 function onPanTap(e) {
   const key = e.target.closest?.('[data-note]')?.dataset.note;
   if (!key) return;
-  if (soundsOn) {
+  if (soundsOpen()) {
+    const take = currentTake();
     if (!take || take.phase === 'review') startTake(key);
     return;
   }
-  if (!teach) {
-    if (mode === 'live' || mode === 'record') return;
-    const had = current.includes(key);
-    change(() => { current = had ? current.filter(l => l !== key) : [...current, key]; });
-    reply(`${had ? 'Removed' : 'Added'} ${labelName(key)}.`);
+  const task = teaching();
+  if (task) {
+    task.label = key;
+    task.freqs = [];
+    renderMode();
+    reply(`Strike ${labelName(key)} ${TEACH_STRIKES} times.`, { tone: 'ask' });
     return;
   }
-  teach.label = key;
-  teach.freqs = [];
-  renderMode();
-  reply(`Strike ${labelName(key)} ${TEACH_STRIKES} times.`, { tone: 'ask' });
+  if (state.mode !== 'capture') return;
+  const had = current.includes(key);
+  change(() => { current = had ? current.filter(l => l !== key) : [...current, key]; });
+  reply(`${had ? 'Removed' : 'Added'} ${labelName(key)}.`);
 }
 
 function doForget(action) {
@@ -944,7 +982,7 @@ const HELP = 'Try: “remove the G”, “add F sharp”, “remove the lower D�
 
 function runAction(action) {
   // Teaching and a note named: that's the note being taught
-  if (teach && !teach.label && (action.type === 'add' || action.type === 'teach') && action.notes?.[0]) {
+  if (teaching() && !teaching().label && (action.type === 'add' || action.type === 'teach') && action.notes?.[0]) {
     return startTeach(action.notes[0]);
   }
   switch (action.type) {
@@ -960,7 +998,7 @@ function runAction(action) {
     case 'replaceChord':
     case 'editChord': return doChordCommand(action);
     case 'clearChord': {
-      if (mode === 'live') return { text: 'Stop live mode first, then edit.', tone: 'warn' };
+      if (state.mode === 'live') return { text: 'Stop live mode first, then edit.', tone: 'warn' };
       if (!current.length) return { text: 'This chord is already empty.' };
       change(() => { current = []; });
       return { text: 'Cleared this chord.' };
@@ -971,14 +1009,14 @@ function runAction(action) {
       return { text: 'Started over. Say “undo” to bring it all back.' };
     }
     case 'live':
-      if (mode === 'live') return { text: 'Already live.' };
+      if (state.mode === 'live') return { text: 'Already live.' };
       startLive();
       return { text: 'Live: play your progression in time.' };
     case 'stop':
       if (recording) return stopRecord();
-      if (source === 'clip' && clipAudio && !clipAudio.paused) { clipAudio.pause(); return { text: 'Paused.' }; }
-      if (teach) { stopTeach(); return { text: 'Stopped teaching.' }; }
-      if (mode === 'live') { stopLive(); return { text: 'Stopped. Here’s your progression.' }; }
+      if (state.input === 'clip' && clipAudio && !clipAudio.paused) { clipAudio.pause(); return { text: 'Paused.' }; }
+      if (teaching()) { stopTeach(); return { text: 'Stopped teaching.' }; }
+      if (state.mode === 'live') { stopLive(); return { text: 'Stopped. Here’s your progression.' }; }
       stopMic();
       return { text: 'Stopped listening.' };
     case 'micOff':
@@ -1035,9 +1073,9 @@ function onVoiceSpeech() {
   let k = undoStack.length;
   while (k > 0 && undoStack[k - 1].audio && undoStack[k - 1].at >= cutoff) k--;
   if (k < undoStack.length) {
-    const state = undoStack[k].state;
+    const { snap } = undoStack[k];
     undoStack.length = k;
-    restore(state);
+    restore(snap);
   }
   els.voice.classList.add('listening');
 }
@@ -1095,7 +1133,7 @@ function setNamesOn(on) {
 function setVoiceOn(on) {
   voiceOn = on;
   try { localStorage.setItem(VOICE_KEY, on ? '1' : '0'); } catch { /* private mode */ }
-  if (on && micOn) beginVoice();
+  if (on && listening()) beginVoice();
   if (!on) { stopVoice(); voiceBusy = false; }
   renderMode();
   reply(on ? HELP : 'Voice commands off.');
@@ -1114,11 +1152,11 @@ async function startRecord() {
     openAuthModal();
     return { text: 'Sign in to save recordings to your Clips.', tone: 'warn' };
   }
-  if (source === 'clip') closeClip();
-  if (mode === 'live') stopLive();
-  teach = null;
-  if (!micOn) await startMic();
-  if (!micOn) return { text: 'The mic is needed to record.', tone: 'warn' };
+  if (state.input === 'clip') closeClip();
+  if (state.mode === 'live') stopLive();
+  if (state.task) setTask(null);
+  if (!listening()) await startMic();
+  if (!listening()) return { text: 'The mic is needed to record.', tone: 'warn' };
   const startedAt = Date.now();
   // The same stream the pan is heard on: one mic, no echo cancellation or gain games
   const ok = await startRawAudioRecording(blob => saveRecording(blob, startedAt), { stream: getMicStream() });
@@ -1137,7 +1175,7 @@ async function startRecord() {
       renderCurrent();
     }, 500),
   };
-  mode = 'record';
+  setMode('record');
   current = [];
   editingIndex = null;
   renderMode();
@@ -1148,9 +1186,9 @@ function stopRecord() {
   if (!recording) return null;
   clearInterval(recording.timer);
   recording = null;
+  setMode('capture');
   els.stage.classList.remove('rec-warn');
   stopRawAudioRecording(); // saveRecording runs once the audio is finalised
-  mode = micOn ? 'capture' : 'idle';
   renderMode();
   return { text: 'Saving your clip…' };
 }
@@ -1173,7 +1211,7 @@ async function saveRecording(blob, startedAt) {
 
 async function openClip(row, blob = null) {
   if (recording) stopRecord();
-  if (micOn) stopMic();
+  if (listening()) stopMic();
   unlockAudio();
   reply(`Loading “${row.title}”…`);
   const audioBlob = blob || await fetchClipBlob(row);
@@ -1196,10 +1234,8 @@ async function openClip(row, blob = null) {
     return;
   }
   await loadCalibrationProfile();
-  source = 'clip';
+  setInput('clip');
   savedClip = null;
-  micOn = true;
-  mode = 'capture';
   current = [];
   els.clipTitle.textContent = row.title;
   renderAll();
@@ -1210,13 +1246,11 @@ async function openClip(row, blob = null) {
 function closeClip({ quiet = false } = {}) {
   if (!clip) return;
   clipAudio?.pause();
-  if (mode === 'live') stopLive();
+  if (state.mode === 'live') stopLive();
   stopListening();
   URL.revokeObjectURL(clip.url);
   clip = null;
-  source = 'mic';
-  micOn = false;
-  mode = 'idle';
+  setInput('off');
   if (!quiet) renderAll();
 }
 
@@ -1228,12 +1262,12 @@ function toggleClipPlay() {
   }
   unlockAudio();
   // A flowing recording has no claps to lock chords with: follow it live
-  if (mode === 'capture' && !current.length && clipAudio.currentTime < 0.5) startLive();
+  if (state.mode === 'capture' && !current.length && clipAudio.currentTime < 0.5) startLive();
   clipAudio.play();
 }
 
 function onClipEnded() {
-  if (mode === 'live') stopLive();
+  if (state.mode === 'live') stopLive();
   renderClipTime();
   const n = live?.changes.length || 0;
   reply(n
@@ -1282,32 +1316,40 @@ function panLabels() {
 function setSoundsOn(on) {
   if (on && !ownHandpan()) return;
   cancelTake();
-  soundsOn = on;
   if (on) {
-    teach = null;
-    if (mode === 'live') stopLive();
+    if (state.mode === 'live') stopLive();
+    if (recording) stopRecord();
+    setTask({ kind: 'sounds', take: null });
+  } else if (soundsOpen()) {
+    setTask(null);
   }
   renderMode();
   if (on) reply('Tap a note to record its sound. Strike it once and let it ring.');
 }
 
+// The note being recorded lives on the sounds task, so it can't outlast it
+function setTake(take) {
+  if (soundsOpen()) state.task.take = take;
+}
+
 // Dashed outline on notes with no recording yet; the note being recorded pulses
 function markNoteAudio() {
-  const svg = els.bigDiagram;
-  svg.querySelectorAll('[data-note]').forEach((el) => {
+  const take = currentTake();
+  els.bigDiagram.querySelectorAll('[data-note]').forEach((el) => {
     const label = el.dataset.note;
-    el.classList.toggle('cl-no-audio', soundsOn && !hasNoteAudio(label));
-    el.classList.toggle('cl-take', !!take && take.label === label);
+    el.classList.toggle('cl-no-audio', soundsOpen() && !hasNoteAudio(label));
+    el.classList.toggle('cl-take', take?.label === label);
   });
 }
 
 function renderSounds() {
-  setVisible(els.soundsBar, soundsOn);
+  setVisible(els.soundsBar, soundsOpen());
   els.soundsBtn.hidden = !ownHandpan();
-  els.soundsBtn.classList.toggle('on', soundsOn);
-  els.soundsBtn.setAttribute('aria-pressed', String(soundsOn));
+  els.soundsBtn.classList.toggle('on', soundsOpen());
+  els.soundsBtn.setAttribute('aria-pressed', String(soundsOpen()));
   markNoteAudio();
-  if (!soundsOn) return;
+  if (!soundsOpen()) return;
+  const take = currentTake();
   const labels = panLabels();
   const missing = labels.filter(l => !hasNoteAudio(l));
   const name = take ? labelName(take.label) : '';
@@ -1338,28 +1380,31 @@ function renderSounds() {
     text = `Saving ${name}…`;
   }
   els.soundsText.textContent = text;
-  if (els.soundsActions.dataset.phase !== `${take?.phase || 'idle'}`) {
+  const phase = take?.phase || 'idle';
+  if (els.soundsActions.dataset.phase !== phase) {
     els.soundsActions.innerHTML = actions;
-    els.soundsActions.dataset.phase = take?.phase || 'idle';
+    els.soundsActions.dataset.phase = phase;
   }
 }
 
 async function startTake(label) {
   cancelTake();
-  if (source === 'clip') closeClip();
-  if (!micOn) await startMic();
+  if (state.input === 'clip') closeClip();
+  if (!listening()) await startMic();
   const stream = getMicStream();
-  if (!stream) return;
+  if (!stream || !soundsOpen()) return;
   const mimeType = typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : '';
   const recorder = new MediaRecorder(stream, { ...(mimeType ? { mimeType } : {}), audioBitsPerSecond: 256000 });
-  take = { label, phase: 'waiting', recorder, chunks: [], startedAt: performance.now(), onsetAt: 0, timer: null, blob: null, url: null, heard: new Set() };
-  recorder.ondataavailable = (e) => { if (e.data.size) take?.chunks.push(e.data); };
+  const take = { label, phase: 'waiting', recorder, chunks: [], startedAt: performance.now(), onsetAt: 0, timer: null, blob: null, url: null, heard: new Set() };
+  recorder.ondataavailable = (e) => { if (e.data.size) take.chunks.push(e.data); };
   recorder.start();
   take.timer = setInterval(tickTake, 250);
+  setTake(take);
   renderMode();
 }
 
 function startTakeCountdown() {
+  const take = currentTake();
   take.phase = 'recording';
   take.onsetAt = performance.now();
   take.heard.clear();
@@ -1367,6 +1412,7 @@ function startTakeCountdown() {
 }
 
 function tickTake() {
+  const take = currentTake();
   if (!take) return;
   const now = performance.now();
   if (take.phase === 'waiting' && now - take.startedAt > TAKE_WAIT_MS) {
@@ -1383,28 +1429,29 @@ function tickTake() {
 }
 
 function finishTake() {
-  const t = take;
-  clearInterval(t.timer);
-  t.phase = 'processing';
-  t.recorder.onstop = async () => {
-    if (take !== t) return;
+  const take = currentTake();
+  clearInterval(take.timer);
+  take.phase = 'processing';
+  take.recorder.onstop = async () => {
+    if (currentTake() !== take) return;
     try {
-      const raw = new Blob(t.chunks, { type: t.recorder.mimeType || 'audio/webm' });
-      t.blob = await trimLeadIn(raw, getAudioCtx());
-      t.url = URL.createObjectURL(t.blob);
-      t.phase = 'review';
+      const raw = new Blob(take.chunks, { type: take.recorder.mimeType || 'audio/webm' });
+      take.blob = await trimLeadIn(raw, getAudioCtx());
+      take.url = URL.createObjectURL(take.blob);
+      take.phase = 'review';
     } catch (err) {
       console.error('Note sound processing failed', err);
-      take = null;
+      setTake(null);
       reply('That recording didn’t come through. Tap the note to try again.', { tone: 'warn' });
     }
     renderMode();
   };
-  t.recorder.stop();
+  take.recorder.stop();
   renderMode();
 }
 
 function cancelTake() {
+  const take = currentTake();
   if (!take) return;
   clearInterval(take.timer);
   if (take.recorder.state !== 'inactive') {
@@ -1412,31 +1459,31 @@ function cancelTake() {
     take.recorder.stop();
   }
   if (take.url) URL.revokeObjectURL(take.url);
-  take = null;
+  setTake(null);
 }
 
 async function saveTake() {
-  const t = take;
+  const take = currentTake();
   const hp = ownHandpan();
-  if (!t?.blob || !hp) return;
-  t.phase = 'saving';
+  if (!take?.blob || !hp) return;
+  take.phase = 'saving';
   renderMode();
   try {
-    const name = labelToNote(t.label);
+    const name = labelToNote(take.label);
     const parsed = parseNoteName(name);
-    const path = await uploadNoteAudio(hp, { note: pitchName(name), octave: parsed.octave }, t.blob);
-    const noteMap = await setNoteAudio(hp.id, t.label, path);
+    const path = await uploadNoteAudio(hp, { note: pitchName(name), octave: parsed.octave }, take.blob);
+    const noteMap = await setNoteAudio(hp.id, take.label, path);
     updateCustomHandpanNoteMap(hp.id, noteMap);
-    await reloadLabelSample(t.label);
-    if (t.label === 'Ding') await reloadLabelSample('D');
-    reply(`Saved ${labelName(t.label)}'s sound. It plays your own pan now.`);
+    await reloadLabelSample(take.label);
+    if (take.label === 'Ding') await reloadLabelSample('D');
+    reply(`Saved ${labelName(take.label)}'s sound. It plays your own pan now.`);
   } catch (err) {
     console.error('Saving note sound failed', err);
     reply('Couldn’t save that sound. Check your connection and try again.', { tone: 'warn' });
   }
-  if (take === t) {
-    URL.revokeObjectURL(t.url);
-    take = null;
+  if (currentTake() === take) {
+    URL.revokeObjectURL(take.url);
+    setTake(null);
   }
   renderMode();
 }
@@ -1444,6 +1491,7 @@ async function saveTake() {
 function onTakeAction(e) {
   const action = e.target.closest('[data-take]')?.dataset.take;
   if (!action) return;
+  const take = currentTake();
   if (action === 'done') setSoundsOn(false);
   else if (action === 'cancel') { cancelTake(); renderMode(); }
   else if (action === 'again' && take) startTake(take.label);
@@ -1467,7 +1515,7 @@ function resultChords() {
 }
 
 function clearAll() {
-  if (mode === 'live') stopLive();
+  if (state.mode === 'live') stopLive();
   change(() => {
     captured = [];
     current = [];
@@ -1644,7 +1692,7 @@ function build() {
   q('.cl-big-wrap').prepend(els.bigDiagram);
 
   q('.cl-back').addEventListener('click', () => (window.history.length > 1 ? window.history.back() : navigate('studio')));
-  els.micBtn.addEventListener('click', () => (micOn ? stopMic() : startMic()));
+  els.micBtn.addEventListener('click', () => (listening() ? stopMic() : startMic()));
   els.lockBtn.addEventListener('click', () => { flashCue('single'); lockChord(); });
   els.voiceBtn.addEventListener('click', () => setVoiceOn(!voiceOn));
   els.recordBtn.addEventListener('click', async () => {
@@ -1662,7 +1710,7 @@ function build() {
     setTimeout(() => Bus.emit(BUS_EVENT.OPEN_LIBRARY_TAB, { tab: 'clips' }), 0);
   });
   els.namesBtn.addEventListener('click', () => setNamesOn(!namesOn));
-  els.soundsBtn.addEventListener('click', () => setSoundsOn(!soundsOn));
+  els.soundsBtn.addEventListener('click', () => setSoundsOn(!soundsOpen()));
   els.soundsActions.addEventListener('click', onTakeAction);
   els.multiBtn.addEventListener('click', () => {
     multiOn = !multiOn;
@@ -1674,13 +1722,13 @@ function build() {
       : 'Multi-note off: only the strongest note in each strike counts.');
   });
   els.teachBtn.addEventListener('click', () => {
-    if (teach) { stopTeach(); return; }
+    if (teaching()) { stopTeach(); return; }
     const r = startTeach();
     reply(r.text, { tone: r.tone });
   });
   q('.cl-teach-cancel').addEventListener('click', stopTeach);
   els.bigDiagram.addEventListener('click', onPanTap);
-  els.liveBtn.addEventListener('click', () => (mode === 'live' ? stopLive() : startLive()));
+  els.liveBtn.addEventListener('click', () => (state.mode === 'live' ? stopLive() : startLive()));
   els.undoBtn.addEventListener('click', undo);
   els.clearBtn.addEventListener('click', clearAll);
   els.toSongBtn.addEventListener('click', sendToSongBuilder);
@@ -1716,7 +1764,7 @@ async function onScaleApplied() {
   const name = getSelectedScaleName();
   const hasChords = captured.length || current.length || live;
   if (sessionScale && name !== sessionScale && hasChords) {
-    if (mode === 'live') stopLive();
+    if (state.mode === 'live') stopLive();
     change(() => {
       captured = [];
       current = [];
@@ -1727,10 +1775,10 @@ async function onScaleApplied() {
     reply(`Switched to ${scaleLabel()}. Those chords were on the other pan, so this is a fresh start (Undo brings them back).`);
   }
   sessionScale = name;
-  teach = null;
-  if (soundsOn && !ownHandpan()) setSoundsOn(false);
+  if (teaching()) setTask(null);
+  if (soundsOpen() && !ownHandpan()) setSoundsOn(false);
   pending = null;
-  if (micOn) await loadCalibrationProfile();
+  if (listening()) await loadCalibrationProfile();
   refreshScaleView();
 }
 
@@ -1773,7 +1821,7 @@ export function initChordListen() {
   setMultiNote(multiOn);
   addEventListener('routeChanged', (e) => {
     if (e.detail.route === 'listen') onEnter();
-    else if (micOn || recording) stopMic(); // a recording in progress is saved
+    else if (listening() || recording) stopMic(); // a recording in progress is saved
   });
   // The saved scale arrives after load (and again after sign-in); follow it.
   // Deferred a tick: custom handpans set their name just after their notes.
