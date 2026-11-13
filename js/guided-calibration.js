@@ -13,6 +13,7 @@
 // and reopening later resumes instead of restarting.
 
 import { supabase } from './supabase-client.js';
+import { trimLeadIn, uploadNoteAudio } from './note-audio.js';
 
 // ── State ──────────────────────────────────────────────────────────────────────
 let handpanData    = null;
@@ -490,7 +491,7 @@ async function saveProgress() {
   for (const n of [ding, ...rest].filter(Boolean)) {
     if (n.audioBlob && !n.audio_url) {
       try {
-        n.audio_url = await uploadNoteAudio(n);
+        n.audio_url = await uploadNoteAudio(handpanData, n, n.audioBlob);
       } catch (err) {
         console.error('[GuidedCal] Audio upload failed:', err);
       } finally {
@@ -506,43 +507,6 @@ async function saveProgress() {
   } else {
     handpanData = { ...handpanData, note_map: noteMap };
   }
-}
-
-function slugify(str) {
-  return String(str || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-}
-
-// [pitch]_[scale_slug]_[00001].wav — see supabase/migrations/*_handpan_audio_bucket.sql's
-// next_handpan_audio_seq() for the race-safe per (pitch, scale) counter this
-// numbering comes from. Lets an admin later browse the bucket and, for any
-// tuning that's been shared, promote a specific recording into the app's
-// own built-in sample library using the same naming shape it already uses.
-async function uploadNoteAudio(note) {
-  const pitch = `${note.note}${note.octave}`.replace('#', 's');
-  const scaleSlug = slugify(handpanData.scale_name || handpanData.name) || 'handpan';
-  const handpanIdShort = String(handpanData.id).replace(/-/g, '').slice(0, 8);
-  const seqKey = `${pitch}_${scaleSlug}_${handpanIdShort}`;
-
-  const { data: seq, error: seqError } = await supabase.rpc('next_handpan_audio_seq', { p_seq_key: seqKey });
-  if (seqError) throw seqError;
-
-  const fileName = `${pitch}_${scaleSlug}_${handpanIdShort}_${String(seq).padStart(5, '0')}.wav`;
-  const { error: uploadError } = await supabase.storage
-    .from('handpan-audio')
-    .upload(fileName, note.audioBlob, { contentType: 'audio/wav' });
-  if (uploadError) throw uploadError;
-
-  // handpan-audio is a private bucket — there's no public URL to fetch.
-  // Link the file to this handpan so storage RLS knows who's allowed to
-  // read it (owner always; everyone else only if is_audio_shared is true),
-  // then hand back the storage PATH — noteplayer.js downloads it via an
-  // authenticated request, not a plain fetch(url).
-  const { error: linkError } = await supabase
-    .from('handpan_audio_recordings')
-    .insert({ user_handpan_id: handpanData.id, storage_path: fileName });
-  if (linkError) throw linkError;
-
-  return fileName;
 }
 
 // ── Tap handling ───────────────────────────────────────────────────────────────
@@ -763,7 +727,7 @@ async function handleRecordingStopped() {
   setActions('');
 
   try {
-    const trimmedBlob = await trimSilence(rawBlob);
+    const trimmedBlob = await trimLeadIn(rawBlob, audioCtx);
     showConfirmScreen(trimmedBlob);
   } catch (err) {
     console.error('[GuidedCal] Trim/process failed:', err);
@@ -966,81 +930,6 @@ function detectDominantFreq(freqData, sampleRate, fftSize) {
 // Peak dB across the same range detectDominantFreq scans, but without
 // requiring a clean single-note read — used during recording to track
 // overall loudness decay, independent of pitch stability.
-// ── Silence trimming + WAV encoding ──────────────────────────────────────────────
-
-// Only trims the LEAD-IN (dead air before the note is struck) — the
-// trailing end is deliberately left untouched all the way through to the
-// actual end of the recording. A real handpan's decay tail runs quiet
-// enough, long enough, that any trailing-silence threshold ended up
-// cutting the capture down to just the first second or so, discarding
-// exactly the long decay the whole 8-second window exists to capture.
-async function trimSilence(blob) {
-  const arrayBuffer = await blob.arrayBuffer();
-  const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
-  const channelData = audioBuffer.getChannelData(0);
-  const sampleRate = audioBuffer.sampleRate;
-
-  const AMPLITUDE_THRESHOLD = 0.02;
-  const WINDOW = Math.max(1, Math.round(sampleRate * 0.02)); // 20ms RMS window
-
-  function rmsAt(i) {
-    let sum = 0;
-    const end = Math.min(channelData.length, i + WINDOW);
-    for (let j = i; j < end; j++) sum += channelData[j] * channelData[j];
-    return Math.sqrt(sum / (end - i));
-  }
-
-  let startIdx = 0;
-  for (let i = 0; i < channelData.length; i += WINDOW) {
-    if (rmsAt(i) > AMPLITUDE_THRESHOLD) { startIdx = Math.max(0, i - WINDOW); break; }
-  }
-
-  const trimmed = channelData.subarray(startIdx);
-  const trimmedBuffer = audioCtx.createBuffer(1, trimmed.length, sampleRate);
-  trimmedBuffer.copyToChannel(trimmed, 0);
-
-  return audioBufferToWav(trimmedBuffer);
-}
-
-function audioBufferToWav(buffer) {
-  const numChannels = 1;
-  const sampleRate = buffer.sampleRate;
-  const samples = buffer.getChannelData(0);
-  const bytesPerSample = 2;
-  const blockAlign = numChannels * bytesPerSample;
-  const dataSize = samples.length * bytesPerSample;
-
-  const arrayBuffer = new ArrayBuffer(44 + dataSize);
-  const view = new DataView(arrayBuffer);
-
-  function writeString(offset, str) {
-    for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i));
-  }
-
-  writeString(0, 'RIFF');
-  view.setUint32(4, 36 + dataSize, true);
-  writeString(8, 'WAVE');
-  writeString(12, 'fmt ');
-  view.setUint32(16, 16, true);
-  view.setUint16(20, 1, true); // PCM
-  view.setUint16(22, numChannels, true);
-  view.setUint32(24, sampleRate, true);
-  view.setUint32(28, sampleRate * blockAlign, true);
-  view.setUint16(32, blockAlign, true);
-  view.setUint16(34, 16, true); // bits per sample
-  writeString(36, 'data');
-  view.setUint32(40, dataSize, true);
-
-  let offset = 44;
-  for (let i = 0; i < samples.length; i++) {
-    const s = Math.max(-1, Math.min(1, samples[i]));
-    view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7fff, true);
-    offset += 2;
-  }
-
-  return new Blob([arrayBuffer], { type: 'audio/wav' });
-}
-
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
 function setStatus(html)  { statusEl.innerHTML  = html; }
