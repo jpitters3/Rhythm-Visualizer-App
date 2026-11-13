@@ -58,25 +58,29 @@ let els = {};
 //   task:  null | { kind: 'teach', label, freqs } | { kind: 'sounds', take }
 //          a side job, one at a time, carrying its own data
 const state = { input: 'off', mode: 'capture', task: null };
-let current = []; // labels of the chord being captured
-let captured = []; // [{ labels, chord }]
+// What's been played and heard, shared by every part of Listen
+const session = {
+  current: [], // labels of the chord being captured
+  captured: [], // [{ labels, chord }]
+  editingIndex: null, // a captured chord being replaced or edited; null = a new chord
+  live: null, // the live follower (js/live-follower.js) plus perBar / shownBeat on screen
+  undoStack: [], // snapshots before each change: { at, audio, snap }
+  recording: null, // { startedAt, timer }: set exactly while mode is 'record'
+  clip: null, // the clip being built from: { row, blob, url }
+  savedClip: null, // { row, blob } just recorded, offered for notation
+  voiceBusy: false, // someone is talking: what the mic hears isn't the pan
+  muteUntil: 0, // the pan's own playback: ignore the mic until then
+};
+
+// The player's switches (kept in localStorage)
+const prefs = { voice: false, names: true, multi: false };
+
 let lastCueAt = -Infinity;
-let live = null; // { candidates, heard, onsets, changes, current }
 let pulseRaf = null;
-let editingIndex = null; // a captured chord being replaced or edited; null = a new chord
-let undoStack = []; // snapshots before each change, for undo: { at, audio, state }
-let voiceOn = false;
-let namesOn = true;
-let multiOn = false; // Multi-note (beta): several notes per strike
 let sessionScale = null; // the scale the chords on screen were played on
-let recording = null; // { startedAt, timer }: set exactly while mode is 'record'
-let clip = null; // the clip being built from: { row, blob, url }
 let clipAudio = null;
 let pendingClip = null; // asked for from the Library before the view was ready
-let savedClip = null; // { row, blob } just recorded, offered for notation
-let voiceBusy = false; // someone is talking: what the mic hears isn't the pan
 let voiceSettleTimer = null;
-let muteUntil = 0;
 let pending = null; // a question waiting for its answer, e.g. which D
 let replyTimer = null;
 
@@ -96,7 +100,7 @@ function setMode(next) {
   if (next !== 'capture' && state.input === 'off') invalid(`${next} needs sound coming in`);
   if (next === 'record' && state.input !== 'mic') invalid('only the mic can be recorded');
   if (next !== 'capture' && state.task) invalid(`${next} with a ${state.task.kind} task open`);
-  if ((next === 'record') !== !!recording) invalid('record mode and the recording must start and stop together');
+  if ((next === 'record') !== !!session.recording) invalid('record mode and the recording must start and stop together');
   state.mode = next;
 }
 
@@ -227,19 +231,19 @@ function chordCard(entry, { bars = null, playing = false, isNew = false, number 
 }
 
 function renderCurrent() {
-  const labels = state.mode === 'live' && live?.current != null ? live.candidates[live.current].labels : current;
+  const labels = state.mode === 'live' && session.live?.current != null ? session.live.candidates[session.live.current].labels : session.current;
   updateChordShapeDiagram(els.bigDiagram, labels);
   const chord = labels.length ? describeChord(labels) : null;
-  if (state.mode === 'record' && recording) {
+  if (state.mode === 'record' && session.recording) {
     els.slot.textContent = 'Recording to your Clips';
-    els.name.textContent = formatTime((Date.now() - recording.startedAt) / 1000);
+    els.name.textContent = formatTime((Date.now() - session.recording.startedAt) / 1000);
     els.notes.textContent = '';
     els.stage.classList.add('has-chord');
     return;
   }
   els.slot.textContent = state.mode === 'live' ? ''
-    : editingIndex != null ? `Chord ${editingIndex + 1} · ${current.length ? 'editing' : 'listening'}`
-      : listening() ? `Chord ${captured.length + 1}` : '';
+    : session.editingIndex != null ? `Chord ${session.editingIndex + 1} · ${session.current.length ? 'editing' : 'listening'}`
+      : listening() ? `Chord ${session.captured.length + 1}` : '';
   els.name.textContent = chord?.short || (state.mode === 'live' ? 'Listening…' : listening() ? 'Play a note' : '');
   // Octaves only when a note is doubled, so "remove the lower D" has something to point at
   const names = chord ? chord.notes.map(pitchName) : [];
@@ -250,16 +254,16 @@ function renderCurrent() {
 
 function renderCaptured() {
   const shown = els.captured.childElementCount;
-  els.captured.replaceChildren(...captured.map((entry, i) => chordCard(entry, {
-    isNew: i >= shown, number: i + 1, editing: i === editingIndex,
+  els.captured.replaceChildren(...session.captured.map((entry, i) => chordCard(entry, {
+    isNew: i >= shown, number: i + 1, editing: i === session.editingIndex,
     onEdit: () => {
       const r = editChordAt(i);
       reply(r.text, { tone: r.tone });
       els.stage.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     },
   })));
-  setVisible(els.capturedWrap, captured.length > 0);
-  els.capturedCount.textContent = String(captured.length);
+  setVisible(els.capturedWrap, session.captured.length > 0);
+  els.capturedCount.textContent = String(session.captured.length);
 }
 
 
@@ -273,16 +277,16 @@ function lengthText(beats, perBar) {
 }
 
 function renderLive() {
-  if (!live) return;
-  const beats = chordLengths(live);
-  live.perBar = beatsPerBar(live);
-  els.bpm.textContent = live.bpm ? String(live.bpm) : '–';
-  els.meter.textContent = live.perBar ? `${live.perBar}/4` : '–';
+  if (!session.live) return;
+  const beats = chordLengths(session.live);
+  session.live.perBar = beatsPerBar(session.live);
+  els.bpm.textContent = session.live.bpm ? String(session.live.bpm) : '–';
+  els.meter.textContent = session.live.perBar ? `${session.live.perBar}/4` : '–';
   renderPulseDots();
   const shown = els.progression.childElementCount;
-  const cards = live.changes.map((c, i) => chordCard(live.candidates[c.idx], {
-    bars: lengthText(beats[i], live.perBar),
-    playing: state.mode === 'live' && i === live.changes.length - 1,
+  const cards = session.live.changes.map((c, i) => chordCard(session.live.candidates[c.idx], {
+    bars: lengthText(beats[i], session.live.perBar),
+    playing: state.mode === 'live' && i === session.live.changes.length - 1,
     isNew: i >= shown,
   }));
   els.progression.replaceChildren(...cards);
@@ -290,7 +294,7 @@ function renderLive() {
 }
 
 function renderPulseDots() {
-  const n = live?.perBar || 4;
+  const n = session.live?.perBar || 4;
   if (els.pulse.childElementCount === n) return;
   els.pulse.replaceChildren(...Array.from({ length: n }, () => {
     const dot = document.createElement('span');
@@ -302,14 +306,14 @@ function renderPulseDots() {
 // Beat dots follow the estimated pulse, counting from the last chord change
 function pulseTick() {
   pulseRaf = requestAnimationFrame(pulseTick);
-  const ms = beatMs(live);
-  const anchor = live?.changes.at(-1)?.at;
+  const ms = beatMs(session.live);
+  const anchor = session.live?.changes.at(-1)?.at;
   if (!ms || anchor == null) return;
   const now = (getAudioCtx()?.currentTime ?? 0) * 1000;
   const beat = Math.floor((now - anchor) / ms);
   const n = els.pulse.childElementCount;
-  if (beat === live.shownBeat) return;
-  live.shownBeat = beat;
+  if (beat === session.live.shownBeat) return;
+  session.live.shownBeat = beat;
   [...els.pulse.children].forEach((d, i) => d.classList.toggle('on', i === ((beat % n) + n) % n));
   els.stage.classList.remove('beat');
   void els.stage.offsetWidth; // restart the ring animation
@@ -320,16 +324,16 @@ function renderMode() {
   view.dataset.mode = listening() ? state.mode : 'idle'; // the CSS keys off this
   els.micBtn.classList.toggle('on', listening());
   els.micBtn.setAttribute('aria-pressed', String(listening()));
-  els.micLabel.textContent = listening() ? 'Stop' : captured.length || live ? 'Listen again' : 'Start listening';
+  els.micLabel.textContent = listening() ? 'Stop' : session.captured.length || session.live ? 'Listen again' : 'Start listening';
   els.modeCapture.classList.toggle('active', state.mode === 'capture');
   els.modeLive.classList.toggle('active', state.mode === 'live');
   els.modeRecord.classList.toggle('active', state.mode === 'record');
-  els.micBtn.hidden = state.input === 'clip' || !!recording;
+  els.micBtn.hidden = state.input === 'clip' || !!session.recording;
   els.recordBtn.hidden = state.input === 'clip';
-  els.recordBtn.classList.toggle('recording', !!recording);
-  els.recordLabel.textContent = recording ? 'Stop & save' : 'Record a flow';
+  els.recordBtn.classList.toggle('recording', !!session.recording);
+  els.recordLabel.textContent = session.recording ? 'Stop & save' : 'Record a flow';
   setVisible(els.clipBar, state.input === 'clip');
-  setVisible(els.savedBar, !!savedClip && !recording && state.input !== 'clip');
+  setVisible(els.savedBar, !!session.savedClip && !session.recording && state.input !== 'clip');
   // Free record (note-by-note transcription) is admin-only for now
   const canTranscribe = isAdminUser(currentUser);
   els.transcribeBtn.hidden = !canTranscribe || state.input !== 'clip';
@@ -341,7 +345,7 @@ function renderMode() {
       : state.mode === 'live'
         ? 'Play your progression in time. <strong>Double clap</strong> to stop.'
         : listening()
-      ? `Play each note of the chord, or tap it. <strong>Clap or snap</strong> to lock it in, <strong>double clap</strong> to play it live.${voiceOn ? ' Or just <strong>say</strong> what to change.' : ''}`
+      ? `Play each note of the chord, or tap it. <strong>Clap or snap</strong> to lock it in, <strong>double clap</strong> to play it live.${prefs.voice ? ' Or just <strong>say</strong> what to change.' : ''}`
       : 'Turn on the mic and play a chord one note at a time, or tap the notes.';
   view.toggleAttribute('data-teach', !!teaching());
   setVisible(els.teachBar, !!teaching());
@@ -354,26 +358,26 @@ function renderMode() {
   els.teachBtn.disabled = !listening() || state.mode === 'live';
   view.toggleAttribute('data-sounds', soundsOpen());
   renderSounds();
-  els.multiBtn.classList.toggle('on', multiOn);
-  els.multiBtn.setAttribute('aria-pressed', String(multiOn));
-  els.multiBtn.querySelector('.cl-voice-state').textContent = multiOn ? 'on' : 'off';
-  els.lockBtn.disabled = state.mode === 'live' || state.mode === 'record' || !current.length;
+  els.multiBtn.classList.toggle('on', prefs.multi);
+  els.multiBtn.setAttribute('aria-pressed', String(prefs.multi));
+  els.multiBtn.querySelector('.cl-voice-state').textContent = prefs.multi ? 'on' : 'off';
+  els.lockBtn.disabled = state.mode === 'live' || state.mode === 'record' || !session.current.length;
   els.liveBtn.textContent = state.mode === 'live' ? 'Stop live' : 'Go live';
   els.liveBtn.disabled = !listening() || state.mode === 'record';
   // Mic off, a chord can still be tapped together: Lock shows once it has notes
-  els.lockBtn.hidden = state.mode === 'record' || (!listening() && !current.length);
+  els.lockBtn.hidden = state.mode === 'record' || (!listening() && !session.current.length);
   els.liveBtn.hidden = state.mode === 'record';
-  const showLive = state.mode === 'live' || !!live?.changes.length;
+  const showLive = state.mode === 'live' || !!session.live?.changes.length;
   setVisible(els.timing, showLive);
   setVisible(els.progressionWrap, showLive);
-  const hasResult = captured.length > 0 || !!live?.changes.length;
+  const hasResult = session.captured.length > 0 || !!session.live?.changes.length;
   setVisible(els.steps, !hasResult && state.mode !== 'live');
-  els.undoBtn.disabled = !undoStack.length;
+  els.undoBtn.disabled = !session.undoStack.length;
   els.voiceBtn.hidden = !voiceSupported();
-  els.voiceBtn.classList.toggle('on', voiceOn);
-  els.voiceBtn.setAttribute('aria-pressed', String(voiceOn));
-  els.voiceBtn.querySelector('.cl-voice-state').textContent = voiceOn ? 'on' : 'off';
-  els.clearBtn.disabled = !hasResult && !current.length;
+  els.voiceBtn.classList.toggle('on', prefs.voice);
+  els.voiceBtn.setAttribute('aria-pressed', String(prefs.voice));
+  els.voiceBtn.querySelector('.cl-voice-state').textContent = prefs.voice ? 'on' : 'off';
+  els.clearBtn.disabled = !hasResult && !session.current.length;
   els.toSongBtn.disabled = !hasResult;
   els.toStudioBtn.disabled = !hasResult;
   renderCurrent();
@@ -389,9 +393,9 @@ function flashCue(kind) {
 
 function snapshot() {
   return {
-    current: [...current],
-    captured: captured.map(e => ({ labels: [...e.labels], chord: e.chord })),
-    editingIndex, live, mode: state.mode,
+    current: [...session.current],
+    captured: session.captured.map(e => ({ labels: [...e.labels], chord: e.chord })),
+    editingIndex: session.editingIndex, live: session.live, mode: state.mode,
   };
 }
 
@@ -401,10 +405,10 @@ function restore(snap) {
     pulseRaf = null;
     setMode('capture');
   }
-  current = snap.current;
-  captured = snap.captured;
-  editingIndex = snap.editingIndex;
-  live = snap.live;
+  session.current = snap.current;
+  session.captured = snap.captured;
+  session.editingIndex = snap.editingIndex;
+  session.live = snap.live;
   els.progression.replaceChildren();
   renderAll();
 }
@@ -412,14 +416,14 @@ function restore(snap) {
 // Every change goes through here so it can be undone; audio=true marks changes
 // made by what the mic heard, which speech may take back.
 function change(fn, { audio = false } = {}) {
-  undoStack.push({ at: performance.now(), audio, snap: snapshot() });
-  if (undoStack.length > HISTORY_MAX) undoStack.shift();
+  session.undoStack.push({ at: performance.now(), audio, snap: snapshot() });
+  if (session.undoStack.length > HISTORY_MAX) session.undoStack.shift();
   fn();
   renderAll();
 }
 
 function undo() {
-  const last = undoStack.pop();
+  const last = session.undoStack.pop();
   if (!last) return false;
   restore(last.snap);
   return true;
@@ -434,20 +438,20 @@ function renderAll() {
 // --- Capture ---
 
 function addNote(label) {
-  if (current.includes(label)) return;
-  change(() => current.push(label), { audio: true });
+  if (session.current.includes(label)) return;
+  change(() => session.current.push(label), { audio: true });
 }
 
 function lockChord({ audio = false } = {}) {
-  if (!current.length) return false;
-  const chord = describeChord(current);
+  if (!session.current.length) return false;
+  const chord = describeChord(session.current);
   if (!chord) return false;
   change(() => {
-    const entry = { labels: [...current], chord };
-    if (editingIndex != null && captured[editingIndex]) captured[editingIndex] = entry;
-    else captured.push(entry);
-    current = [];
-    editingIndex = null;
+    const entry = { labels: [...session.current], chord };
+    if (session.editingIndex != null && session.captured[session.editingIndex]) session.captured[session.editingIndex] = entry;
+    else session.captured.push(entry);
+    session.current = [];
+    session.editingIndex = null;
   }, { audio });
   return chord;
 }
@@ -455,9 +459,9 @@ function lockChord({ audio = false } = {}) {
 // --- Live ---
 
 function liveCandidates() {
-  if (captured.length) {
+  if (session.captured.length) {
     const seen = new Set();
-    return captured.filter(e => {
+    return session.captured.filter(e => {
       const key = [...e.labels].sort().join(',');
       if (seen.has(key)) return false;
       seen.add(key);
@@ -476,10 +480,10 @@ function startLive({ audio = false } = {}) {
   if (state.task) setTask(null); // a side job ends when playing in time begins
   lockChord({ audio });
   change(() => {
-    editingIndex = null;
-    current = [];
+    session.editingIndex = null;
+    session.current = [];
     // Plus what's on screen: the metre shown and the beat lit
-    live = { ...startFollowing(liveCandidates()), perBar: null, shownBeat: null };
+    session.live = { ...startFollowing(liveCandidates()), perBar: null, shownBeat: null };
     els.progression.replaceChildren();
     setMode('live');
   }, { audio });
@@ -490,7 +494,7 @@ function startLive({ audio = false } = {}) {
 function stopLive() {
   cancelAnimationFrame(pulseRaf);
   pulseRaf = null;
-  stopFollowing(live, (getAudioCtx()?.currentTime ?? 0) * 1000);
+  stopFollowing(session.live, (getAudioCtx()?.currentTime ?? 0) * 1000);
   setMode('capture');
   els.pulse.querySelectorAll('.on').forEach(d => d.classList.remove('on'));
   renderLive();
@@ -498,8 +502,8 @@ function stopLive() {
 }
 
 function liveNote(label, at) {
-  const changed = hearNote(live, label, at);
-  if (changed) live.shownBeat = null;
+  const changed = hearNote(session.live, label, at);
+  if (changed) session.live.shownBeat = null;
   renderLive();
   if (changed) renderMode();
 }
@@ -508,7 +512,7 @@ function liveNote(label, at) {
 
 function audioMuted() {
   if (state.input === 'clip') return false; // talking or the pan's playback isn't in the clip
-  return voiceBusy || performance.now() < muteUntil;
+  return session.voiceBusy || performance.now() < session.muteUntil;
 }
 
 function onSound(sound) {
@@ -559,13 +563,13 @@ async function startMic() {
     return;
   }
   setInput('mic');
-  current = [];
-  if (voiceOn) beginVoice();
+  session.current = [];
+  if (prefs.voice) beginVoice();
   renderMode();
 }
 
 function stopMic() {
-  if (recording) stopRecord(); // what's recorded so far is saved
+  if (session.recording) stopRecord(); // what's recorded so far is saved
   if (state.input === 'clip') {
     closeClip();
     return;
@@ -575,9 +579,9 @@ function stopMic() {
   if (state.mode === 'live') stopLive();
   cancelTake();
   setInput('off');
-  current = [];
-  editingIndex = null;
-  voiceBusy = false;
+  session.current = [];
+  session.editingIndex = null;
+  session.voiceBusy = false;
   pending = null;
   els.stage.style.setProperty('--level', '0');
   renderAll();
@@ -586,7 +590,7 @@ function stopMic() {
 function playChord(chord) {
   if (!chord) return;
   unlockAudio();
-  muteUntil = performance.now() + PLAYBACK_MUTE_MS;
+  session.muteUntil = performance.now() + PLAYBACK_MUTE_MS;
   playChordNotes(chord.notes);
 }
 
@@ -610,8 +614,8 @@ const midiOf = label => midi(labelToNote(label));
 
 function chordIndex(ref) {
   if (!ref) return null;
-  if (ref.last) return captured.length - 1;
-  if (ref.previous) return (editingIndex ?? captured.length) - 1;
+  if (ref.last) return session.captured.length - 1;
+  if (ref.previous) return (session.editingIndex ?? session.captured.length) - 1;
   return ref.index;
 }
 
@@ -620,14 +624,14 @@ function chordIndex(ref) {
 function resolveTarget(action, { fallbackToLast = false } = {}) {
   if (action.chord) {
     const i = chordIndex(action.chord);
-    if (i == null || !captured[i]) return { error: `There's no chord ${i == null ? '' : i + 1} yet.` };
-    return { index: i, labels: [...captured[i].labels] };
+    if (i == null || !session.captured[i]) return { error: `There's no chord ${i == null ? '' : i + 1} yet.` };
+    return { index: i, labels: [...session.captured[i].labels] };
   }
   if (state.mode === 'live') return { error: 'Stop live mode first, then edit.' };
-  if (!current.length && fallbackToLast && editingIndex == null && captured.length) {
-    return { index: captured.length - 1, labels: [...captured.at(-1).labels] };
+  if (!session.current.length && fallbackToLast && session.editingIndex == null && session.captured.length) {
+    return { index: session.captured.length - 1, labels: [...session.captured.at(-1).labels] };
   }
-  return { index: null, labels: [...current] };
+  return { index: null, labels: [...session.current] };
 }
 
 function where(target, prep = 'in') {
@@ -636,16 +640,16 @@ function where(target, prep = 'in') {
 
 function writeTarget(target, labels) {
   if (target.index == null) {
-    current = labels;
+    session.current = labels;
     return;
   }
   if (!labels.length) {
-    captured.splice(target.index, 1);
-    if (editingIndex != null && editingIndex > target.index) editingIndex--;
+    session.captured.splice(target.index, 1);
+    if (session.editingIndex != null && session.editingIndex > target.index) session.editingIndex--;
     return;
   }
   const chord = describeChord(labels);
-  if (chord) captured[target.index] = { labels, chord };
+  if (chord) session.captured[target.index] = { labels, chord };
 }
 
 const pickBy = (list, qual) => (qual === 'low' ? list[0] : list.at(-1));
@@ -829,28 +833,28 @@ function doResolve(action) {
 
 function doNext() {
   if (state.mode === 'live') return { text: 'You’re live. Say “stop” to finish.', tone: 'warn' };
-  const wasEditing = editingIndex;
+  const wasEditing = session.editingIndex;
   const chord = lockChord();
   if (!chord) return { text: 'Play some notes first.', tone: 'warn' };
   flashCue('single');
-  return { text: wasEditing != null ? `Chord ${wasEditing + 1} is now ${chord.short}.` : `Locked ${chord.short} as chord ${captured.length}.` };
+  return { text: wasEditing != null ? `Chord ${wasEditing + 1} is now ${chord.short}.` : `Locked ${chord.short} as chord ${session.captured.length}.` };
 }
 
 function doChordCommand(action) {
   const i = chordIndex(action.chord);
-  if (i == null || !captured[i]) return { text: `There's no chord ${i == null ? '' : i + 1} yet.`, tone: 'warn' };
+  if (i == null || !session.captured[i]) return { text: `There's no chord ${i == null ? '' : i + 1} yet.`, tone: 'warn' };
   if (state.mode === 'live') return { text: 'Stop live mode first, then edit.', tone: 'warn' };
-  const name = captured[i].chord.short;
+  const name = session.captured[i].chord.short;
   if (action.type === 'deleteChord') {
     change(() => {
-      captured.splice(i, 1);
-      if (editingIndex === i) { editingIndex = null; current = []; }
-      else if (editingIndex != null && editingIndex > i) editingIndex--;
+      session.captured.splice(i, 1);
+      if (session.editingIndex === i) { session.editingIndex = null; session.current = []; }
+      else if (session.editingIndex != null && session.editingIndex > i) session.editingIndex--;
     });
     return { text: `Removed chord ${i + 1} (${name}).` };
   }
   if (action.type === 'replaceChord') {
-    change(() => { editingIndex = i; current = []; });
+    change(() => { session.editingIndex = i; session.current = []; });
     return { text: `Play the new chord ${i + 1}, then say “next” or clap.` };
   }
   return editChordAt(i);
@@ -858,11 +862,11 @@ function doChordCommand(action) {
 
 // Opens a captured chord on the big pan: changes go to it, "next" or Lock saves it
 function editChordAt(i) {
-  if (!captured[i]) return { text: `There's no chord ${i + 1} yet.`, tone: 'warn' };
+  if (!session.captured[i]) return { text: `There's no chord ${i + 1} yet.`, tone: 'warn' };
   if (state.mode === 'live') return { text: 'Stop live mode first, then edit.', tone: 'warn' };
-  change(() => { editingIndex = i; current = [...captured[i].labels]; });
+  change(() => { session.editingIndex = i; session.current = [...session.captured[i].labels]; });
   const how = listening() ? 'Play or say what to change, then say “next” or clap.' : 'Say or tap what to change, then Lock chord.';
-  return { text: `Editing chord ${i + 1} (${captured[i].chord.short}). ${how}` };
+  return { text: `Editing chord ${i + 1} (${session.captured[i].chord.short}). ${how}` };
 }
 
 // --- Teaching notes ---
@@ -892,8 +896,8 @@ function doCorrect(action) {
   if (state.mode !== 'live' && listening()) {
     change(() => {
       const wrong = last.label ? normLabel(last.label) : null;
-      if (wrong && wrong !== pick.label) current = current.filter(l => l !== wrong);
-      if (!current.includes(pick.label)) current.push(pick.label);
+      if (wrong && wrong !== pick.label) session.current = session.current.filter(l => l !== wrong);
+      if (!session.current.includes(pick.label)) session.current.push(pick.label);
     });
   }
   const before = last.label ? ` (I heard ${labelName(normLabel(last.label))})` : '';
@@ -959,8 +963,8 @@ function onPanTap(e) {
     return;
   }
   if (state.mode !== 'capture') return;
-  const had = current.includes(key);
-  change(() => { current = had ? current.filter(l => l !== key) : [...current, key]; });
+  const had = session.current.includes(key);
+  change(() => { session.current = had ? session.current.filter(l => l !== key) : [...session.current, key]; });
   reply(`${had ? 'Removed' : 'Added'} ${labelName(key)}.`);
 }
 
@@ -999,12 +1003,12 @@ function runAction(action) {
     case 'editChord': return doChordCommand(action);
     case 'clearChord': {
       if (state.mode === 'live') return { text: 'Stop live mode first, then edit.', tone: 'warn' };
-      if (!current.length) return { text: 'This chord is already empty.' };
-      change(() => { current = []; });
+      if (!session.current.length) return { text: 'This chord is already empty.' };
+      change(() => { session.current = []; });
       return { text: 'Cleared this chord.' };
     }
     case 'clearAll': {
-      if (!captured.length && !current.length && !live) return { text: 'Already empty.' };
+      if (!session.captured.length && !session.current.length && !session.live) return { text: 'Already empty.' };
       clearAll();
       return { text: 'Started over. Say “undo” to bring it all back.' };
     }
@@ -1013,7 +1017,7 @@ function runAction(action) {
       startLive();
       return { text: 'Live: play your progression in time.' };
     case 'stop':
-      if (recording) return stopRecord();
+      if (session.recording) return stopRecord();
       if (state.input === 'clip' && clipAudio && !clipAudio.paused) { clipAudio.pause(); return { text: 'Paused.' }; }
       if (teaching()) { stopTeach(); return { text: 'Stopped teaching.' }; }
       if (state.mode === 'live') { stopLive(); return { text: 'Stopped. Here’s your progression.' }; }
@@ -1026,8 +1030,8 @@ function runAction(action) {
       return undo() ? { text: 'Undone.' } : { text: 'Nothing to undo.', tone: 'warn' };
     case 'play': {
       const i = action.chord ? chordIndex(action.chord) : null;
-      const entry = i != null ? captured[i] : null;
-      const chord = entry ? entry.chord : current.length ? describeChord(current) : captured.at(-1)?.chord;
+      const entry = i != null ? session.captured[i] : null;
+      const chord = entry ? entry.chord : session.current.length ? describeChord(session.current) : session.captured.at(-1)?.chord;
       if (!chord) return { text: 'Nothing to play yet.', tone: 'warn' };
       playChord(chord);
       return { text: `Playing ${chord.short}.` };
@@ -1067,14 +1071,14 @@ function onVoiceFinal(alternatives) {
 
 // Talking: the mic's notes and claps since just before were the voice; undo them
 function onVoiceSpeech() {
-  voiceBusy = true;
+  session.voiceBusy = true;
   clearTimeout(voiceSettleTimer);
   const cutoff = performance.now() - SPEECH_LOOKBACK_MS;
-  let k = undoStack.length;
-  while (k > 0 && undoStack[k - 1].audio && undoStack[k - 1].at >= cutoff) k--;
-  if (k < undoStack.length) {
-    const { snap } = undoStack[k];
-    undoStack.length = k;
+  let k = session.undoStack.length;
+  while (k > 0 && session.undoStack[k - 1].audio && session.undoStack[k - 1].at >= cutoff) k--;
+  if (k < session.undoStack.length) {
+    const { snap } = session.undoStack[k];
+    session.undoStack.length = k;
     restore(snap);
   }
   els.voice.classList.add('listening');
@@ -1083,7 +1087,7 @@ function onVoiceSpeech() {
 function settleVoice() {
   clearTimeout(voiceSettleTimer);
   voiceSettleTimer = setTimeout(() => {
-    voiceBusy = false;
+    session.voiceBusy = false;
     els.voice.classList.remove('listening');
   }, SPEECH_SETTLE_MS);
 }
@@ -1103,7 +1107,7 @@ function beginVoice() {
     onIdle: settleVoice,
     onError: code => {
       if (code === 'not-allowed' || code === 'service-not-allowed') {
-        voiceOn = false;
+        prefs.voice = false;
         renderMode();
         reply('Voice commands are blocked in this browser’s settings.', { tone: 'warn' });
       }
@@ -1113,28 +1117,28 @@ function beginVoice() {
 
 // Note names on the big pan ("C4"), so there's something to say: "remove G4"
 function applyNoteNames() {
-  setChordShapeLabels(els.bigDiagram, namesOn ? (key => {
+  setChordShapeLabels(els.bigDiagram, prefs.names ? (key => {
     const note = labelToNote(key);
     return note ? noteName(note) : '';
   }) : null);
   renderCurrent();
   markNoteAudio(); // the redraw dropped the marks
-  els.namesBtn.classList.toggle('on', namesOn);
-  els.namesBtn.setAttribute('aria-pressed', String(namesOn));
-  els.namesBtn.querySelector('.cl-voice-state').textContent = namesOn ? 'on' : 'off';
+  els.namesBtn.classList.toggle('on', prefs.names);
+  els.namesBtn.setAttribute('aria-pressed', String(prefs.names));
+  els.namesBtn.querySelector('.cl-voice-state').textContent = prefs.names ? 'on' : 'off';
 }
 
 function setNamesOn(on) {
-  namesOn = on;
+  prefs.names = on;
   try { localStorage.setItem(NAMES_KEY, on ? '1' : '0'); } catch { /* private mode */ }
   applyNoteNames();
 }
 
 function setVoiceOn(on) {
-  voiceOn = on;
+  prefs.voice = on;
   try { localStorage.setItem(VOICE_KEY, on ? '1' : '0'); } catch { /* private mode */ }
   if (on && listening()) beginVoice();
-  if (!on) { stopVoice(); voiceBusy = false; }
+  if (!on) { stopVoice(); session.voiceBusy = false; }
   renderMode();
   reply(on ? HELP : 'Voice commands off.');
 }
@@ -1147,7 +1151,7 @@ function formatTime(secs) {
 }
 
 async function startRecord() {
-  if (recording) return { text: 'Already recording.' };
+  if (session.recording) return { text: 'Already recording.' };
   if (!currentUser) {
     openAuthModal();
     return { text: 'Sign in to save recordings to your Clips.', tone: 'warn' };
@@ -1161,8 +1165,8 @@ async function startRecord() {
   // The same stream the pan is heard on: one mic, no echo cancellation or gain games
   const ok = await startRawAudioRecording(blob => saveRecording(blob, startedAt), { stream: getMicStream() });
   if (!ok) return { text: 'Couldn’t start recording.', tone: 'warn' };
-  savedClip = null;
-  recording = {
+  session.savedClip = null;
+  session.recording = {
     startedAt,
     timer: setInterval(() => {
       const secs = (Date.now() - startedAt) / 1000;
@@ -1176,16 +1180,16 @@ async function startRecord() {
     }, 500),
   };
   setMode('record');
-  current = [];
-  editingIndex = null;
+  session.current = [];
+  session.editingIndex = null;
   renderMode();
   return { text: 'Recording. Just play; say “stop recording” or press Stop & save when you’re done.' };
 }
 
 function stopRecord() {
-  if (!recording) return null;
-  clearInterval(recording.timer);
-  recording = null;
+  if (!session.recording) return null;
+  clearInterval(session.recording.timer);
+  session.recording = null;
   setMode('capture');
   els.stage.classList.remove('rec-warn');
   stopRawAudioRecording(); // saveRecording runs once the audio is finalised
@@ -1201,7 +1205,7 @@ async function saveRecording(blob, startedAt) {
     reply(error, { tone: 'warn' });
     return;
   }
-  savedClip = { row, blob };
+  session.savedClip = { row, blob };
   els.savedText.textContent = `Saved “${title}” to your Clips.`;
   renderMode();
   reply('Saved to your Clips. Build the notation now, or any time from Library → Clips.');
@@ -1210,7 +1214,7 @@ async function saveRecording(blob, startedAt) {
 // --- Build from a Clip ---
 
 async function openClip(row, blob = null) {
-  if (recording) stopRecord();
+  if (session.recording) stopRecord();
   if (listening()) stopMic();
   unlockAudio();
   reply(`Loading “${row.title}”…`);
@@ -1226,8 +1230,8 @@ async function openClip(row, blob = null) {
     ['timeupdate', 'loadedmetadata', 'play', 'pause'].forEach(ev => clipAudio.addEventListener(ev, renderClipTime));
     clipAudio.addEventListener('ended', onClipEnded);
   }
-  clip = { row, blob: audioBlob, url: URL.createObjectURL(audioBlob) };
-  clipAudio.src = clip.url;
+  session.clip = { row, blob: audioBlob, url: URL.createObjectURL(audioBlob) };
+  clipAudio.src = session.clip.url;
   const ok = await startListeningToClip(clipAudio, { onNote, onCue, onLevel, onSound });
   if (!ok) {
     reply('Couldn’t open the clip for listening.', { tone: 'warn' });
@@ -1235,8 +1239,8 @@ async function openClip(row, blob = null) {
   }
   await loadCalibrationProfile();
   setInput('clip');
-  savedClip = null;
-  current = [];
+  session.savedClip = null;
+  session.current = [];
   els.clipTitle.textContent = row.title;
   renderAll();
   renderClipTime();
@@ -1244,32 +1248,32 @@ async function openClip(row, blob = null) {
 }
 
 function closeClip({ quiet = false } = {}) {
-  if (!clip) return;
+  if (!session.clip) return;
   clipAudio?.pause();
   if (state.mode === 'live') stopLive();
   stopListening();
-  URL.revokeObjectURL(clip.url);
-  clip = null;
+  URL.revokeObjectURL(session.clip.url);
+  session.clip = null;
   setInput('off');
   if (!quiet) renderAll();
 }
 
 function toggleClipPlay() {
-  if (!clipAudio || !clip) return;
+  if (!clipAudio || !session.clip) return;
   if (!clipAudio.paused) {
     clipAudio.pause();
     return;
   }
   unlockAudio();
   // A flowing recording has no claps to lock chords with: follow it live
-  if (state.mode === 'capture' && !current.length && clipAudio.currentTime < 0.5) startLive();
+  if (state.mode === 'capture' && !session.current.length && clipAudio.currentTime < 0.5) startLive();
   clipAudio.play();
 }
 
 function onClipEnded() {
   if (state.mode === 'live') stopLive();
   renderClipTime();
-  const n = live?.changes.length || 0;
+  const n = session.live?.changes.length || 0;
   reply(n
     ? `Done: ${n} chord change${n === 1 ? '' : 's'}. Send it to the Studio or the Song Builder, or fix chords by voice.`
     : 'Done. No chord changes heard; try Capture and pause on each chord.');
@@ -1277,7 +1281,7 @@ function onClipEnded() {
 
 function renderClipTime() {
   if (!clipAudio || !els.clipTime) return;
-  const dur = Number.isFinite(clipAudio.duration) ? clipAudio.duration : (clip?.row.duration_secs || 0);
+  const dur = Number.isFinite(clipAudio.duration) ? clipAudio.duration : (session.clip?.row.duration_secs || 0);
   els.clipTime.textContent = `${formatTime(clipAudio.currentTime)} / ${formatTime(dur)}`;
   els.clipSeek.max = String(dur || 0);
   els.clipSeek.value = String(clipAudio.currentTime);
@@ -1290,11 +1294,11 @@ function renderClipTime() {
 }
 
 // Every note, not just chords: Free record's offline transcription of the clip
-function transcribeNotes(target = clip || savedClip) {
+function transcribeNotes(target = session.clip || session.savedClip) {
   if (!target) return;
   const { blob } = target;
   const name = target.row.title;
-  if (clip) closeClip();
+  if (session.clip) closeClip();
   navigate('studio');
   setTimeout(() => openFreeRecordWithAudio(blob, name), 60);
 }
@@ -1318,7 +1322,7 @@ function setSoundsOn(on) {
   cancelTake();
   if (on) {
     if (state.mode === 'live') stopLive();
-    if (recording) stopRecord();
+    if (session.recording) stopRecord();
     setTask({ kind: 'sounds', take: null });
   } else if (soundsOpen()) {
     setTask(null);
@@ -1503,30 +1507,30 @@ function onTakeAction(e) {
 
 // Live order with each chord repeated per bar when heard live; else capture order
 function resultChords() {
-  if (live?.changes.length) {
-    const beats = chordLengths(live);
-    const perBar = live.perBar || 4;
-    return live.changes.flatMap((c, i) => {
+  if (session.live?.changes.length) {
+    const beats = chordLengths(session.live);
+    const perBar = session.live.perBar || 4;
+    return session.live.changes.flatMap((c, i) => {
       const bars = beats[i] ? Math.max(1, Math.round(beats[i] / perBar)) : 1;
-      return Array(bars).fill(live.candidates[c.idx].chord);
+      return Array(bars).fill(session.live.candidates[c.idx].chord);
     });
   }
-  return captured.map(e => e.chord);
+  return session.captured.map(e => e.chord);
 }
 
 function clearAll() {
   if (state.mode === 'live') stopLive();
   change(() => {
-    captured = [];
-    current = [];
-    live = null;
-    editingIndex = null;
+    session.captured = [];
+    session.current = [];
+    session.live = null;
+    session.editingIndex = null;
     els.progression.replaceChildren();
   });
 }
 
 function sendToSongBuilder() {
-  const chords = live?.changes.length ? live.changes.map(c => live.candidates[c.idx].chord) : captured.map(e => e.chord);
+  const chords = session.live?.changes.length ? session.live.changes.map(c => session.live.candidates[c.idx].chord) : session.captured.map(e => e.chord);
   if (!chords.length) return;
   stopMic();
   appendHeardChords(chords);
@@ -1540,7 +1544,7 @@ async function sendToStudio() {
   stopMic();
   navigate('studio');
   const sent = await sendChordsToStudio(chords, `Heard ${chords.slice(0, 4).map(c => c.short).join(' ')}`);
-  if (sent && live?.bpm) gridA.setBpm(live.bpm);
+  if (sent && session.live?.bpm) gridA.setBpm(session.live.bpm);
 }
 
 // --- View ---
@@ -1694,30 +1698,30 @@ function build() {
   q('.cl-back').addEventListener('click', () => (window.history.length > 1 ? window.history.back() : navigate('studio')));
   els.micBtn.addEventListener('click', () => (listening() ? stopMic() : startMic()));
   els.lockBtn.addEventListener('click', () => { flashCue('single'); lockChord(); });
-  els.voiceBtn.addEventListener('click', () => setVoiceOn(!voiceOn));
+  els.voiceBtn.addEventListener('click', () => setVoiceOn(!prefs.voice));
   els.recordBtn.addEventListener('click', async () => {
-    const r = recording ? stopRecord() : await startRecord();
+    const r = session.recording ? stopRecord() : await startRecord();
     if (r) reply(r.text, { tone: r.tone });
   });
   els.clipPlay.addEventListener('click', toggleClipPlay);
   els.clipSeek.addEventListener('input', () => { if (clipAudio) clipAudio.currentTime = Number(els.clipSeek.value); });
   q('.cl-clip-close').addEventListener('click', () => closeClip());
-  q('.cl-saved-build').addEventListener('click', () => savedClip && openClip(savedClip.row, savedClip.blob));
-  els.savedTranscribe.addEventListener('click', () => transcribeNotes(savedClip));
+  q('.cl-saved-build').addEventListener('click', () => session.savedClip && openClip(session.savedClip.row, session.savedClip.blob));
+  els.savedTranscribe.addEventListener('click', () => transcribeNotes(session.savedClip));
   els.transcribeBtn.addEventListener('click', () => transcribeNotes());
   q('.cl-saved-open').addEventListener('click', () => {
     navigate('library');
     setTimeout(() => Bus.emit(BUS_EVENT.OPEN_LIBRARY_TAB, { tab: 'clips' }), 0);
   });
-  els.namesBtn.addEventListener('click', () => setNamesOn(!namesOn));
+  els.namesBtn.addEventListener('click', () => setNamesOn(!prefs.names));
   els.soundsBtn.addEventListener('click', () => setSoundsOn(!soundsOpen()));
   els.soundsActions.addEventListener('click', onTakeAction);
   els.multiBtn.addEventListener('click', () => {
-    multiOn = !multiOn;
-    try { localStorage.setItem(MULTI_KEY, multiOn ? '1' : '0'); } catch { /* private mode */ }
-    setMultiNote(multiOn);
+    prefs.multi = !prefs.multi;
+    try { localStorage.setItem(MULTI_KEY, prefs.multi ? '1' : '0'); } catch { /* private mode */ }
+    setMultiNote(prefs.multi);
     renderMode();
-    reply(multiOn
+    reply(prefs.multi
       ? 'Multi-note on: every note heard in a strike counts, octaves included.'
       : 'Multi-note off: only the strongest note in each strike counts.');
   });
@@ -1762,14 +1766,14 @@ function pickScale(value) {
 async function onScaleApplied() {
   if (!view.firstElementChild) return;
   const name = getSelectedScaleName();
-  const hasChords = captured.length || current.length || live;
+  const hasChords = session.captured.length || session.current.length || session.live;
   if (sessionScale && name !== sessionScale && hasChords) {
     if (state.mode === 'live') stopLive();
     change(() => {
-      captured = [];
-      current = [];
-      live = null;
-      editingIndex = null;
+      session.captured = [];
+      session.current = [];
+      session.live = null;
+      session.editingIndex = null;
       els.progression.replaceChildren();
     });
     reply(`Switched to ${scaleLabel()}. Those chords were on the other pan, so this is a fresh start (Undo brings them back).`);
@@ -1815,13 +1819,13 @@ function onEnter() {
 export function initChordListen() {
   view = document.getElementById('view-listen');
   if (!view) return;
-  try { voiceOn = voiceSupported() && localStorage.getItem(VOICE_KEY) !== '0'; } catch { voiceOn = voiceSupported(); }
-  try { namesOn = localStorage.getItem(NAMES_KEY) !== '0'; } catch { namesOn = true; }
-  try { multiOn = localStorage.getItem(MULTI_KEY) === '1'; } catch { multiOn = false; }
-  setMultiNote(multiOn);
+  try { prefs.voice = voiceSupported() && localStorage.getItem(VOICE_KEY) !== '0'; } catch { prefs.voice = voiceSupported(); }
+  try { prefs.names = localStorage.getItem(NAMES_KEY) !== '0'; } catch { prefs.names = true; }
+  try { prefs.multi = localStorage.getItem(MULTI_KEY) === '1'; } catch { prefs.multi = false; }
+  setMultiNote(prefs.multi);
   addEventListener('routeChanged', (e) => {
     if (e.detail.route === 'listen') onEnter();
-    else if (listening() || recording) stopMic(); // a recording in progress is saved
+    else if (listening() || session.recording) stopMic(); // a recording in progress is saved
   });
   // The saved scale arrives after load (and again after sign-in); follow it.
   // Deferred a tick: custom handpans set their name just after their notes.
