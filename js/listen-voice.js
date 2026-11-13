@@ -1,4 +1,5 @@
 // Chord listen: what spoken commands do (js/voice-commands.js parses them).
+import { closeTranscribe, stopTranscribing, transcribing } from './listen-transcribe.js';
 import { pauseClip, startRecord, stopRecord } from './listen-clips.js';
 import { byPitch, chordMatches, describeChord, labelName, labelToNote, listText, midiOf, noteName, panMatches, pickBy, say, scalePrefersFlats } from './listen-notes.js';
 import { change, clearAll, editChordAt, lockChord, playChord, restore, startLive, stopLive, stopMic, undo } from './listen-play.js';
@@ -293,6 +294,7 @@ function runAction(action) {
       startLive();
       return { text: 'Live: play your progression in time.' };
     case 'stop':
+      if (transcribing()) { stopTranscribing(); return { text: 'Stopped. Here’s the transcription.' }; }
       if (session.recording) return stopRecord();
       if (state.input === 'clip' && pauseClip()) return { text: 'Paused.' };
       if (teaching()) { stopTeach(); return { text: 'Stopped teaching.' }; }
@@ -317,6 +319,7 @@ function runAction(action) {
     case 'teach': return startTeach(action.notes[0] || null);
     case 'forget': return doForget(action);
     case 'record':
+      closeTranscribe();
       startRecord().then(r => r && reply(r.text, { tone: r.tone }));
       return { text: 'Starting to record…' };
     case 'recordStop': return stopRecord() || { text: 'Not recording.' };

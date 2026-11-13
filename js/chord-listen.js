@@ -8,6 +8,7 @@
 // come back here later and be listened to like the mic, to build its notation.
 import { clipsFeature, closeClip, openClip, seekClip, startRecord, stopRecord, toggleClipPlay, transcribeNotes } from './listen-clips.js';
 import { setMultiNote } from './listen-engine.js';
+import { applyNoteChoice, closeTranscribe, loadTranscribeSettings, openTranscribe, sendTranscription, setBeatsPerBar, setCountInClick, setGrid, setTempo, setTranscribeMulti, startTranscribing, stopTranscribing, tapTempo, transcribeFeature, transcribing } from './listen-transcribe.js';
 import { labelName, scaleLabel } from './listen-notes.js';
 import { change, clearAll, editChordAt, lockChord, playChord, sendToSongBuilder, sendToStudio, startLive, startMic, stopLive, stopMic, undo } from './listen-play.js';
 import { onTakeAction, ownHandpan, setSoundsOn, soundsFeature, startTake } from './listen-sounds.js';
@@ -83,6 +84,13 @@ function wire() {
   els.soundsBtn.addEventListener('click', () => setSoundsOn(!soundsOpen()));
   els.soundsActions.addEventListener('click', onTakeAction);
   els.multiBtn.addEventListener('click', () => {
+    if (state.mode === 'transcribe') {
+      setTranscribeMulti(!prefs.transcribeMulti);
+      reply(prefs.transcribeMulti
+        ? 'Multi-note on: every clear note counts, so chords and a melody over a bassline are kept.'
+        : 'Single note: the clearest note of each strike, the higher of two equally clear.');
+      return;
+    }
     prefs.multi = !prefs.multi;
     try { localStorage.setItem(MULTI_KEY, prefs.multi ? '1' : '0'); } catch { /* private mode */ }
     setMultiNote(prefs.multi);
@@ -91,6 +99,30 @@ function wire() {
       ? 'Multi-note on: every note heard in a strike counts, octaves included.'
       : 'Multi-note off: only the strongest note in each strike counts.');
   });
+  // The tabs
+  els.modeCapture.addEventListener('click', () => {
+    if (state.mode === 'transcribe') closeTranscribe();
+    else if (state.mode === 'live') stopLive();
+  });
+  els.modeLive.addEventListener('click', async () => {
+    closeTranscribe();
+    if (state.mode === 'live') return;
+    if (!listening()) await startMic();
+    if (listening()) startLive();
+  });
+  els.modeTranscribe.addEventListener('click', openTranscribe);
+
+  // Transcribe
+  els.txGo.addEventListener('click', () => (transcribing() ? stopTranscribing() : startTranscribing()));
+  els.txAgain.addEventListener('click', startTranscribing);
+  els.txSend.addEventListener('click', sendTranscription);
+  els.txBpm.addEventListener('change', () => setTempo(Number(els.txBpm.value)));
+  els.txSetup.querySelectorAll('[data-bpm]').forEach(b => b.addEventListener('click', () => setTempo(Number(els.txBpm.value) + Number(b.dataset.bpm))));
+  els.txTap.addEventListener('click', tapTempo);
+  els.txBeats.addEventListener('change', () => setBeatsPerBar(els.txBeats.value));
+  els.txClick.addEventListener('change', () => setCountInClick(els.txClick.checked));
+  els.txResult.querySelectorAll('[data-grid]').forEach(b => b.addEventListener('click', () => setGrid(b.dataset.grid)));
+
   els.teachBtn.addEventListener('click', () => {
     if (teaching()) { stopTeach(); return; }
     const r = startTeach();
@@ -181,7 +213,8 @@ function onEnter() {
 export function initChordListen() {
   els.view = document.getElementById('view-listen');
   if (!els.view) return;
-  features.push(voiceFeature, teachFeature, soundsFeature, clipsFeature);
+  features.push(voiceFeature, teachFeature, soundsFeature, clipsFeature, transcribeFeature);
+  loadTranscribeSettings();
   cardActions.play = playChord;
   cardActions.edit = (i) => {
     const r = editChordAt(i);
@@ -191,7 +224,7 @@ export function initChordListen() {
   try { prefs.voice = voiceSupported() && localStorage.getItem(VOICE_KEY) !== '0'; } catch { prefs.voice = voiceSupported(); }
   try { prefs.names = localStorage.getItem(NAMES_KEY) !== '0'; } catch { prefs.names = true; }
   try { prefs.multi = localStorage.getItem(MULTI_KEY) === '1'; } catch { prefs.multi = false; }
-  setMultiNote(prefs.multi);
+  applyNoteChoice();
   addEventListener('routeChanged', (e) => {
     if (e.detail.route === 'listen') onEnter();
     else if (listening() || session.recording) stopMic(); // a recording in progress is saved

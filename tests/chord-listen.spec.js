@@ -294,6 +294,56 @@ test.describe('the selected scale', () => {
   });
 });
 
+test.describe('Transcribe', () => {
+  withRecording('melody', { bpm: 80, startMs: 2000 });
+
+  test('a count-in, then quarter notes, triplets and a chord onto a Studio phrase', async ({ listen: page }) => {
+    // When the mic opens, the fake mic's recording starts: note it
+    await page.addInitScript(() => {
+      const open = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
+      navigator.mediaDevices.getUserMedia = async (c) => {
+        const stream = await open(c);
+        window.micOpenedAt ??= performance.now();
+        return stream;
+      };
+    });
+    await openListen(page);
+    await startListening(page); // opens the mic: the recording starts now
+    await page.locator('[data-m="transcribe"]').click();
+    await expect(page.locator('.cl-view')).toHaveAttribute('data-tab', 'transcribe');
+    await expect(page.locator('.cl-multi-btn')).toHaveAttribute('aria-pressed', 'true'); // on by default here
+    await page.locator('.cl-tx-bpm-input').fill('80');
+    await page.locator('.cl-tx-bpm-input').dispatchEvent('change');
+    // Start exactly 2 s into the recording, where its count-in silence begins
+    await page.evaluate(() => new Promise((resolve) => {
+      setTimeout(() => {
+        document.querySelector('.cl-tx-go').click();
+        resolve();
+      }, Math.max(0, 2000 - (performance.now() - window.micOpenedAt)));
+    }));
+    await expect(page.locator('.cl-slot')).toHaveText('Count-in');
+    await expect(page.locator('.cl-slot')).toHaveText(/Bar 2/, { timeout: 15000 });
+    await page.waitForTimeout(5000); // to the end of bar 2
+    await page.locator('.cl-tx-go').click();
+
+    await expect(page.locator('.cl-tx-summary')).toContainText('2 bars in triplets');
+    const bar = n => page.locator('.cl-tx-bar').nth(n).locator('.cl-tx-cell');
+    await expect(bar(0)).toHaveText(['D3', '', '', 'A3', '', '', 'C4', '', '', 'D4', '', '']);
+    await expect(bar(1).nth(0)).toHaveText('C4');
+    await expect(bar(1).nth(1)).toHaveText('E4');
+    await expect(bar(1).nth(2)).toHaveText('G4');
+    await expect(bar(1).nth(3)).toHaveText('A4');
+    await expect(bar(1).nth(9)).toHaveText('D4');
+    // The chord: both notes, found in the spectrum (not a pitch in between)
+    await expect(bar(1).nth(6)).toContainText('F4');
+    await expect(bar(1).nth(6)).toContainText('A4');
+
+    await page.locator('.cl-tx-send').click();
+    await expect(page).toHaveURL(/#studio/);
+    await expect(page.locator('.measure-row')).toHaveCount(2, { timeout: 10000 });
+  });
+});
+
 // --- Signed in: Clips and the handpan's own note sounds (staging) ---
 
 async function signIn(page, user) {

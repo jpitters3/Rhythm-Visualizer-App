@@ -93,14 +93,21 @@ body.accent-zen:not(.dark) .cl-view {
 }
 
 .cl-mode {
+  height: auto;
   padding: 6px 14px;
+  border: none;
   border-radius: 999px;
+  background: transparent;
+  font: inherit;
   font-size: 12px;
   font-weight: 700;
   color: var(--text);
   opacity: 0.5;
+  cursor: pointer;
   transition: background 0.2s, color 0.2s, opacity 0.2s;
 }
+
+button.cl-mode:hover:not(.active) { opacity: 0.85; }
 
 .cl-mode.active {
   background: var(--cl-on);
@@ -1131,4 +1138,324 @@ body.dark .cl-clip-play { color: #1a1a1a; }
 
 @keyframes clTakePulse {
   50% { opacity: 0.6; }
+}
+
+/* ---------- Transcribe ---------- */
+/* Each tab shows its own controls */
+.cl-view:not([data-tab="transcribe"]) .cl-tx-setup,
+.cl-view:not([data-tab="transcribe"]) .cl-tx-controls,
+.cl-view[data-tab="transcribe"] .cl-controls,
+.cl-view[data-tab="transcribe"] .cl-steps,
+.cl-view[data-tab="transcribe"] .cl-captured-wrap,
+.cl-view[data-tab="transcribe"] .cl-progression-wrap,
+.cl-view[data-tab="transcribe"] .cl-actions,
+.cl-view[data-tab="transcribe"] .cl-teach-btn,
+.cl-view[data-tab="transcribe"] .cl-sounds-btn,
+.cl-view[data-tab="transcribe"] .cl-saved { display: none; }
+
+.cl-tx-setup {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: flex-end;
+  gap: 12px 18px;
+  margin: 0 0 16px;
+}
+
+.cl-tx-setup[hidden] { display: none; }
+
+.cl-tx-field {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  color: var(--text);
+}
+
+.cl-tx-key {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  opacity: 0.55;
+}
+
+.cl-tx-bpm {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.cl-tx-step {
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid var(--panel-border);
+  background: transparent;
+  color: var(--text);
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.cl-tx-bpm-input {
+  width: 60px;
+  height: 34px;
+  padding: 0 6px;
+  border-radius: 10px;
+  border: 1px solid var(--panel-border);
+  background: var(--panel);
+  color: var(--text);
+  font-size: 18px;
+  font-weight: 800;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  appearance: textfield;
+}
+
+.cl-tx-bpm-input::-webkit-inner-spin-button,
+.cl-tx-bpm-input::-webkit-outer-spin-button { appearance: none; margin: 0; }
+
+.cl-tx-tap { padding: 6px 12px; font-size: 13px; }
+
+.cl-tx-beats {
+  height: 34px;
+  padding: 0 10px;
+  border-radius: 10px;
+  border: 1px solid var(--panel-border);
+  background: var(--panel);
+  color: var(--text);
+  font-weight: 700;
+}
+
+.cl-tx-click-field {
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  height: 34px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.cl-tx-click { accent-color: var(--cl-on); }
+
+.cl-tx-controls {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
+.cl-tx-go {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 180px;
+  height: auto;
+  padding: 12px 26px;
+  border-radius: 999px;
+  border: none;
+  background: var(--cl-on);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+body.dark .cl-tx-go { color: #1a1a1a; }
+
+.cl-tx-go .cl-rec-dot { background: currentColor; }
+
+.cl-tx-go.recording {
+  background: #d64545;
+  color: #fff;
+  box-shadow: 0 0 0 6px rgba(214, 69, 69, 0.18);
+}
+
+.cl-tx-go.recording .cl-rec-dot { border-radius: 2px; }
+
+.cl-tx-block[hidden] { display: none; }
+
+/* The live strip: time left to right, low notes at the bottom */
+.cl-tx-strip {
+  position: relative;
+  overflow-x: auto;
+  overflow-y: hidden;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--cl-on) 5%, transparent);
+  scrollbar-width: thin;
+}
+
+.cl-tx-lane {
+  --beat-px: 56px;
+  --bar-px: 224px;
+  --lane-width: 100%;
+  position: relative;
+  width: var(--lane-width);
+  height: 150px;
+  background:
+    repeating-linear-gradient(to right, color-mix(in srgb, var(--text) 26%, transparent) 0 1.5px, transparent 1.5px var(--bar-px)),
+    repeating-linear-gradient(to right, color-mix(in srgb, var(--text) 9%, transparent) 0 1px, transparent 1px var(--beat-px));
+}
+
+.cl-tx-head {
+  --x: 0px;
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: var(--x);
+  width: 2px;
+  background: var(--cl-on);
+  opacity: 0.6;
+}
+
+.cl-view:not([data-mode="transcribe"]) .cl-tx-head { opacity: 0.25; }
+
+.cl-tx-note {
+  --x: 0px;
+  --y: 0.5;
+  position: absolute;
+  left: var(--x);
+  bottom: calc(10px + var(--y) * (150px - 44px));
+  transform: translateX(-50%);
+  min-width: 24px;
+  height: 24px;
+  padding: 0 4px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  background: var(--cl-on);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 800;
+  animation: clCardIn 0.25s ease-out backwards;
+}
+
+body.dark .cl-tx-note { color: #1a1a1a; }
+
+.cl-tx-empty {
+  margin: 10px 0 0;
+  font-size: 14px;
+  color: var(--text);
+  opacity: 0.55;
+}
+
+.cl-tx-empty[hidden],
+.cl-tx-result[hidden] { display: none; }
+
+.cl-tx-result {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.cl-tx-grids {
+  display: inline-flex;
+  align-self: flex-start;
+  padding: 3px;
+  border-radius: 999px;
+  border: 1px solid var(--panel-border);
+}
+
+.cl-tx-grid {
+  min-width: 38px;
+  height: auto;
+  padding: 5px 10px;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  opacity: 0.6;
+}
+
+.cl-tx-grid.active {
+  background: var(--cl-on);
+  color: #fff;
+  opacity: 1;
+}
+
+body.dark .cl-tx-grid.active { color: #1a1a1a; }
+
+.cl-tx-summary {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--text);
+  opacity: 0.7;
+}
+
+/* The phrase: a row of circles per bar, as in the Studio */
+.cl-tx-phrase {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.cl-tx-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cl-tx-bar-n {
+  flex: 0 0 18px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text);
+  opacity: 0.45;
+  text-align: right;
+}
+
+.cl-tx-cells {
+  --steps: 16;
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(var(--steps), minmax(0, 1fr));
+  gap: 3px;
+}
+
+.cl-tx-cell {
+  aspect-ratio: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--cl-field);
+  border: 1px solid var(--cl-field-stroke);
+  font-size: 8px;
+  font-weight: 800;
+  line-height: 1.05;
+  color: #fff;
+  overflow: hidden;
+}
+
+.cl-tx-cell.is-beat { border-color: color-mix(in srgb, var(--text) 35%, transparent); }
+
+.cl-tx-cell.has-note {
+  background: var(--cl-on);
+  border-color: var(--cl-on);
+}
+
+body.dark .cl-tx-cell.has-note { color: #1a1a1a; }
+
+.cl-tx-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.cl-tx-actions .cl-primary { margin-left: auto; }
+
+@media (max-width: 900px) {
+  .cl-tx-go { flex: 1 1 100%; }
+
+  .cl-tx-cells { gap: 2px; }
 }

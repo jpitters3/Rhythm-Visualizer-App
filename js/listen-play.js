@@ -163,7 +163,7 @@ export function onNote(rawLabel, at) {
   const label = normLabel(rawLabel);
   els.stage.querySelector(`.cl-big [data-note="${label}"]`)?.classList.add('just-heard');
   setTimeout(() => els.stage.querySelector(`.cl-big [data-note="${label}"]`)?.classList.remove('just-heard'), 350);
-  if (features.some(f => f.onNote?.(label))) return; // a feature's, not a chord note
+  if (features.some(f => f.onNote?.(label, at))) return; // a feature's, not a chord note
   if (state.mode === 'capture') addNote(label);
   else if (state.mode === 'live') liveNote(label, at);
 }

@@ -10,6 +10,8 @@
 // (beta) instead counts everything heard in the strike.
 import { getAudioCtx } from './noteplayer.js';
 import { autoCorrelate, findClosestScaleNote } from './transcription.js';
+import { getScale } from './state.js';
+import { parseNoteName } from './voice-commands.js';
 
 const BUFSIZE = 2048;
 const buf = new Float32Array(BUFSIZE);
@@ -34,6 +36,16 @@ const VOTE_MS = 100; // how long a strike's pitches are weighed before one is ch
 const OCTAVE_HOLD_MS = 1500; // other octaves of the chosen note are ignored this long…
 const ATTACK_GRACE_MS = 90; // …unless they arrive this soon after a fresh attack
 const MULTI_MIN_SHARE = 0.3; // Multi-note: notes this strong next to the strongest count too
+const SPECTRUM_SIZE = 8192; // fine enough to tell neighbouring low pan notes apart
+const BAND = 0.025; // a note's band: ±2.5% around its pitch
+const STRUCK_RISE_DB = 6; // a note struck in this strike rose at least this much
+const CHORD_RANGE_DB = 18; // and is within this of the loudest note struck
+const STRUCK_FLOOR_DB = -80; // below this it's the noise floor wobbling, not a note
+const STRUCK_BELOW_PEAK_DB = 40; // …or this far under the loudest sound in the spectrum
+const OVERTONE_MARGIN_DB = 4; // an octave/twelfth this much weaker than its root is its overtone
+const SPECTRA_KEPT = 4; // a strike shows as a rise against the spectrum ~50 ms before
+const RESTRUCK_MS = 250; // a note found in a strike isn't found again this soon
+const CLEAR_TIE = 0.04; // 'clearest': this close in clarity counts as a tie (the higher note wins)
 
 let micStream = null;
 let sourceNode = null;
@@ -51,10 +63,28 @@ let vote = null; // a strike being weighed: { at, scores: Map label -> { score, 
 let focus = null; // the note chosen last: { label, pc, at }, holding off its other octaves
 let lastAttackAt = -Infinity;
 let multiNote = false;
+let choice = 'strongest'; // 'strongest' (clarity × loudness) or 'clearest'
+let octaveGuard = false; // with multiNote: still ignore other octaves of a held note
+let spectral = false; // with multiNote: find a strike's notes in the spectrum
+let spectrumAnalyser = null;
+let spectrumBuf = null;
+let spectra = []; // the last few spectra, newest last (spectral mode)
+const lastStruck = new Map(); // label -> when a strike last found it
 
 // Multi-note (beta): count every note heard in a strike, octaves included
 export function setMultiNote(on) {
   multiNote = !!on;
+}
+
+// How a strike's note is chosen. 'clearest': the clearest pitch, and of two
+// about as clear, the higher (a melody over a bassline). octaveGuard keeps a
+// held note's other octaves out even when several notes count.
+// spectralChords: notes struck together are found in the spectrum (one pitch
+// detector alone hears two notes as one, sometimes a note in between).
+export function setNoteChoice({ pick = 'strongest', guardOctaves = false, spectralChords = false } = {}) {
+  choice = pick;
+  octaveGuard = guardOctaves;
+  spectral = spectralChords;
 }
 
 const pitchClass = freq => ((Math.round(12 * Math.log2(freq / 440)) % 12) + 12 + 9) % 12;
@@ -107,19 +137,115 @@ function emitNote(note) {
 function closeVote() {
   const v = vote;
   vote = null;
+  if (multiNote && spectral && v.pre) {
+    const struck = freshlyStruck(struckNotes(v.pre, readSpectrum()), v.at);
+    if (struck.length) {
+      struck.forEach((n) => {
+        lastStruck.set(n.label, v.at);
+        emitNote({ label: n.label, at: v.at - DETECTION_LATENCY_MS });
+      });
+      focus = { label: struck[0].label, pc: struck[0].pc, at: v.at };
+      return;
+    }
+  }
+  // In spectral mode the spectrum has the last word: a pitch with no strike
+  // behind it (a ringing note's sub-octave, say) is not a note
+  if (!v.scores.size || (multiNote && spectral && v.pre)) return;
   const ranked = [...v.scores.entries()].sort((a, b) => b[1].score - a[1].score);
-  const [winner, best] = ranked[0];
+  const [winner, best] = choice === 'clearest' ? clearestOf(ranked) : ranked[0];
   emitNote({ label: winner, at: v.at - DETECTION_LATENCY_MS });
   focus = { label: winner, pc: best.pc, at: v.at };
   if (!multiNote) return;
-  ranked.slice(1)
-    .filter(([, r]) => r.score >= best.score * MULTI_MIN_SHARE)
+  ranked
+    .filter(([label, r]) => label !== winner && r.score >= best.score * MULTI_MIN_SHARE)
+    .filter(([, r]) => !(octaveGuard && r.pc === best.pc)) // its overtone, not a second note
     .forEach(([label]) => emitNote({ label, at: v.at - DETECTION_LATENCY_MS }));
+}
+
+// --- Notes struck together, from the spectrum ---
+
+// Each pan note and its pitch, for the scale in use
+function panPitches() {
+  const scale = getScale();
+  if (!scale) return [];
+  return [['Ding', scale.ding], ...Object.entries(scale.map || {})]
+    .map(([label, name]) => {
+      const p = parseNoteName(name);
+      return p && { label, pc: p.pc, freq: 440 * 2 ** ((p.midi - 69) / 12) };
+    })
+    .filter(Boolean);
+}
+
+function readSpectrum() {
+  if (!spectrumAnalyser) return null;
+  spectrumAnalyser.getFloatFrequencyData(spectrumBuf);
+  return Float32Array.from(spectrumBuf);
+}
+
+// The loudest bin (dB) in a note's band, and whether it's a peak of its own
+// rather than the slope of a louder note a semitone away
+function band(spectrum, freq) {
+  const binHz = getAudioCtx().sampleRate / SPECTRUM_SIZE;
+  const lo = Math.max(1, Math.floor((freq * (1 - BAND)) / binHz));
+  const hi = Math.min(spectrum.length - 2, Math.ceil((freq * (1 + BAND)) / binHz));
+  let at = lo;
+  for (let i = lo; i <= hi; i++) if (spectrum[i] > spectrum[at]) at = i;
+  const peak = spectrum[at] >= spectrum[at - 1] && spectrum[at] >= spectrum[at + 1]
+    && spectrum[at] >= spectrum[Math.max(0, at - 2)] && spectrum[at] >= spectrum[Math.min(spectrum.length - 1, at + 2)];
+  return { level: spectrum[at], peak, hz: at * binHz };
+}
+
+// The pan notes this strike sounded: their band jumped since just before it,
+// they're near the loudest one, and aren't just an overtone (octave or twelfth)
+// of a stronger note struck with them. Loudest first.
+function struckNotes(before, after) {
+  if (!before || !after) return [];
+  const pitches = panPitches();
+  // A peak belongs to the pan note it's nearest: a semitone neighbour's band can
+  // catch the edge of a louder note's peak
+  const nearest = hz => pitches.reduce((best, p) => (Math.abs(Math.log(hz / p.freq)) < Math.abs(Math.log(hz / best.freq)) ? p : best));
+  const notes = pitches.map((n) => {
+    const now = band(after, n.freq);
+    const own = now.peak && nearest(now.hz) === n;
+    return { ...n, level: now.level, peak: own, rise: now.level - band(before, n.freq).level };
+  });
+  let loudestBin = -Infinity;
+  for (let i = 0; i < after.length; i++) if (after[i] > loudestBin) loudestBin = after[i];
+  const floor = Math.max(STRUCK_FLOOR_DB, loudestBin - STRUCK_BELOW_PEAK_DB);
+  const struck = notes.filter(n => n.peak && n.level >= floor && n.rise >= STRUCK_RISE_DB).sort((a, b) => b.level - a.level);
+  if (!struck.length) return [];
+  const loudest = struck[0].level;
+  const near = struck.filter(n => n.level >= loudest - CHORD_RANGE_DB);
+  const isOvertone = n => near.some(root => root !== n
+    && [2, 3, 4].some(h => Math.abs(n.freq / (root.freq * h) - 1) < BAND)
+    && n.level < root.level - OVERTONE_MARGIN_DB);
+  return near.filter(n => !isOvertone(n));
+}
+
+// A strike under notes still ringing barely changes the overall level, but its
+// own band jumps: open a vote for it even when the pitch detector hears no change
+function watchSpectrum(nowMs) {
+  const now = readSpectrum();
+  if (!now) return;
+  spectra.push(now);
+  if (spectra.length > SPECTRA_KEPT) spectra.shift();
+  if (vote || spectra.length < SPECTRA_KEPT) return;
+  if (freshlyStruck(struckNotes(spectra[0], now), nowMs).length) vote = { at: nowMs, scores: new Map(), pre: spectra[0] };
+}
+
+const freshlyStruck = (notes, at) => notes.filter(n => !(at - (lastStruck.get(n.label) ?? -Infinity) < RESTRUCK_MS));
+
+// The clearest pitch heard; of two about as clear, the higher one
+function clearestOf(ranked) {
+  const byClarity = [...ranked].sort((a, b) => b[1].clarity - a[1].clarity);
+  const top = byClarity[0];
+  const tie = byClarity.filter(([, r]) => top[1].clarity - r.clarity <= CLEAR_TIE);
+  return tie.sort((a, b) => b[1].freq - a[1].freq)[0];
 }
 
 // Another octave of the note in focus, with no fresh attack: its partial, not a strike
 function octaveOfFocus(label, pc, nowMs) {
-  return !multiNote && focus && label !== focus.label && pc === focus.pc
+  return (!multiNote || octaveGuard) && focus && label !== focus.label && pc === focus.pc
     && nowMs - focus.at < OCTAVE_HOLD_MS && nowMs - lastAttackAt > ATTACK_GRACE_MS;
 }
 
@@ -151,6 +277,7 @@ function loop() {
   if (candidate) candidate.peak = Math.max(candidate.peak, rms);
   else floorRms = floorRms * 0.8 + rms * 0.2;
 
+  if (spectral && multiNote) watchSpectrum(nowMs);
   const pitch = autoCorrelate(buf, audioCtx.sampleRate);
   trackSound(nowMs, rms, flux, pitch); // before naming notes, so a strike knows its note
   if (flux > RESTRIKE_FLUX && rms > ONSET_MIN_RMS) lastAttackAt = nowMs;
@@ -164,11 +291,12 @@ function loop() {
         || (nowMs - gate.seen < RING_MS && rms / gate.rms < RESTRIKE_FLUX));
       const weight = pitch.clarity * rms;
       if (vote && (!ringing || vote.scores.has(label))) {
-        const r = vote.scores.get(label) || { score: 0, pc };
+        const r = vote.scores.get(label) || { score: 0, pc, clarity: 0, freq: pitch.freq };
         r.score += weight;
+        r.clarity = Math.max(r.clarity, pitch.clarity);
         vote.scores.set(label, r);
       } else if (!vote && !ringing && !octaveOfFocus(label, pc, nowMs)) {
-        vote = { at: nowMs, scores: new Map([[label, { score: weight, pc }]]) };
+        vote = { at: nowMs, scores: new Map([[label, { score: weight, pc, clarity: pitch.clarity, freq: pitch.freq }]]), pre: spectra[0] };
       }
       // rms follows the decay, so a new strike stands out
       noteGate.set(label, { seen: nowMs, rms, struck: ringing ? gate.struck : nowMs });
@@ -190,6 +318,13 @@ function attach(source, nextHandlers) {
   analyser = audioCtx.createAnalyser();
   analyser.fftSize = BUFSIZE;
   source.connect(analyser);
+  spectrumAnalyser = audioCtx.createAnalyser();
+  spectrumAnalyser.fftSize = SPECTRUM_SIZE;
+  spectrumAnalyser.smoothingTimeConstant = 0;
+  source.connect(spectrumAnalyser);
+  spectrumBuf = new Float32Array(spectrumAnalyser.frequencyBinCount);
+  spectra = [];
+  lastStruck.clear();
   handlers = nextHandlers || {};
   prevRms = 0;
   floorRms = 0;
@@ -243,7 +378,9 @@ export function stopListening() {
   candidate = null;
   if (sourceNode && analyser) {
     try { sourceNode.disconnect(analyser); } catch { /* already apart */ }
+    try { sourceNode.disconnect(spectrumAnalyser); } catch { /* already apart */ }
   }
+  spectrumAnalyser = null;
   sourceNode = null;
   micStream?.getTracks().forEach(t => t.stop());
   micStream = null;

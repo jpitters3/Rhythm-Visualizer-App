@@ -120,6 +120,21 @@ const RECORDINGS = {
   silence() {
     return track(60);
   },
+  // For Transcribe: silence while the count-in runs (Start pressed `startMs` after
+  // the mic opens, a 150 ms lead, then one bar), then at `bpm`:
+  // bar 1 quarter notes; bar 2 two beats of triplets, a chord, a quarter note
+  melody({ bpm = 80, startMs = 2000 } = {}) {
+    const beat = 60 / bpm;
+    const downbeat = (startMs + 150) / 1000 + 4 * beat;
+    const buf = track(downbeat + 8 * beat + 3);
+    const at = (pos, name) => note(buf, downbeat + pos * beat, name, 0.3);
+    [['D3', 0], ['A3', 1], ['C4', 2], ['D4', 3]].forEach(([n, p]) => at(p, n));
+    [['C4', 4], ['E4', 4 + 1 / 3], ['G4', 4 + 2 / 3], ['A4', 5], ['G4', 5 + 1 / 3], ['E4', 5 + 2 / 3]].forEach(([n, p]) => at(p, n));
+    at(6, 'F4');
+    at(6, 'A4');
+    at(7, 'D4');
+    return buf;
+  },
 };
 
 // Workers load specs in parallel: each file is written once, atomically, and the

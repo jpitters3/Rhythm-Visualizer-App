@@ -65,6 +65,10 @@ function chordCard(entry, { bars = null, playing = false, isNew = false, number 
 }
 
 export function renderCurrent() {
+  if (state.mode === 'transcribe') {
+    each('renderStage');
+    return;
+  }
   const labels = state.mode === 'live' && session.live?.current != null ? session.live.candidates[session.live.current].labels : session.current;
   updateChordShapeDiagram(els.bigDiagram, labels);
   const chord = labels.length ? describeChord(labels) : null;
@@ -110,7 +114,7 @@ function lengthText(beats, perBar) {
 }
 
 export function renderLive() {
-  if (!session.live) return;
+  if (!session.live || state.mode === 'transcribe') return;
   const beats = chordLengths(session.live);
   session.live.perBar = beatsPerBar(session.live);
   els.bpm.textContent = session.live.bpm ? String(session.live.bpm) : '–';
@@ -157,14 +161,19 @@ function renderPulseDots() {
 
 export function renderMode() {
   els.view.dataset.mode = listening() ? state.mode : 'idle'; // the CSS keys off this
+  els.view.dataset.tab = state.mode; // which tab is open, even with the mic off
   els.micBtn.classList.toggle('on', listening());
   els.micBtn.setAttribute('aria-pressed', String(listening()));
   els.micLabel.textContent = listening() ? 'Stop' : session.captured.length || session.live ? 'Listen again' : 'Start listening';
   els.modeCapture.classList.toggle('active', state.mode === 'capture');
   els.modeLive.classList.toggle('active', state.mode === 'live');
   els.modeRecord.classList.toggle('active', state.mode === 'record');
+  els.modeTranscribe.classList.toggle('active', state.mode === 'transcribe');
+  [els.modeCapture, els.modeLive, els.modeTranscribe].forEach(b => b.setAttribute('aria-pressed', String(b.classList.contains('active'))));
   els.micBtn.hidden = state.input === 'clip' || !!session.recording;
-  els.hint.innerHTML = state.mode === 'record'
+  els.hint.innerHTML = state.mode === 'transcribe'
+    ? 'Set the tempo, press <strong>Start</strong>, and play after the count-in. Every note goes onto a grid you can send to the Studio.'
+    : state.mode === 'record'
     ? 'Just play. Everything is recorded in high quality and saved to your <strong>Clips</strong>, to build the notation from later.'
     : state.input === 'clip'
       ? 'Press play and Panafide follows the chords in your clip, with the tempo and time signature. Fix any chord afterwards by voice or with ✎.'
@@ -173,17 +182,19 @@ export function renderMode() {
         : listening()
       ? `Play each note of the chord, or tap it. <strong>Clap or snap</strong> to lock it in, <strong>double clap</strong> to play it live.${prefs.voice ? ' Or just <strong>say</strong> what to change.' : ''}`
       : 'Turn on the mic and play a chord one note at a time, or tap the notes.';
-  els.multiBtn.classList.toggle('on', prefs.multi);
-  els.multiBtn.setAttribute('aria-pressed', String(prefs.multi));
-  els.multiBtn.querySelector('.cl-voice-state').textContent = prefs.multi ? 'on' : 'off';
+  // Multi-note has its own setting in Transcribe (on by default there)
+  const multi = state.mode === 'transcribe' ? prefs.transcribeMulti : prefs.multi;
+  els.multiBtn.classList.toggle('on', multi);
+  els.multiBtn.setAttribute('aria-pressed', String(multi));
+  els.multiBtn.querySelector('.cl-voice-state').textContent = multi ? 'on' : 'off';
   els.lockBtn.disabled = state.mode === 'live' || state.mode === 'record' || !session.current.length;
   els.liveBtn.textContent = state.mode === 'live' ? 'Stop live' : 'Go live';
   els.liveBtn.disabled = !listening() || state.mode === 'record';
   // Mic off, a chord can still be tapped together: Lock shows once it has notes
   els.lockBtn.hidden = state.mode === 'record' || (!listening() && !session.current.length);
   els.liveBtn.hidden = state.mode === 'record';
-  const showLive = state.mode === 'live' || !!session.live?.changes.length;
-  setVisible(els.timing, showLive);
+  const showLive = state.mode === 'live' || (state.mode === 'capture' && !!session.live?.changes.length);
+  setVisible(els.timing, showLive || state.mode === 'transcribe');
   setVisible(els.progressionWrap, showLive);
   const hasResult = session.captured.length > 0 || !!session.live?.changes.length;
   setVisible(els.steps, !hasResult && state.mode !== 'live');
@@ -249,8 +260,9 @@ export function build() {
           </label>
         </div>
         <div class="cl-modes" role="group" aria-label="Mode">
-          <span class="cl-mode" data-m="capture">Capture</span>
-          <span class="cl-mode" data-m="live">Live</span>
+          <button type="button" class="cl-mode" data-m="capture" aria-pressed="true">Capture</button>
+          <button type="button" class="cl-mode" data-m="live" aria-pressed="false">Live</button>
+          <button type="button" class="cl-mode" data-m="transcribe" aria-pressed="false">Transcribe</button>
           <span class="cl-mode" data-m="record">Record</span>
         </div>
       </header>
@@ -270,6 +282,34 @@ export function build() {
           <p class="cl-name"></p>
           <p class="cl-notes"></p>
           <p class="cl-hint"></p>
+          <div class="cl-tx-setup">
+            <div class="cl-tx-field">
+              <span class="cl-tx-key">Tempo</span>
+              <div class="cl-tx-bpm">
+                <button type="button" class="cl-tx-step" data-bpm="-1" aria-label="Slower">−</button>
+                <input type="number" class="cl-tx-bpm-input" min="40" max="220" step="1" value="90" aria-label="Tempo in BPM">
+                <button type="button" class="cl-tx-step" data-bpm="1" aria-label="Faster">+</button>
+                <button type="button" class="cl-btn cl-tx-tap">Tap</button>
+              </div>
+            </div>
+            <div class="cl-tx-field">
+              <span class="cl-tx-key">Beats per bar</span>
+              <select class="cl-tx-beats" aria-label="Beats per bar">
+                <option value="2">2</option><option value="3">3</option><option value="4" selected>4</option>
+                <option value="5">5</option><option value="6">6</option><option value="7">7</option>
+              </select>
+            </div>
+            <label class="cl-tx-field cl-tx-click-field">
+              <input type="checkbox" class="cl-tx-click" checked>
+              <span>Count-in click</span>
+            </label>
+          </div>
+          <div class="cl-tx-controls">
+            <button type="button" class="cl-tx-go" aria-pressed="false">
+              <span class="cl-rec-dot" aria-hidden="true"></span>
+              <span class="cl-tx-go-label">Start</span>
+            </button>
+          </div>
           <div class="cl-saved" hidden>
             <span class="cl-saved-text"></span>
             <div class="cl-saved-actions">
@@ -337,6 +377,26 @@ export function build() {
             <li><span class="cl-step-n">3</span><span><strong>Double clap</strong> and play the progression in time. Panafide follows along and finds the tempo, pulse and time signature.</span></li>
             <li><span class="cl-step-n">4</span><span><strong>Just say it</strong>: “remove the G”, “add F sharp”, “remove the lower D”, “next chord”, “replace the third chord”, “undo”, “start over”.</span></li>
           </ol>
+          <div class="cl-block cl-tx-block">
+            <div class="cl-label">Transcription <span class="cl-tx-count"></span></div>
+            <div class="cl-tx-strip"><div class="cl-tx-lane"><span class="cl-tx-head" aria-hidden="true"></span></div></div>
+            <div class="cl-tx-result" hidden>
+              <div class="cl-tx-grids" role="group" aria-label="Grid">
+                <button type="button" class="cl-tx-grid" data-grid="auto">Auto</button>
+                <button type="button" class="cl-tx-grid" data-grid="1" title="Quarter notes">♩</button>
+                <button type="button" class="cl-tx-grid" data-grid="2" title="8th notes">♪</button>
+                <button type="button" class="cl-tx-grid" data-grid="3" title="Triplets">³</button>
+                <button type="button" class="cl-tx-grid" data-grid="4" title="16th notes">♬</button>
+              </div>
+              <p class="cl-tx-summary"></p>
+              <div class="cl-tx-phrase"></div>
+              <div class="cl-tx-actions">
+                <button type="button" class="cl-btn cl-tx-again">Start again</button>
+                <button type="button" class="cl-btn cl-primary cl-tx-send">Send to Studio</button>
+              </div>
+            </div>
+            <p class="cl-tx-empty">Press Start, wait for the count-in, and play. Notes appear here as you play them.</p>
+          </div>
           <div class="cl-block cl-progression-wrap">
             <div class="cl-label">Progression</div>
             <div class="cl-cards cl-progression"></div>
@@ -378,6 +438,12 @@ export function build() {
     undoBtn: q('.cl-undo'), clearBtn: q('.cl-clear'), toSongBtn: q('.cl-to-song'), toStudioBtn: q('.cl-to-studio'),
     back: q('.cl-back'), clipClose: q('.cl-clip-close'), savedBuild: q('.cl-saved-build'), savedOpen: q('.cl-saved-open'),
     teachCancel: q('.cl-teach-cancel'), scaleSelect: q('.cl-scale-select'),
+    modeTranscribe: q('[data-m="transcribe"]'),
+    txSetup: q('.cl-tx-setup'), txBpm: q('.cl-tx-bpm-input'), txBeats: q('.cl-tx-beats'), txClick: q('.cl-tx-click'),
+    txTap: q('.cl-tx-tap'), txGo: q('.cl-tx-go'), txGoLabel: q('.cl-tx-go-label'),
+    txBlock: q('.cl-tx-block'), txCount: q('.cl-tx-count'), txStrip: q('.cl-tx-strip'), txLane: q('.cl-tx-lane'),
+    txHead: q('.cl-tx-head'), txResult: q('.cl-tx-result'), txSummary: q('.cl-tx-summary'), txPhrase: q('.cl-tx-phrase'),
+    txEmpty: q('.cl-tx-empty'), txSend: q('.cl-tx-send'), txAgain: q('.cl-tx-again'),
   });
   els.bigDiagram = diagram([], 'cl-big');
   q('.cl-big-wrap').prepend(els.bigDiagram);

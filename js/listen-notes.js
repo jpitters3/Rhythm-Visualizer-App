@@ -23,7 +23,7 @@ export const pitchName = note => note.replace(/-?\d+$/, '').replace(/^([A-G])s$/
 export const noteName = note => pitchName(note) + (parseNoteName(note)?.octave ?? '');
 
 // Every note on the pan, low to high
-function panNotes() {
+export function panNotes() {
   const scale = getScale();
   if (!scale) return [];
   const entries = [['Ding', scale.ding], ...Object.entries(scale.map || {})];

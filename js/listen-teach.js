@@ -72,7 +72,7 @@ function renderTeach() {
       ? `Teaching ${labelName(task.label)}: strike it ${TEACH_STRIKES} times (${task.freqs.length}/${TEACH_STRIKES})`
       : 'Tap the note you want to teach';
   }
-  els.teachBtn.disabled = !listening() || state.mode === 'live';
+  els.teachBtn.disabled = !listening() || state.mode !== 'capture';
 }
 
 export function stopTeach() {
