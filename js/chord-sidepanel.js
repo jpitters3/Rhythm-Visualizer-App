@@ -182,6 +182,21 @@ async function clearSong() {
   commit();
 }
 
+// Chords heard by Chord listen (js/chord-listen.js) become new sections, 8 to a
+// section; an empty song is replaced rather than added to.
+export function appendHeardChords(chords) {
+  loadSong();
+  if (!songSequence().length) song.sections = [];
+  for (let i = 0; i < chords.length; i += MAX_SLOTS) {
+    const section = newSection(nextSectionName(), song.sections.length % SECTION_COLORS);
+    section.slots = chords.slice(i, i + MAX_SLOTS).map(storedChord);
+    song.sections.push(section);
+  }
+  if (!song.sections.length) song = emptySong();
+  activeSectionId = song.sections.at(-1).id;
+  saveSong();
+}
+
 // --- Playback / send ---
 
 // Flat play order for the stage and Send to Studio; empty slots skipped.

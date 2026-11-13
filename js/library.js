@@ -7,6 +7,7 @@ import { dbDeletePattern, dbRenamePattern, dbSavePattern, dbListPatternNames } f
 import { alert, confirm, prompt } from './alert.js';
 import { showShareLinkModal } from './share-patterns.js';
 import { startRawAudioRecording, stopRawAudioRecording } from './audio-recorder.js';
+import { uploadClip, clipTitle, clipSignedUrl } from './clips.js';
 import { Bus, BUS_EVENT } from './bus.js';
 import { renderThumbnail } from './pattern-thumbnail.js';
 
@@ -52,6 +53,11 @@ export function initLibrary() {
       );
       renderLibrary();
     });
+  });
+
+  // Another view asks for a tab, e.g. Chord listen's "Open Clips"
+  Bus.on(BUS_EVENT.OPEN_LIBRARY_TAB, (e) => {
+    document.querySelector(`.library-tab[data-tab="${e.detail?.tab}"]`)?.click();
   });
 
   document.getElementById('librarySearch')?.addEventListener('input', (e) => {
@@ -901,6 +907,7 @@ function buildClipRow(clip) {
   row.querySelector('.clip-menu-btn').addEventListener('click', (e) => {
     e.stopPropagation();
     showContextMenu(e.currentTarget, [
+      { label: 'Build notation in Listen', action: () => openClipInListen(clip) },
       { label: 'Rename', action: () => renameClip(clip.id, clip.title) },
       { label: 'Share (7-day link)', action: () => shareClip(clip) },
       { label: 'Delete', danger: true, action: () => deleteClip(clip) },
@@ -908,6 +915,13 @@ function buildClipRow(clip) {
   });
 
   return row;
+}
+
+// Chord listen plays the clip through its listening engine (js/chord-listen.js)
+function openClipInListen(clip) {
+  if (clipAudio && !clipAudio.paused) clipAudio.pause();
+  Bus.emit(BUS_EVENT.OPEN_CLIP_IN_LISTEN, { clip });
+  window.location.hash = '#listen';
 }
 
 async function startClipRecording() {
@@ -956,27 +970,8 @@ function stopClipRecording() {
 
 async function saveClip(blob) {
   const durationSecs = Math.round((Date.now() - clipRecordStart) / 1000);
-  const clipId = crypto.randomUUID();
-  const path = `${currentUser.id}/${clipId}.webm`;
-
-  const now = new Date();
-  const defaultTitle = `Recording – ${now.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} ${now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`;
-
-  const { error: uploadError } = await supabase.storage
-    .from('user-clips')
-    .upload(path, blob, { contentType: 'audio/webm' });
-
-  if (uploadError) {
-    await alert(uploadErrMsg(uploadError, blob.size));
-    return;
-  }
-
-  const { error: dbError } = await supabase
-    .from('clips')
-    .insert({ id: clipId, user_id: currentUser.id, title: defaultTitle, audio_url: path, duration_secs: durationSecs });
-
-  if (dbError) { await alert(`Could not save clip: ${dbError.message}`); return; }
-
+  const { error } = await uploadClip(blob, { title: clipTitle(), durationSecs });
+  if (error) { await alert(error); return; }
   renderLibrary();
 }
 
@@ -996,18 +991,15 @@ async function playClip(clip, row) {
   clipPlayingId = clip.id;
   playBtn.innerHTML = '&#9203;'; // hourglass while fetching URL
 
-  const { data, error } = await supabase.storage
-    .from('user-clips')
-    .createSignedUrl(clip.audio_url, 3600);
-
-  if (error || !data?.signedUrl) {
+  const signedUrl = await clipSignedUrl(clip);
+  if (!signedUrl) {
     playBtn.innerHTML = '&#9654;';
     await alert('Could not load audio.');
     return;
   }
 
   if (!clipAudio) clipAudio = new Audio();
-  clipAudio.src = data.signedUrl;
+  clipAudio.src = signedUrl;
   clipAudio.onended = () => {
     playBtn.innerHTML = '&#9654;';
     playBtn.classList.remove('playing');
@@ -1058,17 +1050,6 @@ function formatDuration(secs) {
   const mm = String(Math.floor(s / 60)).padStart(2, '0');
   const ss = String(s % 60).padStart(2, '0');
   return `${mm}:${ss}`;
-}
-
-function uploadErrMsg(err, bytes) {
-  const status = String(err?.statusCode ?? err?.status ?? '');
-  const msg = (err?.message ?? '').toLowerCase();
-  const isTooLarge = status === '413' || msg.includes('too large') || msg.includes('payload') || msg.includes('exceeded');
-  if (isTooLarge) {
-    const mb = (bytes / 1024 / 1024).toFixed(1);
-    return `Recording is too large to upload (${mb} MB). The limit is 50 MB — try a shorter clip.`;
-  }
-  return 'Upload failed — check your connection and try again.';
 }
 
 // ===== UTILS =====

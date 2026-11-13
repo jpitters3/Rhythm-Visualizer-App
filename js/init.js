@@ -42,6 +42,7 @@ import { initCoachingMode } from './coaching-mode.js';
 import { initCalProfiles } from './cal-profiles.js';
 import { initGames } from './games.js';
 import { initHandpanGames } from './handpan-games.js';
+import { initChordListen } from './chord-listen.js';
 import { initClients } from './clients.js';
 import { initPracticeReminders } from './practice-reminders.js';
 import { initAdmin } from './admin.js';
@@ -110,6 +111,7 @@ async function init() {
     initLibrary();
     initGames();
     initHandpanGames();
+    initChordListen();
     initClients();
     initPracticeReminders();
     initCourseMarketplace();

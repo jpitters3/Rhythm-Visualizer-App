@@ -74,6 +74,7 @@
   <link rel="stylesheet" href="./css/create-rhythm-game.css">
   <link rel="stylesheet" href="./css/chord-play-along.css">
   <link rel="stylesheet" href="./css/chord-sidepanel.css">
+  <link rel="stylesheet" href="./css/chord-listen.css">
   <link rel="stylesheet" href="./css/dashboard.css">
   <link rel="stylesheet" href="./css/onboarding-tour.css">
 
@@ -431,6 +432,10 @@
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><circle cx="12" cy="12" r="3"></circle><path d="M12 3v2M12 19v2M3 12h2M19 12h2"></path></svg>
               <span class="ctl-label">Free play</span>
             </button>
+            <a class="ctl-btn" href="#listen" data-closes-controls title="Chord listen: play chords, see the progression">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12h2M7 8v8M11 5v14M15 9v6M19 11v2"></path></svg>
+              <span class="ctl-label">Listen</span>
+            </a>
             <a class="ctl-btn" href="#games" data-closes-controls title="Handpan Games">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="7" width="18" height="11" rx="5"></rect><path d="M8 11v3M6.5 12.5h3"></path><circle cx="15.5" cy="12" r="0.8" fill="currentColor"></circle><circle cx="17.5" cy="14" r="0.8" fill="currentColor"></circle></svg>
               <span class="ctl-label">Games</span>
@@ -1102,6 +1107,8 @@
 
     <!-- Handpan Games hub (populated by js/handpan-games.js) -->
     <div id="view-games" class="route-view games-view"></div>
+    <!-- Chord listen (populated by js/chord-listen.js) -->
+    <div id="view-listen" class="route-view cl-view"></div>
 
     <!-- Clients, admin only (populated by js/clients.js) -->
     <div id="view-clients" class="route-view clients-view"></div>
@@ -1858,6 +1865,7 @@
 
       <section class="cs-builder">
         <div class="cs-label"><span>Song builder</span>
+          <a href="#listen" id="csListenLink" class="cs-link-btn">Listen to me play</a>
           <button type="button" id="csNewSongBtn" class="cs-link-btn">New song</button>
         </div>
         <input type="text" id="csSongTitle" class="cs-song-title" maxlength="60" placeholder="Song title (optional)">

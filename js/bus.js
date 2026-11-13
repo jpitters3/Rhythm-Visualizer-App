@@ -21,6 +21,9 @@ export const BUS_EVENT = {
   PATTERN_SAVED: 'pattern:saved',
   AUTOSAVE_TOGGLED: 'pattern:autosave-toggled',
   AUTOSAVE_FAILED: 'pattern:autosave-failed',
+  OPEN_LIBRARY_TAB: 'library:open-tab', // { tab: 'clips' | 'phrases' | … }
+  OPEN_CLIP_IN_LISTEN: 'listen:open-clip', // { clip } from Library → Clips
+  SCALE_APPLIED: 'scale:applied', // the active scale's notes changed (js/state.js setCurrentScale)
   CHALLENGE_CORRECTION: 'transcription:challenge-correction',
   SHOW_UPGRADE_MODAL: 'monetization:show-upgrade-modal',
   SHOW_CONGRATS_MODAL: 'monetization:show-congrats-modal',

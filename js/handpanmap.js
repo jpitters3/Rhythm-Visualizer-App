@@ -290,6 +290,30 @@ function getFlipButtons() {
   return document.querySelectorAll('#flipSideBtn, #flipSideBtnDesktop');
 }
 
+// The custom handpan in use, or null on a system scale
+export function getActiveCustomHandpan() {
+  const name = getSelectedScaleName() || '';
+  if (!name.startsWith('custom:')) return null;
+  const id = name.slice('custom:'.length);
+  return customHandpansCache.find(hp => String(hp.id) === id) || null;
+}
+
+// A note's recording changed (js/note-audio.js setNoteAudio): keep the cache and
+// the live scale's audio overrides in step, without rebuilding the whole pan
+export function updateCustomHandpanNoteMap(id, noteMap) {
+  const hp = customHandpansCache.find(h => String(h.id) === String(id));
+  if (hp) hp.note_map = noteMap;
+  if (getActiveCustomHandpan()?.id !== hp?.id) return;
+  const audioOverrides = {};
+  noteMap.forEach((tf) => {
+    if (!tf.audio_url) return;
+    const isDing = tf.assignedNumber === 'Ding' || tf.assignedNumber === 'D';
+    if (isDing) { audioOverrides.Ding = tf.audio_url; audioOverrides.D = tf.audio_url; }
+    else audioOverrides[tf.assignedNumber || `${tf.note}${tf.octave}`] = tf.audio_url;
+  });
+  setCurrentScale({ ...getScale(), audioOverrides });
+}
+
 function applyCustomHandpan(handpanData) {
   console.log('Applying custom handpan:', handpanData);
   mountedHandpanData = handpanData; // Store for flipping

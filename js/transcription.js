@@ -760,6 +760,44 @@ export async function loadCalibrationProfile() {
     return null;
 }
 
+// --- Taught sounds (Chord listen's "that was a G") ---
+// Kept in the scale's calibration map as taughtSounds: [{ label, freq }], so they
+// sync with it per user and scale. Several per note: a pan note can be heard at
+// its fundamental or an overtone depending on how it's struck.
+const TAUGHT_MATCH = 0.025; // about 0.4 semitone: never reaches the next note
+const TAUGHT_PER_NOTE = 4;
+
+function taughtSounds() {
+    const list = currentCalibratedFreqs.taughtSounds;
+    return Array.isArray(list) ? list : [];
+}
+
+export function matchTaughtSound(freq) {
+    let best = null;
+    for (const t of taughtSounds()) {
+        const diff = Math.abs(t.freq - freq) / t.freq;
+        if (diff < TAUGHT_MATCH && (!best || diff < best.diff)) best = { label: t.label, diff };
+    }
+    return best?.label || null;
+}
+
+export async function teachSound(label, freq) {
+    // The sound now means this note, whatever it meant before
+    const others = taughtSounds().filter(t => Math.abs(t.freq - freq) / t.freq >= TAUGHT_MATCH);
+    const mine = others.filter(t => t.label === label).slice(-(TAUGHT_PER_NOTE - 1));
+    currentCalibratedFreqs.taughtSounds = [...others.filter(t => t.label !== label), ...mine, { label, freq: Math.round(freq * 100) / 100 }];
+    await saveCalibrationProfile();
+}
+
+export async function forgetTaughtSounds(label = null) {
+    currentCalibratedFreqs.taughtSounds = label ? taughtSounds().filter(t => t.label !== label) : [];
+    await saveCalibrationProfile();
+}
+
+export function taughtSoundCount(label = null) {
+    return taughtSounds().filter(t => !label || t.label === label).length;
+}
+
 export function hasCalibrationForCurrentScale() {
     return Object.values(currentCalibratedFreqs).some(v => typeof v === 'number');
 }
@@ -1037,6 +1075,10 @@ function getNoteClarityThreshold(noteLabel) {
 export function findClosestScaleNote(freq) {
     const currentScale = getScale();
     if (!currentScale) return null;
+
+    // A sound the player taught us wins over the textbook pitch
+    const taught = matchTaughtSound(freq);
+    if (taught) return taught;
 
     // Use a tighter tolerance if we have a calibrated frequency
     const hasCal = hasCalibrationForCurrentScale();

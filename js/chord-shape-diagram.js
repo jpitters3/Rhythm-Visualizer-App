@@ -15,23 +15,26 @@ const FALLBACK_MAP = {
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const ARC_R = 46; // just inside the outline (r 48), like the pan's rim arcs
+// Named diagrams draw bottom notes as pucks outside the pan, their name inside,
+// like the Studio's perimeter view (the svg must allow overflow)
+const PUCK_R = 55;
 
 let layout = null;
 let layoutVersion = 0;
+const labelers = new WeakMap(); // svg -> noteKey => text, for diagrams that name their notes
 
 function noteRadius(p) {
   return p.r || (p.width ? p.width / 2 : 9);
 }
 
 // Same geometry as the pan's perimeter arcs (js/handpanmap.js buildPerimeterSvg):
-// x mirrored, since the bottom is seen from below
-function arcPath(p) {
+// x mirrored, since the bottom is seen from below. mid is in degrees.
+function arcPath({ mid, r }, R) {
   const toRad = d => d * Math.PI / 180;
-  const mid = Math.atan2(p.y - 50, (100 - p.x) - 50) * 180 / Math.PI;
-  const deg = 2 * Math.asin(Math.min(noteRadius(p) / ARC_R, 1)) * 180 / Math.PI;
+  const deg = 2 * Math.asin(Math.min(r / R, 1)) * 180 / Math.PI;
   const [a0, a1] = [mid - deg / 2, mid + deg / 2];
-  const pt = a => `${(50 + ARC_R * Math.cos(toRad(a))).toFixed(2)} ${(50 + ARC_R * Math.sin(toRad(a))).toFixed(2)}`;
-  return `M ${pt(a0)} A ${ARC_R} ${ARC_R} 0 ${deg > 180 ? 1 : 0} 1 ${pt(a1)}`;
+  const pt = a => `${(50 + R * Math.cos(toRad(a))).toFixed(2)} ${(50 + R * Math.sin(toRad(a))).toFixed(2)}`;
+  return `M ${pt(a0)} A ${R} ${R} 0 ${deg > 180 ? 1 : 0} 1 ${pt(a1)}`;
 }
 
 function buildLayout(map) {
@@ -40,7 +43,7 @@ function buildLayout(map) {
   for (const [note, p] of Object.entries(map || {})) {
     if (/^(T|S)_/.test(note) || p == null) continue;
     if (p.side === 'bottom') {
-      arcs.push({ note, d: arcPath(p) });
+      arcs.push({ note, mid: Math.atan2(p.y - 50, (100 - p.x) - 50) * 180 / Math.PI, r: noteRadius(p) });
     } else {
       const r = note === 'Ding' ? 12 : Math.min(10, Math.max(6, noteRadius(p)));
       dots.push({ note, x: p.x, y: p.y, r });
@@ -49,24 +52,58 @@ function buildLayout(map) {
   return { dots, arcs };
 }
 
+const layoutListeners = new Set();
+
 export function setChordShapeLayout(map) {
   layout = buildLayout(map);
   layoutVersion += 1;
+  layoutListeners.forEach(fn => fn());
+}
+
+// Called whenever the pan's layout changes (a new scale or handpan)
+export function onChordShapeLayout(fn) {
+  layoutListeners.add(fn);
 }
 
 function currentLayout() {
   return layout || buildLayout(FALLBACK_MAP);
 }
 
+function addLabel(svg, note, x, y, size, onArc) {
+  const text = labelers.get(svg)?.(note);
+  if (!text) return;
+  const el = document.createElementNS(SVG_NS, 'text');
+  el.setAttribute('class', onArc ? 'note-label note-label-arc' : 'note-label');
+  el.dataset.note = note;
+  el.setAttribute('x', x.toFixed(2));
+  el.setAttribute('y', y.toFixed(2));
+  el.setAttribute('font-size', size.toFixed(2));
+  el.setAttribute('text-anchor', 'middle');
+  el.setAttribute('dominant-baseline', 'central');
+  el.textContent = text;
+  svg.appendChild(el);
+}
+
+function addArc(svg, note, d, className) {
+  const arc = document.createElementNS(SVG_NS, 'path');
+  arc.setAttribute('class', className);
+  arc.dataset.note = note;
+  arc.setAttribute('d', d);
+  svg.appendChild(arc);
+}
+
 function drawNotes(svg) {
-  svg.querySelectorAll('.note-dot, .note-arc').forEach(el => el.remove());
+  svg.querySelectorAll('.note-dot, .note-arc, .note-puck-edge, .note-label').forEach(el => el.remove());
   const { dots, arcs } = currentLayout();
-  for (const { note, d } of arcs) {
-    const arc = document.createElementNS(SVG_NS, 'path');
-    arc.setAttribute('class', 'note-arc');
-    arc.dataset.note = note;
-    arc.setAttribute('d', d);
-    svg.appendChild(arc);
+  const pucks = labelers.has(svg);
+  for (const arc of arcs) {
+    if (pucks) {
+      const d = arcPath(arc, PUCK_R);
+      addArc(svg, arc.note, d, 'note-puck-edge'); // the puck's rim, under its body
+      addArc(svg, arc.note, d, 'note-arc note-puck');
+    } else {
+      addArc(svg, arc.note, arcPath(arc, ARC_R), 'note-arc');
+    }
   }
   for (const { note, x, y, r } of dots) {
     const dot = document.createElementNS(SVG_NS, 'circle');
@@ -76,6 +113,13 @@ function drawNotes(svg) {
     dot.setAttribute('cy', String(y));
     dot.setAttribute('r', String(r));
     svg.appendChild(dot);
+  }
+  if (pucks) {
+    const toRad = d => d * Math.PI / 180;
+    for (const { note, mid } of arcs) {
+      addLabel(svg, note, 50 + PUCK_R * Math.cos(toRad(mid)), 50 + PUCK_R * Math.sin(toRad(mid)), 3.8, true);
+    }
+    for (const { note, x, y, r } of dots) addLabel(svg, note, x, y, Math.min(5.2, r * 0.62), false);
   }
   svg.dataset.layoutVersion = String(layoutVersion);
 }
@@ -102,6 +146,13 @@ export function createChordShapeDiagramEl({ flat = false } = {}) {
   return svg;
 }
 
+// Names each note (labeler: noteKey => text, e.g. "C4"); null takes them off
+export function setChordShapeLabels(svgEl, labeler) {
+  if (labeler) labelers.set(svgEl, labeler);
+  else labelers.delete(svgEl);
+  drawNotes(svgEl);
+}
+
 export function updateChordShapeDiagram(svgEl, lbl) {
   if (!svgEl) return;
   // The handpan changed since this diagram was drawn: redraw its notes
@@ -113,7 +164,7 @@ export function updateChordShapeDiagram(svgEl, lbl) {
     if (key) active.add(key);
   }
 
-  svgEl.querySelectorAll('.note-dot, .note-arc').forEach((el) => {
+  svgEl.querySelectorAll('.note-dot, .note-arc, .note-puck-edge, .note-label').forEach((el) => {
     el.classList.toggle('active', active.has(el.dataset.note));
   });
 }

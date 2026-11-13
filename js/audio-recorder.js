@@ -16,9 +16,10 @@ let recordingStartTime = 0;
 /**
  * Starts recording audio from the microphone
  * @param {Function} onStop - Callback triggered when recording stops. Passed the resulting audio Blob.
+ * @param {{ stream?: MediaStream }} [options] - record this already-open mic stream (it's left open)
  * @returns {Promise<boolean>} True if successful, false if mic permission denied
  */
-export async function startRawAudioRecording(onStop) {
+export async function startRawAudioRecording(onStop, { stream: givenStream = null } = {}) {
   try {
     // Ensure the global AudioContext is initialized and wait a moment for Mac CoreAudio hardware lock to settle.
     // If we request the mic at the exact moment AudioContext starts, Mac hardware returns NotFoundError.
@@ -42,8 +43,11 @@ export async function startRawAudioRecording(onStop) {
     let stream;
     let isBorrowedStream = false;
 
-    // First try to reuse the existing transcription mic stream to avoid hardware conflicts
-    if (micStream && micStream.active) {
+    // Reuse an open mic stream where there is one, to avoid hardware conflicts
+    if (givenStream?.active) {
+      stream = givenStream;
+      isBorrowedStream = true;
+    } else if (micStream && micStream.active) {
       stream = micStream;
       isBorrowedStream = true;
     } else {

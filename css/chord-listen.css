@@ -1,0 +1,1134 @@
+/* Chord listen (route #listen, js/chord-listen.js) */
+
+.cl-view {
+  --cl-on: var(--accent);
+  --cl-pan-fill: #e7e4ee;
+  --cl-pan-stroke: #cfcadb;
+  --cl-field: #f7f6fb;
+  --cl-field-stroke: #c9c4d6;
+  --cl-card: var(--panel);
+  --cl-shadow: 0 10px 30px rgba(20, 16, 40, 0.08);
+  align-items: center;
+}
+
+body.dark .cl-view {
+  --cl-pan-fill: #24283c;
+  --cl-pan-stroke: #363c58;
+  --cl-field: #30364f;
+  --cl-field-stroke: #454c6c;
+  --cl-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+}
+
+body.accent-zen:not(.dark) .cl-view {
+  --cl-pan-fill: #e6e1d4;
+  --cl-pan-stroke: #d2cbb9;
+  --cl-field: #f6f3ec;
+  --cl-field-stroke: #c9c1ad;
+}
+
+.cl-container {
+  width: 100%;
+  max-width: 1120px;
+  padding: 32px 32px 64px;
+  animation: mwFadeUp 0.4s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+
+/* ---------- Header ---------- */
+.cl-head {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-areas: "back back" "titles modes";
+  align-items: end;
+  gap: 8px 16px;
+  margin-bottom: 28px;
+}
+
+.cl-back {
+  grid-area: back;
+  justify-self: start;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  opacity: 0.45;
+  background: none;
+  border: none;
+  padding: 0;
+  margin-bottom: 12px;
+  cursor: pointer;
+}
+
+.cl-back:hover { opacity: 0.8; }
+
+.cl-titles { grid-area: titles; min-width: 0; }
+
+.cl-eyebrow {
+  margin: 0 0 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--cl-on);
+}
+
+.cl-scale {
+  letter-spacing: 0.06em;
+  opacity: 0.7;
+}
+
+.cl-title {
+  margin: 0;
+  font-size: clamp(22px, 3.4vw, 34px);
+  font-weight: 800;
+  line-height: 1.15;
+  color: var(--text);
+}
+
+.cl-modes {
+  grid-area: modes;
+  display: inline-flex;
+  padding: 3px;
+  border-radius: 999px;
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+}
+
+.cl-mode {
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text);
+  opacity: 0.5;
+  transition: background 0.2s, color 0.2s, opacity 0.2s;
+}
+
+.cl-mode.active {
+  background: var(--cl-on);
+  color: #fff;
+  opacity: 1;
+}
+
+body.dark .cl-mode.active { color: #1a1a1a; }
+
+/* ---------- Layout ---------- */
+.cl-layout {
+  display: grid;
+  grid-template-columns: minmax(320px, 5fr) minmax(300px, 6fr);
+  gap: 28px;
+  align-items: start;
+}
+
+/* ---------- Stage ---------- */
+.cl-stage {
+  --level: 0;
+  position: sticky;
+  top: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 32px 24px 28px;
+  border-radius: 24px;
+  background: var(--cl-card);
+  border: 1px solid var(--panel-border);
+  box-shadow: var(--cl-shadow);
+}
+
+.cl-big-wrap {
+  position: relative;
+  width: min(300px, 68vw);
+  aspect-ratio: 1;
+  margin: 2% 0 0;
+}
+
+/* A pan with bottom notes: room for their pucks outside it, the ring around them */
+.cl-big-wrap:has(.note-puck) {
+  width: min(270px, 60vw);
+  margin: 13% 0 9%;
+}
+
+.cl-big-wrap:has(.note-puck) .cl-ring { inset: -15%; }
+
+.cl-ring {
+  position: absolute;
+  inset: -4%;
+  border-radius: 50%;
+  border: 2px solid var(--cl-on);
+  opacity: calc(0.1 + var(--level) * 0.6);
+  transform: scale(calc(0.97 + var(--level) * 0.08));
+  transition: transform 0.08s linear, opacity 0.08s linear;
+  pointer-events: none;
+}
+
+.cl-view[data-mode="idle"] .cl-ring { opacity: 0; }
+
+.cl-stage.cue .cl-ring { animation: clCue 0.45s ease-out; }
+.cl-stage.cue-double .cl-ring { animation: clCue 0.35s ease-out 2; }
+.cl-stage.beat .cl-big-wrap { animation: clBeat 0.3s ease-out; }
+
+@keyframes clCue {
+  0% { transform: scale(1); opacity: 0.9; border-width: 6px; }
+  100% { transform: scale(1.18); opacity: 0; border-width: 1px; }
+}
+
+@keyframes clBeat {
+  0% { transform: scale(1.025); }
+  100% { transform: scale(1); }
+}
+
+.cl-view .chord-shape-diagram.chord-shape-flat {
+  position: static;
+  inset: auto;
+  display: block;
+  opacity: 1;
+  pointer-events: none;
+}
+
+.cl-view .chord-shape-flat .pan-outline {
+  fill: var(--cl-pan-fill);
+  stroke: var(--cl-pan-stroke);
+  stroke-width: 2;
+  opacity: 1;
+}
+
+.cl-view .chord-shape-flat .note-dot {
+  fill: var(--cl-field);
+  stroke: var(--cl-field-stroke);
+  stroke-width: 1.5;
+  opacity: 1;
+  transition: fill 0.25s, stroke 0.25s;
+}
+
+.cl-view .chord-shape-flat .note-arc {
+  stroke: var(--cl-field-stroke);
+  opacity: 1;
+  transition: stroke 0.25s;
+}
+
+.cl-view .chord-shape-flat .note-dot.active {
+  fill: var(--cl-on);
+  stroke: var(--cl-on);
+}
+
+.cl-view .chord-shape-flat .note-arc.active { stroke: var(--cl-on); }
+
+.cl-big {
+  width: 100%;
+  height: 100%;
+}
+
+.cl-big .note-dot,
+.cl-big .note-arc {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.cl-big .note-dot.just-heard { animation: clHeard 0.35s ease-out; }
+
+@keyframes clHeard {
+  0% { transform: scale(1.35); }
+  100% { transform: scale(1); }
+}
+
+.cl-name {
+  margin: 20px 0 2px;
+  min-height: 1.2em;
+  font-size: clamp(30px, 5vw, 44px);
+  font-weight: 800;
+  line-height: 1.1;
+  color: var(--text);
+}
+
+.cl-stage:not(.has-chord) .cl-name {
+  font-size: 18px;
+  font-weight: 600;
+  opacity: 0.45;
+}
+
+.cl-notes {
+  margin: 0;
+  min-height: 1.3em;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--text);
+  opacity: 0.55;
+}
+
+.cl-hint {
+  margin: 14px 0 20px;
+  max-width: 34ch;
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--text);
+  opacity: 0.7;
+}
+
+.cl-controls {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+}
+
+.cl-mic {
+  height: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 22px;
+  border-radius: 999px;
+  border: none;
+  background: var(--cl-on);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.2s;
+}
+
+body.dark .cl-mic { color: #1a1a1a; }
+
+.cl-mic svg { width: 18px; height: 18px; }
+
+.cl-mic:hover { transform: translateY(-1px); }
+
+.cl-mic.on {
+  background: #d64545;
+  color: #fff;
+  box-shadow: 0 0 0 6px rgba(214, 69, 69, 0.18);
+}
+
+.cl-btn {
+  height: auto;
+  padding: 10px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--panel-border);
+  background: transparent;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, opacity 0.15s;
+}
+
+.cl-btn:hover:not(:disabled) { border-color: var(--cl-on); }
+
+.cl-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.cl-btn.cl-primary {
+  background: var(--cl-on);
+  border-color: var(--cl-on);
+  color: #fff;
+}
+
+body.dark .cl-btn.cl-primary { color: #1a1a1a; }
+
+.cl-view[data-mode="idle"] .cl-live { display: none; }
+
+/* ---------- Side: timing, progression, captured ---------- */
+.cl-side {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  min-width: 0;
+}
+
+.cl-timing {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1.4fr;
+  gap: 10px;
+}
+
+.cl-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: 84px;
+  padding: 12px;
+  border-radius: 18px;
+  background: var(--cl-card);
+  border: 1px solid var(--panel-border);
+}
+
+.cl-stat-val {
+  font-size: 28px;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.cl-stat-key {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text);
+  opacity: 0.5;
+}
+
+.cl-pulse {
+  display: flex;
+  gap: 8px;
+  height: 28px;
+  align-items: center;
+}
+
+.cl-pulse-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--cl-field-stroke);
+  transition: transform 0.12s, background 0.12s;
+}
+
+.cl-pulse-dot:first-child { width: 16px; height: 16px; }
+
+.cl-pulse-dot.on {
+  background: var(--cl-on);
+  transform: scale(1.25);
+}
+
+.cl-block {
+  padding: 18px;
+  border-radius: 20px;
+  background: var(--cl-card);
+  border: 1px solid var(--panel-border);
+}
+
+.cl-steps {
+  margin: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.cl-steps li {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--text);
+}
+
+.cl-steps li > span:last-child { opacity: 0.8; }
+
+.cl-step-n {
+  flex: 0 0 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--cl-on) 16%, transparent);
+  color: var(--cl-on);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.cl-label {
+  margin-bottom: 12px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text);
+  opacity: 0.55;
+}
+
+.cl-count:not(:empty)::before { content: "· "; }
+
+.cl-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 10px;
+}
+
+.cl-cards:empty { display: none; }
+
+.cl-empty {
+  margin: 0;
+  padding: 0;
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--text);
+  opacity: 0.55;
+}
+
+.cl-card.is-new { animation: clCardIn 0.35s cubic-bezier(0.22, 1, 0.36, 1) backwards; }
+
+@keyframes clCardIn {
+  from { opacity: 0; transform: translateY(8px) scale(0.96); }
+}
+
+.cl-card-play {
+  width: 100%;
+  height: auto; /* the global button height is 36px */
+  white-space: normal;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 8px;
+  border-radius: 16px;
+  border: 1px solid var(--panel-border);
+  background: var(--bg, transparent);
+  color: var(--text);
+  cursor: pointer;
+  transition: transform 0.15s, border-color 0.15s;
+}
+
+.cl-card-play:hover { transform: translateY(-2px); border-color: var(--cl-on); }
+
+.cl-card.is-playing .cl-card-play {
+  border-color: var(--cl-on);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--cl-on) 22%, transparent);
+}
+
+.cl-card-play .chord-shape-flat { width: 64px; height: 64px; }
+
+.cl-card-name {
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.cl-card-len {
+  font-size: 11px;
+  font-weight: 600;
+  opacity: 0.55;
+}
+
+.cl-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.cl-actions .cl-primary:first-of-type { margin-left: auto; }
+
+/* ---------- Mobile ---------- */
+@media (max-width: 900px) {
+  .cl-container { padding: 16px 16px 120px; }
+
+  .cl-head {
+    grid-template-areas: "back modes" "titles titles";
+    align-items: center;
+    margin-bottom: 18px;
+  }
+
+  .cl-back { margin-bottom: 0; }
+
+  .cl-layout { grid-template-columns: 1fr; gap: 16px; }
+
+  .cl-stage {
+    position: static;
+    padding: 24px 16px 20px;
+  }
+
+  .cl-big-wrap { width: min(260px, 66vw); }
+
+  .cl-big-wrap:has(.note-puck) { width: min(230px, 56vw); }
+
+  .cl-stat { min-height: 72px; padding: 10px 6px; }
+
+  .cl-stat-val { font-size: 24px; }
+
+  .cl-cards { grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); }
+
+  .cl-card-play .chord-shape-flat { width: 54px; height: 54px; }
+
+  .cl-controls { width: 100%; }
+
+  .cl-mic { flex: 1 1 100%; justify-content: center; }
+
+  .cl-controls .cl-btn { flex: 1 1 0; }
+
+  .cl-actions .cl-btn { flex: 1 1 40%; }
+
+  .cl-actions .cl-primary:first-of-type { margin-left: 0; }
+}
+
+/* ---------- Voice ---------- */
+.cl-slot {
+  margin: 18px 0 0;
+  min-height: 1.2em;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--cl-on);
+}
+
+.cl-slot + .cl-name { margin-top: 4px; }
+
+.cl-voice {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  width: 100%;
+  max-width: 420px;
+  margin-top: 16px;
+  padding: 10px 14px;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--cl-on) 8%, transparent);
+  text-align: left;
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity 0.2s, transform 0.2s;
+  pointer-events: none;
+}
+
+.cl-voice.show,
+.cl-voice.listening {
+  opacity: 1;
+  transform: none;
+}
+
+.cl-voice-dot {
+  flex: 0 0 8px;
+  height: 8px;
+  margin-top: 6px;
+  border-radius: 50%;
+  background: var(--cl-on);
+}
+
+.cl-voice.listening .cl-voice-dot { animation: clTalk 0.8s ease-in-out infinite; }
+
+.cl-voice[data-tone="warn"] .cl-voice-dot { background: #d68a2e; }
+
+.cl-voice[data-tone="ask"] .cl-voice-dot { background: #3aa0e2; }
+
+@keyframes clTalk {
+  50% { transform: scale(1.6); opacity: 0.5; }
+}
+
+.cl-voice-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  font-size: 14px;
+  line-height: 1.4;
+  color: var(--text);
+}
+
+.cl-voice-heard {
+  font-style: italic;
+  opacity: 0.6;
+}
+
+.cl-voice-heard:empty,
+.cl-voice-reply:empty { display: none; }
+
+.cl-voice-reply { font-weight: 600; }
+
+.cl-toggles {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.cl-voice-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: auto;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--panel-border);
+  background: transparent;
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 600;
+  opacity: 0.7;
+  cursor: pointer;
+}
+
+.cl-voice-btn svg { width: 15px; height: 15px; }
+
+.cl-voice-btn.on {
+  opacity: 1;
+  border-color: color-mix(in srgb, var(--cl-on) 50%, transparent);
+}
+
+.cl-voice-state {
+  font-weight: 800;
+  color: var(--cl-on);
+}
+
+.cl-voice-btn:not(.on) .cl-voice-state { color: inherit; }
+
+.cl-voice-btn[hidden] { display: none; }
+
+/* Numbered captured chords, so "the third chord" is easy to find */
+.cl-card { position: relative; }
+
+.cl-card-num {
+  position: absolute;
+  top: 6px;
+  left: 8px;
+  z-index: 1;
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--text);
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+.cl-card.is-editing .cl-card-play {
+  border-color: var(--cl-on);
+  border-style: dashed;
+  animation: clEditing 1.6s ease-in-out infinite;
+}
+
+.cl-card.is-editing .cl-card-num {
+  color: var(--cl-on);
+  opacity: 1;
+}
+
+@keyframes clEditing {
+  50% { box-shadow: 0 0 0 4px color-mix(in srgb, var(--cl-on) 18%, transparent); }
+}
+
+/* Note names on the big pan */
+.cl-view .chord-shape-flat .note-label {
+  fill: var(--text);
+  opacity: 0.6;
+  font-weight: 700;
+  pointer-events: none;
+  transition: fill 0.25s, opacity 0.25s;
+}
+
+.cl-view .chord-shape-flat .note-label.active {
+  fill: #fff;
+  opacity: 1;
+}
+
+body.dark .cl-view .chord-shape-flat .note-label.active { fill: #1a1a1a; }
+
+/* Bottom notes: pucks outside the pan with their names inside, as in the Studio */
+.cl-big { overflow: visible; }
+
+.cl-view .chord-shape-flat .note-puck-edge {
+  fill: none;
+  stroke: var(--cl-field-stroke);
+  stroke-width: 9.5;
+  stroke-linecap: round;
+  opacity: 1;
+}
+
+.cl-view .chord-shape-flat .note-arc.note-puck {
+  stroke: var(--cl-field);
+  stroke-width: 7.5;
+  stroke-linecap: round;
+}
+
+.cl-view .chord-shape-flat .note-arc.note-puck.active { stroke: var(--cl-on); }
+
+.cl-view .chord-shape-flat .note-puck-edge.active { stroke: var(--cl-on); }
+
+/* Edit button on captured chords (the card itself plays the chord) */
+.cl-card-edit {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  z-index: 1;
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid var(--panel-border);
+  background: var(--cl-card);
+  color: var(--text);
+  opacity: 0.7;
+  cursor: pointer;
+  transition: opacity 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.cl-card-edit svg { width: 13px; height: 13px; }
+
+.cl-card-edit:hover,
+.cl-card-edit:focus-visible {
+  opacity: 1;
+  border-color: var(--cl-on);
+  color: var(--cl-on);
+}
+
+.cl-card.is-editing .cl-card-edit { display: none; }
+
+/* Teaching a note */
+.cl-teach-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  max-width: 420px;
+  margin: -6px 0 16px;
+  padding: 10px 10px 10px 14px;
+  border-radius: 14px;
+  border: 1px dashed var(--cl-on);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  text-align: left;
+}
+
+.cl-teach-bar[hidden] { display: none; }
+
+.cl-teach-bar .cl-btn { padding: 6px 12px; font-size: 13px; }
+
+/* Tap a note: toggles it in the chord (or picks the note to teach) */
+.cl-view .chord-shape-flat.cl-big { pointer-events: auto; }
+
+.cl-big .note-dot,
+.cl-big .note-arc,
+.cl-big .note-label { cursor: pointer; }
+
+.cl-big .note-dot:hover { stroke: var(--cl-on); stroke-width: 2.5; }
+
+.cl-view[data-mode="live"] .chord-shape-flat.cl-big,
+.cl-view[data-mode="record"] .chord-shape-flat.cl-big { pointer-events: none; }
+
+.cl-beta {
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--cl-on) 18%, transparent);
+  color: var(--cl-on);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* Scale picker under the title */
+.cl-scale-pick {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 12px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid var(--panel-border);
+  background: var(--panel);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.cl-scale-pick:focus-within { border-color: var(--cl-on); }
+
+.cl-scale-pick svg {
+  width: 15px;
+  height: 15px;
+  color: var(--cl-on);
+  flex-shrink: 0;
+}
+
+.cl-scale-select {
+  appearance: none;
+  height: 34px;
+  max-width: 60vw;
+  padding: 0 18px 0 0;
+  border: none;
+  background: transparent url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23888' stroke-width='1.5'/%3E%3C/svg%3E") no-repeat right center / 10px 6px;
+  color: inherit;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  outline: none;
+}
+
+.cl-scale-select option { color: initial; }
+
+.cl-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* ---------- Record a flow ---------- */
+.cl-rec {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: auto;
+  padding: 10px 18px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, #d64545 45%, var(--panel-border));
+  background: transparent;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, transform 0.15s;
+}
+
+.cl-rec:hover { border-color: #d64545; transform: translateY(-1px); }
+
+.cl-rec[hidden] { display: none; }
+
+.cl-rec-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #d64545;
+}
+
+.cl-rec.recording {
+  background: #d64545;
+  border-color: #d64545;
+  color: #fff;
+  box-shadow: 0 0 0 6px rgba(214, 69, 69, 0.18);
+}
+
+.cl-rec.recording .cl-rec-dot {
+  background: #fff;
+  border-radius: 2px;
+}
+
+.cl-view[data-mode="record"] .cl-ring {
+  border-color: #d64545;
+  opacity: calc(0.25 + var(--level) * 0.6);
+}
+
+.cl-view[data-mode="record"] .cl-slot { color: #d64545; }
+
+.cl-view[data-mode="record"] .cl-name {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+}
+
+.cl-view[data-mode="record"] .cl-slot::before {
+  content: "";
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-right: 7px;
+  border-radius: 50%;
+  background: #d64545;
+  vertical-align: 1px;
+  animation: clTalk 1.2s ease-in-out infinite;
+}
+
+.cl-stage.rec-warn .cl-name { color: #d68a2e; }
+
+.cl-mode[data-m="record"] { display: none; }
+
+.cl-mode[data-m="record"].active {
+  display: inline-block;
+  background: #d64545;
+  color: #fff;
+}
+
+.cl-view[data-mode="record"] .cl-mode:not([data-m="record"]) { display: none; }
+
+/* Saved: what to do with the new clip */
+.cl-saved {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  max-width: 440px;
+  margin-top: 16px;
+  padding: 14px;
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--cl-on) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--cl-on) 30%, transparent);
+  text-align: left;
+  animation: clCardIn 0.35s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+
+.cl-saved[hidden] { display: none; }
+
+.cl-saved-text {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.cl-saved-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.cl-saved-actions .cl-btn { padding: 8px 14px; font-size: 13px; }
+
+.cl-saved-actions .cl-btn[hidden] { display: none; }
+
+/* ---------- A clip being built from ---------- */
+.cl-clip {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  margin-bottom: 20px;
+  padding: 10px 12px;
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--cl-on) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--cl-on) 25%, transparent);
+  text-align: left;
+}
+
+.cl-clip[hidden] { display: none; }
+
+.cl-clip-play {
+  flex: 0 0 44px;
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border-radius: 50%;
+  border: none;
+  background: var(--cl-on);
+  color: #fff;
+  cursor: pointer;
+}
+
+body.dark .cl-clip-play { color: #1a1a1a; }
+
+.cl-clip-play svg {
+  width: 20px;
+  height: 20px;
+  fill: currentColor;
+}
+
+.cl-clip-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cl-clip-title {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.cl-clip-seek {
+  width: 100%;
+  height: 4px;
+  margin: 4px 0;
+  accent-color: var(--cl-on);
+  cursor: pointer;
+}
+
+.cl-clip-time {
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+  opacity: 0.6;
+}
+
+.cl-clip-close {
+  flex: 0 0 28px;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  opacity: 0.5;
+  cursor: pointer;
+}
+
+.cl-clip-close:hover { opacity: 0.9; }
+
+.cl-transcribe { align-self: flex-start; }
+
+.cl-transcribe[hidden],
+.cl-mic[hidden],
+.cl-lock[hidden],
+.cl-live[hidden] { display: none; }
+
+@media (max-width: 900px) {
+  .cl-rec { flex: 1 1 100%; justify-content: center; }
+}
+
+/* ---------- Note sounds (a custom handpan's own recordings) ---------- */
+.cl-sounds-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  max-width: 440px;
+  margin: -6px 0 16px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px dashed var(--cl-on);
+  text-align: left;
+}
+
+.cl-sounds-bar[hidden] { display: none; }
+
+.cl-sounds-text {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--text);
+}
+
+.cl-sounds-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.cl-sounds-actions:empty { display: none; }
+
+.cl-sounds-actions .cl-btn { padding: 7px 13px; font-size: 13px; }
+
+.cl-sounds-btn[hidden] { display: none; }
+
+/* Notes still on the built-in sample: dashed, so the gaps stand out */
+.cl-view .chord-shape-flat .note-dot.cl-no-audio {
+  stroke: var(--cl-on);
+  stroke-dasharray: 2.2 1.6;
+  stroke-width: 1.4;
+}
+
+.cl-view .chord-shape-flat .note-puck-edge.cl-no-audio {
+  stroke: var(--cl-on);
+  stroke-dasharray: 2.2 1.6;
+}
+
+.cl-view .chord-shape-flat .note-dot.cl-take,
+.cl-view .chord-shape-flat .note-arc.cl-take {
+  fill: #d64545;
+  stroke: #d64545;
+  stroke-dasharray: none;
+  animation: clTakePulse 1s ease-in-out infinite;
+}
+
+.cl-view .chord-shape-flat .note-arc.note-puck.cl-take { fill: none; }
+
+.cl-view .chord-shape-flat .note-label.cl-take { fill: #fff; }
+
+@keyframes clTakePulse {
+  50% { opacity: 0.6; }
+}

@@ -1,4 +1,5 @@
 import { ADMIN_EMAILS } from './config.js';
+import { Bus, BUS_EVENT } from './bus.js';
 
 /**
  * Global State Management
@@ -113,6 +114,7 @@ export function getScale() { return currentScale; }
 export function setCurrentScale(scaleObj) {
   if (!scaleObj) return;
   currentScale = scaleObj;
+  Bus.emit(BUS_EVENT.SCALE_APPLIED, { name: selectedScaleName });
 }
 
 /**

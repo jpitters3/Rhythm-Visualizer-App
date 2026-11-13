@@ -300,6 +300,14 @@ async function loadCustomSample(key, storagePath) {
   samples[key] = await audioCtx.decodeAudioData(arrayBuffer);
 }
 
+// One note's sample again, e.g. after a new recording of it was saved
+export async function reloadLabelSample(label) {
+  const { key, storagePath } = resolveSampleKey(label);
+  if (!key) return;
+  if (storagePath) await loadCustomSample(key, storagePath);
+  else await loadSample(key, `${BASE_PATH}assets/audio/${noteToFile(key)}`);
+}
+
 // Samples are pitch-named and scale-agnostic (e.g. "Bb3.wav"), but only the
 // currently active scale's pitches get preloaded at startup — so anything
 // wanting to play a pitch outside that (e.g. a Mini-Course preview playing
