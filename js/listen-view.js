@@ -86,7 +86,11 @@ export function renderCurrent() {
   els.stage.classList.toggle('has-chord', !!chord);
 }
 
+// Rebuilt only when the chords or the one being edited change (each card draws a pan)
 export function renderCaptured() {
+  const key = JSON.stringify([session.editingIndex, session.captured.map(e => e.labels)]);
+  if (els.captured.dataset.key === key) return;
+  els.captured.dataset.key = key;
   const shown = els.captured.childElementCount;
   els.captured.replaceChildren(...session.captured.map((entry, i) => chordCard(entry, {
     isNew: i >= shown, number: i + 1, editing: i === session.editingIndex,
@@ -112,14 +116,33 @@ export function renderLive() {
   els.bpm.textContent = session.live.bpm ? String(session.live.bpm) : '–';
   els.meter.textContent = session.live.perBar ? `${session.live.perBar}/4` : '–';
   renderPulseDots();
-  const shown = els.progression.childElementCount;
-  const cards = session.live.changes.map((c, i) => chordCard(session.live.candidates[c.idx], {
-    bars: lengthText(beats[i], session.live.perBar),
-    playing: state.mode === 'live' && i === session.live.changes.length - 1,
-    isNew: i >= shown,
-  }));
-  els.progression.replaceChildren(...cards);
-  setVisible(els.progressionEmpty, !cards.length);
+  // Heard notes arrive many times a second: add cards for new chord changes and
+  // update the rest in place. Undo or clear (fewer changes) starts again.
+  const { changes } = session.live;
+  if (els.progression.childElementCount > changes.length) els.progression.replaceChildren();
+  const cards = els.progression.children;
+  changes.forEach((c, i) => {
+    const bars = lengthText(beats[i], session.live.perBar);
+    let card = cards[i];
+    if (!card) {
+      card = chordCard(session.live.candidates[c.idx], { isNew: true });
+      els.progression.appendChild(card);
+    }
+    setCardLength(card, bars);
+    card.classList.toggle('is-playing', state.mode === 'live' && i === changes.length - 1);
+  });
+  setVisible(els.progressionEmpty, !changes.length);
+}
+
+function setCardLength(card, text) {
+  let len = card.querySelector('.cl-card-len');
+  if (!text) { len?.remove(); return; }
+  if (!len) {
+    len = document.createElement('span');
+    len.className = 'cl-card-len';
+    card.querySelector('.cl-card-play').appendChild(len);
+  }
+  if (len.textContent !== text) len.textContent = text;
 }
 
 function renderPulseDots() {

@@ -181,9 +181,15 @@ export function onCue(at) {
   }
 }
 
+let shownLevel = '';
+
 export function onLevel(rms) {
   each('onLevel', rms);
-  els.stage.style.setProperty('--level', Math.min(1, rms * 12).toFixed(3));
+  // About 60 times a second: only restyle when the ring would visibly change
+  const level = Math.min(1, rms * 12).toFixed(2);
+  if (level === shownLevel) return;
+  shownLevel = level;
+  els.stage.style.setProperty('--level', level);
 }
 
 export async function startMic() {
