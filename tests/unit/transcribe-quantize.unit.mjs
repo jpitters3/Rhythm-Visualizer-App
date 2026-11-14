@@ -59,6 +59,8 @@ test('playing consistently late (or a laggy mic) is taken out', () => {
   assert.ok(Math.abs(r.offset - 0.15) < 0.03);
   assert.equal(show(r), '1 2 3 4 5 . 6 .');
   assert.ok(Math.abs(findOffset([0.1, 1.1, 2.12, 3.08]) - 0.1) < 0.02);
+  // A known feel is kept as given (edited notes mustn't change it)
+  assert.equal(run([[0, '1'], [1, '2'], [2, '3']], { late }, { offset: 0.15 }).offset, 0.15);
 });
 
 test('a forced grid places everything on it', () => {
@@ -73,4 +75,5 @@ test('several bars: measures fill out, notes before the "1" are left out', () =>
   assert.equal(r.dropped, 1);
   assert.equal(r.measures, 2);
   assert.equal(show(r), '1 . . . 2 . . 3');
+  assert.deepEqual(r.noteSteps, [null, 0, 4, 7]); // which step each note landed on
 });

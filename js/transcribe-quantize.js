@@ -30,13 +30,15 @@ function gridForBeat(fracs, tolerance) {
 
 // notes: [{ label, at }] in ms on the same clock as downbeat (the count-in's "1").
 // grid: 'auto' or a steps-per-beat from GRIDS.
-// Returns { subdivision, measures, steps, offset, beatGrids, rounded, dropped }:
-// steps is one entry per grid step: '' or a label or [labels] (notes together).
-export function quantize(notes, { bpm, beatsPerBar, downbeat, grid = 'auto' }) {
+// Returns { subdivision, measures, steps, noteSteps, offset, beatGrids, rounded, dropped }:
+// steps is one entry per grid step: '' or a label or [labels] (notes together);
+// noteSteps[i] is the step notes[i] landed on.
+// offset: the player's feel in beats, if already known (edits mustn't change it)
+export function quantize(notes, { bpm, beatsPerBar, downbeat, grid = 'auto', offset: knownOffset = null }) {
   const beatMs = 60000 / bpm;
   const tolerance = Math.min(MAX_TOLERANCE, TOLERANCE_MS / beatMs);
-  const raw = notes.map(n => ({ label: n.label, x: (n.at - downbeat) / beatMs }));
-  const offset = findOffset(raw.map(n => n.x));
+  const raw = notes.map((n, i) => ({ i, label: n.label, x: (n.at - downbeat) / beatMs }));
+  const offset = knownOffset ?? findOffset(raw.map(n => n.x));
   const placed = raw.map(n => ({ ...n, x: n.x - offset }));
   // Before the count-in's "1": a pickup we don't place yet
   const kept = placed.filter(n => n.x >= -EARLY_SHARE);
@@ -69,9 +71,11 @@ export function quantize(notes, { bpm, beatsPerBar, downbeat, grid = 'auto' }) {
 
   // Onto steps; notes landing together become one chord step
   const steps = [];
+  const noteSteps = notes.map(() => null); // each note's step (null: left out)
   let rounded = 0;
   kept.forEach((n) => {
     const step = Math.max(0, Math.round(n.x * subdivision));
+    noteSteps[n.i] = step;
     if (Math.abs(n.x * subdivision - step) / subdivision > tolerance) rounded++;
     const was = steps[step];
     if (!was) steps[step] = n.label;
@@ -81,5 +85,5 @@ export function quantize(notes, { bpm, beatsPerBar, downbeat, grid = 'auto' }) {
   const stepsPerBar = beatsPerBar * subdivision;
   const measures = Math.max(1, Math.ceil(steps.length / stepsPerBar));
   const filled = Array.from({ length: measures * stepsPerBar }, (_, i) => steps[i] ?? '');
-  return { subdivision, measures, steps: filled, offset, beatGrids, rounded, dropped };
+  return { subdivision, measures, steps: filled, noteSteps, offset, beatGrids, rounded, dropped };
 }

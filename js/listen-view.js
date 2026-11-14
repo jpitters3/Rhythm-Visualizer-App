@@ -303,6 +303,10 @@ export function build() {
               <input type="checkbox" class="cl-tx-click" checked>
               <span>Count-in click</span>
             </label>
+            <label class="cl-tx-field cl-tx-click-field" title="The click keeps going while you play. Best with headphones, so the mic doesn't hear it.">
+              <input type="checkbox" class="cl-tx-metro">
+              <span>Metronome (headphones)</span>
+            </label>
           </div>
           <div class="cl-tx-controls">
             <button type="button" class="cl-tx-go" aria-pressed="false">
@@ -381,6 +385,7 @@ export function build() {
             <div class="cl-label">Transcription <span class="cl-tx-count"></span></div>
             <div class="cl-tx-strip"><div class="cl-tx-lane"><span class="cl-tx-head" aria-hidden="true"></span></div></div>
             <div class="cl-tx-result" hidden>
+              <div class="cl-tx-tools">
               <div class="cl-tx-grids" role="group" aria-label="Grid">
                 <button type="button" class="cl-tx-grid" data-grid="auto">Auto</button>
                 <button type="button" class="cl-tx-grid" data-grid="1" title="Quarter notes">♩</button>
@@ -388,9 +393,25 @@ export function build() {
                 <button type="button" class="cl-tx-grid" data-grid="3" title="Triplets">³</button>
                 <button type="button" class="cl-tx-grid" data-grid="4" title="16th notes">♬</button>
               </div>
+              <div class="cl-tx-grids cl-tx-shift" role="group" aria-label="Move every note">
+                <button type="button" class="cl-tx-grid cl-tx-nudge" data-shift="-1" title="Move every note one step earlier">◀</button>
+                <span class="cl-tx-shift-text"></span>
+                <button type="button" class="cl-tx-grid cl-tx-nudge" data-shift="1" title="Move every note one step later">▶</button>
+              </div>
+              </div>
               <p class="cl-tx-summary"></p>
               <div class="cl-tx-phrase"></div>
+              <div class="cl-tx-edit" role="toolbar" aria-label="Edit the notes">
+                <span class="cl-tx-sel"></span>
+                <button type="button" class="cl-btn cl-tx-ed" data-ed="copy" title="Copy (⌘/Ctrl C)">Copy</button>
+                <button type="button" class="cl-btn cl-tx-ed" data-ed="cut" title="Cut (⌘/Ctrl X)">Cut</button>
+                <button type="button" class="cl-btn cl-tx-ed" data-ed="paste" title="Paste at the first selected cell (⌘/Ctrl V)">Paste</button>
+                <button type="button" class="cl-btn cl-tx-ed" data-ed="delete" title="Delete (⌫)">Delete</button>
+                <button type="button" class="cl-btn cl-tx-ed" data-ed="undo" title="Undo (⌘/Ctrl Z)">Undo</button>
+                <button type="button" class="cl-btn cl-tx-ed" data-ed="clear" title="Clear the selection (Esc)" aria-label="Clear the selection">✕</button>
+              </div>
               <div class="cl-tx-actions">
+                <button type="button" class="cl-btn cl-tx-play" aria-pressed="false">▶ Play</button>
                 <button type="button" class="cl-btn cl-tx-again">Start again</button>
                 <button type="button" class="cl-btn cl-primary cl-tx-send">Send to Studio</button>
               </div>
@@ -439,11 +460,11 @@ export function build() {
     back: q('.cl-back'), clipClose: q('.cl-clip-close'), savedBuild: q('.cl-saved-build'), savedOpen: q('.cl-saved-open'),
     teachCancel: q('.cl-teach-cancel'), scaleSelect: q('.cl-scale-select'),
     modeTranscribe: q('[data-m="transcribe"]'),
-    txSetup: q('.cl-tx-setup'), txBpm: q('.cl-tx-bpm-input'), txBeats: q('.cl-tx-beats'), txClick: q('.cl-tx-click'),
+    txSetup: q('.cl-tx-setup'), txBpm: q('.cl-tx-bpm-input'), txBeats: q('.cl-tx-beats'), txClick: q('.cl-tx-click'), txMetro: q('.cl-tx-metro'),
     txTap: q('.cl-tx-tap'), txGo: q('.cl-tx-go'), txGoLabel: q('.cl-tx-go-label'),
     txBlock: q('.cl-tx-block'), txCount: q('.cl-tx-count'), txStrip: q('.cl-tx-strip'), txLane: q('.cl-tx-lane'),
     txHead: q('.cl-tx-head'), txResult: q('.cl-tx-result'), txSummary: q('.cl-tx-summary'), txPhrase: q('.cl-tx-phrase'),
-    txEmpty: q('.cl-tx-empty'), txSend: q('.cl-tx-send'), txAgain: q('.cl-tx-again'),
+    txEmpty: q('.cl-tx-empty'), txSend: q('.cl-tx-send'), txAgain: q('.cl-tx-again'), txPlay: q('.cl-tx-play'), txShiftText: q('.cl-tx-shift-text'), txEdit: q('.cl-tx-edit'), txSel: q('.cl-tx-sel'),
   });
   els.bigDiagram = diagram([], 'cl-big');
   q('.cl-big-wrap').prepend(els.bigDiagram);

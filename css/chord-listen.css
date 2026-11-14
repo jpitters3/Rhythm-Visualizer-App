@@ -1238,7 +1238,8 @@ body.dark .cl-clip-play { color: #1a1a1a; }
   cursor: pointer;
 }
 
-.cl-tx-click { accent-color: var(--cl-on); }
+.cl-tx-click,
+.cl-tx-metro { accent-color: var(--cl-on); }
 
 .cl-tx-controls {
   display: flex;
@@ -1373,6 +1374,25 @@ body.dark .cl-tx-note { color: #1a1a1a; }
   opacity: 0.6;
 }
 
+.cl-tx-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.cl-tx-shift { align-items: center; }
+
+.cl-tx-nudge { opacity: 1; }
+
+.cl-tx-shift-text {
+  min-width: 96px;
+  font-size: 12px;
+  font-weight: 600;
+  text-align: center;
+  color: var(--text);
+  opacity: 0.75;
+}
+
 .cl-tx-grid.active {
   background: var(--cl-on);
   color: #fff;
@@ -1445,6 +1465,91 @@ body.dark .cl-tx-grid.active { color: #1a1a1a; }
 }
 
 body.dark .cl-tx-cell.has-note { color: #1a1a1a; }
+
+/* Editing (js/listen-tgrid.js): taps, holds and drags select and move, no scroll or text menu */
+.cl-tx-cell {
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  cursor: pointer;
+}
+
+.cl-tx-cell.has-note { cursor: grab; }
+
+.cl-tx-cell.selected {
+  outline: 3px solid var(--cl-on);
+  outline-offset: 2px;
+}
+
+.cl-tx-cell.selected:not(.has-note) { background: color-mix(in srgb, var(--cl-on) 22%, var(--cl-field)); }
+
+/* Moving: the cells left fade, the cells landed on are ringed */
+.cl-tx-cell.dragging { opacity: 0.35; }
+
+.cl-tx-cell.drop {
+  outline: 2px dashed var(--cl-on);
+  outline-offset: 1px;
+}
+
+.cl-tx-ghost {
+  position: fixed;
+  left: var(--x);
+  top: var(--y);
+  width: var(--size);
+  height: var(--size);
+  transform: translate(-50%, -50%) scale(1.15);
+  pointer-events: none;
+  z-index: 1000;
+  cursor: grabbing;
+  box-shadow: 0 4px 12px rgb(0 0 0 / 0.25);
+}
+
+.cl-tx-ghost[data-count]::after {
+  content: attr(data-count);
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  min-width: 16px;
+  padding: 1px 4px;
+  border-radius: 999px;
+  background: var(--text);
+  color: #fff;
+  font-size: 10px;
+  text-align: center;
+}
+
+body.dark .cl-tx-ghost[data-count]::after { color: #1a1a1a; }
+
+.cl-tx-edit {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.cl-tx-sel {
+  margin-right: auto;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+  opacity: 0.7;
+}
+
+.cl-tx-ed {
+  padding: 6px 12px;
+  font-size: 13px;
+}
+
+.cl-tx-ed:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.cl-tx-cell.playing {
+  outline: 2px solid var(--text);
+  outline-offset: 1px;
+}
 
 .cl-tx-actions {
   display: flex;

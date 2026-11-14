@@ -314,6 +314,8 @@ test.describe('Transcribe', () => {
     await expect(page.locator('.cl-multi-btn')).toHaveAttribute('aria-pressed', 'true'); // on by default here
     await page.locator('.cl-tx-bpm-input').fill('80');
     await page.locator('.cl-tx-bpm-input').dispatchEvent('change');
+    await page.locator('.cl-tx-metro').check(); // the click carries on while playing
+    expect(await page.evaluate(() => JSON.parse(localStorage.getItem('gp_listenTranscribe')).metro)).toBe(true);
     // Start exactly 2 s into the recording, where its count-in silence begins
     await page.evaluate(() => new Promise((resolve) => {
       setTimeout(() => {
@@ -338,9 +340,79 @@ test.describe('Transcribe', () => {
     await expect(bar(1).nth(6)).toContainText('F4');
     await expect(bar(1).nth(6)).toContainText('A4');
 
+    // Every note moved one step later, then back
+    const shiftText = page.locator('.cl-tx-shift-text');
+    await expect(shiftText).toHaveText('Move all notes');
+    await page.locator('[data-shift="1"]').click();
+    await expect(shiftText).toHaveText('⅓ beat later');
+    await expect(bar(0).nth(1)).toHaveText('D3');
+    await page.locator('[data-shift="-1"]').click();
+    await expect(shiftText).toHaveText('Move all notes');
+    await expect(bar(0).nth(0)).toHaveText('D3');
+
+    // Dragging a note to another cell, then back
+    const dragCell = async (from, to) => {
+      const a = await from.boundingBox();
+      const b = await to.boundingBox();
+      await page.mouse.move(a.x + a.width / 2, a.y + a.height / 2);
+      await page.mouse.down();
+      await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2, { steps: 8 });
+      await page.mouse.up();
+    };
+    await dragCell(bar(0).nth(0), bar(0).nth(2));
+    await expect(bar(0).nth(2)).toHaveText('D3');
+    await expect(bar(0).nth(0)).toHaveText('');
+    await dragCell(bar(0).nth(2), bar(0).nth(0));
+    const bar0 = ['D3', '', '', 'A3', '', '', 'C4', '', '', 'D4', '', ''];
+    await expect(bar(0)).toHaveText(bar0);
+
+    // Selecting: a click, then Shift-click for a range
+    const selText = page.locator('.cl-tx-sel');
+    await expect(selText).toHaveText('1 cell · 1 note'); // a moved note stays selected
+    await bar(0).nth(0).click(); // again: none
+    await expect(selText).toHaveText('Tap a note to select it');
+    await bar(0).nth(0).click();
+    await expect(selText).toHaveText('1 cell · 1 note');
+    await bar(0).nth(6).click({ modifiers: ['Shift'] });
+    await expect(selText).toHaveText('7 cells · 3 notes');
+    // Copy, paste at the last cell (the phrase grows a bar), delete it again
+    await page.locator('[data-ed="copy"]').click();
+    await bar(1).nth(11).click();
+    await page.locator('[data-ed="paste"]').click();
+    await expect(page.locator('.cl-tx-bar')).toHaveCount(3);
+    await expect(bar(1).nth(11)).toHaveText('D3');
+    await expect(bar(2).nth(2)).toHaveText('A3');
+    await expect(bar(2).nth(5)).toHaveText('C4');
+    await page.keyboard.press('Backspace'); // the pasted notes are still selected
+    await expect(page.locator('.cl-tx-bar')).toHaveCount(2);
+    // ⌘/Ctrl-click adds a cell; Delete, then Undo
+    await bar(0).nth(3).click();
+    await bar(0).nth(9).click({ modifiers: ['ControlOrMeta'] });
+    await expect(selText).toHaveText('2 cells · 2 notes');
+    await page.locator('[data-ed="delete"]').click();
+    await expect(bar(0).nth(3)).toHaveText('');
+    await expect(bar(0).nth(9)).toHaveText('');
+    await page.locator('[data-ed="undo"]').click();
+    await expect(bar(0)).toHaveText(bar0);
+    // A drag from an empty cell selects a range; Escape clears it
+    await dragCell(bar(0).nth(1), bar(0).nth(5));
+    await expect(selText).toHaveText('5 cells · 1 note');
+    await page.keyboard.press('Escape');
+    await expect(selText).toHaveText('Tap a note to select it');
+
+    // Played back right here: each cell in turn, then it stops on its own
+    const play = page.locator('.cl-tx-play');
+    await play.click();
+    await expect(play).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.locator('.cl-tx-cell.playing')).toHaveCount(1);
+    await expect(bar(1).nth(0)).toHaveClass(/playing/, { timeout: 8000 });
+    await expect(play).toHaveAttribute('aria-pressed', 'false', { timeout: 8000 });
+    await expect(page.locator('.cl-tx-cell.playing')).toHaveCount(0);
+
     await page.locator('.cl-tx-send').click();
     await expect(page).toHaveURL(/#studio/);
-    await expect(page.locator('.measure-row')).toHaveCount(2, { timeout: 10000 });
+    // 2 bars × 12 triplet steps (a phone's Studio shows them as quarter-note bars)
+    await expect(page.locator('.measure-row .grid > *')).toHaveCount(24, { timeout: 10000 });
   });
 });
 

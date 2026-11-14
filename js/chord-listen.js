@@ -8,7 +8,8 @@
 // come back here later and be listened to like the mic, to build its notation.
 import { clipsFeature, closeClip, openClip, seekClip, startRecord, stopRecord, toggleClipPlay, transcribeNotes } from './listen-clips.js';
 import { setMultiNote } from './listen-engine.js';
-import { applyNoteChoice, closeTranscribe, loadTranscribeSettings, openTranscribe, sendTranscription, setBeatsPerBar, setCountInClick, setGrid, setTempo, setTranscribeMulti, startTranscribing, stopTranscribing, tapTempo, transcribeFeature, transcribing } from './listen-transcribe.js';
+import { applyNoteChoice, closeTranscribe, loadTranscribeSettings, nudgeNotes, openTranscribe, sendTranscription, setBeatsPerBar, setCountInClick, setGrid, setMetronome, setTempo, setTranscribeMulti, startTranscribing, stopTranscribing, tapTempo, togglePlayback, transcribeFeature, transcribing } from './listen-transcribe.js';
+import { tgridFeature, wireTgrid } from './listen-tgrid.js';
 import { labelName, scaleLabel } from './listen-notes.js';
 import { change, clearAll, editChordAt, lockChord, playChord, sendToSongBuilder, sendToStudio, startLive, startMic, stopLive, stopMic, undo } from './listen-play.js';
 import { onTakeAction, ownHandpan, setSoundsOn, soundsFeature, startTake } from './listen-sounds.js';
@@ -121,7 +122,11 @@ function wire() {
   els.txTap.addEventListener('click', tapTempo);
   els.txBeats.addEventListener('change', () => setBeatsPerBar(els.txBeats.value));
   els.txClick.addEventListener('change', () => setCountInClick(els.txClick.checked));
+  els.txMetro.addEventListener('change', () => setMetronome(els.txMetro.checked));
+  els.txPlay.addEventListener('click', togglePlayback);
   els.txResult.querySelectorAll('[data-grid]').forEach(b => b.addEventListener('click', () => setGrid(b.dataset.grid)));
+  els.txResult.querySelectorAll('[data-shift]').forEach(b => b.addEventListener('click', () => nudgeNotes(Number(b.dataset.shift))));
+  wireTgrid();
 
   els.teachBtn.addEventListener('click', () => {
     if (teaching()) { stopTeach(); return; }
@@ -213,7 +218,7 @@ function onEnter() {
 export function initChordListen() {
   els.view = document.getElementById('view-listen');
   if (!els.view) return;
-  features.push(voiceFeature, teachFeature, soundsFeature, clipsFeature, transcribeFeature);
+  features.push(voiceFeature, teachFeature, soundsFeature, clipsFeature, transcribeFeature, tgridFeature);
   loadTranscribeSettings();
   cardActions.play = playChord;
   cardActions.edit = (i) => {
