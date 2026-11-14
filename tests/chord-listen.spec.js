@@ -423,6 +423,49 @@ async function signIn(page, user) {
   await loginAsTestUser(page, user);
 }
 
+test.describe('Transcribe, signed in', () => {
+  withRecording('melody', { bpm: 80, startMs: 2000 });
+
+  test('Send to Studio saves a new phrase, never over the open one', async ({ listen: page }) => {
+    const user = await createTestUser();
+    try {
+      const keep = { version: 'v1.0', beats: 4, subdivision: 2, bpm: 90, steps: 8, measures: 1, labels: ['1', '', '', '', '', '', '', ''], hands: Array(8).fill(null) };
+      const { error } = await supabaseAdmin.from('patterns').insert({ user_id: user.user.id, name: 'Keep', data: keep, source: 'manual' });
+      if (error) throw error;
+      await page.addInitScript(() => localStorage.setItem('groovepan_last_pattern', 'Keep'));
+      await signIn(page, user);
+      await expect(page.locator('#patternSelect')).toHaveValue('Keep', { timeout: 15000 });
+
+      await openListen(page);
+      await startListening(page);
+      await page.locator('[data-m="transcribe"]').click();
+      await page.locator('.cl-tx-go').click();
+      await expect(page.locator('.cl-slot')).toHaveText(/Bar 2/, { timeout: 20000 });
+      await page.waitForTimeout(4000);
+      await page.locator('.cl-tx-go').click();
+      await expect(page.locator('.cl-tx-send')).toBeVisible();
+      await page.locator('.cl-tx-send').click();
+      await expect(page).toHaveURL(/#studio/);
+      await expect(page.locator('.measure-row').first()).toBeVisible();
+      await page.waitForTimeout(1000);
+      // A Studio edit, then past the auto-save delay: it goes to the new phrase
+      await page.locator('.measure-row .cell').first().click();
+      await page.keyboard.press('7');
+      await page.waitForTimeout(3500);
+
+      const { data: rows } = await supabaseAdmin.from('patterns').select('name, data').eq('user_id', user.user.id);
+      expect(rows.find(r => r.name === 'Keep').data).toEqual(keep); // untouched
+      const sent = rows.filter(r => r.name !== 'Keep');
+      expect(sent).toHaveLength(1);
+      expect(sent[0].name).toMatch(/^Transcribed /);
+      await expect(page.locator('#patternSelect')).toHaveValue(sent[0].name);
+      expect(sent[0].data.labels[0]).toBe('7'); // the edit was auto-saved there
+    } finally {
+      await deleteTestUser(user.user.id);
+    }
+  });
+});
+
 test.describe('record a flow as a Clip', () => {
   withRecording('session');
 

@@ -23,6 +23,8 @@ import { isAdminUser, currentUser } from './state.js';
 import { setChordHighlight, getPitchPositionMap, isChordTestMode } from './handpanmap.js';
 import { annotatePlayability } from './chord-playability.js';
 import { HistoryManager } from './history.js';
+import { releaseOpenPhrase, saveAsNewPhrase } from './controls.js';
+import { guardBeforeReplacingGrid } from './lesson-settings.js';
 
 // ── State ──────────────────────────────────────────────────
 let rhythms = [];
@@ -738,8 +740,11 @@ Rules:
 }
 
 // ── Open in Studio ─────────────────────────────────────────
+// Always a new phrase, never the one that was open
 async function openInStudio() {
   if (!selectedPatternJson) return;
+  if (!await guardBeforeReplacingGrid('You have unsaved changes. Discard them and open this in the Studio?')) return;
+  await releaseOpenPhrase();
 
   const btn = document.getElementById('methodStudioBtn');
   const originalText = btn?.textContent ?? 'Open in Studio →';
@@ -768,6 +773,7 @@ async function openInStudio() {
     }
 
     navigate('studio');
+    await saveAsNewPhrase(selectedRhythm?.name || 'Method phrase');
   } finally {
     if (btn) { btn.disabled = false; btn.textContent = originalText; }
   }

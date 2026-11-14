@@ -9,7 +9,7 @@ import { startMic, stopLive } from './listen-play.js';
 import { each, listening, prefs, session, setMode, setTask, state } from './listen-state.js';
 import { els, renderMode, reply } from './listen-view.js';
 import { updateChordShapeDiagram } from './chord-shape-diagram.js';
-import { updateCurrentPhraseName } from './controls.js';
+import { releaseOpenPhrase, saveAsNewPhrase } from './controls.js';
 import { setVisible } from './dom.js';
 import { guardBeforeReplacingGrid } from './lesson-settings.js';
 import { getAudioCtx, metroClick, playNoteByLabel, unlockAudio } from './noteplayer.js';
@@ -481,6 +481,7 @@ export async function sendTranscription() {
   if (!r) return;
   stopPlayback();
   if (!await guardBeforeReplacingGrid('You have unsaved changes. Discard them and replace the grid with this transcription?')) return;
+  await releaseOpenPhrase(); // a new phrase, never the one that was open
   const labels = r.steps.map(s => (Array.isArray(s) ? s.map(studioLabel) : s ? studioLabel(s) : ''));
   navigate('studio');
   await applyPattern({
@@ -496,7 +497,7 @@ export async function sendTranscription() {
     tags: [],
   });
   const when = new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
-  updateCurrentPhraseName(`Transcribed ${when}`);
+  await saveAsNewPhrase(`Transcribed ${when}`);
 }
 
 // --- Plugged into the core ---

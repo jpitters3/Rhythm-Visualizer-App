@@ -7,7 +7,7 @@ import { measureRange } from './measure-actions.js';
 import { activeGrid } from './state.js';
 import { guardBeforeReplacingGrid } from './lesson-settings.js';
 import { HistoryManager } from './history.js';
-import { updateCurrentPhraseName } from './controls.js';
+import { releaseOpenPhrase, saveAsNewPhrase } from './controls.js';
 
 // "G Minor" -> "Gm", "F Major" -> "F"
 export function abbreviateChord(chord) {
@@ -34,8 +34,10 @@ export function writeChordsOverMeasures(chords, ctx = activeGrid) {
 
 // Replaces the grid with one cleared measure per chord. Resolves false if
 // the player cancelled the unsaved-changes prompt.
-export async function sendChordsToStudio(chords, phraseName) {
+// Always a new phrase (bpm: the tempo it was played at, if known)
+export async function sendChordsToStudio(chords, phraseName, { bpm } = {}) {
   if (!await guardBeforeReplacingGrid('You have unsaved changes. Discard them and replace the grid with this progression?')) return false;
+  await releaseOpenPhrase();
 
   const ctx = activeGrid;
   HistoryManager?.pushState();
@@ -47,6 +49,7 @@ export async function sendChordsToStudio(chords, phraseName) {
     assignChordToSelectedCell(notesToLabels(chord.notes), ctx); // silent — no audio
   });
   renderAllMeasures(ctx);
-  updateCurrentPhraseName(phraseName || `Chords ${chords.map(chordShortLabel).join(' ')}`);
+  if (bpm) ctx.setBpm(bpm);
+  await saveAsNewPhrase(phraseName || `Chords ${chords.map(chordShortLabel).join(' ')}`);
   return true;
 }

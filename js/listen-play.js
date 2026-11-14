@@ -7,7 +7,6 @@ import { els, flashCue, renderAll, renderLive, renderMode } from './listen-view.
 import { alert as showAlert } from './alert.js';
 import { getScaleChordPool, notesToLabels, playChordNotes } from './chord-playback.js';
 import { appendHeardChords, openChordPanel } from './chord-sidepanel.js';
-import { gridA } from './grid-context.js';
 import { beatMs, chordLengths, hearNote, startFollowing, stopFollowing } from './live-follower.js';
 import { getAudioCtx, unlockAudio } from './noteplayer.js';
 import { sendChordsToStudio } from './progression-to-grid.js';
@@ -280,6 +279,5 @@ export async function sendToStudio() {
   if (!chords.length) return;
   stopMic();
   navigate('studio');
-  const sent = await sendChordsToStudio(chords, `Heard ${chords.slice(0, 4).map(c => c.short).join(' ')}`);
-  if (sent && session.live?.bpm) gridA.setBpm(session.live.bpm);
+  await sendChordsToStudio(chords, `Heard ${chords.slice(0, 4).map(c => c.short).join(' ')}`, { bpm: session.live?.bpm });
 }

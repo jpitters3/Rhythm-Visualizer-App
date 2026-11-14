@@ -186,6 +186,17 @@ export function detachOpenPhrase() {
   syncPhraseNameDisplay();
 }
 
+// Names content that isn't a saved phrase. Unlike syncPhraseNameDisplay, never
+// selects a saved phrase of the same name (auto-save would write over it).
+export function showUnsavedPhrase(name) {
+  detachOpenPhrase();
+  if (phraseNameOverride) return;
+  ['currentProjectName', 'currentPhraseName', 'gridPhraseName'].forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = name || 'Untitled';
+  });
+}
+
 export function getSelectedPatternName() {
   const patternSelect = document.getElementById('patternSelect');
   return patternSelect ? (patternSelect.value || '') : '';

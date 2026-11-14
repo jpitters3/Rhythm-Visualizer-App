@@ -2,8 +2,8 @@ import { escapeHtml } from './utils.js';
 import { currentUser } from './state.js';
 import { supabase } from './supabase-client.js';
 import { addToPractice } from './practice.js';
-import { applyPattern } from './pattern-crud.js';
-import { updateCurrentPhraseName } from './controls.js';
+import { applyPattern, showUnsavedPhrase } from './pattern-crud.js';
+import { releaseOpenPhrase } from './controls.js';
 import { alert, confirm } from './alert.js';
 import { navigate } from './router.js';
 
@@ -12,9 +12,10 @@ import { navigate } from './router.js';
 export async function loadPatternFromFeed(json, name) {
   if (await confirm(`Load pattern "${name}"? Unsaved changes will be lost.`)) {
     const data = typeof json === 'string' ? JSON.parse(json) : json;
+    await releaseOpenPhrase(); // opens unsaved: never into (or over) the open phrase
     await applyPattern(data);
     document.title = `Panafide — ${name}`;
-    updateCurrentPhraseName(name);
+    showUnsavedPhrase(name);
     navigate('studio');
   }
 }

@@ -3,6 +3,8 @@ import { getScale, isListening, activeGrid } from './state.js';
 import { turnOffMic, startCountdown } from './transcription.js';
 import { Bus, BUS_EVENT } from './bus.js';
 import { applyPattern } from './pattern-crud.js';
+import { releaseOpenPhrase, saveAsNewPhrase } from './controls.js';
+import { guardBeforeReplacingGrid } from './lesson-settings.js';
 import { TransportRegistry } from './transport-ui.js';
 import { detectBpm } from './tempo-detect.js';
 
@@ -1129,8 +1131,11 @@ function clearAudioFile() {
 
 // --- Send to Studio ---
 
-function sendToStudio() {
+// Always a new phrase, never the one that was open
+async function sendToStudio() {
   if (!events.length) return;
+  if (!await guardBeforeReplacingGrid('You have unsaved changes. Discard them and replace the grid with this recording?')) return;
+  await releaseOpenPhrase();
 
   const bpm        = activeGrid?.bpm        || 120;
   const beats      = activeGrid?.beats      || 4;
@@ -1170,7 +1175,9 @@ function sendToStudio() {
 
   closeFreeRecordView();
   window.location.hash = '#studio';
-  applyPattern(state);
+  await applyPattern(state);
+  const when = new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+  await saveAsNewPhrase(`Recorded ${when}`);
 }
 
 // --- Button Wiring ---

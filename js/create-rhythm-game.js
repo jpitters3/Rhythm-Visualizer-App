@@ -11,7 +11,7 @@ import { TransportRegistry } from './transport-ui.js';
 import { duplicateSelection } from './measure-actions.js';
 import { setRange, clearRange } from './range-selection.js';
 import { labelNotation, setLabelNotation, setIsListening, setTapToDingMode } from './state.js';
-import { saveCurrentPatternAs } from './controls.js';
+import { releaseOpenPhrase, saveCurrentPatternAs } from './controls.js';
 import { dbListPatternNames } from './pattern-crud.js';
 import { navigate } from './router.js';
 import { showToast } from './toast.js';
@@ -84,6 +84,7 @@ class CreateRhythmGame {
     // building a rhythm of Ding strikes by hand, with or without clapping.
     setTapToDingMode(true);
 
+    releaseOpenPhrase(); // a new rhythm, never written into the open phrase
     clearGrid(gridA);
     setBeats(BEATS, gridA);
     setSubdivision(SUBDIVISION, gridA);

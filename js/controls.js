@@ -9,7 +9,7 @@ import {
   dbSavePattern, dbDeletePattern, dbRenamePattern, dbLoadPatternByName, dbListPatternNames,
   serializePattern, applyPattern, getSavedPatterns, setSavedPatterns,
   getSelectedPatternName, refreshPatternSelect, updatePatternButtons, ensureHasSelection,
-  LAST_USED_KEY, hasUnsavedChanges, syncPhraseNameDisplay, detachOpenPhrase
+  LAST_USED_KEY, hasUnsavedChanges, syncPhraseNameDisplay, detachOpenPhrase, showUnsavedPhrase
 } from './pattern-crud.js';
 import { setPresentation } from './presentation-mode.js';
 import { getRange } from './range-selection.js';
@@ -123,6 +123,31 @@ export async function createNewPhrase() {
   resetGridToDefault(gridA);
   await saveCurrentPatternAs(name.trim());
   return name.trim();
+}
+
+// Content sent to the Studio from elsewhere must never land in, or auto-save
+// over, the phrase that's open. Call before filling the grid: it's let go at
+// once, and its pending edits (a copy taken earlier) are saved.
+export function releaseOpenPhrase() {
+  const saved = flushAutoSave();
+  detachOpenPhrase();
+  return saved;
+}
+
+// Then keep what was sent as a new phrase under an unused name ("Name (2)"…).
+// Signed out, or at the plan's phrase limit, it stays on screen unsaved.
+export async function saveAsNewPhrase(baseName) {
+  const base = String(baseName || 'Untitled').trim();
+  if (!currentUser) {
+    showUnsavedPhrase(base);
+    return null;
+  }
+  const taken = new Set(await dbListPatternNames().catch(() => []));
+  let name = base;
+  for (let n = 2; taken.has(name); n++) name = `${base} (${n})`;
+  if (await saveCurrentPatternAs(name)) return name;
+  showUnsavedPhrase(base);
+  return null;
 }
 
 // Shared by #deleteBtn and the phrase title dropdown (which must not go through the
@@ -833,8 +858,9 @@ export function initControls() {
 
     try {
       const obj = JSON.parse(raw);
+      await releaseOpenPhrase(); // opens unsaved: never into (or over) the open phrase
       await applyPattern(obj);
-      updateCurrentPhraseName(obj.name || 'Imported');
+      showUnsavedPhrase(obj.name || 'Imported');
 
       const wantSave = await showCustomModal({
         title: 'Import Success',
