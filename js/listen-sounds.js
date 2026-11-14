@@ -1,14 +1,14 @@
 // Chord listen: Note sounds, recording a custom handpan's own note audio.
 import { closeClip, stopRecord } from './listen-clips.js';
 import { getMicStream } from './listen-engine.js';
-import { byPitch, labelName, labelToNote, listText, pitchName } from './listen-notes.js';
+import { byPitch, labelName, labelToNote, listText, normLabel, panNotes, pitchName } from './listen-notes.js';
 import { startMic, stopLive } from './listen-play.js';
 import { currentTake, listening, session, setTask, soundsOpen, state } from './listen-state.js';
 import { els, renderMode, reply } from './listen-view.js';
 import { setVisible } from './dom.js';
 import { getActiveCustomHandpan, updateCustomHandpanNoteMap } from './handpanmap.js';
 import { setNoteAudio, trimLeadIn, uploadNoteAudio } from './note-audio.js';
-import { getAudioCtx, reloadLabelSample } from './noteplayer.js';
+import { getAudioCtx, hasLibrarySample, reloadLabelSample } from './noteplayer.js';
 import { currentUser, getScale } from './state.js';
 import { parseNoteName } from './voice-commands.js';
 
@@ -25,10 +25,8 @@ export function ownHandpan() {
 
 const hasNoteAudio = label => !!getScale()?.audioOverrides?.[label];
 
-function panLabels() {
-  const scale = getScale();
-  return scale ? ['Ding', ...Object.keys(scale.map || {})] : [];
-}
+// Pitched notes only: tak and slap position markers have no pitch to record
+const panLabels = () => panNotes().map(n => n.label);
 
 export function setSoundsOn(on) {
   if (on && !ownHandpan()) return;
@@ -54,7 +52,7 @@ function markNoteAudio() {
   const take = currentTake();
   els.bigDiagram.querySelectorAll('[data-note]').forEach((el) => {
     const label = el.dataset.note;
-    el.classList.toggle('cl-no-audio', soundsOpen() && !hasNoteAudio(label));
+    el.classList.toggle('cl-no-audio', soundsOpen() && !hasNoteAudio(label) && !hasLibrarySample(label));
     el.classList.toggle('cl-take', take?.label === label);
   });
 }
@@ -69,14 +67,18 @@ function renderSounds() {
   if (!soundsOpen()) return;
   const take = currentTake();
   const labels = panLabels();
-  const missing = labels.filter(l => !hasNoteAudio(l));
+  const own = labels.filter(hasNoteAudio).length;
+  const library = labels.filter(l => !hasNoteAudio(l) && hasLibrarySample(l)).length;
+  const missing = labels.filter(l => !hasNoteAudio(l) && !hasLibrarySample(l));
   const name = take ? labelName(take.label) : '';
   let text;
   let actions = '';
   if (!take) {
+    const sources = [own && `${own} your own`, library && `${library} from the sample library`].filter(Boolean).join(', ');
+    const have = `${labels.length - missing.length} of ${labels.length} notes have a sound${sources ? ` (${sources})` : ''}`;
     text = missing.length
-      ? `Tap a note to record its sound. ${labels.length - missing.length} of ${labels.length} recorded; missing ${listText(byPitch(missing).map(labelName))}.`
-      : `All ${labels.length} notes have their own sound. Tap one to record it again.`;
+      ? `${have}. No sound yet for ${listText(byPitch(missing).map(labelName))}: tap a note to record it.`
+      : `${have}. Tap a note to record your own.`;
     actions = '<button type="button" class="cl-btn" data-take="done">Done</button>';
   } else if (take.phase === 'waiting') {
     text = `Strike ${name} once and let it ring…`;
@@ -113,7 +115,7 @@ export async function startTake(label) {
   if (!stream || !soundsOpen()) return;
   const mimeType = typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : '';
   const recorder = new MediaRecorder(stream, { ...(mimeType ? { mimeType } : {}), audioBitsPerSecond: 256000 });
-  const take = { label, phase: 'waiting', recorder, chunks: [], startedAt: performance.now(), onsetAt: 0, timer: null, blob: null, url: null, heard: new Set() };
+  const take = { label: normLabel(label), phase: 'waiting', recorder, chunks: [], startedAt: performance.now(), onsetAt: 0, timer: null, blob: null, url: null, heard: new Set() };
   recorder.ondataavailable = (e) => { if (e.data.size) take.chunks.push(e.data); };
   recorder.start();
   take.timer = setInterval(tickTake, 250);
@@ -189,6 +191,7 @@ async function saveTake() {
   try {
     const name = labelToNote(take.label);
     const parsed = parseNoteName(name);
+    if (!parsed) throw new Error(`No pitch for ${take.label}`);
     const path = await uploadNoteAudio(hp, { note: pitchName(name), octave: parsed.octave }, take.blob);
     const noteMap = await setNoteAudio(hp.id, take.label, path);
     updateCustomHandpanNoteMap(hp.id, noteMap);

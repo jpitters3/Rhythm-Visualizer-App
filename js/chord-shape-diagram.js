@@ -42,6 +42,7 @@ function buildLayout(map) {
   const arcs = [];
   for (const [note, p] of Object.entries(map || {})) {
     if (/^(T|S)_/.test(note) || p == null) continue;
+    if (note === 'D' && map.Ding) continue; // custom pans list the Ding twice
     if (p.side === 'bottom') {
       arcs.push({ note, mid: Math.atan2(p.y - 50, (100 - p.x) - 50) * 180 / Math.PI, r: noteRadius(p) });
     } else {

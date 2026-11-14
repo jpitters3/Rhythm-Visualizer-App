@@ -390,16 +390,17 @@ test.describe('record a flow as a Clip', () => {
 test.describe('Note sounds', () => {
   withRecording('threeStrikes');
 
-  test('records a missing note on the player\'s own handpan', async ({ listen: page }) => {
+  test('records a note\'s own sound on the player\'s handpan', async ({ listen: page }) => {
     const user = await createTestUser();
     let saved = null;
     try {
       const pos = [[48, 46], [59, 76], [34, 75], [78, 59], [18, 56], [77, 35], [21, 33], [60, 19], [38, 19]];
-      const notes = [['D', 3, 'Ding'], ['A', 3, '1'], ['A#', 3, '2'], ['C', 4, '3'], ['D', 4, '4'], ['E', 4, '5'], ['F', 4, '6'], ['G', 4, '7'], ['A', 4, '8']];
-      // Every note but E4 already has a sound (paths needn't exist: only E4 is played back)
+      const notes = [['D', 3, 'Ding'], ['A', 3, '1'], ['A#', 3, '2'], ['C', 4, '3'], ['D', 4, '4'], ['E', 4, '5'], ['F', 4, '6'], ['G', 4, '7'], ['B', 5, '8']];
+      // Own recordings on all but E4 (library sample) and B5 (none in the library).
+      // Paths needn't exist: only E4 is played back.
       const noteMap = notes.map(([n, o, a], i) => ({
         id: i + 1, note: n, octave: o, assignedNumber: a, x: pos[i][0], y: pos[i][1], width: 11, height: 11, side: 'top',
-        ...(a === '5' ? {} : { audio_url: `test-placeholder-${a}.wav` }),
+        ...(a === '5' || a === '8' ? {} : { audio_url: `test-placeholder-${a}.wav` }),
       }));
       const { data: hp, error } = await supabaseAdmin.from('user_handpans').insert({
         user_id: user.user.id, name: 'Test Kurd', scale_name: 'D Kurd', top_image_url: 'https://example.com/pan.png', note_map: noteMap,
@@ -412,19 +413,20 @@ test.describe('Note sounds', () => {
       await openListen(page);
       await expect(page.locator('.cl-scale-select')).toHaveValue(`custom:${hp.id}`, { timeout: 15000 });
       await page.locator('.cl-sounds-btn').click();
-      await expect(page.locator('.cl-sounds-text')).toContainText('8 of 9 recorded; missing E4');
+      await expect(page.locator('.cl-sounds-text')).toContainText('8 of 9 notes have a sound (7 your own, 1 from the sample library). No sound yet for B5');
       await expect(page.locator('.cl-big .note-dot.cl-no-audio')).toHaveCount(1);
+      await expect(page.locator('.cl-big .note-dot[data-note="D"]')).toHaveCount(0); // the Ding is drawn once, as 'Ding'
 
       await panNote(page, '5').click({ force: true });
       await expect(page.locator('.cl-sounds-text')).toContainText('Recording E4', { timeout: 10000 });
       await page.locator('[data-take="save"]').click({ timeout: 20000 });
       await expect(reply(page)).toHaveText("Saved E4's sound. It plays your own pan now.", { timeout: 30000 });
-      await expect(page.locator('.cl-sounds-text')).toContainText('All 9 notes have their own sound');
+      await expect(page.locator('.cl-sounds-text')).toContainText('8 of 9 notes have a sound (8 your own). No sound yet for B5');
 
       const { data: row } = await supabaseAdmin.from('user_handpans').select('note_map').eq('id', hp.id).single();
       saved = row.note_map.find(t => t.assignedNumber === '5').audio_url;
       expect(saved).toMatch(/^E4_dkurd_[0-9a-f]{8}_\d{5}\.wav$/);
-      expect(row.note_map.filter(t => t.audio_url?.startsWith('test-placeholder'))).toHaveLength(8);
+      expect(row.note_map.filter(t => t.audio_url?.startsWith('test-placeholder'))).toHaveLength(7);
     } finally {
       if (saved) await supabaseAdmin.storage.from('handpan-audio').remove([saved]);
       await deleteTestUser(user.user.id);

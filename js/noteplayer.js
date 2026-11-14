@@ -85,6 +85,12 @@ for (const path of _audioFilePaths) {
   NOTE_FILE_MAP[noteKey] = filename;
 }
 
+// Whether the built-in library has a sample for this label's pitch
+export function hasLibrarySample(label) {
+  const key = noteForLabel(label);
+  return !!key && !!NOTE_FILE_MAP[key.replace('#', 's')];
+}
+
 function noteToFile(note) {
   if (!note) return '';
   const base = note.replace('#', 's');
