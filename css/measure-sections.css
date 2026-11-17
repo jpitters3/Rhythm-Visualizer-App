@@ -75,9 +75,10 @@ body.present .measure-grip { display: none; }
 .measure-row:not([data-color]) .measure-section-name { color: var(--ui-ink); }
 
 /* ── Selection + hold ── */
+/* Inset, so the scroller can't clip it on the top row */
 body:not(.present) .measure-row.measure-selected {
   outline: 2px solid var(--ui-ring);
-  outline-offset: 2px;
+  outline-offset: -2px;
 }
 
 body:not(.present) .measure-row {
