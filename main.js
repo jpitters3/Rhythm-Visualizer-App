@@ -16,6 +16,7 @@ import './css/hand-cursors.css';
 import './css/shared-pattern-banner.css';
 import './css/action-bar.css';
 import './css/measure-actions.css';
+import './css/measure-sections.css';
 import './css/course-creator.css';
 import './css/courses.css';
 import './css/mic-mode.css';

@@ -8,6 +8,7 @@
 
 import { addTickObserver } from './noteplayer.js';
 import { gridA } from './grid-context.js';
+import { isMeasureDragging } from './measure-reorder.js';
 
 const FOLLOW_KEY = 'gp_followPlayback';
 
@@ -72,7 +73,7 @@ export function initGridAutoscroll() {
   addTickObserver((ctx) => {
     // Only act on Grid A and only when NOT in presentation mode
     if (!ctx || ctx.id !== 'A') return;
-    if (!following) return;
+    if (!following || isMeasureDragging()) return;
     if (document.body.classList.contains('present')) return;
 
     const measuresEl = document.getElementById('measures');

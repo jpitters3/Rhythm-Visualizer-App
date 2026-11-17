@@ -1,0 +1,275 @@
+/* Measure sections (colour + name) and drag-to-reorder — js/measure-select.js, js/measure-reorder.js */
+
+:root {
+  --section-red: #e5484d;
+  --section-orange: #f76b15;
+  --section-yellow: #d9a800;
+  --section-green: #30a46c;
+  --section-blue: #0090ff;
+  --section-purple: #8e4ec6;
+  --section-tint: 13%;
+}
+
+body.dark {
+  --section-red: #ff6369;
+  --section-orange: #ff8b3e;
+  --section-yellow: #f5d90a;
+  --section-green: #3dd68c;
+  --section-blue: #52a9ff;
+  --section-purple: #bf7af0;
+  --section-tint: 18%;
+}
+
+.measure-row[data-color="red"] { --section: var(--section-red); }
+.measure-row[data-color="orange"] { --section: var(--section-orange); }
+.measure-row[data-color="yellow"] { --section: var(--section-yellow); --section-ink: #2a2200; }
+.measure-row[data-color="green"] { --section: var(--section-green); }
+.measure-row[data-color="blue"] { --section: var(--section-blue); }
+.measure-row[data-color="purple"] { --section: var(--section-purple); }
+
+/* ── Card chrome is interactive (cells keep their own handlers) ── */
+body:not(.present) .measure-row {
+  pointer-events: auto;
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+body:not(.present) .measure-row[data-color] {
+  background: color-mix(in srgb, var(--section) var(--section-tint), var(--ui-surface-solid));
+  box-shadow: inset 4px 0 0 var(--section);
+}
+
+/* Presentation mode: a faint tint so sections still read while playing */
+body.present .measure-row[data-color] {
+  background: color-mix(in srgb, var(--section) 8%, transparent);
+  border-radius: var(--ui-radius-lg);
+}
+
+.measure-grip {
+  flex: 0 0 auto;
+  width: 8px;
+  height: 14px;
+  margin-right: -2px;
+  background: radial-gradient(circle, currentColor 1.1px, transparent 1.5px) 0 0 / 4px 4.7px;
+  opacity: 0.5;
+}
+
+body.present .measure-grip { display: none; }
+
+.measure-row[data-color] .measure-title { color: var(--section); }
+
+.measure-section-name {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--section, var(--ui-tint-hover));
+  color: var(--section-ink, #fff);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  max-width: 14em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.measure-row:not([data-color]) .measure-section-name { color: var(--ui-ink); }
+
+/* ── Selection + hold ── */
+body:not(.present) .measure-row.measure-selected {
+  outline: 2px solid var(--ui-ring);
+  outline-offset: 2px;
+}
+
+body:not(.present) .measure-row {
+  transition: scale 0.18s ease, box-shadow 0.18s ease, background-color 0.2s ease;
+}
+
+.measure-row.measure-armed {
+  scale: 1.02;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.18);
+  animation: measure-armed-pulse 0.5s ease-out;
+}
+
+.measure-row.measure-armed[data-color] {
+  box-shadow: inset 4px 0 0 var(--section), 0 10px 28px rgba(0, 0, 0, 0.18);
+}
+
+@keyframes measure-armed-pulse {
+  0% { scale: 1; }
+  45% { scale: 1.035; }
+  100% { scale: 1.02; }
+}
+
+/* ── Reorder: other cards ease back, slot is dashed, ghost follows the pointer ── */
+.measures-reordering,
+.measures-reordering .measure-row { cursor: grabbing; }
+
+.measures-reordering .measure-row {
+  scale: 0.98;
+  transition: translate 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), scale 0.2s ease;
+}
+
+.measures-reordering .measure-row.measure-drag-slot {
+  outline: 2px dashed var(--ui-ring);
+  outline-offset: -2px;
+}
+
+.measure-drag-slot > * { opacity: 0.15; }
+
+/* body:not(.present) .measure-row sets position: relative; this must outrank it */
+body:not(.present) .measure-row.measure-drag-ghost {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 10000;
+  margin: 0;
+  pointer-events: none;
+  background-color: var(--ui-surface-solid);
+  rotate: 1.2deg;
+  scale: 1.03;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.25);
+  opacity: 0.96;
+  transition: none;
+}
+
+body:not(.present) .measure-row.measure-drag-ghost.settling {
+  rotate: 0deg;
+  scale: 0.98;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  transition: translate 0.2s ease, rotate 0.2s ease, scale 0.2s ease, box-shadow 0.2s ease;
+}
+
+.measure-drag-count {
+  position: absolute;
+  top: -10px;
+  right: -10px;
+  min-width: 28px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: var(--ui-ring);
+  color: var(--ui-surface-solid);
+  font-size: 13px;
+  font-weight: 700;
+  text-align: center;
+}
+
+/* ── Colour / name popover ── */
+.measure-pop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 10001;
+  width: 252px;
+  padding: 10px 12px 12px;
+  border: 1px solid var(--panel-border);
+  border-radius: var(--ui-radius-md);
+  background: var(--ui-surface-solid);
+  color: var(--ui-ink);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.18);
+  animation: measure-pop-in 0.14s ease-out;
+}
+
+.measure-pop.docked {
+  top: auto;
+  left: 50%;
+  bottom: calc(12px + env(safe-area-inset-bottom));
+  width: min(360px, calc(100vw - 32px));
+  translate: -50% 0;
+  animation-name: measure-pop-up;
+}
+
+@keyframes measure-pop-up {
+  from { opacity: 0; translate: -50% 16px; }
+}
+
+@keyframes measure-pop-in {
+  from { opacity: 0; scale: 0.96; }
+}
+
+.measure-pop-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.measure-pop-title {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ui-muted);
+}
+
+.measure-pop-close {
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--ui-muted);
+  cursor: pointer;
+}
+
+.measure-pop-close:hover { background: var(--ui-tint-hover); }
+
+.measure-pop-swatches {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.measure-swatch {
+  justify-self: center;
+  width: 28px;
+  height: 28px;
+  min-width: 0;
+  min-height: 0;
+  border: 2px solid transparent;
+  border-radius: 50%;
+  background: var(--sw);
+  cursor: pointer;
+  padding: 0;
+}
+
+.measure-swatch[data-color="red"] { --sw: var(--section-red); }
+.measure-swatch[data-color="orange"] { --sw: var(--section-orange); }
+.measure-swatch[data-color="yellow"] { --sw: var(--section-yellow); }
+.measure-swatch[data-color="green"] { --sw: var(--section-green); }
+.measure-swatch[data-color="blue"] { --sw: var(--section-blue); }
+.measure-swatch[data-color="purple"] { --sw: var(--section-purple); }
+.measure-swatch[data-color="none"] {
+  --sw: linear-gradient(135deg, transparent 45%, var(--ui-muted) 45% 55%, transparent 55%);
+  border-color: var(--panel-border);
+}
+
+.measure-swatch[aria-pressed="true"] {
+  box-shadow: 0 0 0 2px var(--ui-surface-solid), 0 0 0 4px var(--ui-ring);
+}
+
+.measure-pop-name {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px 10px;
+  border: 1px solid var(--panel-border);
+  border-radius: var(--ui-radius-sm);
+  background: var(--ui-tint);
+  color: var(--ui-ink);
+  font: inherit;
+  font-size: 16px; /* 16px stops iOS zooming on focus */
+}
+
+.measure-pop-hint {
+  margin: 8px 0 0;
+  font-size: 11px;
+  color: var(--ui-faint);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .measures-reordering .measure-row,
+  body:not(.present) .measure-row.measure-drag-ghost.settling,
+  body:not(.present) .measure-row { transition: none; }
+  .measure-row.measure-armed,
+  .measure-pop { animation: none; }
+}
