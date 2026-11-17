@@ -3,7 +3,7 @@ import { alert, confirm } from './alert.js';
 import { supabase } from './supabase-client.js';
 import { isAuthed } from './auth.js';
 import { currentUser } from './state.js';
-import { gridA, gridB } from './grid-context.js';
+import { gridA, gridB, cloneSections } from './grid-context.js';
 import { start, stop, setBeats, setSubdivision } from './noteplayer.js';
 import { migratePatternState } from './rhythm-core.js';
 import { renderAllMeasures, clearSelection, setDualGrid } from './notegrid.js';
@@ -312,6 +312,7 @@ export function serializePattern(ctx = gridA) {
     flams: cloneSteps(ctx.innerFlams),
     tags: ctx.tags ? ctx.tags.slice() : [],
   };
+  addSections(state, ctx);
 
   // If serializing Grid A, check if Dual Mode is active to include Grid B
   if (ctx === gridA) {
@@ -326,10 +327,17 @@ export function serializePattern(ctx = gridA) {
         hands: cloneSteps(gridB.innerHands),
         flams: cloneSteps(gridB.innerFlams),
       };
+      addSections(state.gridB, gridB);
     }
   }
 
   return state;
+}
+
+// Omitted when no measure has a section, so older phrases serialize unchanged
+function addSections(state, ctx) {
+  const list = (ctx.measureSections || []).slice(0, ctx.measures);
+  if (list.some(Boolean)) state.measureSections = cloneSections(list);
 }
 
 // On mobile, force subdivision to 1 (quarter notes) regardless of what the
@@ -410,6 +418,8 @@ export async function applyPattern(state, ctx = gridA) {
   ctx.innerFlams = Array.isArray(state.flams)
     ? state.flams.slice()
     : Array(ctx.innerLabels.length).fill('');
+
+  ctx.measureSections = cloneSections(state.measureSections);
 
   // Apply Tags
   ctx.tags = Array.isArray(state.tags) ? state.tags.slice() : [];

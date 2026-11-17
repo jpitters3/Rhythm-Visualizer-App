@@ -213,6 +213,27 @@ export function updateGridLabels(ctx = activeGrid) {
   });
 }
 
+// A section name shows only where a run starts (previous measure differs)
+function buildMeasureHeader(m, section, prev) {
+  const frag = document.createDocumentFragment();
+  const grip = document.createElement('span');
+  grip.className = 'measure-grip';
+  grip.setAttribute('aria-hidden', 'true');
+  const title = document.createElement('span');
+  title.className = 'measure-title';
+  title.textContent = `Measure ${m + 1}`;
+  frag.append(grip, title);
+  const startsRun = section?.label &&
+    !(prev?.label === section.label && prev?.color === section.color);
+  if (startsRun) {
+    const name = document.createElement('span');
+    name.className = 'measure-section-name';
+    name.textContent = section.label;
+    frag.append(name);
+  }
+  return frag;
+}
+
 export function renderAllMeasures(ctx = activeGrid) {
   const measuresEl = ctx.container;
   if (!measuresEl) return;
@@ -255,9 +276,15 @@ export function renderAllMeasures(ctx = activeGrid) {
     : getCurrentZoomLevel(ctx);
   const cols = zoomLevel.cols;
 
+  const sections = Array.isArray(ctx.measureSections) ? ctx.measureSections : [];
+  sections.length = Math.min(sections.length, measureCount);
+
   for (let m = 0; m < measureCount; m++) {
     const row = document.createElement('div');
     row.className = 'measure-row';
+    row.dataset.measure = String(m);
+    const section = sections[m] || null;
+    if (section?.color) row.dataset.color = section.color;
     if (s >= 16) row.classList.add('sixteen-beats');
     else if (s >= 12) row.classList.add('twelve-beats');
     if (s > 4 && s <= 6) row.classList.add('fewer-beats');
@@ -280,7 +307,7 @@ export function renderAllMeasures(ctx = activeGrid) {
 
     const header = document.createElement('div');
     header.className = 'measure-header';
-    header.textContent = `Measure ${m + 1}`;
+    header.append(buildMeasureHeader(m, section, sections[m - 1] || null));
     row.appendChild(header);
 
     // Print labels and cells
@@ -420,6 +447,7 @@ export function clearGrid(ctx = activeGrid) {
   ctx.innerLabels = Array(ctx.measures * s).fill('');
   ctx.innerHands = Array(ctx.measures * s).fill(null);
   ctx.innerFlams = Array(ctx.measures * s).fill('');
+  ctx.measureSections = [];
   renderAllMeasures(ctx);
   ctx.step = 0;
 }

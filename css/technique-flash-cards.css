@@ -6,6 +6,7 @@
   position: fixed;
   inset: 0;
   z-index: 20000;
+  pointer-events: none; /* its load-time fade-out must not swallow clicks */
   background: var(--bg);
   display: flex;
   visibility: hidden;
@@ -14,6 +15,7 @@
 }
 
 .fc-overlay.open {
+  pointer-events: auto;
   visibility: visible;
   opacity: 1;
   transition: opacity 0.3s ease;

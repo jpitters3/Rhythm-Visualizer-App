@@ -5,6 +5,10 @@
 import { getBeats, getSubdivision } from './rhythm-core.js';
 import { setGridA, setGridB, setActiveGrid } from './state.js';
 
+export function cloneSections(list) {
+  return Array.isArray(list) ? list.map(sec => (sec ? { ...sec } : null)) : [];
+}
+
 export class GridContext {
   constructor(id, containerId) {
     this.id = id;
@@ -18,6 +22,8 @@ export class GridContext {
     this.innerLabels = Array(this.stepsPerMeasure).fill('');
     this.innerHands = Array(this.stepsPerMeasure).fill(null);
     this.innerFlams = Array(this.stepsPerMeasure).fill('');
+    // Per measure: null or { color, label } (song sections)
+    this.measureSections = [];
     this.step = 0;
     this.playing = false;
     this.bpm = 90;
@@ -59,6 +65,7 @@ export class GridContext {
     this.innerLabels = Array(m * this.stepsPerMeasure).fill('');
     this.innerHands = Array(m * this.stepsPerMeasure).fill(null);
     this.innerFlams = Array(m * this.stepsPerMeasure).fill('');
+    this.measureSections = [];
   }
 
   setBpm(bpm) {
@@ -78,6 +85,7 @@ export class GridContext {
     this.innerLabels = cloneSteps(otherGrid.innerLabels);
     this.innerHands = cloneSteps(otherGrid.innerHands);
     this.innerFlams = cloneSteps(otherGrid.innerFlams);
+    this.measureSections = cloneSections(otherGrid.measureSections);
     this.step = otherGrid.step;
     this.playing = otherGrid.playing;
     this.bpm = otherGrid.bpm;
@@ -126,6 +134,7 @@ export class GridContext {
     this.innerLabels = Array(m * s).fill('');
     this.innerHands = Array(m * s).fill(null);
     this.innerFlams = Array(m * s).fill('');
+    this.measureSections = [];
     this.step = 0;
     this.playing = false;
     this.transcriptionIndex = 0;
