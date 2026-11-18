@@ -20,7 +20,7 @@ import { VOICE_KEY, resetPending, setVoiceOn, voiceFeature } from './listen-voic
 import { BUS_EVENT, Bus } from './bus.js';
 import { onChordShapeLayout } from './chord-shape-diagram.js';
 import { navigate } from './router.js';
-import { getSelectedScaleName } from './state.js';
+import { currentUser, getSelectedScaleName, isAdminUser } from './state.js';
 import { loadCalibrationProfile } from './transcription.js';
 import { voiceSupported } from './voice-listener.js';
 
@@ -196,8 +196,19 @@ function refreshScaleView() {
   renderMode();
 }
 
+// Admin-only until it ships; everyone else gets a placeholder at #listen
+function showComingSoon() {
+  if (els.view.querySelector('.cl-head')) {
+    if (listening() || session.recording) stopMic();
+    navigate('studio'); // signed out while here
+    return;
+  }
+  els.view.innerHTML = '<div class="cl-container cl-gate"><p>Chord listen isn\'t available yet.</p></div>';
+}
+
 function onEnter() {
-  if (!els.view.firstElementChild) {
+  if (!isAdminUser(currentUser)) return showComingSoon();
+  if (!els.view.querySelector('.cl-head')) {
     build();
     wire();
   }
@@ -237,6 +248,13 @@ export function initChordListen() {
   // The saved scale arrives after load (and again after sign-in); follow it.
   // Deferred a tick: custom handpans set their name just after their notes.
   Bus.on(BUS_EVENT.SCALE_APPLIED, () => setTimeout(onScaleApplied, 0));
+  // Signed in, the main dropdown is rebuilt once custom handpans load; keep the copy in step
+  const mainScaleSelect = document.getElementById('scaleSelect');
+  if (mainScaleSelect) new MutationObserver(syncScaleSelect).observe(mainScaleSelect, { childList: true });
+  // A cold load on #listen routes before auth resolves
+  [BUS_EVENT.AUTH_LOGIN, BUS_EVENT.AUTH_LOGOUT].forEach(ev => Bus.on(ev, () => {
+    if (document.body.classList.contains('route-listen')) onEnter();
+  }));
   Bus.on(BUS_EVENT.OPEN_CLIP_IN_LISTEN, (e) => {
     pendingClip = e.detail?.clip || null;
     if (document.body.classList.contains('route-listen')) onEnter();

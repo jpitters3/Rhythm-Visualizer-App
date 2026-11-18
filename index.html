@@ -433,7 +433,7 @@
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><circle cx="12" cy="12" r="3"></circle><path d="M12 3v2M12 19v2M3 12h2M19 12h2"></path></svg>
               <span class="ctl-label">Free play</span>
             </button>
-            <a class="ctl-btn" href="#listen" data-closes-controls title="Chord listen: play chords, see the progression">
+            <a class="ctl-btn admin-only" style="display:none;" href="#listen" data-closes-controls title="Chord listen: play chords, see the progression">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12h2M7 8v8M11 5v14M15 9v6M19 11v2"></path></svg>
               <span class="ctl-label">Listen</span>
             </a>
@@ -1866,7 +1866,7 @@
 
       <section class="cs-builder">
         <div class="cs-label"><span>Song builder</span>
-          <a href="#listen" id="csListenLink" class="cs-link-btn">Listen to me play</a>
+          <a href="#listen" id="csListenLink" class="cs-link-btn admin-only" style="display:none;">Listen to me play</a>
           <button type="button" id="csNewSongBtn" class="cs-link-btn">New song</button>
         </div>
         <input type="text" id="csSongTitle" class="cs-song-title" maxlength="60" placeholder="Song title (optional)">

@@ -1,12 +1,11 @@
 // Chord listen: what spoken commands do (js/voice-commands.js parses them).
 import { closeTranscribe, stopTranscribing, transcribing } from './listen-transcribe.js';
 import { pauseClip, startRecord, stopRecord } from './listen-clips.js';
-import { byPitch, chordMatches, describeChord, labelName, labelToNote, listText, midiOf, noteName, panMatches, pickBy, say, scalePrefersFlats } from './listen-notes.js';
+import { byPitch, chordMatches, describeChord, labelName, labelToNote, listText, midiOf, noteName, panMatches, pickBy, say, scaleLabel, scalePrefersFlats } from './listen-notes.js';
 import { change, clearAll, editChordAt, lockChord, playChord, restore, startLive, stopLive, stopMic, undo } from './listen-play.js';
 import { listening, prefs, session, state, teaching } from './listen-state.js';
 import { doCorrect, doForget, startTeach, stopTeach } from './listen-teach.js';
 import { els, flashCue, renderMode, reply } from './listen-view.js';
-import { getSelectedScaleName } from './state.js';
 import { parseNoteName, parseVoiceCommand, pcName } from './voice-commands.js';
 import { startVoice, stopVoice, voiceSupported } from './voice-listener.js';
 
@@ -104,7 +103,7 @@ function doRemoveOctave(action) {
 // the chord yet, nearest the chord's other notes
 function choosePanNote(note, labels) {
   const options = panMatches(note);
-  if (!options.length) return { error: `There's no ${say(note)} on your ${getSelectedScaleName() || 'pan'}.` };
+  if (!options.length) return { error: `There's no ${say(note)} on your ${scaleLabel()}.` };
   if (note.qual) return { pick: pickBy(options, note.qual), options };
   const fresh = options.filter(o => !labels.includes(o.label));
   if (!fresh.length) return { error: `${say(note)} is already in.` };

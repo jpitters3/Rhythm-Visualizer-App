@@ -1,13 +1,12 @@
 // Chord listen: teaching the app what a note sounds like on this pan
 // ("that was a G", Teach a note, "forget the G").
 import { getLastSound } from './listen-engine.js';
-import { labelName, normLabel, noteName, panMatches, pickBy, say } from './listen-notes.js';
+import { labelName, normLabel, noteName, panMatches, pickBy, say, scaleLabel } from './listen-notes.js';
 import { change } from './listen-play.js';
 import { currentTake, listening, session, setTask, state, teaching } from './listen-state.js';
 import { els, renderMode, reply } from './listen-view.js';
 import { setVisible } from './dom.js';
 import { getAudioCtx } from './noteplayer.js';
-import { getSelectedScaleName } from './state.js';
 import { forgetTaughtSounds, taughtSoundCount, teachSound } from './transcription.js';
 
 export const TEACH_STRIKES = 3;
@@ -35,7 +34,7 @@ export function doCorrect(action) {
     return startTeach(note);
   }
   const pick = noteForSound(note, last.freq);
-  if (!pick) return { text: `There's no ${say(note)} on your ${getSelectedScaleName() || 'pan'}.`, tone: 'warn' };
+  if (!pick) return { text: `There's no ${say(note)} on your ${scaleLabel()}.`, tone: 'warn' };
   teachSound(pick.label, last.freq);
   // Put the chord right too: the misheard note becomes this one
   if (state.mode !== 'live' && listening()) {
@@ -53,7 +52,7 @@ export function startTeach(note = null) {
   if (!listening()) return { text: 'Turn on the mic first, then teach me the note.', tone: 'warn' };
   if (state.mode !== 'capture') return { text: `Stop ${state.mode === 'live' ? 'live mode' : 'recording'} first.`, tone: 'warn' };
   const pick = note ? noteForSound(note, null) : null;
-  if (note && !pick) return { text: `There's no ${say(note)} on your ${getSelectedScaleName() || 'pan'}.`, tone: 'warn' };
+  if (note && !pick) return { text: `There's no ${say(note)} on your ${scaleLabel()}.`, tone: 'warn' };
   // "teach D" on a pan with two Ds: tap the right one
   const ambiguous = note && note.octave == null && !note.qual && panMatches(note).length > 1;
   setTask({ kind: 'teach', label: ambiguous ? null : pick?.label || null, freqs: [] });

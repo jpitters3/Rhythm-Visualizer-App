@@ -1,5 +1,5 @@
 import { supabase } from './supabase-client.js';
-import { currentUser } from './state.js';
+import { currentUser, isAdminUser } from './state.js';
 import { openAuthModal } from './auth.js';
 import { openComposerToComposition } from './song-composer.js';
 import { loadPatternByName, createNewPhrase } from './controls.js';
@@ -907,7 +907,8 @@ function buildClipRow(clip) {
   row.querySelector('.clip-menu-btn').addEventListener('click', (e) => {
     e.stopPropagation();
     showContextMenu(e.currentTarget, [
-      { label: 'Build notation in Listen', action: () => openClipInListen(clip) },
+      // Chord listen is admin-only until it ships
+      ...(isAdminUser(currentUser) ? [{ label: 'Build notation in Listen', action: () => openClipInListen(clip) }] : []),
       { label: 'Rename', action: () => renameClip(clip.id, clip.title) },
       { label: 'Share (7-day link)', action: () => shareClip(clip) },
       { label: 'Delete', danger: true, action: () => deleteClip(clip) },

@@ -4,6 +4,7 @@
 // recogniser takes the place of the browser's for voice commands.
 const base = require('./fixtures');
 const { recording, fakeMic } = require('./utils/synth-audio');
+const { createClient } = require('@supabase/supabase-js');
 const { createTestUser, deleteTestUser, loginAsTestUser, supabaseAdmin } = require('./utils/auth-helper');
 
 // A browser plays its fake-mic file once, and launch options can't change per
@@ -11,11 +12,31 @@ const { createTestUser, deleteTestUser, loginAsTestUser, supabaseAdmin } = requi
 // recording as the mic. Device emulation (Mobile Chrome) carries over.
 const test = base.test.extend({
   micFile: [null, { option: true }],
-  listen: async ({ playwright, micFile, baseURL, viewport, isMobile, hasTouch, userAgent, deviceScaleFactor }, use) => {
+  // Chord listen is admin-only until it ships, so pages start signed in as an
+  // admin. Groups that sign in their own (admin) user turn this off.
+  asAdmin: [true, { option: true }],
+  adminSession: [async ({}, use) => {
+    const admin = await createTestUser(true);
+    const client = createClient(process.env.VITE_SUPABASE_URL, process.env.VITE_SUPABASE_ANON_KEY, { auth: { persistSession: false } });
+    const { data, error } = await client.auth.signInWithPassword({ email: admin.email, password: admin.password });
+    if (error) throw error;
+    // supabase-js keeps the session in localStorage under this key
+    const key = `sb-${new URL(process.env.VITE_SUPABASE_URL).hostname.split('.')[0]}-auth-token`;
+    await use({ id: admin.user.id, key, value: JSON.stringify(data.session) });
+    await deleteTestUser(admin.user.id);
+  }, { scope: 'worker' }],
+  listen: async ({ playwright, micFile, asAdmin, adminSession, baseURL, viewport, isMobile, hasTouch, userAgent, deviceScaleFactor }, use) => {
     const browser = await playwright.chromium.launch(fakeMic(micFile));
     const context = await browser.newContext({
       baseURL, viewport, isMobile, hasTouch, userAgent, deviceScaleFactor, ignoreHTTPSErrors: true, permissions: ['microphone'],
     });
+    if (asAdmin) {
+      // Shared across the worker's tests: each starts on D Kurd, as a guest does.
+      // (Not the column default "d_kurd": that slug is a separate, known quirk.)
+      const { error } = await supabaseAdmin.from('profiles').update({ handpan_scale: 'D Kurd' }).eq('user_id', adminSession.id);
+      if (error) throw error;
+      await context.addInitScript(([k, v]) => { if (!localStorage.getItem(k)) localStorage.setItem(k, v); }, [adminSession.key, adminSession.value]);
+    }
     const page = await context.newPage();
     const errors = [];
     page.on('pageerror', err => errors.push(err.stack || err.message));
@@ -253,20 +274,34 @@ test.describe('voice, taps and editing', () => {
   });
 });
 
-test.describe('the selected scale', () => {
+// Signs in through the login screen, so the session is the app's own across the reload
+test.describe('the selected scale, across a reload', () => {
   withRecording('silence');
+  test.use({ asAdmin: false });
 
   test('a reload keeps the saved scale, and the page can switch it', async ({ listen: page }) => {
-    await page.addInitScript(() => { if (!localStorage.getItem('gp_scale')) localStorage.setItem('gp_scale', 'D Major'); });
-    await openListen(page);
-    const names = page.locator('.cl-big .note-label');
-    await expect(names).toContainText(['C#4']);
-    await page.reload();
-    await expect(names).toContainText(['C#4'], { timeout: 15000 });
-    await page.locator('.cl-scale-select').selectOption('D Kurd');
-    await expect(names).toContainText(['Bb3']);
-    await expect(page.locator('#scaleSelect')).toHaveValue('D Kurd');
+    const user = await createTestUser(true);
+    try {
+      // Signed in, the saved scale lives on the profile
+      const { error } = await supabaseAdmin.from('profiles').update({ handpan_scale: 'D Major' }).eq('user_id', user.user.id);
+      if (error) throw error;
+      await signIn(page, user);
+      await openListen(page);
+      const names = page.locator('.cl-big .note-label');
+      await expect(names).toContainText(['C#4']);
+      await page.reload();
+      await expect(names).toContainText(['C#4'], { timeout: 15000 });
+      await page.locator('.cl-scale-select').selectOption('D Kurd');
+      await expect(names).toContainText(['Bb3']);
+      await expect(page.locator('#scaleSelect')).toHaveValue('D Kurd');
+    } finally {
+      await deleteTestUser(user.user.id);
+    }
   });
+});
+
+test.describe('the selected scale', () => {
+  withRecording('silence');
 
   // No built-in scale has bottom notes, so the test stands in a layout with three
   // (as a custom handpan's would report) through the page's own modules
@@ -424,10 +459,11 @@ async function signIn(page, user) {
 }
 
 test.describe('Transcribe, signed in', () => {
+  test.use({ asAdmin: false });
   withRecording('melody', { bpm: 80, startMs: 2000 });
 
   test('Send to Studio saves a new phrase, never over the open one', async ({ listen: page }) => {
-    const user = await createTestUser();
+    const user = await createTestUser(true);
     try {
       const keep = { version: 'v1.0', beats: 4, subdivision: 2, bpm: 90, steps: 8, measures: 1, labels: ['1', '', '', '', '', '', '', ''], hands: Array(8).fill(null) };
       const { error } = await supabaseAdmin.from('patterns').insert({ user_id: user.user.id, name: 'Keep', data: keep, source: 'manual' });
@@ -467,10 +503,11 @@ test.describe('Transcribe, signed in', () => {
 });
 
 test.describe('record a flow as a Clip', () => {
+  test.use({ asAdmin: false });
   withRecording('session');
 
   test('records, saves to Clips, and builds the notation from it', async ({ listen: page }) => {
-    const user = await createTestUser();
+    const user = await createTestUser(true);
     try {
       await signIn(page, user);
       await openListen(page);
@@ -503,10 +540,11 @@ test.describe('record a flow as a Clip', () => {
 });
 
 test.describe('Note sounds', () => {
+  test.use({ asAdmin: false });
   withRecording('threeStrikes');
 
   test('records a note\'s own sound on the player\'s handpan', async ({ listen: page }) => {
-    const user = await createTestUser();
+    const user = await createTestUser(true);
     let saved = null;
     try {
       const pos = [[48, 46], [59, 76], [34, 75], [78, 59], [18, 56], [77, 35], [21, 33], [60, 19], [38, 19]];
@@ -546,5 +584,30 @@ test.describe('Note sounds', () => {
       if (saved) await supabaseAdmin.storage.from('handpan-audio').remove([saved]);
       await deleteTestUser(user.user.id);
     }
+  });
+});
+
+test.describe('admin-only until it ships', () => {
+  const listenBtn = page => page.locator('a.ctl-btn[href="#listen"]');
+
+  test('signed out: no Listen button, and #listen shows a placeholder', { tag: '@core' }, async ({ page }) => {
+    await skipTours(page);
+    await page.goto('/#studio');
+    await page.waitForSelector('.measure-row');
+    await expect(listenBtn(page)).toHaveAttribute('style', /display:\s*none/);
+    await expect(page.locator('#csListenLink')).toHaveAttribute('style', /display:\s*none/);
+    await page.goto('/#listen');
+    await expect(page.locator('.cl-gate')).toContainText("isn't available yet");
+    await expect(page.locator('.cl-mic')).toHaveCount(0);
+  });
+
+  test('an admin gets the Listen button and the page', { tag: '@core' }, async ({ page, adminSession }) => {
+    await page.context().addInitScript(([k, v]) => { if (!localStorage.getItem(k)) localStorage.setItem(k, v); }, [adminSession.key, adminSession.value]);
+    await skipTours(page);
+    await page.goto('/#studio');
+    await expect(listenBtn(page)).not.toHaveAttribute('style', /display:\s*none/, { timeout: 15000 });
+    await page.goto('/#listen');
+    await expect(page.locator('.cl-mic')).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('.cl-gate')).toHaveCount(0);
   });
 });
