@@ -1,3 +1,14 @@
+/* Tak / Slap colours. Not --up-fill / --down-fill: those mean hand sticking. */
+:root {
+  --re-tak: #1f8a7a;
+  --re-slap: #d2691e;
+}
+
+body.dark {
+  --re-tak: #4fc7b2;
+  --re-slap: #f29a52;
+}
+
 /* Rhythm by Ear (route #games, Rhythm domain). See js/rhythm-ear-game.js.
    Reuses .hg-container/.hg-back/.hg-header from css/handpan-games.css. */
 
@@ -9,15 +20,81 @@
 
 /* --- Hero / level picker --- */
 
-.re-hero {
-  padding: 22px 24px;
-  margin-bottom: 32px;
+.re-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.re-topbar .hg-back {
+  margin-bottom: 0;
+}
+
+.re-topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.re-topbar [hidden] {
+  display: none;
+}
+
+.re-icon-btn {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border-radius: 50%;
+  font-size: 16px;
+  font-weight: 800;
+  border: 1px solid var(--panel-border);
+  background: var(--panel);
+  color: var(--text);
+  cursor: pointer;
+}
+
+/* Play mode: no page header, so the game fits without scrolling. */
+.re-mode-play {
+  padding-top: 16px;
+  padding-bottom: 16px;
+}
+
+.re-mode-play .hg-header {
+  display: none;
+}
+
+.re-mode-play .re-topbar {
+  margin-bottom: 12px;
+}
+
+.re-howto {
+  width: min(560px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+  padding: 24px;
   border-radius: 16px;
   border: 1px solid var(--panel-border);
   background: var(--panel);
+  color: var(--text);
 }
 
-.re-hero-title,
+.re-howto::backdrop {
+  background: rgba(0, 0, 0, 0.55);
+}
+
+.re-howto-title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.re-howto-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 20px;
+}
+
 .re-section-title {
   font-size: 13px;
   font-weight: 700;
@@ -26,10 +103,6 @@
   color: var(--text);
   opacity: 0.6;
   margin: 0;
-}
-
-.re-hero-title {
-  cursor: pointer;
 }
 
 .re-levels-head {
@@ -59,6 +132,25 @@
   font-size: 13px;
   font-weight: 700;
   border: 1px solid var(--panel-border);
+}
+
+.re-chip[data-kind] {
+  color: var(--btn-active-text);
+}
+
+.re-chip[data-kind="d"] {
+  background: var(--btn-active);
+  border-color: var(--btn-active);
+}
+
+.re-chip[data-kind="t"] {
+  background: var(--re-tak);
+  border-color: var(--re-tak);
+}
+
+.re-chip[data-kind="s"] {
+  background: var(--re-slap);
+  border-color: var(--re-slap);
 }
 
 .re-level-grid {
@@ -115,22 +207,8 @@
   color: var(--btn-active-text);
 }
 
-.re-level-rules {
-  margin: 0;
-  padding-left: 18px;
-  font-size: 14px;
-  line-height: 1.5;
-  opacity: 0.75;
-}
-
 .re-level-current {
   border-color: var(--accent, #f6c84c);
-}
-
-.re-level-named {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--btn-active);
 }
 
 .re-category {
@@ -265,13 +343,13 @@
 }
 
 .re-pattern-cell[data-kind="t"] {
-  background: var(--up-fill);
-  border-color: var(--up-fill);
+  background: var(--re-tak);
+  border-color: var(--re-tak);
 }
 
 .re-pattern-cell[data-kind="s"] {
-  background: var(--down-fill);
-  border-color: var(--down-fill);
+  background: var(--re-slap);
+  border-color: var(--re-slap);
 }
 
 /* Preview highlight, same idea as the in-game Hint dots. */
@@ -332,24 +410,19 @@
 /* --- Level / round status --- */
 
 .re-status {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  margin-bottom: 18px;
+  margin-bottom: 12px;
 }
 
+/* Level/round, round chips and total on one row. */
 .re-status-top {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 12px;
 }
 
-.re-levels-btn {
-  align-self: flex-start;
-}
-
 .re-status-heading {
+  flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -459,10 +532,11 @@
 /* --- Stage --- */
 
 .re-panel {
+  position: relative;
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  padding: 20px 16px;
+  gap: 12px;
+  padding: 16px;
   border-radius: 16px;
   border: 1px solid var(--panel-border);
   background: var(--panel);
@@ -481,10 +555,93 @@
   display: none;
 }
 
+/* Level summary sits over the last round, which keeps the panel's height. */
+.re-summary {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 16px;
+  border-radius: inherit;
+  background: var(--panel);
+  text-align: center;
+  overflow-y: auto;
+}
+
+.re-summary[hidden] {
+  display: none;
+}
+
+/* View transitions: round <-> result <-> summary. */
+.re-enter {
+  animation: reEnter 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.re-summary {
+  animation: reSummaryIn 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.re-summary.re-leaving {
+  animation: reSummaryOut 0.22s ease forwards;
+  pointer-events: none;
+}
+
+@keyframes reEnter {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes reSummaryIn {
+  from { opacity: 0; transform: scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes reSummaryOut {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .re-enter,
+  .re-summary {
+    animation: none;
+  }
+
+  .re-summary.re-leaving {
+    animation-duration: 0.01s;
+  }
+}
+
+.re-panel-summary > :not(.re-summary) {
+  visibility: hidden;
+}
+
 /* Main actions share one width so the column reads as a single flow. */
 .re-btn-wide {
   width: min(100%, 320px);
 }
+
+/* Two controls side by side (Listen + tempo, Play mine + Check). */
+.re-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: min(100%, 520px);
+}
+
+.re-row > .re-btn {
+  flex: 1;
+}
+
+.re-row > .re-tempo {
+  width: auto;
+  flex: 0 0 auto;
+}
+
 
 /* Metronome toggle switch */
 .re-switch {
@@ -572,7 +729,7 @@
 
 .re-points {
   margin: 0;
-  font-size: 28px;
+  font-size: 24px;
   font-weight: 800;
   color: #2e9e5b;
   animation: rePointsPop 0.35s cubic-bezier(0.22, 1, 0.36, 1);
@@ -601,7 +758,7 @@
   flex-direction: column;
   align-items: center;
   gap: 2px;
-  padding: 12px 18px;
+  padding: 8px 18px;
   border-radius: 14px;
   border: 1px solid var(--btn-active);
   max-width: 420px;
@@ -684,6 +841,31 @@
 .re-cue[data-phase="idle"] {
   font-weight: 500;
   opacity: 0.85;
+}
+
+.re-cue.re-feedback-wrong,
+.re-cue.re-feedback-right {
+  font-weight: 700;
+  color: #d9534f;
+  opacity: 1;
+}
+
+.re-cue.re-feedback-right {
+  color: #2e9e5b;
+}
+
+/* Show answer, next to Check's "Not quite" verdict. */
+.re-link-btn {
+  height: auto;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  font-weight: 600;
+  color: var(--text);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
 }
 
 .re-cue[data-phase="ready"],
@@ -843,15 +1025,32 @@
   outline-offset: -3px;
 }
 
-.re-grid-slot {
-  margin-top: 8px;
+/* Measure headers (grip, "Measure 1", hand legend) cost height and mean
+   nothing here; the beat numbers are enough. Tighter cards, too. */
+.re-grid-slot .measure-header {
+  display: none;
+}
+
+body:not(.present) .re-grid-slot .measure-row {
+  padding: 8px 10px;
+}
+
+.re-grid-slot .measures-scroller {
+  gap: 8px;
+}
+
+.re-grid-slot .labels {
+  margin-bottom: 6px;
+  font-size: 18px;
 }
 
 /* Show every measure in full, no inner scroll box (a global .measures
    height from css/create-rhythm-game.css would otherwise clip measure 2). */
 .re-grid-slot .measures {
-  margin-inline: auto; /* .measures is capped at 900px; centre it in the panel */
+  max-width: 500px; /* smaller beats, so two measures fit on screen */
+  margin-inline: auto;
   height: auto;
+  min-height: 0; /* the Studio's min-height left a gap under the grid */
   max-height: none;
   overflow: visible;
 }
@@ -863,9 +1062,8 @@
 }
 
 @media (max-width: 640px) {
-  .re-hero {
-    padding: 16px;
-    margin-bottom: 20px;
+  .re-howto {
+    padding: 18px;
   }
 
   .re-hero-steps {
@@ -890,39 +1088,101 @@
     align-items: stretch;
   }
 
+  .re-status-top {
+    gap: 8px;
+  }
+
   .re-status-level {
-    font-size: 20px;
+    font-size: 18px;
   }
 
   .re-status-round {
-    font-size: 14px;
+    font-size: 13px;
   }
 
+  .re-status-main {
+    column-gap: 8px;
+    row-gap: 0;
+  }
 
   .re-round-chips {
-    display: grid;
-    grid-auto-flow: column;
-    grid-auto-columns: 1fr;
+    gap: 4px;
   }
 
   .re-round-chip {
-    min-width: 0;
+    min-width: 40px;
+    padding: 3px 6px;
+    border-radius: 10px;
   }
 
-  .re-levels-btn {
-    align-self: flex-start;
+  .re-round-chip-score {
+    font-size: 14px;
+  }
+
+  .re-total-value {
+    font-size: 22px;
   }
 
   .re-panel {
-    padding: 16px 12px;
+    padding: 12px 10px;
+    gap: 10px;
+  }
+
+  .re-stage-top,
+  .re-stage {
+    gap: 10px;
+  }
+
+  .re-rhythm-about {
+    display: none;
   }
 
   .re-cue {
-    height: 56px; /* room for the count-in note on two lines */
-    flex-wrap: wrap;
-    row-gap: 0;
-    border-radius: 16px;
+    height: 40px;
+    padding: 4px 12px;
+    font-size: 14px;
     text-align: center;
+  }
+
+  .re-cue-note {
+    font-size: 10px;
+  }
+
+  .re-status-cat {
+    display: none;
+  }
+
+  .re-mode-play {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  .re-options-row {
+    gap: 6px;
+  }
+
+  .re-options-row .re-btn {
+    padding: 8px 10px;
+    font-size: 13px;
+  }
+
+  .re-switch {
+    font-size: 13px;
+    gap: 6px;
+  }
+
+  .re-switch-track {
+    width: 38px;
+    height: 22px;
+  }
+
+  .re-switch-thumb {
+    width: 16px;
+    height: 16px;
+  }
+
+  .re-switch input:checked + .re-switch-track .re-switch-thumb {
+    transform: translateX(16px);
   }
 
   .re-options-row {
@@ -932,21 +1192,20 @@
 
   .re-options-row .re-btn {
     width: auto;
-    min-height: 44px;
-  }
-
-  .re-tempo {
-    width: 100%;
-    justify-content: space-between;
+    min-height: 40px;
   }
 
   .re-tempo-btn {
-    width: 48px;
-    height: 48px;
+    width: 44px;
+    height: 44px;
+  }
+
+  .re-tempo-readout {
+    min-width: 64px;
   }
 
   .re-points {
-    font-size: 24px;
+    font-size: 22px;
   }
 
   .re-summary-score {

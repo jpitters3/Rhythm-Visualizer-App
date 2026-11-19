@@ -3,6 +3,22 @@
 // rebuilds it on the real Studio grid, relocated the same way
 // js/create-rhythm-game.js does. A "run" is whatever is being played: a
 // level, a Rhythm Library set, or one library rhythm.
+//
+// Level ladder (rules live in js/rhythm-ear-levels.js; players never see
+// them). Every level is a Ding on beat 1 plus N notes, 3 rounds each.
+// "Dings only": every note is a Ding. "Mix": Ding, Tak or Slap, at least one
+// Tak or Slap.
+//   One Measure (8 beats)
+//     1  1 note,  odd beats, Dings only     6  2 notes, any, mix
+//     2  1 note,  any beat,  Dings only     7  3 notes, any, Dings only
+//     3  2 notes, odd beats, Dings only     8  3 notes, any, mix
+//     4  2 notes, any beat,  Dings only     9  4 notes, any, Dings only
+//     5  1 note,  any beat,  mix           10  4 notes, any, mix
+//   Two Measures (16 beats, any beat)
+//    11  3 notes, Dings only              15  7 notes, Dings only
+//    12  4 notes, Dings only              16  7 notes, mix
+//    13  4 notes, mix                     17  9 notes, mix
+//    14  5 notes, mix
 import { gridA } from './grid-context.js';
 import { clearGrid, setInnerLabel, renderAllMeasures } from './notegrid.js';
 import { setBeats, setSubdivision, stop, unlockAudio, getAudioCtx, metroClick, playNoteByLabel, intervalMs } from './noteplayer.js';
@@ -12,19 +28,20 @@ import { releaseOpenPhrase } from './controls.js';
 import { BASE_PATH } from './config.js';
 import {
   BEATS_PER_MEASURE, CATEGORIES, HINT_PENALTY, LIBRARY_SETS, NAMED_RHYTHMS, ROUND_MAX,
-  distinctRhythmCount, fittingRhythms, generatePhrase, levelRules, libraryPhrase,
+  distinctRhythmCount, generatePhrase, levelNumber, libraryPhrase,
   libraryRhythms, rhythmKey, roundScore, verdict,
 } from './rhythm-ear-levels.js';
 
-const BPM = 120;
+const BPM = 160;
 const TEMPO_STEP = 5;
 const TEMPO_MIN = 40;
 const TEMPO_MAX = 240;
 const LIBRARY_BPM = 160; // library rhythms at a more natural tempo
-const ROUNDS_PER_LEVEL = 4;
+const ROUNDS_PER_LEVEL = 3;
 const COUNT_IN = 4;
 const BEST_KEY = 'rhythmEarBestScore';
 const CLICK_KEY = 'rhythmEarClick';
+const HOWTO_KEY = 'rhythmEarHowToSeen';
 // Notes are handed to Web Audio only this far ahead, so stopping playback
 // silences everything after the next ~0.1s.
 const LOOKAHEAD_SEC = 0.1;
@@ -60,6 +77,9 @@ async function playSuccessChime() {
   src.start();
 }
 
+// Tap order for a beat, coloured like the library patterns.
+const TAP_CYCLE_HTML = '<span class="re-chip" data-kind="d">Ding</span> → <span class="re-chip" data-kind="t">Tak</span> → <span class="re-chip" data-kind="s">Slap</span> → <span class="re-chip">empty</span>';
+
 function describeResult(result) {
   if (result.revealed) return 'answer shown';
   const tries = result.tries === 1 ? '1 try' : `${result.tries} tries`;
@@ -70,18 +90,16 @@ function normalize(label) {
   return label === '0' ? 'Ding' : (label || '');
 }
 
-// Levels with fewer distinct rhythms than ROUNDS_PER_LEVEL get fewer rounds,
-// since no rhythm repeats within a level.
+// No rhythm repeats within a level; every level has at least
+// ROUNDS_PER_LEVEL distinct rhythms, so this cap is a safety net.
 function roundsFor(category, level) {
   return distinctRhythmCount(category, level, ROUNDS_PER_LEVEL);
 }
 
+// Keyed by level number; the old per-category keys from before the ladder
+// change are simply ignored.
 function bestKey(catIndex, levelIndex) {
-  return `${CATEGORIES[catIndex].id}:${levelIndex}`;
-}
-
-function levelLabel(catIndex, levelIndex) {
-  return `${CATEGORIES[catIndex].name} · Level ${levelIndex + 1}`;
+  return `level:${levelNumber(catIndex, levelIndex)}`;
 }
 
 function shuffled(arr) {
@@ -105,8 +123,8 @@ function levelRun(c, i) {
     catIndex: c,
     levelIndex: i,
     heading: cat.name,
-    title: `Level ${i + 1}`,
-    label: levelLabel(c, i),
+    title: `Level ${levelNumber(c, i)}`,
+    label: `Level ${levelNumber(c, i)}`,
     measures: cat.measures,
     rounds,
     bestKey: bestKey(c, i),
@@ -121,7 +139,7 @@ function levelRun(c, i) {
     },
     replay: () => levelRun(c, i),
     next: nextRef && (() => levelRun(...nextRef)),
-    nextLabel: nextRef && (nextRef[0] === c ? `Level ${nextRef[1] + 1}` : levelLabel(...nextRef)),
+    nextLabel: nextRef && `Level ${levelNumber(...nextRef)}`,
   };
 }
 
@@ -584,12 +602,13 @@ class RhythmEarGame {
   // The cue line always shows count-in vs rhythm.
   scheduleCue(kind, value, delaySec) {
     this.cueTimers.push(setTimeout(() => {
-      const root = this.previewCard ?? this.view;
+      // Scoped: hidden library cards have .re-cue lines of their own.
+      const root = this.previewCard ?? this.view.querySelector('.re-play');
       const cue = root.querySelector('.re-cue');
       if (cue) {
         cue.dataset.phase = kind;
         cue.innerHTML = kind === 'count'
-          ? `Count-in <strong>${value}</strong> <br/><span class="re-cue-note">not part of the rhythm</span>`
+          ? `Count-in <strong>${value}</strong> <span class="re-cue-note">not part of the rhythm</span>`
           : (this.playingMine ? '▶ Playing your version' : '🎵 Rhythm playing');
       }
       const beats = this.beatHighlights(root);
@@ -628,16 +647,13 @@ class RhythmEarGame {
       const cards = cat.levels.map((level, i) => {
         const score = best[bestKey(c, i)];
         const rounds = roundsFor(cat, level);
-        const named = fittingRhythms(cat, level).map(r => r.name);
         const current = this.run?.kind === 'level' && c === this.run.catIndex && i === this.run.levelIndex;
         return `
           <button class="re-level-card${current ? ' re-level-current' : ''}" type="button" data-cat="${c}" data-level="${i}">
             <span class="re-level-topline">
-              <span class="re-level-name">Level ${i + 1}</span>
+              <span class="re-level-name">Level ${levelNumber(c, i)}</span>
               ${score != null ? `<span class="re-level-best">Best ${score}/${rounds * ROUND_MAX}</span>` : ''}
             </span>
-            <ul class="re-level-rules">${levelRules(cat, level).map(r => `<li>${r}</li>`).join('')}</ul>
-            ${named.length ? `<span class="re-level-named">🎵 ${named.join(', ')}</span>` : ''}
             <span class="re-level-play">Play →</span>
           </button>
         `;
@@ -707,18 +723,20 @@ class RhythmEarGame {
     `;
   }
 
-  renderHeroHtml() {
-    const hasPlayed = Object.keys(readStore(BEST_KEY, {})).length > 0;
+  renderHowToHtml() {
     return `
-      <details class="re-hero" ${hasPlayed ? '' : 'open'}>
-        <summary class="re-hero-title">How to play</summary>
+      <dialog class="re-howto" aria-labelledby="reHowToTitle">
+        <h2 class="re-howto-title" id="reHowToTitle">How to play</h2>
         <ol class="re-hero-steps">
           <li><strong>Listen.</strong> First you'll hear a ${COUNT_IN}-count shaker count-in. <em>The count-in is not part of the rhythm.</em> Then the rhythm plays. Replay it as often as you like.</li>
-          <li><strong>Build it.</strong> Tap a beat on the grid to cycle <span class="re-chip">Ding</span> → <span class="re-chip">Tak</span> → <span class="re-chip">Slap</span> → empty. Beat 1 is always a Ding.</li>
-          <li><strong>Check.</strong> Each level has up to ${ROUNDS_PER_LEVEL} rounds worth ${ROUND_MAX} points each, and no rhythm repeats within a level. Fewer tries and a quicker answer score more; the clock starts when the rhythm finishes playing. Stuck? Tap 💡 Hint to see the grid light up as the rhythm plays; it costs ${HINT_PENALTY} points that round.</li>
-          <li><strong>Learn real rhythms.</strong> Whenever a famous rhythm fits the level, like the Tresillo or Son clave, you'll get that, and its name once you've solved it. To study them on purpose, open the 🎵 Rhythm Library from the menu.</li>
+          <li><strong>Build it.</strong> Tap a beat on the grid to change its sound: ${TAP_CYCLE_HTML}. Keep tapping to get the one you want. Beat 1 is always a Ding.</li>
+          <li><strong>Check.</strong> Each level has ${ROUNDS_PER_LEVEL} rounds worth ${ROUND_MAX} points each, and no rhythm repeats within a level. Fewer tries and a quicker answer score more; the clock starts when the rhythm finishes playing. Stuck? Tap 💡 Hint to see the grid light up as the rhythm plays; it costs ${HINT_PENALTY} points that round.</li>
+          <li><strong>Learn real rhythms.</strong> Whenever a famous rhythm fits the level, like the Tresillo or Son clave, you'll see the name of the rhythm once you've solved it. To study all of the famous rhythms, open the 🎵 Rhythm Library from the menu.</li>
         </ol>
-      </details>
+        <form method="dialog" class="re-howto-actions">
+          <button class="re-btn re-btn-primary" type="submit" data-action="howto-close">Got it</button>
+        </form>
+      </dialog>
     `;
   }
 
@@ -737,7 +755,6 @@ class RhythmEarGame {
     }).join('');
     return `
       <div class="re-status">
-        <button class="re-levels-btn" type="button">☰ Levels & library</button>
         <div class="re-status-top">
           <div class="re-status-heading">
             <span class="re-status-cat">${this.run.heading}</span>
@@ -746,12 +763,12 @@ class RhythmEarGame {
               <span class="re-status-round">${roundLabel}</span>
             </div>
           </div>
+          <div class="re-round-chips">${chips}</div>
           <div class="re-total" aria-label="Total score">
             <span class="re-total-value">${this.totalScore}</span>
             <span class="re-total-max">/ ${this.levelMax}</span>
           </div>
         </div>
-        <div class="re-round-chips">${chips}</div>
       </div>
     `;
   }
@@ -760,7 +777,6 @@ class RhythmEarGame {
     const statusEl = this.view.querySelector('.re-status-slot');
     if (!statusEl) return;
     statusEl.innerHTML = this.renderStatusHtml();
-    statusEl.querySelector('.re-levels-btn').addEventListener('click', () => this.showLevels());
   }
 
   rhythmNameHtml() {
@@ -779,17 +795,28 @@ class RhythmEarGame {
     const top = this.view.querySelector('.re-stage-top');
     const stage = this.view.querySelector('.re-stage');
     if (!top || !stage) return;
+    if (this.step === 'summary') {
+      this.renderSummary();
+      return;
+    }
+    this.showSummaryOverlay(false);
     const playing = this.playingTarget || this.playingMine;
-    const listenBtn = `<button class="re-btn re-btn-wide ${this.attempts === 0 && this.step === 'answering' ? 're-btn-primary' : 're-btn-secondary'}" type="button" data-action="listen" ${this.playingTarget ? 'disabled' : ''}>🔊 ${this.playingTarget ? 'Playing…' : 'Listen'}</button>`;
-    // One line above Listen: a short instruction when idle, the count-in /
-    // playing cue during playback (same slot, so nothing shifts).
-    const idleText = {
+    const listenBtn = `<button class="re-btn ${this.attempts === 0 && this.step === 'answering' ? 're-btn-primary' : 're-btn-secondary'}" type="button" data-action="listen" ${this.playingTarget ? 'disabled' : ''}>🔊 ${this.playingTarget ? 'Playing…' : 'Listen'}</button>`;
+    // One line above Listen: a short instruction (or Check's verdict) when
+    // idle, the count-in / playing cue during playback. Same slot, so nothing shifts.
+    const offText = `Not quite: ${this.wrongCount} ${this.wrongCount === 1 ? 'beat' : 'beats'} off. <button class="re-link-btn" type="button" data-action="reveal">Show answer</button>`;
+    let idleText = {
       answering: 'Listen to the rhythm, then build it on the grid.',
-      wrong: 'Listen again, then fix the beats marked in red.',
-      correct: 'Listen again to hear it.',
-      revealed: 'Listen again to hear how it lines up.',
+      wrong: offText,
     }[this.step] ?? '';
-    const cue = `<div class="re-cue" data-phase="${playing ? 'ready' : 'idle'}">${playing ? (this.playingTarget ? 'Get ready…' : '▶ Playing your version') : idleText}</div>`;
+    const roundMsg = this.step === 'revealed'
+      ? "Here's the answer. No points this round."
+      : (this.attempts === 1 ? '🎯 Nailed it, first try!' : '✓ Got it!');
+    if (this.step === 'correct' || this.step === 'revealed') idleText = roundMsg;
+    let cueClass = '';
+    if (!playing && this.step === 'wrong') cueClass = ' re-feedback-wrong';
+    if (!playing && this.step === 'correct') cueClass = ' re-feedback-right';
+    const cue = `<div class="re-cue${cueClass}" data-phase="${playing ? 'ready' : 'idle'}">${playing ? (this.playingTarget ? 'Get ready…' : '▶ Playing your version') : idleText}</div>`;
     const bpm = Math.round(gridA.bpm);
     const tempo = `
       <div class="re-tempo" role="group" aria-label="Tempo">
@@ -797,11 +824,13 @@ class RhythmEarGame {
         <span class="re-tempo-readout"><span class="re-tempo-value">${bpm}</span> BPM</span>
         <button class="re-tempo-btn" type="button" data-action="faster" aria-label="Faster" ${bpm >= TEMPO_MAX ? 'disabled' : ''}>+</button>
       </div>`;
-    const mineBtn = `<button class="re-btn re-btn-wide re-btn-secondary${this.playingMine ? ' re-btn-on' : ''}" type="button" data-action="play-mine">${this.playingMine ? '■ Stop' : '▶ Play mine'}</button>`;
-    const checkBtn = `<button class="re-btn re-btn-wide re-btn-primary" type="button" data-action="check">✓ Check</button>`;
+    const listenRow = `<div class="re-row">${listenBtn}${tempo}</div>`;
+    const mineBtn = `<button class="re-btn re-btn-secondary${this.playingMine ? ' re-btn-on' : ''}" type="button" data-action="play-mine">${this.playingMine ? '■ Stop' : '▶ Play mine'}</button>`;
+    const checkBtn = `<button class="re-btn re-btn-primary" type="button" data-action="check">✓ Check</button>`;
+    const actionRow = `<div class="re-row">${mineBtn}${checkBtn}</div>`;
     const options = `
       <div class="re-options-row">
-        <button class="re-btn re-btn-ghost${this.hintOn ? ' re-btn-on' : ''}" type="button" data-action="hint" aria-pressed="${this.hintOn}">💡 ${this.hintOn ? 'Hint on' : (this.hintUsed ? 'Hint' : `Hint (−${HINT_PENALTY})`)}</button>
+        <button class="re-btn re-btn-ghost${this.hintOn ? ' re-btn-on' : ''}" type="button" data-action="hint" aria-pressed="${this.hintOn}">💡 ${this.hintOn ? 'Hint on' : (this.hintUsed ? 'Hint' : `Hint −${HINT_PENALTY}`)}</button>
         <label class="re-switch">
           <input type="checkbox" role="switch" data-action="click" ${this.clickOn ? 'checked' : ''}>
           <span class="re-switch-track" aria-hidden="true"><span class="re-switch-thumb"></span></span>
@@ -816,60 +845,29 @@ class RhythmEarGame {
     let body = '';
     switch (this.step) {
       case 'answering':
-        topHtml = `${upfront}${cue}${listenBtn}${tempo}`;
-        body = `${mineBtn}${checkBtn}${options}`;
-        break;
       case 'wrong':
-        topHtml = `${upfront}${cue}${listenBtn}${tempo}`;
-        body = `
-          <p class="re-instruction re-feedback-wrong">Not quite: ${this.wrongCount} ${this.wrongCount === 1 ? 'beat is' : 'beats are'} off (marked in red).</p>
-          ${mineBtn}
-          <div class="re-cta-row">
-            ${checkBtn}
-            <button class="re-btn re-btn-ghost" type="button" data-action="reveal">Show answer</button>
-          </div>
-          ${options}`;
+        topHtml = `${upfront}${cue}${listenRow}`;
+        body = `${actionRow}${options}`;
         break;
       case 'correct':
       case 'revealed': {
         const last = this.round === this.roundCount - 1;
         const result = this.roundResults[this.round];
-        const msg = this.step === 'revealed'
-          ? "Here's the answer. No points this round."
-          : (this.attempts === 1 ? '🎯 Nailed it, first try!' : '✓ Got it!');
         const points = this.step === 'correct'
           ? `<p class="re-points">+${result.score} <span class="re-points-detail">${describeResult(result)}</span></p>`
           : '';
-        topHtml = `${cue}${listenBtn}${tempo}`;
+        topHtml = `${cue}${listenRow}`;
         body = `
-          <p class="re-instruction ${this.step === 'correct' ? 're-feedback-right' : ''}">${msg}</p>
           ${points}
           ${this.rhythmNameHtml()}
           <button class="re-btn re-btn-wide re-btn-primary" type="button" data-action="next">${last ? 'Finish →' : 'Next round →'}</button>`;
-        break;
-      }
-      case 'summary': {
-        const total = this.totalScore;
-        const rows = this.roundResults.map((r, i) => `
-          <li class="re-breakdown-row">
-            <span class="re-breakdown-round">Round ${i + 1}</span>
-            <span class="re-breakdown-detail">${describeResult(r)}</span>
-            <span class="re-breakdown-score">${r.score}</span>
-          </li>`).join('');
-        body = `
-          <p class="re-summary-score">${total} <span class="re-summary-max">/ ${this.levelMax}</span></p>
-          <p class="re-instruction re-verdict">${verdict(total, this.levelMax)}</p>
-          <ul class="re-breakdown">${rows}</ul>
-          <div class="re-cta-row">
-            <button class="re-btn re-btn-secondary" type="button" data-action="replay">${this.run.replayText}</button>
-            ${this.run.next ? `<button class="re-btn re-btn-primary" type="button" data-action="next-level">${this.run.nextLabel} →</button>` : ''}
-          </div>`;
         break;
       }
     }
     top.innerHTML = topHtml;
     top.hidden = !topHtml;
     stage.innerHTML = body;
+    this.enterView(this.step === 'correct' || this.step === 'revealed' ? 'result' : 'main');
 
     const on = (action, event, fn) => this.view.querySelector(`.re-play [data-action="${action}"]`)?.addEventListener(event, fn);
     on('listen', 'click', () => this.playTarget());
@@ -880,21 +878,80 @@ class RhythmEarGame {
     on('faster', 'click', () => this.changeTempo(TEMPO_STEP));
     on('reveal', 'click', () => this.reveal());
     on('next', 'click', () => this.nextRound());
-    on('replay', 'click', () => this.startRun(this.run.replay()));
-    on('next-level', 'click', () => this.startRun(this.run.next()));
     on('click', 'change', (e) => {
       this.clickOn = e.target.checked;
       writeStore(CLICK_KEY, this.clickOn);
     });
   }
 
-  // Re-renders everything below the header for the current step.
+  // Laid over the panel (the last round stays underneath, hidden), so the
+  // page height doesn't change between a level's end and the next start.
+  renderSummary() {
+    const total = this.totalScore;
+    const rows = this.roundResults.map((r, i) => `
+      <li class="re-breakdown-row">
+        <span class="re-breakdown-round">Round ${i + 1}</span>
+        <span class="re-breakdown-detail">${describeResult(r)}</span>
+        <span class="re-breakdown-score">${r.score}</span>
+      </li>`).join('');
+    const overlay = this.view.querySelector('.re-summary');
+    overlay.innerHTML = `
+      <p class="re-summary-score">${total} <span class="re-summary-max">/ ${this.levelMax}</span></p>
+      <p class="re-instruction re-verdict">${verdict(total, this.levelMax)}</p>
+      <ul class="re-breakdown">${rows}</ul>
+      <div class="re-cta-row">
+        <button class="re-btn re-btn-secondary" type="button" data-action="replay">${this.run.replayText}</button>
+        ${this.run.next ? `<button class="re-btn re-btn-primary" type="button" data-action="next-level">${this.run.nextLabel} →</button>` : ''}
+      </div>`;
+    this.showSummaryOverlay(true);
+    overlay.querySelector('[data-action="replay"]').addEventListener('click', () => this.startRun(this.run.replay()));
+    overlay.querySelector('[data-action="next-level"]')?.addEventListener('click', () => this.startRun(this.run.next()));
+  }
+
+  showSummaryOverlay(on) {
+    const panel = this.view.querySelector('.re-panel');
+    const overlay = panel.querySelector('.re-summary');
+    panel.classList.toggle('re-panel-summary', on);
+    panel.querySelectorAll('.re-stage-top, .re-board, .re-stage').forEach(el => { el.inert = on; });
+    if (on) {
+      overlay.classList.remove('re-leaving');
+      overlay.hidden = false;
+      this.viewGroup = 'summary';
+    } else if (!overlay.hidden && !overlay.classList.contains('re-leaving')) {
+      // Fade out over the next round, which is already in place underneath.
+      overlay.classList.add('re-leaving');
+      overlay.addEventListener('animationend', () => {
+        if (overlay.classList.contains('re-leaving')) overlay.hidden = true;
+        overlay.classList.remove('re-leaving');
+      }, { once: true });
+    }
+  }
+
+  // A subtle fade-in for what changed (the cue line and the controls below
+  // the grid) when moving between the round, its result and the summary.
+  enterView(group) {
+    const changed = this.viewGroup && this.viewGroup !== group;
+    this.viewGroup = group;
+    if (!changed) return;
+    [this.view.querySelector('.re-play .re-cue'), this.view.querySelector('.re-stage')].forEach(el => {
+      if (!el) return;
+      el.classList.remove('re-enter');
+      void el.offsetWidth; // restart the animation
+      el.classList.add('re-enter');
+    });
+  }
+
+  // Re-renders everything below the top bar for the current step.
   renderAll() {
     const levelsEl = this.view.querySelector('.re-levels');
     const playEl = this.view.querySelector('.re-play');
     const inLevels = this.step === 'levels';
     levelsEl.hidden = !inLevels;
     playEl.hidden = inLevels;
+    // Play mode drops the header so the whole game fits on screen.
+    this.view.querySelector('.re-container').classList.toggle('re-mode-play', !inLevels);
+    this.view.querySelector('.re-topbar [data-action="levels"]').hidden = inLevels;
+    this.view.scrollTop = 0;
 
     if (inLevels) {
       levelsEl.innerHTML = this.renderPickerHtml();
@@ -921,21 +978,26 @@ class RhythmEarGame {
     }
 
     this.renderStatus();
-    this.view.querySelector('.re-board').hidden = this.step === 'summary';
     this.renderStage();
   }
 
   render() {
     this.view.innerHTML = `
       <div class="hg-container re-container">
-        <button class="hg-back" type="button">← Back to Games</button>
+        <div class="re-topbar">
+          <button class="hg-back" type="button">← Games</button>
+          <div class="re-topbar-actions">
+            <button class="re-levels-btn" type="button" data-action="levels">☰ Levels & library</button>
+            <button class="re-icon-btn" type="button" data-action="howto" aria-label="How to play">?</button>
+          </div>
+        </div>
         <header class="hg-header">
           <p class="hg-eyebrow">Rhythm · Rhythm by Ear</p>
           <h1 class="hg-title">Rhythm by Ear</h1>
           <p class="hg-subtitle">Hear a rhythm, then build it on the grid.</p>
         </header>
 
-        ${this.renderHeroHtml()}
+        ${this.renderHowToHtml()}
 
         <div class="re-levels" hidden></div>
 
@@ -947,6 +1009,7 @@ class RhythmEarGame {
               <div class="re-grid-slot"></div>
             </div>
             <div class="re-stage"></div>
+            <div class="re-summary" hidden></div>
           </div>
         </div>
       </div>
@@ -961,6 +1024,13 @@ class RhythmEarGame {
       this.onBack?.();
     });
     window.addEventListener('routeChanged', this.onRouteChanged);
+    this.view.querySelector('.re-topbar [data-action="levels"]').addEventListener('click', () => this.showLevels());
+
+    const howTo = this.view.querySelector('.re-howto');
+    this.view.querySelector('[data-action="howto"]').addEventListener('click', () => howTo.showModal());
+    howTo.addEventListener('close', () => writeStore(HOWTO_KEY, true));
+    // Opens by itself once, for a first-time player.
+    if (!readStore(HOWTO_KEY, false)) howTo.showModal();
 
     this.startRun(levelRun(0, 0));
   }

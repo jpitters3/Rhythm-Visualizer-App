@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   CATEGORIES, NAMED_RHYTHMS, beatsFor, generatePhrase, fittingRhythms,
-  levelRules, roundScore, verdict, ROUND_MAX, rhythmKey, distinctRhythmCount,
+  levelNumber, roundScore, verdict, ROUND_MAX, rhythmKey, distinctRhythmCount,
   LIBRARY_SETS, libraryRhythms, libraryPhrase,
 } from '../../js/rhythm-ear-levels.js';
 
@@ -14,33 +14,33 @@ CATEGORIES.forEach(cat => {
   cat.levels.forEach((level, idx) => {
     test(`${cat.name} level ${idx + 1} phrases follow its rules`, () => {
       const beats = beatsFor(cat);
-      let sawMix = false;
       let sawEven = false;
+      let sawDingInMix = false;
       for (let s = 0; s < SAMPLES; s++) {
         const { labels } = generatePhrase(cat, level);
         assert.equal(labels.length, beats);
         assert.equal(labels[0], 'Ding');
         assert.ok(labels.every(l => ['', 'Ding', 'T', 'S'].includes(l)));
-        assert.equal(labels.filter(l => l === 'Ding').length, 1 + level.extraDings, `dings: ${labels}`);
 
-        const extras = labels.map((l, i) => (l && i > 0 ? i + 1 : null)).filter(Boolean);
-        assert.equal(extras.length, level.extraDings + level.accents);
-        if (level.where === 'odd') assert.ok(extras.every(b => b % 2 === 1), `odd only: ${labels}`);
-        if (extras.some(b => b % 2 === 0)) sawEven = true;
+        const notes = labels.map((l, i) => (l && i > 0 ? i + 1 : null)).filter(Boolean);
+        assert.equal(notes.length, level.notes, `notes: ${labels}`);
+        if (level.where === 'odd') assert.ok(notes.every(b => b % 2 === 1), `odd only: ${labels}`);
+        if (notes.some(b => b % 2 === 0)) sawEven = true;
 
-        const sounds = new Set(labels.filter(isAccent));
-        if (level.sounds === 'same') assert.equal(sounds.size, 1, `never mixed: ${labels}`);
-        if (sounds.size > 1) sawMix = true;
+        const accents = labels.filter(isAccent).length;
+        if (level.sounds === 'dings') assert.equal(accents, 0, `Dings only: ${labels}`);
+        else assert.ok(accents > 0, `mix has a Tak or Slap: ${labels}`);
+        if (level.sounds === 'mix' && accents < level.notes) sawDingInMix = true;
       }
       if (level.where === 'any') assert.ok(sawEven, 'even beats can appear');
-      if (level.sounds === 'mix' && level.accents > 1) assert.ok(sawMix, 'mixes can appear');
+      if (level.sounds === 'mix' && level.notes > 1) assert.ok(sawDingInMix, 'mix levels can add Dings');
     });
   });
 });
 
 test('named rhythms come first, each once per level', () => {
   const cat = CATEGORIES[0];
-  const level = cat.levels[3]; // 2 accents, any beat: Tresillo fits
+  const level = cat.levels[3]; // 2 notes, any beat: Tresillo fits
   assert.deepEqual(fittingRhythms(cat, level).map(r => r.name), ['Tresillo']);
   const first = generatePhrase(cat, level);
   assert.equal(first.name, 'Tresillo');
@@ -49,7 +49,7 @@ test('named rhythms come first, each once per level', () => {
 });
 
 // Plays every level's rounds many times, like the game does.
-const ROUNDS = 4;
+const ROUNDS = 3;
 CATEGORIES.forEach(cat => {
   cat.levels.forEach((level, idx) => {
     test(`${cat.name} level ${idx + 1}: no rhythm repeats and random never copies a named one`, () => {
@@ -77,11 +77,18 @@ CATEGORIES.forEach(cat => {
   });
 });
 
-test('levels with too few distinct rhythms get fewer rounds', () => {
-  assert.equal(distinctRhythmCount(CATEGORIES[0], CATEGORIES[0].levels[0], 4), 3);
-  assert.equal(distinctRhythmCount(CATEGORIES[0], CATEGORIES[0].levels[2], 4), 3);
-  assert.equal(distinctRhythmCount(CATEGORIES[1], CATEGORIES[1].levels[2], 4), 1);
-  assert.equal(distinctRhythmCount(CATEGORIES[2], CATEGORIES[2].levels[6], 4), 4);
+test('every level has enough distinct rhythms for 3 rounds', () => {
+  CATEGORIES.forEach(cat => cat.levels.forEach((level, i) => {
+    assert.equal(distinctRhythmCount(cat, level, 3), 3, `${cat.name} level ${i + 1}`);
+  }));
+  assert.equal(distinctRhythmCount(CATEGORIES[0], CATEGORIES[0].levels[0]), 3); // Ding on 3, 5 or 7
+});
+
+test('level numbers run on across categories', () => {
+  assert.equal(levelNumber(0, 0), 1);
+  assert.equal(levelNumber(0, 9), 10);
+  assert.equal(levelNumber(1, 0), 11);
+  assert.equal(CATEGORIES.reduce((n, c) => n + c.levels.length, 0), 17);
 });
 
 test('Tak and Slap alone do not make a new rhythm', () => {
@@ -90,7 +97,7 @@ test('Tak and Slap alone do not make a new rhythm', () => {
 });
 
 test('the claves fill the Two Measures levels with five notes', () => {
-  const cat = CATEGORIES[2];
+  const cat = CATEGORIES[1];
   const names = fittingRhythms(cat, cat.levels[1]).map(r => r.name);
   assert.ok(names.includes('Son clave'));
   assert.ok(names.includes('Bossa nova'));
@@ -119,13 +126,6 @@ test('library phrases place the fixed voicing on the rhythm\'s beats', () => {
   const son = libraryPhrase(NAMED_RHYTHMS.find(r => r.name === 'Son clave'));
   assert.equal(son.labels.length, 16);
   assert.equal(son.labels[10], 'Ding');
-});
-
-test('rules read clearly for each category', () => {
-  assert.deepEqual(levelRules(CATEGORIES[0], CATEGORIES[0].levels[0]),
-    ['Ding on beat 1', '1 accent on odd beats only (3, 5, 7)', 'The accent is a Tak or a Slap']);
-  assert.equal(levelRules(CATEGORIES[1], CATEGORIES[1].levels[0])[1], '1 accent and the extra Ding on odd beats only (3, 5, 7)');
-  assert.equal(levelRules(CATEGORIES[2], CATEGORIES[2].levels[6])[0], 'Dings on beat 1 and 3 more beats');
 });
 
 test('first try within 15s is a perfect round', () => {
