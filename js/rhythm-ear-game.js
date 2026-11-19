@@ -42,6 +42,7 @@ const COUNT_IN = 4;
 const BEST_KEY = 'rhythmEarBestScore';
 const CLICK_KEY = 'rhythmEarClick';
 const HOWTO_KEY = 'rhythmEarHowToSeen';
+const BPM_KEY = 'rhythmEarBpm'; // the player's level tempo, kept between visits
 // Notes are handed to Web Audio only this far ahead, so stopping playback
 // silences everything after the next ~0.1s.
 const LOOKAHEAD_SEC = 0.1;
@@ -76,6 +77,13 @@ async function playSuccessChime() {
   src.connect(audioCtx.destination);
   src.start();
 }
+
+// Game title with a small equalizer that idles, then bounces on the beat
+// (never on the rhythm's notes, which would give the answer away).
+const EQ_HTML = `<span class="re-eq" aria-hidden="true">${'<span class="re-eq-bar"></span>'.repeat(5)}</span>`;
+const TITLE_HTML = `${EQ_HTML}<span>Rhythm by Ear</span>`;
+
+const BURST_NOTES = ['♪', '♫', '♩', '♬', '♪', '♫'];
 
 // Tap order for a beat, coloured like the library patterns.
 const TAP_CYCLE_HTML = '<span class="re-chip" data-kind="d">Ding</span> → <span class="re-chip" data-kind="t">Tak</span> → <span class="re-chip" data-kind="s">Slap</span> → <span class="re-chip">empty</span>';
@@ -203,6 +211,11 @@ function patternHtml(labels) {
   return `<span class="re-pattern" aria-hidden="true">${rows.join('')}</span>`;
 }
 
+function savedBpm() {
+  const bpm = Number(readStore(BPM_KEY, BPM));
+  return Number.isFinite(bpm) ? Math.max(TEMPO_MIN, Math.min(TEMPO_MAX, bpm)) : BPM;
+}
+
 function readStore(key, fallback) {
   try { return JSON.parse(localStorage.getItem(key)) ?? fallback; } catch { return fallback; }
 }
@@ -256,6 +269,9 @@ class RhythmEarGame {
     this.gridMount = createRelocatableMount('measures');
     this.onRouteChanged = this.onRouteChanged.bind(this);
     this.onGridTap = this.onGridTap.bind(this);
+    this.onDocPointer = this.onDocPointer.bind(this);
+    this.onDocKey = this.onDocKey.bind(this);
+    this.tempoOpen = false;
 
     this.prevLabelNotation = labelNotation;
     setLabelNotation('numeric');
@@ -267,7 +283,7 @@ class RhythmEarGame {
     setBeats(BEATS_PER_MEASURE, gridA);
     setSubdivision(1, gridA);
     gridA.setMeasures(1);
-    gridA.setBpm(BPM);
+    gridA.setBpm(savedBpm());
     renderAllMeasures(gridA);
     TransportRegistry.updateAll(gridA);
 
@@ -286,6 +302,8 @@ class RhythmEarGame {
     window.dispatchEvent(new CustomEvent('labelNotationChanged', { detail: this.prevLabelNotation }));
     this.gridMount.unmount();
     window.removeEventListener('routeChanged', this.onRouteChanged);
+    document.removeEventListener('pointerdown', this.onDocPointer);
+    document.removeEventListener('keydown', this.onDocKey);
   }
 
   onRouteChanged({ detail }) {
@@ -337,6 +355,7 @@ class RhythmEarGame {
   }
 
   startRound() {
+    this.tempoOpen = false;
     this.cancelTargetPlayback();
     this.stopTransport();
     this.clearMarks();
@@ -371,6 +390,7 @@ class RhythmEarGame {
         hint: this.hintUsed,
       };
       playSuccessChime();
+      this.burstNotes = true;
       this.step = 'correct';
       this.renderStatus();
     } else {
@@ -407,6 +427,7 @@ class RhythmEarGame {
   }
 
   showLevels() {
+    this.tempoOpen = false;
     this.cancelTargetPlayback();
     this.stopTransport();
     this.stepBeforeLevels = this.step;
@@ -433,8 +454,16 @@ class RhythmEarGame {
     const bpm = Math.max(TEMPO_MIN, Math.min(TEMPO_MAX, Math.round(gridA.bpm) + delta));
     gridA.setBpm(bpm);
     TransportRegistry.updateAll(gridA);
+    // Library runs play at their own tempo; only a level tempo is remembered.
+    if (!this.run?.bpm) writeStore(BPM_KEY, bpm);
+    this.view.querySelector('.re-container').style.setProperty('--re-beat', `${60 / bpm}s`);
     const value = this.view.querySelector('.re-tempo-value');
     if (value) value.textContent = bpm;
+    const chip = this.view.querySelector('.re-tempo-chip');
+    if (chip) {
+      chip.querySelector('.re-tempo-chip-value').textContent = bpm;
+      chip.setAttribute('aria-label', `Tempo ${bpm} BPM`);
+    }
     this.view.querySelector('[data-action="slower"]')?.toggleAttribute('disabled', bpm <= TEMPO_MIN);
     this.view.querySelector('[data-action="faster"]')?.toggleAttribute('disabled', bpm >= TEMPO_MAX);
   }
@@ -512,6 +541,9 @@ class RhythmEarGame {
     });
     const endAt = t0 + (countIn + labels.length) * beatSec;
 
+    const container = this.view.querySelector('.re-container');
+    container.style.setProperty('--re-beat', `${beatSec}s`);
+    container.classList.add('re-is-playing');
     onStart?.();
     let next = 0;
     const tick = () => {
@@ -617,8 +649,71 @@ class RhythmEarGame {
     }, delaySec * 1000));
   }
 
+  // Closing the tempo popover also stops its Test click.
+  // Toggled in place, not re-rendered: a tap outside closes it on
+  // pointerdown, and re-rendering then would swallow that tap's click.
+  setTempoOpen(open) {
+    if (this.tempoOpen === open) return;
+    this.tempoOpen = open;
+    if (!open && this.tempoTest) this.cancelTargetPlayback();
+    const chip = this.view.querySelector('.re-tempo-chip');
+    chip?.setAttribute('aria-expanded', String(open));
+    chip?.classList.toggle('re-btn-on', open);
+    const pop = this.view.querySelector('.re-tempo-pop');
+    if (pop) pop.hidden = !open;
+    const test = this.view.querySelector('[data-action="tempo-test"]');
+    if (test && !this.tempoTest) {
+      test.textContent = '♩ Test';
+      test.setAttribute('aria-pressed', 'false');
+      test.classList.remove('re-btn-on');
+    }
+  }
+
+  // Taps outside the tempo popover (or Escape) close it.
+  onDocPointer(e) {
+    if (this.tempoOpen && !e.target.closest('.re-tempo-menu')) this.setTempoOpen(false);
+  }
+
+  onDocKey(e) {
+    if (e.key === 'Escape' && this.tempoOpen) this.setTempoOpen(false);
+  }
+
+  // Test: a steady click at the current tempo until toggled off. Reads the
+  // tempo on every beat, so − / + are heard straight away.
+  async toggleTempoTest() {
+    if (this.tempoTest) {
+      this.cancelTargetPlayback();
+      this.renderStage();
+      return;
+    }
+    this.cancelTargetPlayback();
+    this.stopTransport();
+    await unlockAudio();
+    const audioCtx = getAudioCtx();
+    if (!audioCtx || this.tornDown) return;
+    let next = audioCtx.currentTime + 0.05;
+    let beat = 0;
+    const tick = () => {
+      const now = audioCtx.currentTime;
+      while (next < now + LOOKAHEAD_SEC) {
+        metroClick(beat % BEATS_PER_MEASURE === 0 ? 'downbeat' : 'beat', Math.max(0, next - now), 'Click');
+        next += 60 / gridA.bpm;
+        beat++;
+      }
+    };
+    this.tempoTest = setInterval(tick, SCHEDULER_MS);
+    tick();
+    const container = this.view.querySelector('.re-container');
+    container.style.setProperty('--re-beat', `${60 / gridA.bpm}s`);
+    container.classList.add('re-is-playing');
+    this.renderStage();
+  }
+
   cancelTargetPlayback() {
+    clearInterval(this.tempoTest);
+    this.tempoTest = null;
     clearInterval(this.playScheduler);
+    this.view.querySelector('.re-container')?.classList.remove('re-is-playing');
     this.playScheduler = null;
     this.cueTimers.forEach(clearTimeout);
     this.cueTimers = [];
@@ -779,14 +874,19 @@ class RhythmEarGame {
     statusEl.innerHTML = this.renderStatusHtml();
   }
 
-  rhythmNameHtml() {
+  // A named rhythm's card. Its story opens in a bubble on tap (ⓘ), so the
+  // card stays small and nothing around it moves.
+  rhythmNameHtml(label, { opensDown = false } = {}) {
     if (!this.target?.name) return '';
     return `
-      <div class="re-rhythm-name">
-        <span class="re-rhythm-label">🎵 ${this.step === 'correct' ? 'You just played the' : 'This rhythm is the'}</span>
-        <strong class="re-rhythm-title">${this.target.name}</strong>
-        <span class="re-rhythm-about">${this.target.about}</span>
-      </div>`;
+      <button class="re-rhythm-name${opensDown ? ' re-rhythm-name-down' : ''}" type="button" data-action="rhythm-info" aria-expanded="false" aria-label="${label} ${this.target.name}. Tap for more about it.">
+        <span class="re-rhythm-label">🎵 ${label}</span>
+        <span class="re-rhythm-title-row">
+          <strong class="re-rhythm-title">${this.target.name}</strong>
+          <span class="re-rhythm-info-icon" aria-hidden="true">ⓘ</span>
+        </span>
+        <span class="re-rhythm-about" role="tooltip">${this.target.about}</span>
+      </button>`;
   }
 
   // The play panel: top (Listen, cue, tempo), the grid, then bottom
@@ -824,22 +924,29 @@ class RhythmEarGame {
         <span class="re-tempo-readout"><span class="re-tempo-value">${bpm}</span> BPM</span>
         <button class="re-tempo-btn" type="button" data-action="faster" aria-label="Faster" ${bpm >= TEMPO_MAX ? 'disabled' : ''}>+</button>
       </div>`;
-    const listenRow = `<div class="re-row">${listenBtn}${tempo}</div>`;
+    const testBtn = `<button class="re-btn re-btn-ghost re-tempo-test${this.tempoTest ? ' re-btn-on' : ''}" type="button" data-action="tempo-test" aria-pressed="${Boolean(this.tempoTest)}">${this.tempoTest ? '■ Stop' : '♩ Test'}</button>`;
+    // Tempo is set once and left, so it lives in the settings row as a chip;
+    // − / + and Test open in a popover above it.
+    const tempoMenu = `
+      <div class="re-tempo-menu">
+        <button class="re-btn re-btn-ghost re-tempo-chip${this.tempoOpen ? ' re-btn-on' : ''}" type="button" data-action="tempo-open" aria-expanded="${this.tempoOpen}" aria-label="Tempo ${bpm} BPM">♩ <span class="re-tempo-chip-value">${bpm}</span></button>
+        <div class="re-tempo-pop" ${this.tempoOpen ? '' : 'hidden'}>${tempo}${testBtn}</div>
+      </div>`;
+    const listenRow = listenBtn.replace('class="re-btn ', 'class="re-btn re-btn-wide ');
     const mineBtn = `<button class="re-btn re-btn-secondary${this.playingMine ? ' re-btn-on' : ''}" type="button" data-action="play-mine">${this.playingMine ? '■ Stop' : '▶ Play mine'}</button>`;
     const checkBtn = `<button class="re-btn re-btn-primary" type="button" data-action="check">✓ Check</button>`;
     const actionRow = `<div class="re-row">${mineBtn}${checkBtn}</div>`;
     const options = `
       <div class="re-options-row">
         <button class="re-btn re-btn-ghost${this.hintOn ? ' re-btn-on' : ''}" type="button" data-action="hint" aria-pressed="${this.hintOn}">💡 ${this.hintOn ? 'Hint on' : (this.hintUsed ? 'Hint' : `Hint −${HINT_PENALTY}`)}</button>
+        ${tempoMenu}
         <label class="re-switch">
           <input type="checkbox" role="switch" data-action="click" ${this.clickOn ? 'checked' : ''}>
           <span class="re-switch-track" aria-hidden="true"><span class="re-switch-thumb"></span></span>
           <span class="re-switch-label">Metronome</span>
         </label>
       </div>`;
-    const upfront = this.run.nameUpfront
-      ? `<div class="re-rhythm-name"><span class="re-rhythm-label">🎵 Learn the</span><strong class="re-rhythm-title">${this.target.name}</strong><span class="re-rhythm-about">${this.target.about}</span></div>`
-      : '';
+    const upfront = this.run.nameUpfront ? this.rhythmNameHtml('Learn the', { opensDown: true }) : '';
 
     let topHtml = '';
     let body = '';
@@ -859,7 +966,7 @@ class RhythmEarGame {
         topHtml = `${cue}${listenRow}`;
         body = `
           ${points}
-          ${this.rhythmNameHtml()}
+          ${this.rhythmNameHtml(this.step === 'correct' ? 'You just played the' : 'This rhythm is the')}
           <button class="re-btn re-btn-wide re-btn-primary" type="button" data-action="next">${last ? 'Finish →' : 'Next round →'}</button>`;
         break;
       }
@@ -867,7 +974,12 @@ class RhythmEarGame {
     top.innerHTML = topHtml;
     top.hidden = !topHtml;
     stage.innerHTML = body;
+    stage.dataset.step = this.step; // round results space out evenly (CSS)
     this.enterView(this.step === 'correct' || this.step === 'revealed' ? 'result' : 'main');
+    if (this.burstNotes) {
+      this.burstNotes = false;
+      this.noteBurst(stage.querySelector('.re-points'));
+    }
 
     const on = (action, event, fn) => this.view.querySelector(`.re-play [data-action="${action}"]`)?.addEventListener(event, fn);
     on('listen', 'click', () => this.playTarget());
@@ -876,8 +988,15 @@ class RhythmEarGame {
     on('hint', 'click', () => this.toggleHint());
     on('slower', 'click', () => this.changeTempo(-TEMPO_STEP));
     on('faster', 'click', () => this.changeTempo(TEMPO_STEP));
+    on('tempo-test', 'click', () => this.toggleTempoTest());
+    on('tempo-open', 'click', () => this.setTempoOpen(!this.tempoOpen));
     on('reveal', 'click', () => this.reveal());
     on('next', 'click', () => this.nextRound());
+    this.view.querySelectorAll('.re-play [data-action="rhythm-info"]').forEach(card => {
+      card.addEventListener('click', () => {
+        card.setAttribute('aria-expanded', String(card.getAttribute('aria-expanded') !== 'true'));
+      });
+    });
     on('click', 'change', (e) => {
       this.clickOn = e.target.checked;
       writeStore(CLICK_KEY, this.clickOn);
@@ -925,6 +1044,25 @@ class RhythmEarGame {
         overlay.classList.remove('re-leaving');
       }, { once: true });
     }
+  }
+
+  // A few notes float up from the score on a correct answer.
+  noteBurst(anchor) {
+    const panel = this.view.querySelector('.re-panel');
+    if (!anchor || !panel) return;
+    const a = anchor.getBoundingClientRect();
+    const p = panel.getBoundingClientRect();
+    const burst = document.createElement('div');
+    burst.className = 're-burst';
+    burst.setAttribute('aria-hidden', 'true');
+    burst.style.left = `${a.left - p.left + a.width / 2}px`;
+    burst.style.top = `${a.top - p.top}px`;
+    burst.innerHTML = BURST_NOTES.map((note, i) => {
+      const x = Math.round((i - (BURST_NOTES.length - 1) / 2) * 22 + (Math.random() * 12 - 6));
+      return `<span class="re-burst-note" data-tone="${i % 3}" style="--x:${x}px;--delay:${i * 60}ms">${note}</span>`;
+    }).join('');
+    panel.appendChild(burst);
+    setTimeout(() => burst.remove(), 1600);
   }
 
   // A subtle fade-in for what changed (the cue line and the controls below
@@ -986,6 +1124,7 @@ class RhythmEarGame {
       <div class="hg-container re-container">
         <div class="re-topbar">
           <button class="hg-back" type="button">← Games</button>
+          <span class="re-topbar-title">${TITLE_HTML}</span>
           <div class="re-topbar-actions">
             <button class="re-levels-btn" type="button" data-action="levels">☰ Levels & library</button>
             <button class="re-icon-btn" type="button" data-action="howto" aria-label="How to play">?</button>
@@ -1002,6 +1141,10 @@ class RhythmEarGame {
         <div class="re-levels" hidden></div>
 
         <div class="re-play">
+          <div class="re-play-title">
+            <p class="hg-eyebrow">The Handpan Games</p>
+            <h1 class="re-play-title-name">${TITLE_HTML}</h1>
+          </div>
           <div class="re-status-slot"></div>
           <div class="re-panel">
             <div class="re-stage-top"></div>
@@ -1024,6 +1167,8 @@ class RhythmEarGame {
       this.onBack?.();
     });
     window.addEventListener('routeChanged', this.onRouteChanged);
+    document.addEventListener('pointerdown', this.onDocPointer);
+    document.addEventListener('keydown', this.onDocKey);
     this.view.querySelector('.re-topbar [data-action="levels"]').addEventListener('click', () => this.showLevels());
 
     const howTo = this.view.querySelector('.re-howto');

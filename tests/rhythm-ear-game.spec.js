@@ -101,7 +101,7 @@ test('Rhythm by Ear: Hint lights the grid as the rhythm plays; the count-in is l
   }
 });
 
-test('Rhythm by Ear: panel rows are Listen + Tempo, grid, Play mine + Check, Hint + Metronome', async ({ page }) => {
+test('Rhythm by Ear: panel rows are Listen, grid, Play mine + Check, Hint + Tempo + Metronome', async ({ page }) => {
   test.setTimeout(60000);
   const u = await createTestUser(false);
 
@@ -115,10 +115,10 @@ test('Rhythm by Ear: panel rows are Listen + Tempo, grid, Play mine + Check, Hin
         return r.top + r.height / 2;
       };
       return [
-        [mid('[data-action="listen"]'), mid('.re-tempo')],
+        [mid('[data-action="listen"]')],
         [mid('#measures')],
         [mid('[data-action="play-mine"]'), mid('[data-action="check"]')],
-        [mid('[data-action="hint"]'), mid('.re-switch')],
+        [mid('[data-action="hint"]'), mid('.re-tempo-chip'), mid('.re-switch')],
       ];
     });
     rows.forEach(row => row.forEach(y => expect(Math.abs(y - row[0])).toBeLessThan(4))); // side by side
@@ -485,7 +485,7 @@ test('Rhythm by Ear: a fast double tap steps two labels and never opens multi-mo
   }
 });
 
-test('Rhythm by Ear: tempo − / + step the tempo by 5', async ({ page }) => {
+test('Rhythm by Ear: tempo − / + step by 5, ♩ Test previews it, and it is remembered', async ({ page }) => {
   test.setTimeout(60000);
   const u = await createTestUser(false);
 
@@ -495,11 +495,37 @@ test('Rhythm by Ear: tempo − / + step the tempo by 5', async ({ page }) => {
 
     const value = page.locator('.re-tempo-value');
     await expect(value).toHaveText('160');
+    const chip = page.locator('[data-action="tempo-open"]');
+    await expect(page.locator('.re-tempo-pop')).toBeHidden();
+    await chip.click();
+    await expect(page.locator('.re-tempo-pop')).toBeVisible();
     await page.click('[data-action="faster"]');
     await expect(value).toHaveText('165');
     await page.click('[data-action="slower"]');
     await page.click('[data-action="slower"]');
     await expect(value).toHaveText('155');
+    await expect(chip).toHaveText('♩ 155');
+
+    // ♩ Test clicks at the tempo until toggled off; Listen stops it too.
+    const testBtn = page.locator('[data-action="tempo-test"]');
+    await testBtn.click();
+    await expect(testBtn).toHaveAttribute('aria-pressed', 'true');
+    await expect(testBtn).toHaveText('■ Stop');
+    await testBtn.click();
+    await expect(testBtn).toHaveAttribute('aria-pressed', 'false');
+    await testBtn.click();
+    // A tap outside closes the popover and stops the click, and still counts.
+    await page.click('[data-action="listen"]');
+    await expect(page.locator('.re-tempo-pop')).toBeHidden();
+    await expect(page.locator('[data-action="listen"]')).toHaveText(/Playing/);
+    await expect(testBtn).toHaveAttribute('aria-pressed', 'false');
+
+    // The tempo is remembered next time the game opens.
+    await page.click('.re-container .hg-back');
+    await page.click('.hg-tile[data-domain="rhythm"]');
+    await page.click('.hg-tile[data-game="rhythm-ear"]');
+    await page.click('#confirmOkBtn'); // the grid the game borrowed counts as unsaved Studio changes
+    await expect(page.locator('.re-tempo-value')).toHaveText('155');
   } finally {
     await deleteTestUser(u.user.id);
   }
