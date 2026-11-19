@@ -97,8 +97,7 @@ body.pan-hero-open #mobileControlsBtn {
 
 /* The real #handpanWrap is re-parented into #panHeroPanHost and pinned near
    the bottom. !important beats any inline max-width js/panel-resize.js sets
-   before the wrap leaves its subtree. animation:none freezes handpanBreathe
-   so tonefield centres don't drift under the falling notes. */
+   before the wrap leaves its subtree. */
 #handpanWrap.pan-hero-pinned {
   position: fixed;
   left: 50%;
@@ -108,7 +107,6 @@ body.pan-hero-open #mobileControlsBtn {
   max-width: none !important;
   margin: 0 !important;
   z-index: 9001;
-  animation: none;
 }
 
 @media (max-width: 900px) {

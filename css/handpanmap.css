@@ -78,24 +78,10 @@
   z-index: 1001;
 }
 
-@keyframes handpanBreathe {
-  from { transform: scale(1); }
-  to   { transform: scale(1.02); }
-}
-
 .handpan-wrap {
   position: relative;
   width: 100%;
   padding: var(--hp-pad);
-  animation: handpanBreathe 5s ease-in-out infinite alternate;
-  will-change: transform;
-  transform-origin: center center;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .handpan-wrap {
-    animation: none;
-  }
 }
 
 /* Desktop: the panel fills .main's height; the wrap shrinks its width so the
@@ -1205,6 +1191,11 @@ body.accent-zen:not(.dark) .chord-chip.minor {
   border-radius: 50%;
   animation: hp-spin 1s linear infinite;
   margin-bottom: 12px;
+}
+
+/* Paused while the overlay is hidden, or it repaints every frame for nothing. */
+.hp-loading-overlay:not(.active) .hp-loader {
+  animation-play-state: paused;
 }
 
 body.dark .hp-loader {

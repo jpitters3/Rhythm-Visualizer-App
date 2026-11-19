@@ -216,6 +216,12 @@ body.dark .price-notice {
     animation: pulse 2s infinite;
 }
 
+/* Both run inside modals that stay in the page while closed: paused then. */
+.modal-overlay:not(.open) .celebratory-border,
+.modal-overlay:not(.open) .pulse-animation {
+    animation-play-state: paused;
+}
+
 @keyframes pulse {
     0% {
         transform: scale(1);

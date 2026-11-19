@@ -70,7 +70,8 @@ body.dark {
   visibility: hidden;
 }
 
-/* Equalizer: breathes when idle, bounces on the beat during playback. */
+/* Equalizer: a still skyline when idle (an idle loop cost ~10% of a CPU
+   core), bouncing on the beat only while something plays. */
 .re-eq {
   display: inline-flex;
   align-items: flex-end;
@@ -84,13 +85,13 @@ body.dark {
   border-radius: 2px;
   background: var(--btn-active);
   transform-origin: bottom;
-  animation: reEqIdle 2.4s ease-in-out infinite;
+  transform: scaleY(0.45);
 }
 
-.re-eq-bar:nth-child(2) { animation-delay: -0.5s; background: var(--re-tak); }
-.re-eq-bar:nth-child(3) { animation-delay: -1.1s; }
-.re-eq-bar:nth-child(4) { animation-delay: -1.6s; background: var(--re-slap); }
-.re-eq-bar:nth-child(5) { animation-delay: -0.8s; }
+.re-eq-bar:nth-child(2) { transform: scaleY(0.75); background: var(--re-tak); }
+.re-eq-bar:nth-child(3) { transform: scaleY(0.35); }
+.re-eq-bar:nth-child(4) { transform: scaleY(0.6); background: var(--re-slap); }
+.re-eq-bar:nth-child(5) { transform: scaleY(0.4); }
 
 .re-is-playing .re-eq-bar {
   animation: reEqBeat var(--re-beat, 0.5s) ease-out infinite;
@@ -100,11 +101,6 @@ body.dark {
 .re-is-playing .re-eq-bar:nth-child(3) { animation-delay: calc(var(--re-beat, 0.5s) * -0.5); }
 .re-is-playing .re-eq-bar:nth-child(4) { animation-delay: calc(var(--re-beat, 0.5s) * -0.15); }
 .re-is-playing .re-eq-bar:nth-child(5) { animation-delay: calc(var(--re-beat, 0.5s) * -0.65); }
-
-@keyframes reEqIdle {
-  0%, 100% { transform: scaleY(0.3); }
-  50% { transform: scaleY(0.7); }
-}
 
 @keyframes reEqBeat {
   0% { transform: scaleY(1); }
@@ -140,10 +136,8 @@ body.dark {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .re-eq-bar,
   .re-is-playing .re-eq-bar {
     animation: none;
-    transform: scaleY(0.5);
   }
 
   .re-burst {

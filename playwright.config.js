@@ -80,6 +80,10 @@ module.exports = defineConfig({
     // From then on WebKit sends requests through it, so page.route() mocks
     // stop applying. No test exercises the service worker itself.
     serviceWorkers: 'block',
+    // Test browsers draw in software, so decorative animations cost real CPU;
+    // across 4 workers that starved timing-sensitive tests. The app already
+    // switches them off for reduced motion.
+    reducedMotion: 'reduce',
   },
 
   projects: process.env.CI ? allProjects.filter(p => p.name !== 'firefox') : allProjects,

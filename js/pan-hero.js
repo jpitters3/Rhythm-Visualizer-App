@@ -244,8 +244,7 @@ function maybeReforceSide() {
   if (getHandpanSide() !== 'perimeter') setHandpanSide('perimeter');
 }
 
-// The pinned pan is fixed-position with its breathing animation frozen, so its
-// box is stable while open — no need to hit getBoundingClientRect() (a layout
+// The pinned pan is fixed-position, so its box is stable while open — no need to hit getBoundingClientRect() (a layout
 // flush) every frame. `boxes` is refreshed on resize and every
 // REFRESH_RECTS_EVERY frames as a safety net.
 const REFRESH_RECTS_EVERY = 20;

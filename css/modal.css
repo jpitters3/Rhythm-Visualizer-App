@@ -460,6 +460,11 @@ button#subdivKeepBtn {
   animation: welcomeBgShift 10s ease-in-out infinite;
 }
 
+/* Paused while the welcome modal is closed (it stays in the page, hidden). */
+.modal-overlay:not(.open) .welcome-video-preview {
+  animation-play-state: paused;
+}
+
 @keyframes welcomeBgShift {
   0%   { background-position: 0% 50%; }
   50%  { background-position: 100% 50%; }
