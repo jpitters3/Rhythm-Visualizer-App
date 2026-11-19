@@ -1,0 +1,965 @@
+/* Rhythm by Ear (route #games, Rhythm domain). See js/rhythm-ear-game.js.
+   Reuses .hg-container/.hg-back/.hg-header from css/handpan-games.css. */
+
+.re-levels[hidden],
+.re-play[hidden],
+.re-board[hidden] {
+  display: none;
+}
+
+/* --- Hero / level picker --- */
+
+.re-hero {
+  padding: 22px 24px;
+  margin-bottom: 32px;
+  border-radius: 16px;
+  border: 1px solid var(--panel-border);
+  background: var(--panel);
+}
+
+.re-hero-title,
+.re-section-title {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text);
+  opacity: 0.6;
+  margin: 0;
+}
+
+.re-hero-title {
+  cursor: pointer;
+}
+
+.re-levels-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.re-hero-steps {
+  margin: 14px 0 0;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  color: var(--text);
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.re-chip {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 700;
+  border: 1px solid var(--panel-border);
+}
+
+.re-level-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 16px;
+}
+
+.re-level-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  text-align: left;
+  height: auto;
+  white-space: normal;
+  font-weight: 400;
+  padding: 18px 20px;
+  border-radius: 16px;
+  border: 1px solid var(--panel-border);
+  background: var(--panel);
+  color: var(--text);
+  cursor: pointer;
+  transition: transform 0.15s, border-color 0.15s;
+}
+
+.re-level-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--btn-active);
+}
+
+.re-level-card:focus-visible {
+  outline: 2px solid var(--btn-active);
+  outline-offset: 2px;
+}
+
+.re-level-topline {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.re-level-name {
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.re-level-best {
+  font-size: 12px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--btn-active);
+  color: var(--btn-active-text);
+}
+
+.re-level-rules {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 14px;
+  line-height: 1.5;
+  opacity: 0.75;
+}
+
+.re-level-current {
+  border-color: var(--accent, #f6c84c);
+}
+
+.re-level-named {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--btn-active);
+}
+
+.re-category {
+  margin-bottom: 32px;
+}
+
+.re-category-name {
+  margin: 0 0 4px;
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--text);
+}
+
+.re-category-blurb {
+  margin: 0 0 14px;
+  font-size: 14px;
+  color: var(--text);
+  opacity: 0.6;
+}
+
+.re-level-play {
+  margin-top: auto;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--btn-active);
+}
+
+/* --- Picker tabs + Rhythm Library --- */
+
+.re-tabs {
+  display: inline-flex;
+  padding: 4px;
+  gap: 4px;
+  border-radius: 999px;
+  border: 1px solid var(--panel-border);
+  background: var(--panel);
+}
+
+.re-tab {
+  height: auto;
+  padding: 8px 16px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 700;
+  background: none;
+  color: var(--text);
+  opacity: 0.65;
+}
+
+.re-tab[aria-selected="true"] {
+  background: var(--btn-active);
+  color: var(--btn-active-text);
+  opacity: 1;
+}
+
+.re-library-intro {
+  margin: 0 0 24px;
+  max-width: 680px;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--text);
+  opacity: 0.8;
+}
+
+.re-library-set-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.re-library-set-head .re-category-blurb {
+  margin: 0;
+}
+
+.re-play-set-btn {
+  flex-shrink: 0;
+}
+
+.re-rhythm-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 18px 20px;
+  border-radius: 16px;
+  border: 1px solid var(--panel-border);
+  background: var(--panel);
+  color: var(--text);
+}
+
+.re-rhythm-card-name {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.re-rhythm-card-about {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.45;
+  opacity: 0.75;
+}
+
+.re-pattern {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.re-pattern-row {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 4px;
+}
+
+.re-pattern-cell {
+  aspect-ratio: 1;
+  max-height: 30px;
+  display: grid;
+  place-items: center;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 800;
+  border: 1px solid var(--panel-border);
+  color: var(--btn-active-text);
+}
+
+.re-pattern-cell[data-kind="d"] {
+  background: var(--btn-active);
+  border-color: var(--btn-active);
+}
+
+.re-pattern-cell[data-kind="t"] {
+  background: var(--up-fill);
+  border-color: var(--up-fill);
+}
+
+.re-pattern-cell[data-kind="s"] {
+  background: var(--down-fill);
+  border-color: var(--down-fill);
+}
+
+/* Preview highlight, same idea as the in-game Hint dots. */
+.re-pattern-cell {
+  transition: transform 0.08s, box-shadow 0.08s;
+}
+
+.re-pattern-cell.re-beat-on {
+  transform: scale(1.15);
+  box-shadow: 0 0 0 2px var(--accent, #f6c84c);
+}
+
+.re-pattern-cell[data-kind=""].re-beat-on {
+  background: var(--panel-border);
+}
+
+/* The card's cue only takes space while a preview plays. */
+.re-rhythm-card .re-cue[data-phase="idle"] {
+  display: none;
+}
+
+.re-rhythm-card .re-cue {
+  height: auto;
+  font-size: 13px;
+  padding: 4px 12px;
+}
+
+.re-rhythm-card-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: auto;
+}
+
+.re-card-btn {
+  flex: 1;
+  height: auto;
+  min-height: 40px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 700;
+  border: 1px solid var(--panel-border);
+  background: var(--panel);
+  color: var(--text);
+}
+
+.re-card-btn-primary {
+  background: var(--btn-active);
+  border-color: var(--btn-active);
+  color: var(--btn-active-text);
+}
+
+.re-card-btn.re-previewing {
+  border-color: var(--btn-active);
+  color: var(--btn-active);
+}
+
+/* --- Level / round status --- */
+
+.re-status {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.re-status-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.re-levels-btn {
+  align-self: flex-start;
+}
+
+.re-status-heading {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.re-status-cat {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text);
+  opacity: 0.55;
+}
+
+.re-status-main {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.re-status-level {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--text);
+}
+
+.re-status-round {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--btn-active);
+}
+
+.re-total {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  color: var(--text);
+}
+
+.re-total-value {
+  font-size: 26px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.re-total-max {
+  font-size: 13px;
+  font-weight: 600;
+  opacity: 0.55;
+}
+
+.re-round-chips {
+  display: flex;
+  gap: 8px;
+}
+
+.re-round-chip {
+  min-width: 58px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 12px;
+  border: 1px solid var(--panel-border);
+  background: var(--panel);
+  color: var(--text);
+}
+
+.re-round-chip[data-state="todo"] {
+  opacity: 0.45;
+}
+
+.re-round-chip[data-state="current"] {
+  border-color: var(--accent, #f6c84c);
+  box-shadow: 0 0 0 3px var(--accent-glow, rgba(246, 200, 76, 0.35));
+}
+
+.re-round-chip[data-state="done"] {
+  border-color: var(--btn-active);
+}
+
+.re-round-chip-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  opacity: 0.6;
+}
+
+.re-round-chip-score {
+  font-size: 16px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.re-levels-btn {
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--panel-border);
+  background: var(--panel);
+  color: var(--text);
+  cursor: pointer;
+}
+
+/* --- Stage --- */
+
+.re-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px 16px;
+  border-radius: 16px;
+  border: 1px solid var(--panel-border);
+  background: var(--panel);
+}
+
+.re-stage-top,
+.re-stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  text-align: center;
+}
+
+.re-stage-top[hidden] {
+  display: none;
+}
+
+/* Main actions share one width so the column reads as a single flow. */
+.re-btn-wide {
+  width: min(100%, 320px);
+}
+
+/* Metronome toggle switch */
+.re-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.re-switch input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+}
+
+.re-switch-track {
+  position: relative;
+  width: 44px;
+  height: 26px;
+  border-radius: 999px;
+  background: var(--panel-border);
+  transition: background 0.15s;
+}
+
+.re-switch-thumb {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--text);
+  transition: transform 0.15s;
+}
+
+.re-switch input:checked + .re-switch-track {
+  background: var(--btn-active);
+}
+
+.re-switch input:checked + .re-switch-track .re-switch-thumb {
+  transform: translateX(18px);
+  background: var(--btn-active-text);
+}
+
+.re-switch input:focus-visible + .re-switch-track {
+  outline: 2px solid var(--btn-active);
+  outline-offset: 2px;
+}
+
+.re-instruction {
+  margin: 0;
+  font-size: 15px;
+  color: var(--text);
+  max-width: 560px;
+}
+
+.re-feedback-right {
+  font-size: 18px;
+  font-weight: 800;
+  color: #2e9e5b;
+}
+
+.re-feedback-wrong {
+  font-weight: 700;
+  color: #d9534f;
+}
+
+.re-summary-score {
+  margin: 0;
+  font-size: 44px;
+  font-weight: 800;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.re-summary-max {
+  font-size: 18px;
+  font-weight: 600;
+  opacity: 0.55;
+}
+
+.re-points {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 800;
+  color: #2e9e5b;
+  animation: rePointsPop 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.re-points-detail {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  opacity: 0.6;
+}
+
+@keyframes rePointsPop {
+  from { transform: scale(0.6); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+.re-verdict {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.re-rhythm-name {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 12px 18px;
+  border-radius: 14px;
+  border: 1px solid var(--btn-active);
+  max-width: 420px;
+}
+
+.re-rhythm-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+  opacity: 0.65;
+}
+
+.re-rhythm-title {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--btn-active);
+}
+
+.re-rhythm-about {
+  font-size: 13px;
+  color: var(--text);
+  opacity: 0.75;
+}
+
+.re-breakdown {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  max-width: 420px;
+}
+
+.re-breakdown-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: baseline;
+  gap: 12px;
+  padding: 10px 4px;
+  border-bottom: 1px solid var(--panel-border);
+  color: var(--text);
+  text-align: left;
+}
+
+.re-breakdown-row:last-child {
+  border-bottom: none;
+}
+
+.re-breakdown-round {
+  font-weight: 700;
+}
+
+.re-breakdown-detail {
+  font-size: 13px;
+  opacity: 0.6;
+}
+
+.re-breakdown-score {
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+
+/* Count-in vs rhythm cue: muted and labelled while counting in, accent once
+   the rhythm itself starts, so the count-in never reads as part of it. */
+.re-cue {
+  box-sizing: border-box;
+  height: 38px;
+  border: 1px solid transparent; /* same size idle or showing, so the grid never shifts */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 4px 16px;
+  border-radius: 999px;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.re-cue[data-phase="idle"] {
+  font-weight: 500;
+  opacity: 0.85;
+}
+
+.re-cue[data-phase="ready"],
+.re-cue[data-phase="count"] {
+  border-style: dashed;
+  border-color: var(--panel-border);
+  opacity: 0.75;
+}
+
+.re-cue[data-phase="count"] strong {
+  font-size: 20px;
+}
+
+.re-cue-note {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  opacity: 0.8;
+}
+
+.re-cue[data-phase="beat"] {
+  background: var(--btn-active);
+  color: var(--btn-active-text);
+}
+
+.re-options-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+
+
+
+.re-cta-row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: center;
+  width: 100%;
+}
+
+.re-btn {
+  height: auto;
+  min-height: 48px;
+  padding: 12px 24px;
+  border-radius: 999px;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  border: 1px solid var(--panel-border);
+  transition: transform 0.1s, opacity 0.15s;
+}
+
+/* Hint just turned on: pulse Listen so the player plays it again. */
+.re-btn.re-flash {
+  animation: reFlash 0.6s ease-in-out 3;
+}
+
+@keyframes reFlash {
+  0%, 100% { box-shadow: 0 0 0 0 transparent; transform: scale(1); }
+  50% { box-shadow: 0 0 0 6px var(--accent-glow, rgba(246, 200, 76, 0.45)); transform: scale(1.04); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .re-btn.re-flash {
+    animation: none;
+    box-shadow: 0 0 0 4px var(--accent-glow, rgba(246, 200, 76, 0.45));
+  }
+}
+
+.re-btn:active {
+  transform: scale(0.97);
+}
+
+.re-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.re-btn-primary {
+  background: var(--btn-active);
+  color: var(--btn-active-text);
+  border-color: var(--btn-active);
+}
+
+.re-btn-secondary {
+  background: var(--panel);
+  color: var(--text);
+}
+
+.re-btn-ghost {
+  background: none;
+  color: var(--text);
+  opacity: 0.7;
+}
+
+.re-btn-ghost.re-btn-on {
+  opacity: 1;
+  border-color: var(--btn-active);
+  color: var(--btn-active);
+}
+
+.re-tempo {
+  display: inline-flex;
+  width: min(100%, 320px);
+  justify-content: space-between;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 999px;
+  border: 1px solid var(--panel-border);
+}
+
+.re-tempo-btn {
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border-radius: 50%;
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1;
+  background: var(--panel);
+  color: var(--text);
+  touch-action: manipulation; /* rapid taps don't zoom on iOS */
+}
+
+.re-tempo-btn:disabled {
+  opacity: 0.35;
+}
+
+.re-tempo-readout {
+  min-width: 78px;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.re-tempo-value {
+  font-size: 18px;
+  font-variant-numeric: tabular-nums;
+}
+
+
+/* Right/wrong marks on the relocated Studio grid after Check. */
+.re-grid-slot .cell.re-right {
+  outline: 3px solid #2e9e5b;
+  outline-offset: -3px;
+}
+
+.re-grid-slot .cell.re-wrong {
+  outline: 3px solid #d9534f;
+  outline-offset: -3px;
+}
+
+.re-grid-slot {
+  margin-top: 8px;
+}
+
+/* Show every measure in full, no inner scroll box (a global .measures
+   height from css/create-rhythm-game.css would otherwise clip measure 2). */
+.re-grid-slot .measures {
+  margin-inline: auto; /* .measures is capped at 900px; centre it in the panel */
+  height: auto;
+  max-height: none;
+  overflow: visible;
+}
+
+/* ▶ Play mine: each grid cell lights up as it plays. */
+.re-grid-slot .cell.re-beat-on {
+  box-shadow: 0 0 0 3px var(--accent, #f6c84c);
+  transform: scale(1.06);
+}
+
+@media (max-width: 640px) {
+  .re-hero {
+    padding: 16px;
+    margin-bottom: 20px;
+  }
+
+  .re-hero-steps {
+    font-size: 14px;
+  }
+
+  .re-levels-head {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .re-tabs {
+    display: flex;
+  }
+
+  .re-tab {
+    flex: 1;
+  }
+
+  .re-library-set-head {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .re-status-level {
+    font-size: 20px;
+  }
+
+  .re-status-round {
+    font-size: 14px;
+  }
+
+
+  .re-round-chips {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: 1fr;
+  }
+
+  .re-round-chip {
+    min-width: 0;
+  }
+
+  .re-levels-btn {
+    align-self: flex-start;
+  }
+
+  .re-panel {
+    padding: 16px 12px;
+  }
+
+  .re-cue {
+    height: 56px; /* room for the count-in note on two lines */
+    flex-wrap: wrap;
+    row-gap: 0;
+    border-radius: 16px;
+    text-align: center;
+  }
+
+  .re-options-row {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .re-options-row .re-btn {
+    width: auto;
+    min-height: 44px;
+  }
+
+  .re-tempo {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .re-tempo-btn {
+    width: 48px;
+    height: 48px;
+  }
+
+  .re-points {
+    font-size: 24px;
+  }
+
+  .re-summary-score {
+    font-size: 36px;
+  }
+
+  .re-cta-row {
+    flex-direction: column;
+  }
+
+  .re-btn {
+    width: 100%;
+    min-height: 52px;
+  }
+
+}

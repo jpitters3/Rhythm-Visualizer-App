@@ -81,6 +81,10 @@ function render(view) {
 // Domains with more than one game show a small in-domain choice screen
 // instead of jumping straight into a single game.
 const DOMAIN_GAMES = {
+  rhythm: [
+    { id: 'create-rhythm', name: 'Create Your Own Rhythm', icon: '🥁', blurb: 'Clap or tap an 8-beat rhythm, then harmonize it.' },
+    { id: 'rhythm-ear', name: 'Rhythm by Ear', icon: '👂', blurb: 'Hear a rhythm, then build it on the grid.' },
+  ],
   harmony: [
     { id: 'chord-wheel', name: 'Chord Wheel', icon: '🎡', blurb: 'Spin chords, reorder them, build a progression.' },
     { id: 'chord-play-along', name: 'Chord Play Along', icon: '🎧', blurb: 'Listen to a chord, then play it back by ear.' },
@@ -91,12 +95,6 @@ async function openDomainGame(view, domainId) {
   const games = DOMAIN_GAMES[domainId];
   if (games) {
     renderDomainChoice(view, domainId, games);
-    return;
-  }
-  if (domainId === 'rhythm') {
-    if (!await guardBeforeReplacingGrid('You have unsaved changes in the studio. Discard them and start a new rhythm?')) return;
-    const { renderCreateRhythmGame } = await import('./create-rhythm-game.js');
-    renderCreateRhythmGame(view, { onBack: () => render(view) });
   }
 }
 
@@ -131,6 +129,17 @@ function renderDomainChoice(view, domainId, games) {
 }
 
 async function launchGame(view, gameId) {
+  if (gameId === 'create-rhythm' || gameId === 'rhythm-ear') {
+    if (!await guardBeforeReplacingGrid('You have unsaved changes in the studio. Discard them and start a new rhythm?')) return;
+  }
+  if (gameId === 'create-rhythm') {
+    const { renderCreateRhythmGame } = await import('./create-rhythm-game.js');
+    renderCreateRhythmGame(view, { onBack: () => render(view) });
+  }
+  if (gameId === 'rhythm-ear') {
+    const { renderRhythmEarGame } = await import('./rhythm-ear-game.js');
+    renderRhythmEarGame(view, { onBack: () => render(view) });
+  }
   if (gameId === 'chord-wheel') {
     const { renderChordWheelGame } = await import('./chord-wheel-game.js');
     renderChordWheelGame(view, { onBack: () => render(view) });

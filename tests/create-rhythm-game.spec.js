@@ -29,6 +29,7 @@ async function openGame(page) {
   await page.evaluate(() => { window.location.hash = '#games'; });
   await page.waitForSelector('.hg-tile', { timeout: 10000 });
   await page.click('.hg-tile[data-domain="rhythm"]');
+  await page.click('.hg-tile[data-game="create-rhythm"]');
   await expect(page.locator('.rg-container')).toBeVisible();
 }
 
