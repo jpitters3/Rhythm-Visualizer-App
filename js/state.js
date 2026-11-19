@@ -52,6 +52,11 @@ export function setLongPressFired(v) { longPressFired = v; }
 export let tapToDingMode = false;
 export function setTapToDingMode(v) { tapToDingMode = v; }
 
+// Rhythm by Ear (js/rhythm-ear-game.js): a plain tap steps a beat through
+// these labels, then back to empty. null = off.
+export let tapCycle = null;
+export function setTapCycle(labels) { tapCycle = labels; }
+
 export let labelNotation = localStorage.getItem('labelNotation') || 'musical';
 export function setLabelNotation(v) {
   labelNotation = v;

@@ -5,7 +5,7 @@ import { stop, setBeats, setSubdivision } from './noteplayer.js';
 import { getScale } from './state.js';
 import { setCaret, setRange, clearRange, getRange, updateDragSelectionOver, startLongPress, cancelLongPress, hasRange } from './range-selection.js';
 import { HistoryManager } from './history.js';
-import { editHandsMode, isEditMulti, multiEditSessionSlot, longPressFired, setLongPressFired, setIsEditMulti, setMultiEditSessionSlot, labelNotation, isEditFlam, setIsEditFlam, tapToDingMode } from './state.js';
+import { editHandsMode, isEditMulti, multiEditSessionSlot, longPressFired, setLongPressFired, setIsEditMulti, setMultiEditSessionSlot, labelNotation, isEditFlam, setIsEditFlam, tapToDingMode, tapCycle } from './state.js';
 import { TransportRegistry } from './transport-ui.js';
 import { isReviewing, getFeedbackForStep, showFeedbackTooltip, copyLogsForStep, getExpectedNoteForStep } from './coaching-mode.js';
 import { Bus, BUS_EVENT } from './bus.js';
@@ -547,6 +547,11 @@ export function deleteSelection(ctx = activeGrid) {
   renderAllMeasures(ctx);
 }
 
+function nextTapCycleLabel(current) {
+  const idx = tapCycle.indexOf(current === '0' ? 'Ding' : current);
+  return idx === -1 ? tapCycle[0] : (tapCycle[idx + 1] ?? '');
+}
+
 export function setInnerLabel(i, value, ctx = activeGrid) {
   const cell = cells(ctx)[i];
   if (!cell) return;
@@ -717,7 +722,8 @@ function attachCellListeners(cell, ctx = activeGrid) {
     // entirely — so a real double-tap there never produces a dblclick.
     // Detect it manually from click timing instead; mouse input already gets
     // a native dblclick, so this only needs to run for touch/coarse pointers.
-    if (window.matchMedia('(pointer: coarse)').matches) {
+    // Not in a tapCycle game, where fast repeat taps step through labels.
+    if (!tapCycle && window.matchMedia('(pointer: coarse)').matches) {
       const now = Date.now();
       if (now - lastTapTime < DOUBLE_TAP_MS) {
         lastTapTime = 0;
@@ -800,6 +806,13 @@ function attachCellListeners(cell, ctx = activeGrid) {
       return;
     }
 
+    // Rhythm by Ear: each tap steps the beat to the next label in tapCycle.
+    if (tapCycle) {
+      if (HistoryManager) HistoryManager.pushState();
+      setInnerLabel(i, nextTapCycleLabel(ctx.innerLabels[i]), ctx);
+      return;
+    }
+
     // Caps Lock on (or the Create Your Own Rhythm game is active): a plain
     // click writes Ding directly, skipping the 'D' key. In the rhythm game
     // specifically, a second tap toggles it back to a ghost note, and the
@@ -842,6 +855,7 @@ function attachCellListeners(cell, ctx = activeGrid) {
 
   cell.addEventListener('dblclick', (ev) => {
     ev.stopPropagation();
+    if (tapCycle) return; // a quick double tap is two label steps, not multi-mode
     if (isReviewing && isReviewing()) return; // BLOCK EDITING
     activateMultiMode(cell, ctx);
   });
