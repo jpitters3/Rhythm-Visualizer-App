@@ -37,7 +37,7 @@ env:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04 # Playwright 1.57 has no Ubuntu 26.04 (ubuntu-latest) support
     timeout-minutes: 10
     steps:
       - name: Checkout
@@ -70,7 +70,7 @@ jobs:
   smoke:
     needs: build
     if: inputs.suite == 'smoke'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04 # Playwright 1.57 has no Ubuntu 26.04 (ubuntu-latest) support
     timeout-minutes: 15
     steps:
       - name: Checkout
@@ -122,7 +122,7 @@ jobs:
   core:
     needs: build
     if: github.event_name == 'push' || inputs.suite == 'core'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04 # Playwright 1.57 has no Ubuntu 26.04 (ubuntu-latest) support
     timeout-minutes: 20
     steps:
       - name: Checkout
@@ -174,7 +174,7 @@ jobs:
   full:
     needs: build
     if: github.event_name == 'schedule' || inputs.suite == 'full'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04 # Playwright 1.57 has no Ubuntu 26.04 (ubuntu-latest) support
     timeout-minutes: 15
     strategy:
       fail-fast: false
@@ -230,7 +230,7 @@ jobs:
   deploy:
     needs: [build, core]
     if: github.event_name == 'push' && needs.core.result == 'success'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04 # Playwright 1.57 has no Ubuntu 26.04 (ubuntu-latest) support
     timeout-minutes: 15
     outputs:
       deploy_url: ${{ steps.netlify_deploy.outputs.deploy_url }}
@@ -279,7 +279,7 @@ jobs:
   report:
     needs: [build, smoke, core, full, deploy]
     if: always() && (needs.smoke.result != 'skipped' || needs.core.result != 'skipped' || needs.full.result != 'skipped')
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04 # Playwright 1.57 has no Ubuntu 26.04 (ubuntu-latest) support
     timeout-minutes: 10
     steps:
       - name: Checkout

@@ -19,7 +19,7 @@ jobs:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04 # Playwright 1.57 has no Ubuntu 26.04 (ubuntu-latest) support
     steps:
       - name: Checkout
         uses: actions/checkout@v4
