@@ -98,26 +98,30 @@ test('with auto-save on, edits save themselves with no unsaved badge', async ({ 
 
 // Games borrow the Studio grid and clear it; auto-save must not write that into
 // the open phrase (js/autosave.js only saves edits made on the Studio route).
-test('a game clearing the grid never overwrites the open phrase', { tag: '@core' }, async ({ page }) => {
-  const user = await createTestUser();
-  try {
-    await signInToStudio(page, user);
-    await saveNewPhrase(page, 'Keep');
-    await expect(page.locator('#phraseSaveStatus')).toBeHidden({ timeout: 6000 });
+// Both Rhythm games clear and reshape the grid; neither may touch the open phrase.
+for (const [gameId, ready] of [['create-rhythm', '.rg-progress'], ['rhythm-ear', '.re-panel']]) {
+  test(`a game clearing the grid never overwrites the open phrase (${gameId})`, { tag: '@core' }, async ({ page }) => {
+    const user = await createTestUser();
+    try {
+      await signInToStudio(page, user);
+      await saveNewPhrase(page, 'Keep');
+      await expect(page.locator('#phraseSaveStatus')).toBeHidden({ timeout: 6000 });
 
-    await page.goto('/#games');
-    await page.locator('.hg-tile', { hasText: 'Rhythm' }).first().click();
-    await expect(page.locator('.rg-progress')).toBeVisible({ timeout: 10000 });
-    await page.waitForTimeout(3500); // past the auto-save delay
+      await page.goto('/#games');
+      await page.locator('.hg-tile', { hasText: 'Rhythm' }).first().click();
+      await page.click(`.hg-tile[data-game="${gameId}"]`); // Rhythm opens a choice of games
+      await expect(page.locator(ready)).toBeVisible({ timeout: 10000 });
+      await page.waitForTimeout(3500); // past the auto-save delay
 
-    await page.goto('/#studio');
-    await page.reload();
-    await page.waitForSelector('.measure-row');
-    await expect(page.locator('.measure-row .cell').first()).toContainText('1', { timeout: 10000 });
-  } finally {
-    await deleteTestUser(user.user.id);
-  }
-});
+      await page.goto('/#studio');
+      await page.reload();
+      await page.waitForSelector('.measure-row');
+      await expect(page.locator('.measure-row .cell').first()).toContainText('1', { timeout: 10000 });
+    } finally {
+      await deleteTestUser(user.user.id);
+    }
+  });
+}
 
 // What's sent to the Studio is named after where it came from (a Chords panel
 // song's title, "Heard Dm C"…). A saved phrase of the same name used to be
