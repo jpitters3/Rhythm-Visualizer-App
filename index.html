@@ -39,6 +39,7 @@
   <link rel="stylesheet" href="./css/handpanmap.css">
   <link rel="stylesheet" href="css/handpan-overlays.css">
   <link rel="stylesheet" href="./css/pan-hero.css">
+  <link rel="stylesheet" href="./css/play-along-mode.css">
   <link rel="stylesheet" href="css/hand-cursors.css"> <!-- Virtual Hands -->
   <link rel="stylesheet" href="./css/shared-pattern-banner.css">
   <link rel="stylesheet" href="./css/process-status.css">
@@ -430,6 +431,10 @@
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><circle cx="12" cy="12" r="5"></circle><circle cx="12" cy="12" r="1"></circle></svg>
               <span class="ctl-label">Pan Hero</span>
             </button>
+            <button data-compose-only class="ctl-btn ctl-mobile" data-play-along data-closes-controls title="Play Along">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="13" rx="2"></rect><rect x="14" y="3" width="7" height="13" rx="2"></rect><path d="M2 20h20"></path></svg>
+              <span class="ctl-label">Play Along</span>
+            </button>
             <button class="ctl-btn" data-free-play data-closes-controls aria-pressed="false" title="Free play: just the handpan, no grid">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><circle cx="12" cy="12" r="3"></circle><path d="M12 3v2M12 19v2M3 12h2M19 12h2"></path></svg>
               <span class="ctl-label">Free play</span>
@@ -565,6 +570,7 @@
                 <button class="tab-btn" data-tab="handpanSettingsDrawer" title="Scale settings" aria-label="Scale settings"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><circle cx="12" cy="12" r="3"></circle><circle cx="12" cy="6.5" r="1"></circle><circle cx="17" cy="14" r="1"></circle><circle cx="7" cy="14" r="1"></circle></svg></button>
                 <button class="tab-btn" data-chord-panel title="Chords" aria-label="Chords"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg></button>
                                 <button data-compose-only class="tab-btn" data-pan-hero title="Pan Hero" aria-label="Pan Hero"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><circle cx="12" cy="12" r="5"></circle><circle cx="12" cy="12" r="1"></circle></svg></button>
+                <button data-compose-only class="tab-btn" data-play-along title="Play Along" aria-label="Play Along"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="13" rx="2"></rect><rect x="14" y="3" width="7" height="13" rx="2"></rect><path d="M2 20h20"></path></svg></button>
                 <button class="tab-btn" id="flipSideBtnDesktop" style="display:none;" title="Flip to Bottom">🔄</button>
               </div>
             </div>

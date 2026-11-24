@@ -1,0 +1,214 @@
+/* Play Along mode (js/play-along-mode.js). Same layer as Pan Hero: above the
+   app, transport and drawers, below modals. Always dark. */
+
+#playAlongOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9000;
+  box-sizing: border-box;
+  height: 100dvh;
+  height: var(--app-height, 100dvh);
+  display: flex;
+  justify-content: center;
+  padding: calc(env(safe-area-inset-top, 0px) + 12px) 16px calc(env(safe-area-inset-bottom, 0px) + 16px);
+  background: #14161a;
+  color: #ecedef;
+  color-scheme: dark;
+  font-family: Inter, system-ui, -apple-system, sans-serif;
+  overscroll-behavior: none;
+}
+
+.pa-column {
+  width: 100%;
+  max-width: 520px;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.pa-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.pa-exit,
+.pa-tempo {
+  border: 1px solid #2c3038;
+  background: #1c1f24;
+  color: #ecedef;
+  box-sizing: border-box;
+}
+
+.pa-exit {
+  width: 44px;
+  height: 44px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border-radius: 12px;
+  cursor: pointer;
+}
+
+.pa-exit:hover { background: #262a31; }
+
+.pa-heading {
+  flex: 1;
+  min-width: 0;
+}
+
+.pa-title {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.pa-sub {
+  font-size: 12px;
+  color: #9aa1ac;
+  min-height: 1.2em;
+}
+
+.pa-tempo {
+  height: 44px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  border-radius: 22px;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.pa-tempo-btn {
+  width: 40px;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.pa-tempo-btn:first-child { border-radius: 22px 0 0 22px; }
+.pa-tempo-btn:last-child { border-radius: 0 22px 22px 0; }
+.pa-tempo-btn:hover { background: #262a31; }
+
+.pa-tempo-field {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  color: #9aa1ac;
+}
+
+.pa-tempo-field input {
+  width: 3.2ch;
+  padding: 4px 0;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: #ecedef;
+  font: inherit;
+  text-align: center;
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+.pa-tempo-field input::-webkit-outer-spin-button,
+.pa-tempo-field input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.pa-tempo-field input:focus-visible,
+.pa-tempo-btn:focus-visible {
+  outline: 2px solid #ffd27a;
+  outline-offset: 1px;
+}
+
+.pa-strip-card {
+  flex: none;
+  height: clamp(200px, 36dvh, 340px);
+  border: 1px solid #262a31;
+  border-radius: 16px;
+  background: #1a1d22;
+  overflow: hidden;
+}
+
+#playAlongStrip {
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: none; /* drags scrub the strip, not the page */
+  cursor: grab;
+}
+
+.pa-scrubbing #playAlongStrip { cursor: grabbing; }
+
+.pa-pan {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#handpanWrap.play-along-pinned {
+  position: relative;
+  z-index: 1;
+  width: min(100%, 420px, 44dvh) !important;
+  max-width: none !important;
+  margin: 0 !important;
+}
+
+#playAlongPanCanvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 2;
+  pointer-events: none; /* taps reach the pan */
+}
+
+.pa-controls {
+  display: flex;
+  justify-content: center;
+}
+
+.pa-play {
+  width: 64px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: #f2b544;
+  color: #14161a;
+  cursor: pointer;
+}
+
+.pa-play:hover { background: #ffd27a; }
+
+.pa-exit:focus-visible,
+.pa-play:focus-visible {
+  outline: 2px solid #ffd27a;
+  outline-offset: 3px;
+}
+
+body.play-along-open {
+  overflow: hidden;
+}
+
+body.play-along-open .controls-transport,
+body.play-along-open #aiFab,
+body.play-along-open #aiFabMobile,
+body.play-along-open #mobileControlsBtn {
+  display: none !important;
+}

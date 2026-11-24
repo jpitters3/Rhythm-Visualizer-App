@@ -30,6 +30,7 @@ import { initChordPanel } from './chord-sidepanel.js';
 import { initPOTW } from './pattern-of-the-week.js';
 import { initHandpanMap, initScale } from './handpanmap.js';
 import { initPanHero } from './pan-hero.js';
+import { initPlayAlongMode } from './play-along-mode.js';
 import { initDraggableDrawers } from './drawer-drag.js';
 import { initTranscription } from './transcription.js';
 import { initAiAssistant } from './ai-assistant.js';
@@ -103,6 +104,7 @@ async function init() {
     initChordPanel();
     initHandpanMap();
     initPanHero();
+    initPlayAlongMode();
     initDraggableDrawers();
     initTranscription();
     initCalProfiles();

@@ -27,6 +27,7 @@ export const FEATURE = {
   UNLIMITED_COMPOSITIONS: new GatedFeature('unlimited_compositions', 'Unlimited Compositions'),
   COACHING_MODE: new GatedFeature('coaching_mode', 'Coach Mode'),
   PAN_HERO: new GatedFeature('pan_hero', 'Pan Hero'),
+  PLAY_ALONG: new GatedFeature('play_along', 'Play Along mode'),
 };
 
 // The tier a feature needs: 'player_plus' or 'pro'.
@@ -59,6 +60,7 @@ export function canAccess(feature, context = {}) {
     'download_wav': false,
     'coaching_mode': false,
     'pan_hero': false,
+    'play_along': false,
     'custom_scales': (context.count || 0) < FREE_LIMIT.custom_scales,
     'unlimited_patterns': (context.count || 0) < FREE_LIMIT.unlimited_patterns,
     'unlimited_compositions': (context.count || 0) < FREE_LIMIT.unlimited_compositions,
