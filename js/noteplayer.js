@@ -952,7 +952,8 @@ function scheduleNoteSample(n, buffer, delay) {
 }
 
 
-export async function start(ctx, isSync = true, skipCountdown = false) {
+// fromStep: start here instead of at the caret.
+export async function start(ctx, isSync = true, skipCountdown = false, fromStep = null) {
   const c = ctx || activeGrid;
 
   if (c.playing) return;
@@ -962,7 +963,8 @@ export async function start(ctx, isSync = true, skipCountdown = false) {
 
   c.playing = true;
   c.loopCount = 0; // Reset visual loop counter
-  const targetStart = (c.caretIndex !== null && c.caretIndex >= 0) ? c.caretIndex : 0;
+  const caret = (c.caretIndex !== null && c.caretIndex >= 0) ? c.caretIndex : 0;
+  const targetStart = Number.isInteger(fromStep) && fromStep >= 0 ? fromStep % c.cells.length : caret;
 
   // COUNTDOWN SETUP
   const isGravity = document.body.classList.contains('mode-gravity') && document.body.classList.contains('present');
@@ -979,13 +981,10 @@ export async function start(ctx, isSync = true, skipCountdown = false) {
   const secondsPerBeat = intervalMs(c) / 1000;
   nextNoteTime = audioCtx.currentTime;
 
-  // If counting down, audioStartTime represents when the actual pattern (Step 0) starts.
-  // This ensures visuals (Highway) are synced to the audio pattern start.
-  if (useCountdown) {
-    c.audioStartTime = nextNoteTime + ((c.countdownSteps || 4) * secondsPerBeat);
-  } else {
-    c.audioStartTime = nextNoteTime;
-  }
+  // audioStartTime is when step 0 plays (or would have, when starting
+  // mid-phrase), as nextNote() assumes on every loop.
+  const countIn = useCountdown ? (c.countdownSteps || 4) * secondsPerBeat : 0;
+  c.audioStartTime = nextNoteTime + countIn - targetStart * secondsPerBeat;
 
   c.lastTickAudioTime = nextNoteTime;
 
@@ -1007,6 +1006,13 @@ export async function start(ctx, isSync = true, skipCountdown = false) {
       if (TransportRegistry) TransportRegistry.updateAll(gridB);
     }
   }
+}
+
+// Seconds between a step's playback position and when it is heard: the
+// scheduling buffer, the device's output buffer and the visual head start.
+export function audibleLagSeconds(ctx) {
+  const c = ctx || activeGrid;
+  return AUDIO_DELAY + (c.outputLatency || 0) + (VISUAL_HEADSTART || 0);
 }
 
 export function getPlaybackPosition(ctx) {
