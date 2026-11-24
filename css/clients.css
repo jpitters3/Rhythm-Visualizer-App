@@ -271,6 +271,141 @@
   opacity: 0.45;
 }
 
+/* Panafide access row and dialog (admin grants). */
+.cl-access {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--text) 4%, transparent);
+  font-size: 13px;
+}
+
+.cl-access-label {
+  font-weight: 700;
+  opacity: 0.6;
+}
+
+.cl-access-status {
+  flex: 1;
+  min-width: 0;
+}
+
+.clients-view button.cl-access-btn,
+.clients-view button.cl-quick-btn,
+.clients-view button.cl-btn {
+  min-width: 0;
+  height: auto;
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--panel-border);
+  background: var(--panel);
+  color: var(--text);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.clients-view button.cl-access-btn:hover,
+.clients-view button.cl-quick-btn:hover {
+  border-color: var(--accent-glow);
+}
+
+.clients-view button.cl-btn-primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+}
+
+.clients-view button.cl-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.cl-access-dialog {
+  width: min(440px, calc(100vw - 32px));
+  padding: 0;
+  border: 1px solid var(--panel-border);
+  border-radius: 16px;
+  background: var(--panel);
+  color: var(--text);
+}
+
+.cl-access-dialog::backdrop {
+  background: rgb(0 0 0 / 0.6);
+}
+
+.cl-access-body {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 18px 24px 8px;
+}
+
+.cl-tiers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.cl-tiers legend,
+.cl-until > label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  opacity: 0.7;
+}
+
+.cl-tiers label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.cl-until input[type="date"] {
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--panel-border);
+  background: var(--panel);
+  color: var(--text);
+  font: inherit;
+}
+
+.cl-quick {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.cl-hint {
+  margin: 10px 0 0;
+  font-size: 12px;
+  opacity: 0.65;
+}
+
+.cl-access-error {
+  margin: 0;
+  min-height: 1.2em;
+  font-size: 13px;
+  color: #e07a76;
+}
+
+.cl-access-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 24px 20px;
+}
+
 /* Summary reader: centred sheet on desktop, full screen on phones. */
 .cl-reader {
   width: min(760px, calc(100vw - 32px));

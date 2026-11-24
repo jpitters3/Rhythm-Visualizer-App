@@ -8,10 +8,16 @@ import { Bus, BUS_EVENT } from './bus.js';
 
 const SORT_KEY = 'clients_sort';
 const PROGRAM_LABELS = { mentorship: 'Mentorship', group: 'Group' };
+const TIER_LABELS = { player_plus: 'Panafide+', pro: 'Panafide Pro' };
+// What a program usually comes with (matches tekmatix-plus/access.ts).
+const PROGRAM_ACCESS = { mentorship: { tier: 'pro', weeks: 6 }, group: { tier: 'player_plus', weeks: 8 } };
+const QUICK_WEEKS = [[6, '6 weeks'], [8, '8 weeks'], [12, '12 weeks'], [52, '1 year']];
 
 let clients = null; // cached for the session; Refresh re-fetches
 let loading = false;
 let error = '';
+let accounts = null; // email → Panafide access summary (null: no account); null while loading
+let accountsError = '';
 let sortBy = readSort();
 let program = 'all';
 
@@ -42,13 +48,41 @@ function enter(view) {
 async function load(view) {
   loading = true;
   error = '';
+  accounts = null;
   render(view);
   const { data, error: fnError } = await supabase.functions.invoke('tekmatix-clients');
   loading = false;
   if (fnError || data?.error) error = data?.error || 'Couldn’t reach Tekmatix. Try Refresh.';
   else clients = data.clients;
   render(view);
+  if (clients) loadAccounts(view);
 }
+
+async function loadAccounts(view) {
+  accountsError = '';
+  const emails = clients.map(c => c.email).filter(Boolean);
+  if (!emails.length) { accounts = {}; render(view); return; }
+  const { data, error: fnError } = await supabase.functions.invoke('admin-plus', { body: { action: 'lookup', emails } });
+  if (fnError || data?.error) {
+    accounts = {};
+    accountsError = await fnMessage(fnError, data, 'Couldn’t load Panafide accounts. Try Refresh.');
+  } else {
+    accounts = data.accounts;
+  }
+  render(view);
+}
+
+// supabase-js puts a non-2xx body on error.context (a Response).
+async function fnMessage(fnError, data, fallback) {
+  if (data?.error) return data.error;
+  try {
+    const body = await fnError?.context?.json();
+    if (body?.error) return body.error;
+  } catch { /* not JSON */ }
+  return fallback;
+}
+
+const accountFor = (c) => (c.email && accounts ? accounts[c.email.toLowerCase()] : undefined);
 
 function readSort() {
   try { return localStorage.getItem(SORT_KEY) || 'next'; } catch { return 'next'; }
@@ -98,6 +132,7 @@ function render(view) {
         </label>
       </div>
       ${error ? `<p class="cl-error">${escapeHtml(error)}</p>` : ''}
+      ${accountsError ? `<p class="cl-error">${escapeHtml(accountsError)}</p>` : ''}
       ${clients && !visible.length ? '<p class="cl-empty">No clients tagged “client mentorship” or “client group” yet.</p>' : ''}
       <div class="cl-grid">${visible.map(card).join('')}</div>
     </div>
@@ -111,6 +146,7 @@ function render(view) {
       </div>
       <div class="cl-reader-body"></div>
     </dialog>
+    ${accessDialogHtml()}
   `;
 
   const select = view.querySelector('.cl-sort select');
@@ -132,6 +168,11 @@ function render(view) {
   const reader = view.querySelector('.cl-reader');
   reader.querySelector('.cl-reader-close').addEventListener('click', () => reader.close());
   reader.addEventListener('click', (e) => { if (e.target === reader) reader.close(); }); // backdrop
+
+  view.querySelectorAll('[data-access]').forEach(btn => btn.addEventListener('click', () => {
+    openAccess(view, clients.find(c => c.id === btn.dataset.access));
+  }));
+  wireAccessDialog(view);
 }
 
 function card(c) {
@@ -154,6 +195,7 @@ function card(c) {
           <div><dt>Next</dt><dd>${apptLabel(c.nextAppointment)}</dd></div>
           <div><dt>Last</dt><dd>${apptLabel(c.lastAppointment)}</dd></div>
         </dl>
+        ${accessRow(c)}
         ${preview
           ? `<button type="button" class="cl-summary" data-summary="${escapeAttr(c.id)}">
                <span class="cl-summary-label">Lesson summary · ${shortDate(c.summary.at)}</span>
@@ -180,6 +222,163 @@ function openReader(view, client) {
   body.replaceChildren(sanitizeNote(client.summary.html || escapeHtml(client.summary.text)));
   reader.showModal();
   body.scrollTop = 0;
+}
+
+// --- Panafide access ------------------------------------------------------
+
+function accessRow(c) {
+  const account = accountFor(c);
+  let status;
+  if (!c.email) status = '<span class="cl-muted">No email in Tekmatix</span>';
+  else if (account === undefined) status = `<span class="cl-muted">${accountsError ? 'Unavailable' : 'Checking…'}</span>`;
+  else if (account === null) status = `<span class="cl-muted">No account for ${escapeHtml(c.email)}</span>`;
+  else status = accessLabel(account);
+
+  const canManage = account && !account.stripe;
+  return `
+    <div class="cl-access">
+      <span class="cl-access-label">Panafide</span>
+      <span class="cl-access-status">${status}</span>
+      ${canManage ? `<button type="button" class="cl-access-btn" data-access="${escapeAttr(c.id)}">Manage</button>` : ''}
+    </div>
+  `;
+}
+
+function accessLabel(a) {
+  const tier = TIER_LABELS[a.tier];
+  if (a.stripe) return `<strong>${tier}</strong> <span class="cl-muted">· pays via Stripe</span>`;
+  if (a.active) {
+    if (!a.expiresAt) return `<strong>${tier}</strong> <span class="cl-muted">· no end date</span>`;
+    return `<strong>${tier}</strong> until ${shortDate(a.expiresAt)} <span class="cl-muted">${relativeDays(new Date(a.expiresAt))}</span>`;
+  }
+  if (tier && a.expiresAt) return `Free <span class="cl-muted">· ${tier} ended ${shortDate(a.expiresAt)}</span>`;
+  return 'Free';
+}
+
+function accessDialogHtml() {
+  const quick = QUICK_WEEKS.map(([weeks, label]) =>
+    `<button type="button" class="cl-quick-btn" data-weeks="${weeks}">${label}</button>`).join('');
+  return `
+    <dialog class="cl-access-dialog" aria-labelledby="clAccessTitle">
+      <form class="cl-access-form" novalidate>
+        <div class="cl-reader-head">
+          <div>
+            <p class="cl-eyebrow cl-access-who"></p>
+            <h2 class="cl-reader-title" id="clAccessTitle">Panafide access</h2>
+          </div>
+          <button type="button" class="cl-reader-close" data-close aria-label="Close">✕</button>
+        </div>
+        <div class="cl-access-body">
+          <fieldset class="cl-tiers">
+            <legend>Access</legend>
+            <label><input type="radio" name="tier" value="player_plus"> Panafide+</label>
+            <label><input type="radio" name="tier" value="pro"> Panafide Pro</label>
+            <label><input type="radio" name="tier" value="none"> No access</label>
+          </fieldset>
+          <div class="cl-until">
+            <label for="clAccessUntil">Access until</label>
+            <input type="date" id="clAccessUntil" name="until">
+            <div class="cl-quick" aria-label="From today">${quick}</div>
+            <p class="cl-hint">Ends at the end of that day. Removing their client tag in Tekmatix also ends it.</p>
+          </div>
+          <p class="cl-access-error" role="alert"></p>
+        </div>
+        <div class="cl-access-foot">
+          <button type="button" class="cl-btn" data-close>Cancel</button>
+          <button type="submit" class="cl-btn cl-btn-primary">Save</button>
+        </div>
+      </form>
+    </dialog>
+  `;
+}
+
+let editing = null; // the client whose access dialog is open
+
+function openAccess(view, client) {
+  const account = client && accountFor(client);
+  if (!account || account.stripe) return;
+  editing = client;
+  const dialog = view.querySelector('.cl-access-dialog');
+  const form = dialog.querySelector('form');
+  const usual = PROGRAM_ACCESS[client.programs[0]] ?? PROGRAM_ACCESS.group;
+  const tier = account.active ? account.tier : usual.tier;
+  const until = account.active && account.expiresAt ? new Date(account.expiresAt) : weeksFromToday(usual.weeks);
+
+  dialog.querySelector('.cl-access-who').textContent = account.username ? `${client.name} · @${account.username}` : client.name;
+  form.tier.value = TIER_LABELS[tier] ? tier : usual.tier;
+  form.until.value = dateInputValue(until);
+  form.until.min = dateInputValue(new Date());
+  setAccessError(dialog, '');
+  syncUntil(dialog);
+  dialog.showModal();
+}
+
+function wireAccessDialog(view) {
+  const dialog = view.querySelector('.cl-access-dialog');
+  const form = dialog.querySelector('form');
+  dialog.querySelectorAll('[data-close]').forEach(btn => btn.addEventListener('click', () => dialog.close()));
+  dialog.addEventListener('click', (e) => { if (e.target === dialog) dialog.close(); });
+  form.querySelectorAll('input[name="tier"]').forEach(r => r.addEventListener('change', () => syncUntil(dialog)));
+  dialog.querySelectorAll('[data-weeks]').forEach(btn => btn.addEventListener('click', () => {
+    form.until.value = dateInputValue(weeksFromToday(Number(btn.dataset.weeks)));
+  }));
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    saveAccess(view, dialog);
+  });
+}
+
+function syncUntil(dialog) {
+  const form = dialog.querySelector('form');
+  dialog.querySelector('.cl-until').hidden = form.tier.value === 'none';
+}
+
+function setAccessError(dialog, message) {
+  dialog.querySelector('.cl-access-error').textContent = message;
+}
+
+async function saveAccess(view, dialog) {
+  const form = dialog.querySelector('form');
+  const tier = form.tier.value;
+  if (tier !== 'none' && !form.until.value) {
+    setAccessError(dialog, 'Pick an end date.');
+    return;
+  }
+  const save = form.querySelector('[type="submit"]');
+  save.disabled = true;
+  save.textContent = 'Saving…';
+  setAccessError(dialog, '');
+
+  const body = { action: 'set', email: editing.email, tier };
+  if (tier !== 'none') body.expiresAt = endOfDay(form.until.value).toISOString();
+  const { data, error: fnError } = await supabase.functions.invoke('admin-plus', { body });
+
+  save.disabled = false;
+  save.textContent = 'Save';
+  if (fnError || data?.error) {
+    setAccessError(dialog, await fnMessage(fnError, data, 'Couldn’t save. Try again.'));
+    return;
+  }
+  accounts = { ...accounts, [editing.email.toLowerCase()]: data.account };
+  editing = null;
+  dialog.close();
+  render(view);
+}
+
+function weeksFromToday(weeks) {
+  const d = new Date();
+  d.setDate(d.getDate() + weeks * 7);
+  return d;
+}
+
+function dateInputValue(date) {
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
+function endOfDay(value) {
+  const [y, m, d] = value.split('-').map(Number);
+  return new Date(y, m - 1, d, 23, 59, 59);
 }
 
 function apptLabel(appt) {
