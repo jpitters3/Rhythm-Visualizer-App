@@ -9,7 +9,7 @@
  * optional TEKMATIX_LOCATION_ID.
  */
 
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { isAdmin } from '../_shared/admin.ts'
 
 const API = 'https://services.leadconnectorhq.com'
 const PROGRAM_TAGS: Record<string, string> = {
@@ -31,16 +31,6 @@ const jsonResponse = (body: unknown, status = 200) =>
   })
 
 type Json = Record<string, any>
-
-async function isAdmin(req: Request) {
-  const jwt = req.headers.get('Authorization')?.replace('Bearer ', '')
-  if (!jwt) return false
-  const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
-  const { data: { user } } = await supabase.auth.getUser(jwt)
-  if (!user) return false
-  const { data: profile } = await supabase.from('profiles').select('role').eq('user_id', user.id).maybeSingle()
-  return profile?.role === 'admin'
-}
 
 function tekmatix(token: string) {
   return async (path: string, init: RequestInit = {}): Promise<Json> => {
