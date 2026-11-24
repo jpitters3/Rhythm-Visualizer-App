@@ -12,10 +12,8 @@
 import { gridA } from './grid-context.js';
 import { getPlaybackPosition, intervalMs, start, stop } from './noteplayer.js';
 import { getEffectiveHand } from './notegrid.js';
-import {
-  HANDPAN_MAP, getDisplayPosition, isPerimeterNote, resolveTakSlapNote,
-  setHandpanSide, getHandpanSide,
-} from './handpanmap.js';
+import { HANDPAN_MAP, resolveTakSlapNote } from './handpanmap.js';
+import { borrowPan, keepPerimeterFace, measurePanBoxes, tonefieldScreenPos } from './pinned-pan.js';
 import { show, hide } from './dom.js';
 import { canAccess, FEATURE } from './gated-feature.js';
 import { Bus, BUS_EVENT } from './bus.js';
@@ -36,14 +34,8 @@ let cctx = null;
 let panHost = null;
 let hintEl = null;
 
-// Pan re-parent bookkeeping
-let originalParent = null;
-let originalNextSibling = null;
-let stashedInline = { maxWidth: '', width: '', margin: '' };
-
-// Playback / side bookkeeping
+let releasePan = null;
 let startedPlaybackOurselves = false;
-let prevHandpanSideRaw = null;
 
 // Landed-note spark particles (ported from presentation-mode.js)
 let sparks = [];
@@ -105,25 +97,9 @@ export function openPanHero() {
   sparked = new Set();
   ensureDom();
 
-  // Force the merged "perimeter" face so bottom notes have visible tonefields.
-  prevHandpanSideRaw = localStorage.getItem('gp_handpanSide');
-  setHandpanSide('perimeter');
-
   // Re-parent the real pan into the overlay. A transformed ancestor
   // (.handpan-panel translateZ on mobile) would otherwise trap position:fixed.
-  const wrap = document.getElementById('handpanWrap');
-  if (wrap) {
-    originalParent = wrap.parentElement;
-    originalNextSibling = wrap.nextSibling;
-    stashedInline = {
-      maxWidth: wrap.style.maxWidth,
-      width: wrap.style.width,
-      margin: wrap.style.margin,
-    };
-    wrap.style.maxWidth = wrap.style.width = wrap.style.margin = '';
-    wrap.classList.add('pan-hero-pinned');
-    panHost.appendChild(wrap);
-  }
+  releasePan = borrowPan(panHost, 'pan-hero-pinned');
 
   document.body.classList.add('pan-hero-open');
   show(overlayEl);
@@ -161,25 +137,8 @@ export function closePanHero() {
   if (startedPlaybackOurselves && gridA.playing) stop(gridA);
   startedPlaybackOurselves = false;
 
-  const wrap = document.getElementById('handpanWrap');
-  if (wrap && originalParent) {
-    wrap.classList.remove('pan-hero-pinned');
-    wrap.style.maxWidth = stashedInline.maxWidth;
-    wrap.style.width = stashedInline.width;
-    wrap.style.margin = stashedInline.margin;
-    originalParent.insertBefore(wrap, originalNextSibling);
-  }
-  originalParent = originalNextSibling = null;
-
-  // Restore the user's face, then write their persisted preference back
-  // verbatim (setHandpanSide clobbers gp_handpanSide).
-  setHandpanSide(prevHandpanSideRaw || 'top');
-  if (prevHandpanSideRaw != null) {
-    localStorage.setItem('gp_handpanSide', prevHandpanSideRaw);
-  } else {
-    localStorage.removeItem('gp_handpanSide');
-  }
-  prevHandpanSideRaw = null;
+  releasePan?.();
+  releasePan = null;
 
   document.body.classList.remove('pan-hero-open');
   hide(overlayEl);
@@ -240,8 +199,7 @@ function onForcedResize() {
 }
 
 function maybeReforceSide() {
-  if (frameCount % 30 !== 0) return;
-  if (getHandpanSide() !== 'perimeter') setHandpanSide('perimeter');
+  if (frameCount % 30 === 0) keepPerimeterFace();
 }
 
 // The pinned pan is fixed-position, so its box is stable while open — no need to hit getBoundingClientRect() (a layout
@@ -250,13 +208,7 @@ function maybeReforceSide() {
 const REFRESH_RECTS_EVERY = 20;
 
 function refreshBoxes() {
-  const overlay = document.getElementById('handpanOverlay');
-  const wrap = document.getElementById('handpanWrap');
-  boxes = {
-    overlay: overlay ? overlay.getBoundingClientRect() : null,
-    wrap: wrap ? wrap.getBoundingClientRect() : null,
-    canvas: canvas.getBoundingClientRect(),
-  };
+  boxes = measurePanBoxes(canvas);
 }
 
 // Cap the render rate to ~60fps. On a 120Hz (ProMotion) display rAF fires
@@ -303,23 +255,6 @@ function labelText(label) {
   const s = String(label);
   if (s === 'Ding' || s === 'D' || s === '0') return 'D';
   return s;
-}
-
-// Resolve a note's tonefield centre to screen pixels for THIS frame.
-// Two coordinate spaces: rim pucks are 0-100 of #handpanWrap (padding
-// included); everything else is 0-100 of #handpanOverlay (the image area).
-function tonefieldScreenPos(key, boxes) {
-  const p = getDisplayPosition(key);
-  if (!p) return null;
-  const isRim = isPerimeterNote(key);
-  const box = isRim ? boxes.wrap : boxes.overlay;
-  if (!box || box.width === 0) return null;
-  const r = (HANDPAN_MAP[key] && HANDPAN_MAP[key].r) || 8;
-  return {
-    x: (box.left - boxes.canvas.left) + (p.x / 100) * box.width,
-    y: (box.top - boxes.canvas.top) + (p.y / 100) * box.height,
-    rpx: (r / 100) * box.width,
-  };
 }
 
 function draw(t) {
