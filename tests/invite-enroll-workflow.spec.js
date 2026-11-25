@@ -22,6 +22,7 @@ require('dotenv').config();
 
 const { createTestUser, deleteTestUser, loginAsTestUser, supabaseAdmin } = require('./utils/auth-helper');
 const { waitForPageReady } = require('./utils/page-helper');
+const { deleteCourse } = require('./utils/seed-helper');
 
 // ── seed / cleanup ────────────────────────────────────────────────────────────
 
@@ -83,13 +84,7 @@ async function cleanupSeed(seed) {
   if (seed.assignment) {
     await supabaseAdmin.from('assignments').delete().eq('id', seed.assignment.id);
   }
-  if (seed.course) {
-    // lessons + sections cascade-deleted with course in most setups;
-    // delete explicitly to be safe.
-    if (seed.lesson) await supabaseAdmin.from('lessons').delete().eq('id', seed.lesson.id);
-    if (seed.section) await supabaseAdmin.from('sections').delete().eq('id', seed.section.id);
-    await supabaseAdmin.from('courses').delete().eq('id', seed.course.id);
-  }
+  if (seed.course) await deleteCourse(seed.course.id);
 }
 
 // ── test ─────────────────────────────────────────────────────────────────────

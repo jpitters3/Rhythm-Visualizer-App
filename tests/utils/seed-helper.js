@@ -76,6 +76,27 @@ async function deleteCourse(courseId) {
   await supabaseAdmin.from('courses').delete().eq('id', courseId);
 }
 
+async function deleteCoursesByTitle(title) {
+  const { data } = await supabaseAdmin.from('courses').select('id').eq('title', title);
+  for (const { id } of data || []) await deleteCourse(id);
+}
+
+// Titles the specs give the courses they create; each ends in a Date.now() stamp.
+const TEST_COURSE_TITLE = /^(LessonPlayerTest|LessonSettingsTest|E2E Beginner Course|Practice Test Course|Rhythm Basics|Dashboard Course|Test Marketplace Course|Clean Test Course|Course to Update|MC Test Course|Seeded Course|Cleanup Probe) .*\d{13}/;
+const PRODUCTION_PROJECT = 'ycdlqkaymkgpbpgtqubs';
+
+// Safety net for runs that were killed before their cleanup ran. Only touches
+// courses older than `olderThanMinutes`, so a run going on elsewhere keeps its own.
+async function sweepTestCourses({ olderThanMinutes = 60 } = {}) {
+  if (String(process.env.VITE_SUPABASE_URL).includes(PRODUCTION_PROJECT)) return 0;
+  const cutoff = new Date(Date.now() - olderThanMinutes * 60000).toISOString();
+  const { data, error } = await supabaseAdmin.from('courses').select('id, title').lt('created_at', cutoff);
+  if (error) throw error;
+  const stale = (data || []).filter(c => TEST_COURSE_TITLE.test(c.title));
+  for (const { id } of stale) await deleteCourse(id);
+  return stale.length;
+}
+
 async function seedPattern(userId, name, data = DEMO_PATTERN) {
   await must(
     supabaseAdmin.from('patterns').insert({
@@ -96,4 +117,7 @@ async function deleteUserContent(userId) {
   await supabaseAdmin.from('patterns').delete().eq('user_id', userId);
 }
 
-module.exports = { DEMO_PATTERN, seedCourse, enroll, deleteCourse, seedPattern, deleteUserContent };
+module.exports = {
+  DEMO_PATTERN, seedCourse, enroll, deleteCourse, deleteCoursesByTitle, sweepTestCourses,
+  seedPattern, deleteUserContent, TEST_COURSE_TITLE,
+};

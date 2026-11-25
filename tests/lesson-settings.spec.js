@@ -3,6 +3,7 @@ const { phraseAction } = require('./helpers');
 require('dotenv').config();
 const { createClient } = require('@supabase/supabase-js');
 const { createTestUser, deleteTestUser, loginAsTestUser } = require('./utils/auth-helper');
+const { deleteCourse } = require('./utils/seed-helper');
 
 const admin = createClient(process.env.VITE_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 
@@ -63,12 +64,13 @@ test.describe('Lesson Settings (Reset/Restore)', () => {
   });
 
   test.afterEach(async () => {
-    await admin.from('student_lesson_settings').delete().eq('user_id', u.user.id);
-    await admin.from('patterns').delete().eq('user_id', u.user.id);
-    await admin.from('lessons').delete().eq('section_id', section.id);
-    await admin.from('sections').delete().eq('id', section.id);
-    await admin.from('courses').delete().eq('id', course.id);
-    await deleteTestUser(u.user.id);
+    if (course) await deleteCourse(course.id);
+    if (u) {
+      await admin.from('student_lesson_settings').delete().eq('user_id', u.user.id);
+      await admin.from('patterns').delete().eq('user_id', u.user.id);
+      await deleteTestUser(u.user.id);
+    }
+    u = course = section = lesson = lesson2 = undefined;
   });
 
   async function openLesson(page, l, isMobile, { freeGrid = true } = {}) {

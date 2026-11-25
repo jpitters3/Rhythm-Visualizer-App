@@ -2,6 +2,7 @@
 const { test, expect } = require('./fixtures');
 const { createTestUser, deleteTestUser, supabaseAdmin } = require('./utils/auth-helper');
 const { waitForPageReady } = require('./utils/page-helper');
+const { deleteCourse } = require('./utils/seed-helper');
 
 test.describe('Course Marketplace', () => {
   let testUser;
@@ -22,9 +23,8 @@ test.describe('Course Marketplace', () => {
 
   test.afterEach(async ({ page }) => {
     // Cleanup seeded course
-    if (seededCourseId) {
-      await supabaseAdmin.from('courses').delete().eq('id', seededCourseId);
-    }
+    if (seededCourseId) await deleteCourse(seededCourseId);
+    seededCourseId = null;
 
     // Clear session and delete users
     await page.context().clearCookies();
