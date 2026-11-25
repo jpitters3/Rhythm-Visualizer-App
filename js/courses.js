@@ -14,6 +14,7 @@ import { openMarketplace } from './course-marketplace.js';
 import { autoLinkText } from './glossary.js';
 import { openAuthModal } from './auth.js';
 import { extractYouTubeId } from './utils.js';
+import { appLinkLabel, openAppLink } from './app-links.js';
 import { renderThumbnail } from './pattern-thumbnail.js';
 import { clearGrid } from './notegrid.js';
 import { getLessonOverride, applyLessonOverride, captureLessonBaseline, guardBeforeReplacingGrid, renderLessonSettingsControl } from './lesson-settings.js';
@@ -56,7 +57,7 @@ export async function fetchCourses() {
         sections (
           id, title, order_index, is_published,
           lessons (
-            id, title, description, video_url, pattern_json, pattern_name, order_index, section_id
+            id, title, description, video_url, pattern_json, pattern_name, app_link, order_index, section_id
           )
         )
       `)
@@ -729,6 +730,15 @@ export async function loadLesson(lessonId) {
       }
     }
 
+    // 4. "Play Rhythm by Ear" (or any Panafide page) the lesson points at
+    const appLinkBtn = document.getElementById('lessonAppLinkBtn');
+    if (appLinkBtn) {
+      const label = appLinkLabel(lesson.app_link);
+      appLinkBtn.hidden = !label;
+      appLinkBtn.textContent = label;
+      appLinkBtn.dataset.link = label ? lesson.app_link : '';
+    }
+
   } catch (err) {
     console.error("loadLesson Error:", err);
     await alert("Error loading lesson: " + err.message);
@@ -1124,6 +1134,7 @@ export function initCourses() {
   });
 
   document.getElementById('courseSearchInput')?.addEventListener('input', applyLessonSearch);
+  document.getElementById('lessonAppLinkBtn')?.addEventListener('click', (e) => openAppLink(e.currentTarget.dataset.link));
 
   // BUS LISTENERS
   Bus.on(BUS_EVENT.AUTH_LOGOUT, () => {

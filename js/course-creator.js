@@ -5,6 +5,7 @@ import { dbListPatternNames, dbLoadPatternByName, getSavedPatterns, serializePat
 import { supabase } from './supabase-client.js';
 import { alert, confirm, prompt } from './alert.js';
 import { escapeHtml } from './utils.js';
+import { appLinkChoices, cleanCustomLink, isPickedLink } from './app-links.js';
 
 // ===== STATE =====
 let currentCourseData = {
@@ -133,6 +134,7 @@ function addLessonToSection(sectionIndex) {
     // (a named pattern, or 📸 Capture Current Grid) or leaves it "None".
     pattern_json: null,
     pattern_name: null,
+    app_link: null, // 'game:<id>', 'page:<route>' or a Panafide link (js/app-links.js)
     assignment: null, // Linked assignment { id, title } or null
   };
   currentCourseData.sections[sectionIndex].lessons.push(lesson);
@@ -195,6 +197,42 @@ function renderLessonAssignmentBox(lesson, sIdx, lIdx) {
     </div>`;
 }
 
+const CUSTOM_LINK = '__custom__';
+
+// "Open in Panafide": a game or page the lesson's button takes students to.
+function renderLessonAppLink(lesson, sIdx, lIdx) {
+  const link = lesson.app_link || '';
+  const custom = !!link && !isPickedLink(link);
+  const groups = appLinkChoices().map(g => `
+    <optgroup label="${g.group}">
+      ${g.options.map(o => `<option value="${o.value}" ${o.value === link ? 'selected' : ''}>${escapeHtml(o.label)}</option>`).join('')}
+    </optgroup>`).join('');
+  const ids = `data-sidx="${sIdx}" data-lidx="${lIdx}"`;
+  return `
+    <div class="lesson-field lesson-app-link">
+      <span class="meta-label">Open in Panafide</span>
+      <select data-field="lesson-app-link" ${ids} aria-label="Open in Panafide">
+        <option value="" ${!link ? 'selected' : ''}>Nothing</option>
+        ${groups}
+        <option value="${CUSTOM_LINK}" ${custom ? 'selected' : ''}>Another Panafide link…</option>
+      </select>
+      <input type="text" data-field="lesson-app-link-custom" ${ids} value="${custom ? escapeHtml(link) : ''}"
+        placeholder="e.g. https://panafide.com/?course=… or #library" aria-label="Panafide link" ${custom ? '' : 'hidden'}>
+      <p class="cp-hint">Students get a button that takes them straight there.</p>
+    </div>`;
+}
+
+function setCustomLink(input, lesson) {
+  const text = input.value.trim();
+  const clean = cleanCustomLink(text);
+  const invalid = !!text && !clean;
+  input.toggleAttribute('aria-invalid', invalid);
+  input.closest('.lesson-app-link').querySelector('.cp-hint').textContent = invalid
+    ? 'Use a panafide.com link or a #page link.'
+    : 'Students get a button that takes them straight there.';
+  lesson.app_link = clean;
+}
+
 // Build a single lesson DOM element
 function renderLessonEl(sIdx, lIdx) {
   const lesson = currentCourseData.sections[sIdx].lessons[lIdx];
@@ -246,6 +284,7 @@ function renderLessonEl(sIdx, lIdx) {
           <button type="button" class="small-capture-btn" data-action="capturePattern" data-sidx="${sIdx}" data-lidx="${lIdx}" title="Use the Studio grid as this lesson’s pattern">Use grid</button>
         </div>
       </div>
+      ${renderLessonAppLink(lesson, sIdx, lIdx)}
       ${renderLessonAssignmentBox(lesson, sIdx, lIdx)}
     </div>
   `;
@@ -328,6 +367,19 @@ function handleCourseCreatorChange(e) {
     currentCourseData.sections[sIdx].lessons[lIdx].video_url = target.value;
   } else if (field === 'lesson-pattern') {
     handlePatternSelect(target, sIdx, lIdx);
+  } else if (field === 'lesson-app-link') {
+    const lesson = currentCourseData.sections[sIdx].lessons[lIdx];
+    const customInput = target.parentElement.querySelector('[data-field="lesson-app-link-custom"]');
+    const isCustom = target.value === CUSTOM_LINK;
+    customInput.hidden = !isCustom;
+    if (isCustom) {
+      customInput.focus();
+      setCustomLink(customInput, lesson);
+    } else {
+      lesson.app_link = target.value || null;
+    }
+  } else if (field === 'lesson-app-link-custom') {
+    setCustomLink(target, currentCourseData.sections[sIdx].lessons[lIdx]);
   } else if (field === 'lesson-assignment-link') {
     if (target.value) linkAssignmentToLesson(sIdx, lIdx, target.value);
   }
@@ -1106,6 +1158,7 @@ async function handleCourseSave(shouldClose = true) {
           video_url: lData.video_url || "",
           pattern_json: lData.pattern_json,
           pattern_name: lData.pattern_name,
+          app_link: lData.app_link || null,
           order_index: lIdx
         };
 

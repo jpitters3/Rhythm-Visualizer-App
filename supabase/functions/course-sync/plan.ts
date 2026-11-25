@@ -9,6 +9,7 @@ export interface Lesson {
   video_url?: string | null
   pattern_json?: unknown
   pattern_name?: string | null
+  app_link?: string | null
   order_index: number
   created_at?: string
 }

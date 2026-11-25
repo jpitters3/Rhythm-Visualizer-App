@@ -1065,3 +1065,28 @@ body.dark .chord-fav-btn {
 .text-btn:hover {
   opacity: 1;
 }
+/* Lesson → game/page button (lessons.app_link, js/app-links.js) */
+.lesson-app-link-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  margin-top: 12px;
+  padding: 12px 16px;
+  border: none;
+  border-radius: var(--ui-radius-md);
+  background: var(--ui-brass);
+  color: var(--ui-brass-ink);
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.lesson-app-link-btn:hover {
+  filter: brightness(1.06);
+}
+
+.lesson-app-link-btn[hidden] {
+  display: none;
+}

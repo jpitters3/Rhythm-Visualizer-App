@@ -3,7 +3,7 @@
 // tiles. Individual games, the competency graph and progress tracking come
 // later; see the plan / project_handpan_games memo.
 
-import { navigate } from './router.js';
+import { navigate, getCurrentRoute } from './router.js';
 import { guardBeforeReplacingGrid } from './lesson-settings.js';
 
 // The ten domains of the Handpan Pathway. `status`: 'soon' until a domain
@@ -21,6 +21,8 @@ const DOMAINS = [
   { id: 'collaboration', name: 'Collaboration',         icon: '👥', blurb: 'Play with others and hold your part.',            status: 'soon' },
 ];
 
+let pendingGame = null; // a game to open once #games has rendered (see openGame)
+
 export function initHandpanGames() {
   const view = document.getElementById('view-games');
   if (!view) return;
@@ -29,10 +31,30 @@ export function initHandpanGames() {
   // #view-games's markup stale (e.g. Send to Studio navigates away without
   // going through this hub's own Back button).
   window.addEventListener('routeChanged', (e) => {
-    if (e.detail.route === 'games') render(view);
+    if (e.detail.route !== 'games') return;
+    render(view);
+    if (pendingGame) {
+      const gameId = pendingGame;
+      pendingGame = null;
+      launchGame(view, gameId);
+    }
   });
   if (document.body.classList.contains('route-games')) render(view);
 }
+
+// Straight into one game, e.g. from a lesson's "Play Rhythm by Ear" button.
+export function openGame(gameId) {
+  const view = document.getElementById('view-games');
+  if (!view || !findGame(gameId)) return;
+  if (getCurrentRoute() === 'games') {
+    launchGame(view, gameId);
+  } else {
+    pendingGame = gameId;
+    navigate('games');
+  }
+}
+
+export const findGame = (gameId) => Object.values(DOMAIN_GAMES).flat().find(g => g.id === gameId) ?? null;
 
 function render(view) {
   const tiles = DOMAINS.map(d => `
@@ -80,7 +102,7 @@ function render(view) {
 
 // Domains with more than one game show a small in-domain choice screen
 // instead of jumping straight into a single game.
-const DOMAIN_GAMES = {
+export const DOMAIN_GAMES = {
   rhythm: [
     { id: 'create-rhythm', name: 'Create Your Own Rhythm', icon: '🥁', blurb: 'Clap or tap an 8-beat rhythm, then harmonize it.' },
     { id: 'rhythm-ear', name: 'Rhythm by Ear', icon: '👂', blurb: 'Hear a rhythm, then build it on the grid.' },

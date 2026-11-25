@@ -68,7 +68,7 @@ async function fetchAllCourses() {
       id, title,
       sections (
         id, title, order_index, is_published,
-        lessons ( id, title, order_index, description, video_url, pattern_json, pattern_name, section_id )
+        lessons ( id, title, order_index, description, video_url, pattern_json, pattern_name, app_link, section_id )
       )
     `)
     .order('title', { ascending: true });
@@ -395,6 +395,7 @@ async function copySection(srcSection, targetSide, targetSIdx) {
       video_url: l.video_url || '',
       pattern_json: l.pattern_json || null,
       pattern_name: l.pattern_name || '',
+      app_link: l.app_link || null,
       order_index: lIdx,
     }));
 

@@ -19,7 +19,7 @@ const SUMMARY = 'id, title, is_published, sections(id, lessons(id))'
 const TREE = `id, owner_id, title, description, created_at, updated_at, is_paid, price, thumbnail_url,
   is_published, progression_id, category, tags, intended_scale, level, preview_lesson_id,
   sections(id, course_id, title, order_index, created_at, is_published,
-    lessons(id, section_id, title, description, video_url, pattern_json, order_index, created_at, pattern_name))`
+    lessons(id, section_id, title, description, video_url, pattern_json, order_index, created_at, pattern_name, app_link))`
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',

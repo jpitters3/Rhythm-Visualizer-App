@@ -1297,3 +1297,11 @@ body.dark .section-header button {
   }
   .cp-saved { right: 16px; }
 }
+
+.course-page .lesson-app-link input[aria-invalid] {
+  border-color: #c0504d;
+}
+
+.course-page .lesson-app-link input[aria-invalid] ~ .cp-hint {
+  color: #c0504d;
+}
