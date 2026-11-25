@@ -3031,8 +3031,18 @@
             <span class="plan-current">Your plan</span>
             <h3>Panafide+</h3>
             <p class="plan-tagline">Practise on your own pan.</p>
-            <div class="plan-price">$12<small>CAD/month</small></div>
-            <span class="plan-alt-price">or $9 USD per month</span>
+            <div class="plan-interval" role="group" aria-label="Billing">
+              <button type="button" data-plan-interval="month" aria-pressed="true">Monthly</button>
+              <button type="button" data-plan-interval="year" aria-pressed="false">Yearly</button>
+            </div>
+            <div data-interval-price="month">
+              <div class="plan-price">$12<small>CAD/month</small></div>
+              <span class="plan-alt-price">or $9 USD per month</span>
+            </div>
+            <div data-interval-price="year" hidden>
+              <div class="plan-price">$120<small>CAD/year</small></div>
+              <span class="plan-alt-price">or $90 USD per year · 2 months free</span>
+            </div>
             <button id="plansUpgradeBtn" class="primary-btn pro-btn">Upgrade to Panafide+</button>
             <button id="plansManageBtn" class="manage-sub-btn" data-open-manage-sub hidden>Manage subscription</button>
             <span class="price-notice">Cancel anytime</span>

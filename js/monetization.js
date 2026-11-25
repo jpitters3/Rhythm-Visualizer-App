@@ -165,7 +165,7 @@ function checkUpgradeSuccess() {
     }
 }
 
-async function handleUpgradeClick(btn) {
+async function handleUpgradeClick(btn, interval = 'month') {
     if (!currentUser) {
         await alert("Please sign in or register to upgrade to Panafide+.");
         Bus.emit(BUS_EVENT.OPEN_AUTH_MODAL);
@@ -189,7 +189,8 @@ async function handleUpgradeClick(btn) {
             body: { 
                 userId: currentUser.id,
                 email: currentUser.email,
-                returnUrl: window.location.origin + window.location.pathname
+                returnUrl: window.location.origin + window.location.pathname,
+                interval,
             }
         });
 

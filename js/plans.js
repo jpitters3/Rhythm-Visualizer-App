@@ -49,8 +49,18 @@ export function initPlans({ onUpgrade }) {
   document.querySelectorAll('[data-open-plans]').forEach(btn =>
     btn.addEventListener('click', openPlansModal));
 
+  let interval = 'month';
+  plansModal.querySelectorAll('[data-plan-interval]').forEach(btn => btn.addEventListener('click', () => {
+    interval = btn.dataset.planInterval;
+    plansModal.querySelectorAll('[data-plan-interval]').forEach(b =>
+      b.setAttribute('aria-pressed', String(b === btn)));
+    plansModal.querySelectorAll('[data-interval-price]').forEach(el => {
+      el.hidden = el.dataset.intervalPrice !== interval;
+    });
+  }));
+
   const upgradeBtn = document.getElementById('plansUpgradeBtn');
-  upgradeBtn?.addEventListener('click', () => onUpgrade(upgradeBtn));
+  upgradeBtn?.addEventListener('click', () => onUpgrade(upgradeBtn, interval));
 }
 
 export function openPlansModal() {

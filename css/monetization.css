@@ -325,6 +325,32 @@ body.dark .price-notice {
     margin: -6px 0 6px;
 }
 
+.plan-interval {
+    display: inline-flex;
+    align-self: flex-start;
+    padding: 3px;
+    border-radius: 999px;
+    border: 1px solid var(--panel-border);
+}
+
+.plan-interval button {
+    min-width: 0;
+    height: auto;
+    padding: 6px 14px;
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+    color: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.plan-interval button[aria-pressed="true"] {
+    background: var(--accent);
+    color: var(--accent-ink);
+}
+
 .plan-price--soon {
     font-size: 24px;
     opacity: 0.7;

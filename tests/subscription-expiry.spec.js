@@ -218,6 +218,27 @@ test.describe('Subscription Expiry', () => {
     await expect.poll(() => canAddScale(5)).toBe(true);
   });
 
+  test('plans: Yearly shows the yearly price and checks out yearly', async ({ page }) => {
+    const bodies = [];
+    await page.route('**/functions/v1/stripe-checkout', async route => {
+      bodies.push(route.request().postDataJSON());
+      await route.fulfill({ json: { url: `${new URL(page.url()).origin}/?upgrade=cancel` } });
+    });
+    const plans = page.locator('#plansModal');
+    await page.evaluate(() => document.getElementById('plansBtn')?.click());
+    await expect(plans).toHaveClass(/open/);
+    await expect(plans.locator('[data-interval-price="month"]')).toBeVisible();
+
+    await plans.locator('[data-plan-interval="year"]').click();
+    await expect(plans.locator('[data-plan-interval="year"]')).toHaveAttribute('aria-pressed', 'true');
+    await expect(plans.locator('[data-interval-price="year"]')).toContainText('$120');
+    await expect(plans.locator('[data-interval-price="month"]')).toBeHidden();
+
+    await page.locator('#plansUpgradeBtn').click();
+    await expect.poll(() => bodies.length).toBe(1);
+    expect(bodies[0]).toMatchObject({ interval: 'year' });
+  });
+
   test('plans: compare tiers from the menu, current plan marked', async ({ page }) => {
     const plans = page.locator('#plansModal');
     await page.evaluate(() => document.getElementById('plansBtn')?.click());

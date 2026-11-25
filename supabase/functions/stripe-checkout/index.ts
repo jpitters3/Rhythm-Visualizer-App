@@ -12,14 +12,20 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { userId, email, returnUrl } = await req.json()
-    
-    const stripeKey = Deno.env.get('STRIPE_SECRET_KEY')
-    const priceId = Deno.env.get('STRIPE_PRICE_ID_PLUS')
+    const { userId, email, returnUrl, interval = 'month' } = await req.json()
+    if (interval !== 'month' && interval !== 'year') throw new Error('interval must be month or year')
 
-    if (!stripeKey || !priceId) {
-      throw new Error('Missing Stripe configuration')
-    }
+    const stripeKey = Deno.env.get('STRIPE_SECRET_KEY')
+    if (!stripeKey) throw new Error('Missing Stripe configuration')
+
+    // Prices are found by lookup key (plus_month / plus_year) so a new price
+    // needs no new secret; the old monthly secret is the fallback.
+    const lookup = await fetch(`https://api.stripe.com/v1/prices?active=true&lookup_keys[]=plus_${interval}`, {
+      headers: { 'Authorization': `Bearer ${stripeKey}` },
+    })
+    const found = await lookup.json()
+    const priceId = found?.data?.[0]?.id ?? (interval === 'month' ? Deno.env.get('STRIPE_PRICE_ID_PLUS') : undefined)
+    if (!priceId) throw new Error(`No active price for plus_${interval}`)
 
     // Call Stripe REST API directly using fetch (No library dependencies)
     const response = await fetch('https://api.stripe.com/v1/checkout/sessions', {
@@ -35,6 +41,7 @@ Deno.serve(async (req) => {
         'cancel_url': `${returnUrl}?upgrade=cancel`,
         'line_items[0][price]': priceId,
         'line_items[0][quantity]': '1',
+        'allow_promotion_codes': 'true',
         'metadata[supabase_user_id]': userId,
       }),
     })
