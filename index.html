@@ -73,6 +73,7 @@
   <link rel="stylesheet" href="./css/exercises.css">
   <link rel="stylesheet" href="./css/handpan-games.css">
   <link rel="stylesheet" href="./css/clients.css">
+  <link rel="stylesheet" href="./css/manage-courses.css">
   <link rel="stylesheet" href="./css/create-rhythm-game.css">
   <link rel="stylesheet" href="./css/rhythm-ear-game.css">
   <link rel="stylesheet" href="./css/chord-play-along.css">
@@ -1121,6 +1122,155 @@
     <!-- Clients, admin only (populated by js/clients.js) -->
     <div id="view-clients" class="route-view clients-view"></div>
 
+    <!-- Manage courses, admin only (js/manage-courses.js; Copy sections: js/course-copier.js) -->
+    <div id="view-manage-courses" class="route-view manage-courses-view">
+      <div class="mc-page">
+        <div class="mc-header">
+          <div>
+            <p class="mc-eyebrow">Admin</p>
+            <h2 class="mc-title">Manage courses</h2>
+          </div>
+          <div class="mc-tabs" role="tablist" aria-label="Manage courses">
+            <button type="button" role="tab" class="mc-tab" data-mc-tab="courses" aria-selected="true">Courses</button>
+            <button type="button" role="tab" class="mc-tab" data-mc-tab="copy" aria-selected="false">Copy sections</button>
+          </div>
+        </div>
+
+        <section class="mc-panel" data-mc-panel="courses" role="tabpanel"></section>
+
+        <section class="mc-panel mc-copier" data-mc-panel="copy" role="tabpanel" hidden>
+          <p class="mc-intro">Drag a section onto the other course to copy it, or within a course to reorder.</p>
+          <div class="copier-status-bar" id="copierStatusBar"
+            style="display:none; margin: 0 0 12px 0; padding: 8px 14px; border-radius: 6px; background: rgba(46,204,113,0.12); border: 1px solid rgba(46,204,113,0.3); color: #2ecc71; font-size: 13px;">
+          </div>
+
+          <div style="display:flex; gap:16px; overflow:hidden; flex:1; min-height:0;">
+            <!-- LEFT COLUMN (source) -->
+            <div class="copier-col" id="copierColLeft">
+              <div class="copier-col-header">
+                <label style="font-size:12px; color:var(--text-secondary); display:block; margin-bottom:6px;">SOURCE
+                  COURSE</label>
+                <input id="copierSearch" type="text" placeholder="Search courses, sections, lessons…"
+                  class="copier-search-input" style="margin-bottom:8px;">
+                <div id="copierSearchResults" class="copier-search-results" style="display:none;"></div>
+                <select id="copierSelectLeft" class="copier-course-select"></select>
+                <button id="copierEditLeft" class="secondary-btn" style="margin-top:8px; width:100%;">✏️ Edit
+                  Course</button>
+              </div>
+              <div class="copier-col-body" id="copierSectionsLeft">
+                <p style="opacity:0.5; font-size:13px; padding:10px;">Select a course above.</p>
+              </div>
+            </div>
+
+            <!-- Divider -->
+            <div
+              style="display:flex; align-items:center; font-size:24px; color:var(--text-secondary); user-select:none; flex-shrink:0;">
+              →</div>
+
+            <!-- RIGHT COLUMN (destination) -->
+            <div class="copier-col" id="copierColRight">
+              <div class="copier-col-header">
+                <label style="font-size:12px; color:var(--text-secondary); display:block; margin-bottom:6px;">DESTINATION
+                  COURSE</label>
+                <select id="copierSelectRight" class="copier-course-select"></select>
+                <button id="copierEditRight" class="secondary-btn" style="margin-top:8px; width:100%;">✏️ Edit
+                  Course</button>
+              </div>
+              <div class="copier-col-body" id="copierSectionsRight">
+                <p style="opacity:0.5; font-size:13px; padding:10px;">Select a course above.</p>
+              </div>
+            </div>
+          </div>
+          <div class="mc-copier-footer">
+            <span id="copierSaveStatus" class="status-msg"
+              style="margin-right:auto; color:#2ecc71; font-weight:bold; opacity:0; transition:opacity 0.3s; pointer-events:none;">Saved!</span>
+            <button id="copierSaveBtn" class="secondary-btn">Save order</button>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <!-- Course Creator, full page (js/course-creator.js) -->
+    <div id="view-course-creator" class="route-view course-creator-view">
+      <div class="course-page">
+        <header class="course-page-header">
+          <div>
+            <p class="cp-eyebrow">Courses</p>
+            <h2 class="course-page-title" id="courseCreatorTitle">New course</h2>
+            <p class="cp-subtitle">Fill in the details, then build it section by section. Drag ⋮⋮ to reorder.</p>
+          </div>
+          <button id="closeCourseCreatorBtn" class="close-btn" aria-label="Close course creator">&times;</button>
+        </header>
+
+        <div class="course-form">
+          <section class="cp-card" aria-labelledby="cpDetailsHeading">
+            <h3 class="cp-card-title" id="cpDetailsHeading">Details</h3>
+            <div class="cp-field">
+              <label class="cp-label" for="courseTitle">Title</label>
+              <input type="text" id="courseTitle" placeholder="e.g. Intro to D Kurd" autocomplete="off">
+            </div>
+            <div class="cp-field">
+              <label class="cp-label" for="courseDesc">Description</label>
+              <textarea id="courseDesc" rows="4" placeholder="What students will learn, and who it’s for"></textarea>
+            </div>
+            <div class="cp-field course-thumb-field">
+              <span class="cp-label">Thumbnail</span>
+              <div class="course-thumb-row">
+                <div id="courseThumbPreview" class="course-thumb-preview"></div>
+                <div class="course-thumb-actions">
+                  <button type="button" id="uploadCourseThumbBtn" class="secondary-btn">Upload image</button>
+                  <button type="button" id="removeCourseThumbBtn" class="secondary-btn" style="display:none;">Remove</button>
+                  <p class="cp-hint">Shown on the course card. 16:9 works best.</p>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="cp-card" aria-labelledby="cpOrganizeHeading">
+            <h3 class="cp-card-title" id="cpOrganizeHeading">Organize</h3>
+            <div class="cp-grid">
+              <div class="cp-field cp-level">
+                <label class="cp-label" for="courseLevel">Level</label>
+                <input type="number" id="courseLevel" placeholder="1" min="1" step="1" inputmode="numeric">
+              </div>
+              <div class="cp-field cp-category">
+                <label class="cp-label" for="courseCategory">Category</label>
+                <input type="text" id="courseCategory" placeholder="e.g. Foundations" list="courseCategoryList" autocomplete="off">
+                <datalist id="courseCategoryList"><!-- Populated by course-creator.js --></datalist>
+              </div>
+              <div class="cp-field cp-tags">
+                <label class="cp-label" for="courseTags">Tags</label>
+                <input type="text" id="courseTags" placeholder="e.g. rhythm, beginner" autocomplete="off">
+                <p class="cp-hint">Separate tags with commas.</p>
+              </div>
+            </div>
+            <div class="cp-field">
+              <label class="cp-label" for="courseProgressionSelect">Linked progression</label>
+              <select id="courseProgressionSelect"><!-- Populated by course-creator.js --></select>
+              <p class="cp-hint">Linking one makes this a Pattern Mini-Course in the Patterns panel.</p>
+            </div>
+          </section>
+
+          <section class="cp-card" aria-labelledby="cpSectionsHeading">
+            <div class="cp-card-head">
+              <h3 class="cp-card-title" id="cpSectionsHeading">Sections &amp; lessons</h3>
+              <div class="course-structure-toolbar">
+                <button type="button" id="collapseAllSectionsBtn" class="compact-sections-btn">Collapse all</button>
+                <button type="button" id="addSectionBtn" class="secondary-btn">+ Add section</button>
+              </div>
+            </div>
+            <div id="courseStructure"></div>
+          </section>
+        </div>
+
+        <div class="course-page-footer">
+          <span id="courseSaveStatus" class="cp-saved" role="status">Saved!</span>
+          <button type="button" id="saveAndContinueBtn" class="secondary-btn">Save &amp; Continue</button>
+          <button type="button" id="saveCourseBtn" class="primary-btn">Save Course</button>
+        </div>
+      </div>
+    </div>
+
   </div> <!-- End Container -->
 
   <!-- Legend -->
@@ -1487,118 +1637,6 @@
       </form>
     </div>
   </div>
-
-  <!-- Course Creator Modal -->
-  <div id="courseModal" class="modal-overlay" aria-hidden="true">
-    <div class="modal course-modal">
-      <div class="modal-header">
-        <h2 class="modal-title">Course Creator</h2>
-        <button id="closeCourseModal" class="close-btn">&times;</button>
-      </div>
-
-      <div class="course-form">
-        <input type="text" id="courseTitle" placeholder="Course Title (e.g., Intro to D-Kurd)" class="full-width">
-        <textarea id="courseDesc" placeholder="Course Description"></textarea>
-
-        <div class="course-thumb-field">
-          <label class="prog-field-label">Course Thumbnail</label>
-          <div class="course-thumb-row">
-            <div id="courseThumbPreview" class="course-thumb-preview"></div>
-            <div class="course-thumb-actions">
-              <button type="button" id="uploadCourseThumbBtn" class="secondary-btn">📷 Upload Image</button>
-              <button type="button" id="removeCourseThumbBtn" class="secondary-btn" style="display:none;">Remove</button>
-            </div>
-          </div>
-        </div>
-
-        <div style="display:flex; gap:16px;">
-          <input type="number" id="courseLevel" placeholder="Level (e.g., 1)" min="1" step="1" style="flex:1;">
-          <input type="text" id="courseCategory" placeholder="Category (e.g., Foundations)" list="courseCategoryList" style="flex:1;">
-          <datalist id="courseCategoryList"><!-- Populated by course-creator.js --></datalist>
-          <input type="text" id="courseTags" placeholder="Tags (comma, separated)" style="flex:1;">
-        </div>
-
-        <div style="margin-top:12px;">
-          <label class="prog-field-label" for="courseProgressionSelect">Linked Progression (makes this a Pattern Mini-Course in the Patterns modal)</label>
-          <select id="courseProgressionSelect" class="hp-input" style="width:100%;"><!-- Populated by course-creator.js --></select>
-        </div>
-
-        <div class="course-structure-toolbar">
-          <button id="collapseAllSectionsBtn" class="compact-sections-btn">Collapse All</button>
-        </div>
-        <div id="courseStructure">
-        </div>
-      </div>
-
-      <div class="modal-footer">
-        <span id="courseSaveStatus" class="status-msg"
-          style="margin-right: auto; color: #2ecc71; font-weight: bold; opacity: 0; transition: opacity 0.3s; pointer-events: none;">Saved!</span>
-        <button id="addSectionBtn" class="secondary-btn">+ Add Section</button>
-        <button id="saveAndContinueBtn" class="secondary-btn">Save & Continue</button>
-        <button id="saveCourseBtn" class="primary-btn">Save Course</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Course Copier Modal (Admin Only) -->
-  <div id="courseCopierModal" class="modal-overlay" aria-hidden="true">
-    <div class="modal course-modal" style="max-width: 960px; width: 95vw;">
-      <div class="modal-header">
-        <h2 class="modal-title">📋 Copy Sections Between Courses</h2>
-        <button id="closeCourseCopierModal" class="close-btn">&times;</button>
-      </div>
-
-      <div class="copier-status-bar" id="copierStatusBar"
-        style="display:none; margin: 0 0 12px 0; padding: 8px 14px; border-radius: 6px; background: rgba(46,204,113,0.12); border: 1px solid rgba(46,204,113,0.3); color: #2ecc71; font-size: 13px;">
-      </div>
-
-      <div style="display:flex; gap:16px; overflow:hidden; flex:1; min-height:0;">
-        <!-- LEFT COLUMN (source) -->
-        <div class="copier-col" id="copierColLeft">
-          <div class="copier-col-header">
-            <label style="font-size:12px; color:var(--text-secondary); display:block; margin-bottom:6px;">SOURCE
-              COURSE</label>
-            <input id="copierSearch" type="text" placeholder="Search courses, sections, lessons…"
-              class="copier-search-input" style="margin-bottom:8px;">
-            <div id="copierSearchResults" class="copier-search-results" style="display:none;"></div>
-            <select id="copierSelectLeft" class="copier-course-select"></select>
-            <button id="copierEditLeft" class="secondary-btn" style="margin-top:8px; width:100%;">✏️ Edit
-              Course</button>
-          </div>
-          <div class="copier-col-body" id="copierSectionsLeft">
-            <p style="opacity:0.5; font-size:13px; padding:10px;">Select a course above.</p>
-          </div>
-        </div>
-
-        <!-- Divider -->
-        <div
-          style="display:flex; align-items:center; font-size:24px; color:var(--text-secondary); user-select:none; flex-shrink:0;">
-          →</div>
-
-        <!-- RIGHT COLUMN (destination) -->
-        <div class="copier-col" id="copierColRight">
-          <div class="copier-col-header">
-            <label style="font-size:12px; color:var(--text-secondary); display:block; margin-bottom:6px;">DESTINATION
-              COURSE</label>
-            <select id="copierSelectRight" class="copier-course-select"></select>
-            <button id="copierEditRight" class="secondary-btn" style="margin-top:8px; width:100%;">✏️ Edit
-              Course</button>
-          </div>
-          <div class="copier-col-body" id="copierSectionsRight">
-            <p style="opacity:0.5; font-size:13px; padding:10px;">Select a course above.</p>
-          </div>
-        </div>
-      </div>
-
-      <div class="modal-footer" style="margin-top:16px;">
-        <span id="copierSaveStatus" class="status-msg"
-          style="margin-right:auto; color:#2ecc71; font-weight:bold; opacity:0; transition:opacity 0.3s; pointer-events:none;">Saved!</span>
-        <button id="copierSaveBtn" class="secondary-btn">Save</button>
-        <button id="copierSaveCloseBtn" class="primary-btn">Save &amp; Close</button>
-      </div>
-    </div>
-  </div>
-
 
   <!-- Lesson Save Changes Modal (js/lesson-settings.js) — shown instead of
        the generic "Discard unsaved changes?" confirm whenever the grid

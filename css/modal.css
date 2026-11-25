@@ -818,3 +818,7 @@ button#subdivKeepBtn {
     margin-bottom: 0px;
   }
 }
+/* Confirm/alert messages keep their line breaks */
+#confirmMessage {
+  white-space: pre-line;
+}

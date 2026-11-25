@@ -1,5 +1,5 @@
 import { currentUser, isAdminUser } from './state.js';
-import { Modal } from './modal.js';
+import { navigate, getCurrentRoute } from './router.js';
 import { Bus, BUS_EVENT } from './bus.js';
 import { dbListPatternNames, dbLoadPatternByName, getSavedPatterns, serializePattern } from './pattern-crud.js';
 import { supabase } from './supabase-client.js';
@@ -59,9 +59,17 @@ export function initCourseCreator() {
   }
 
   // Bind main buttons
-  document.getElementById('openCourseModalBtn')?.addEventListener('click', openCourseCreator);
-  document.getElementById('closeCourseModal')?.addEventListener('click', closeCourseCreator);
+  document.getElementById('openCourseModalBtn')?.addEventListener('click', startNewCourse);
+  document.getElementById('closeCourseCreatorBtn')?.addEventListener('click', closeCourseCreator);
   document.getElementById('addSectionBtn')?.addEventListener('click', addSection);
+
+  window.addEventListener('routeChanged', (e) => {
+    if (e.detail.route === ROUTE) enterCourseCreator();
+  });
+  // A cold load on #course-creator routes before auth resolves.
+  Bus.on(BUS_EVENT.AUTH_LOGIN, () => {
+    if (getCurrentRoute() === ROUTE) enterCourseCreator();
+  });
 
   document.getElementById('saveCourseBtn')?.addEventListener('click', () => handleCourseSave(true));
   document.getElementById('saveAndContinueBtn')?.addEventListener('click', () => handleCourseSave(false));
@@ -121,7 +129,7 @@ function addLessonToSection(sectionIndex) {
     video_url: "",
     // No pattern by default — was `serializePattern()` (whatever happened to
     // be in the Studio grid), which silently linked every new lesson to
-    // that content. The teacher opts in via the ASSOCIATED PATTERN dropdown
+    // that content. The teacher opts in via the Pattern dropdown
     // (a named pattern, or 📸 Capture Current Grid) or leaves it "None".
     pattern_json: null,
     pattern_name: null,
@@ -150,7 +158,8 @@ function addLessonToSection(sectionIndex) {
       btn.className = 'add-lesson-btn';
       btn.dataset.action = 'addLesson';
       btn.dataset.sidx = sectionIndex;
-      btn.textContent = '+ Add Lesson';
+      btn.type = 'button';
+      btn.textContent = '+ Add lesson';
       sectionEl.appendChild(btn);
     }
   } else {
@@ -162,14 +171,14 @@ function renderLessonAssignmentBox(lesson, sIdx, lIdx) {
   if (!lesson.id) {
     return `
       <div class="lesson-assignment-box">
-        <div class="meta-label">ASSIGNMENT</div>
+        <div class="meta-label">Assignment</div>
         <div class="lesson-assignment-unsaved">Save the course first to link an assignment.</div>
       </div>`;
   }
   if (lesson.assignment) {
     return `
       <div class="lesson-assignment-box">
-        <div class="meta-label">ASSIGNMENT</div>
+        <div class="meta-label">Assignment</div>
         <div class="lesson-assignment-linked">
           <span class="lesson-assignment-name">📋 ${escapeHtml(lesson.assignment.title)}</span>
           <button class="small-unlink-btn" data-action="unlinkAssignment" data-sidx="${sIdx}" data-lidx="${lIdx}" title="Unlink assignment">✕</button>
@@ -178,7 +187,7 @@ function renderLessonAssignmentBox(lesson, sIdx, lIdx) {
   }
   return `
     <div class="lesson-assignment-box">
-      <div class="meta-label">ASSIGNMENT</div>
+      <div class="meta-label">Assignment</div>
       <div class="lesson-assignment-empty">
         <button class="small-link-btn" data-action="showLinkAssignment" data-sidx="${sIdx}" data-lidx="${lIdx}">Link existing</button>
         <button class="small-create-btn" data-action="createAssignment" data-sidx="${sIdx}" data-lidx="${lIdx}">+ Create new</button>
@@ -209,29 +218,32 @@ function renderLessonEl(sIdx, lIdx) {
 
   lessonEl.innerHTML = `
     <div class="lesson-header-bar" data-action="toggleLessonHeader" data-sidx="${sIdx}" data-lidx="${lIdx}">
-      <div class="lesson-drag-handle" title="Drag to reorder lesson">::</div>
-      <button class="toggle-btn lesson-toggle-btn" data-action="toggleLesson" data-sidx="${sIdx}" data-lidx="${lIdx}">
-        ${isLessonExpanded ? '▼' : '▶'}
-      </button>
-      <input type="text" class="lesson-title-input" value="${lesson.title}" placeholder="Lesson Title" data-field="lesson-title" data-sidx="${sIdx}" data-lidx="${lIdx}">
-      <button class="icon-btn remove-btn-small" data-action="removeLesson" data-sidx="${sIdx}" data-lidx="${lIdx}" title="Remove Lesson">&times;</button>
+      <div class="lesson-drag-handle" title="Drag to reorder lesson" aria-hidden="true">⋮⋮</div>
+      <button type="button" class="toggle-btn lesson-toggle-btn" data-action="toggleLesson" data-sidx="${sIdx}" data-lidx="${lIdx}" aria-label="Show or hide lesson details">${isLessonExpanded ? '▼' : '▶'}</button>
+      <input type="text" class="lesson-title-input" value="${escapeHtml(lesson.title ?? '')}" placeholder="Lesson title" aria-label="Lesson title" data-field="lesson-title" data-sidx="${sIdx}" data-lidx="${lIdx}">
+      <button type="button" class="icon-btn remove-btn-small" data-action="removeLesson" data-sidx="${sIdx}" data-lidx="${lIdx}" title="Remove lesson" aria-label="Remove lesson">&times;</button>
     </div>
     <div class="lesson-content ${isLessonExpanded ? 'active' : ''}">
-      <textarea placeholder="Description" data-field="lesson-desc" data-sidx="${sIdx}" data-lidx="${lIdx}">${lesson.description}</textarea>
-      <div class="input-with-icon">
-        <span>📺</span>
-        <input type="text" value="${lesson.video_url}" placeholder="YouTube URL or Uploaded Video" data-field="lesson-video" data-sidx="${sIdx}" data-lidx="${lIdx}">
-        <button class="small-upload-btn" data-action="uploadVideo" data-sidx="${sIdx}" data-lidx="${lIdx}" title="Upload Video File">📤</button>
+      <label class="lesson-field">
+        <span class="meta-label">Description</span>
+        <textarea rows="3" placeholder="What this lesson covers" data-field="lesson-desc" data-sidx="${sIdx}" data-lidx="${lIdx}">${escapeHtml(lesson.description ?? '')}</textarea>
+      </label>
+      <div class="lesson-field">
+        <span class="meta-label">Video</span>
+        <div class="input-with-icon">
+          <input type="text" value="${escapeHtml(lesson.video_url ?? '')}" placeholder="YouTube link, or upload a file" aria-label="Video link" data-field="lesson-video" data-sidx="${sIdx}" data-lidx="${lIdx}">
+          <button type="button" class="small-upload-btn" data-action="uploadVideo" data-sidx="${sIdx}" data-lidx="${lIdx}" title="Upload a video file">Upload</button>
+        </div>
       </div>
-      <div class="lesson-meta-box">
-        <div class="meta-label">ASSOCIATED PATTERN</div>
+      <div class="lesson-meta-box lesson-field">
+        <div class="meta-label">Pattern</div>
         <div class="pattern-control-row">
           <select class="pattern-select" data-field="lesson-pattern" data-sidx="${sIdx}" data-lidx="${lIdx}">
             <option value="__none__" ${!hasPattern ? 'selected' : ''}>None</option>
             <option value="" ${hasPattern && !lesson.pattern_name ? 'selected' : ''}>-- Capture Current Grid --</option>
             ${patternOptions}
           </select>
-          <button class="small-capture-btn" data-action="capturePattern" data-sidx="${sIdx}" data-lidx="${lIdx}" title="Save current grid as pattern">📸</button>
+          <button type="button" class="small-capture-btn" data-action="capturePattern" data-sidx="${sIdx}" data-lidx="${lIdx}" title="Use the Studio grid as this lesson’s pattern">Use grid</button>
         </div>
       </div>
       ${renderLessonAssignmentBox(lesson, sIdx, lIdx)}
@@ -305,10 +317,8 @@ function handleCourseCreatorChange(e) {
     currentCourseData.sections[sIdx].is_published = isPublished;
     const sectionEl = document.querySelector(`.section-builder[data-sidx="${sIdx}"]`);
     if (sectionEl) {
-      sectionEl.querySelector(`label[for="sec-pub-${sIdx}"]`).textContent = isPublished ? 'Published' : 'Draft';
-      sectionEl.querySelector(`label[for="sec-pub-${sIdx}"]`).style.color = isPublished ? '#2ecc71' : '#f39c12';
-      sectionEl.querySelector('.section-header-bar').style.borderBottom = isPublished ? '' : '2px dashed #f39c12';
-      sectionEl.querySelector('.lessons-container').style.opacity = isPublished ? '' : '0.8';
+      sectionEl.classList.toggle('is-draft', !isPublished);
+      sectionEl.querySelector('.publish-text').textContent = isPublished ? 'Published' : 'Draft';
     }
   } else if (field === 'lesson-title') {
     currentCourseData.sections[sIdx].lessons[lIdx].title = target.value;
@@ -431,7 +441,8 @@ function toggleSection(sIdx) {
       btn.className = 'add-lesson-btn';
       btn.dataset.action = 'addLesson';
       btn.dataset.sidx = sIdx;
-      btn.textContent = '+ Add Lesson';
+      btn.type = 'button';
+      btn.textContent = '+ Add lesson';
       sectionEl.appendChild(btn);
     }
   }
@@ -571,31 +582,26 @@ function renderCourseStructure() {
     const isExpanded = expandedSections.has(sIdx);
 
     const sectionEl = document.createElement('div');
-    sectionEl.className = 'section-builder';
+    sectionEl.className = `section-builder${section.is_published ? '' : ' is-draft'}`;
     sectionEl.setAttribute('draggable', 'true');
     sectionEl.dataset.sidx = sIdx;
 
     sectionEl.innerHTML = `
-      <div class="section-header-bar" style="${!section.is_published ? 'border-bottom: 2px dashed #f39c12;' : ''}">
-        <div class="drag-handle" title="Drag to reorder section">☰</div>
-        <button class="toggle-btn" data-action="toggleSection" data-sidx="${sIdx}">
-          ${isExpanded ? '▼' : '▶'}
-        </button>
+      <div class="section-header-bar">
+        <div class="drag-handle" title="Drag to reorder section" aria-hidden="true">⋮⋮</div>
+        <button type="button" class="toggle-btn" data-action="toggleSection" data-sidx="${sIdx}" aria-label="Show or hide lessons">${isExpanded ? '▼' : '▶'}</button>
         <div class="section-title-input">
-          <input type="text" value="${section.title}" data-field="section-title" data-sidx="${sIdx}" placeholder="Section Title">
+          <input type="text" value="${escapeHtml(section.title ?? '')}" data-field="section-title" data-sidx="${sIdx}" placeholder="Section title" aria-label="Section title">
         </div>
-        <div class="section-publish-toggle" style="margin-right: 10px; display: flex; align-items: center; gap: 5px;">
-          <input type="checkbox" id="sec-pub-${sIdx}"
-            ${section.is_published ? 'checked' : ''}
-            data-field="section-published" data-sidx="${sIdx}">
-          <label for="sec-pub-${sIdx}" style="font-size: 0.8rem; cursor: pointer; color: ${section.is_published ? '#2ecc71' : '#f39c12'};">
-            ${section.is_published ? 'Published' : 'Draft'}
-          </label>
-        </div>
-        <button class="icon-btn remove-section-btn" data-action="removeSection" data-sidx="${sIdx}" title="Remove Section">&times;</button>
+        <label class="section-publish-toggle" title="Students only see published sections">
+          <input type="checkbox" id="sec-pub-${sIdx}" ${section.is_published ? 'checked' : ''} data-field="section-published" data-sidx="${sIdx}">
+          <span class="publish-switch" aria-hidden="true"></span>
+          <span class="publish-text">${section.is_published ? 'Published' : 'Draft'}</span>
+        </label>
+        <button type="button" class="icon-btn remove-section-btn" data-action="removeSection" data-sidx="${sIdx}" title="Remove section" aria-label="Remove section">&times;</button>
       </div>
-      <div class="lessons-container ${isExpanded ? 'active' : ''}" id="section-${sIdx}-lessons" style="${!section.is_published ? 'opacity: 0.8;' : ''}"></div>
-      ${isExpanded ? `<button class="add-lesson-btn" data-action="addLesson" data-sidx="${sIdx}">+ Add Lesson</button>` : ''}
+      <div class="lessons-container ${isExpanded ? 'active' : ''}" id="section-${sIdx}-lessons"></div>
+      ${isExpanded ? `<button type="button" class="add-lesson-btn" data-action="addLesson" data-sidx="${sIdx}">+ Add lesson</button>` : ''}
     `;
 
     if (isExpanded) {
@@ -620,6 +626,7 @@ function updateThumbPreview() {
 
   const url = currentCourseData.thumbnail_url;
   preview.style.backgroundImage = url ? `url('${url}')` : '';
+  preview.classList.toggle('has-image', !!url);
   if (removeBtn) removeBtn.style.display = (isAdmin && url) ? 'inline-block' : 'none';
 }
 
@@ -875,18 +882,49 @@ async function capturePatternForLesson(sIdx, lIdx) {
 
 // ===== Event listeners ===== //
 
-const courseModal = document.getElementById('courseModal');
-const courseModalPanel = new Modal(courseModal);
-const openCourseBtn = document.getElementById('openCourseModalBtn');
-const closeCourseBtn = document.getElementById('closeCourseModal');
+const ROUTE = 'course-creator';
+let returnRoute = 'dashboard'; // where Close / Save Course goes back to
 
-async function openCourseCreator() {
+function openCourseCreator() {
+  const route = getCurrentRoute();
+  if (route === ROUTE) enterCourseCreator(); // already here: no hashchange fires
+  else {
+    returnRoute = route || 'dashboard';
+    navigate(ROUTE);
+  }
+}
+
+// "Create course" starts blank, but keeps an unsaved new course you were part-way through.
+function startNewCourse() {
+  if (currentCourseData.id) resetCourseForm();
+  openCourseCreator();
+}
+
+function resetCourseForm() {
+  currentCourseData = { title: "", description: "", thumbnail_url: null, sections: [] };
+  expandedSections.clear();
+  expandedLessons.clear();
+  ['courseTitle', 'courseDesc', 'courseLevel', 'courseCategory', 'courseTags', 'courseProgressionSelect']
+    .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  setEditing(false);
+  updateThumbPreview();
+}
+
+function setEditing(isEditing) {
+  const title = document.getElementById('courseCreatorTitle');
+  if (title) title.textContent = isEditing ? 'Edit course' : 'New course';
+  const saveBtn = document.getElementById('saveCourseBtn');
+  const contBtn = document.getElementById('saveAndContinueBtn');
+  if (saveBtn) saveBtn.textContent = isEditing ? 'Update Course' : 'Save Course';
+  if (contBtn) contBtn.textContent = isEditing ? 'Update & Continue' : 'Save & Continue';
+}
+
+async function enterCourseCreator() {
   await Promise.all([loadPatternOptions(), loadAvailableAssignments(), populateCategoryDatalist(), populateProgressionSelect()]);
   // Set after populating — the select has no matching <option> until the
   // fetch above resolves, so assigning .value any earlier is a silent no-op.
   document.getElementById('courseProgressionSelect').value = currentCourseData.progression_id || '';
 
-  courseModalPanel.open();
   // Initialize with one empty section if new
   if (currentCourseData.sections.length === 0 && !currentCourseData.id) {
     currentCourseData.sections.push({ title: "Section 1", lessons: [] });
@@ -907,10 +945,7 @@ export async function loadCourseToEdit(course) {
   document.getElementById('courseCategory').value = course.category || '';
   document.getElementById('courseTags').value = (course.tags || []).join(', ');
 
-  const saveBtn = document.getElementById('saveCourseBtn');
-  const contBtn = document.getElementById('saveAndContinueBtn');
-  if (saveBtn) saveBtn.textContent = "Update Course";
-  if (contBtn) contBtn.textContent = "Update & Continue";
+  setEditing(true);
 
   // Collapse all by default on edit
   expandedSections.clear();
@@ -933,12 +968,8 @@ export async function loadCourseToEdit(course) {
 }
 
 export function closeCourseCreator() {
-  courseModalPanel.close();
+  if (getCurrentRoute() === ROUTE) navigate(returnRoute);
 }
-
-// Listeners
-openCourseBtn?.addEventListener('click', openCourseCreator);
-closeCourseBtn?.addEventListener('click', closeCourseCreator);
 
 document.getElementById('uploadCourseThumbBtn')?.addEventListener('click', triggerCourseThumbnailUpload);
 document.getElementById('removeCourseThumbBtn')?.addEventListener('click', () => {
@@ -986,6 +1017,7 @@ async function handleCourseSave(shouldClose = true) {
 
   if (!title) {
     await alert("Please enter a course title.");
+    document.getElementById('courseTitle').focus();
     return;
   }
 
@@ -1143,16 +1175,7 @@ async function handleCourseSave(shouldClose = true) {
     if (shouldClose) {
       await alert("Course saved successfully!");
       closeCourseCreator();
-      // Reset form
-      currentCourseData = { title: "", description: "", thumbnail_url: null, sections: [] };
-      document.getElementById('courseTitle').value = "";
-      document.getElementById('courseDesc').value = "";
-      document.getElementById('courseLevel').value = "";
-      document.getElementById('courseCategory').value = "";
-      document.getElementById('courseTags').value = "";
-      document.getElementById('courseProgressionSelect').value = "";
-      updateThumbPreview();
-      saveCourseBtn.textContent = "Save Course";
+      resetCourseForm();
     } else {
       // Show flashing "Saved!" message for 3 seconds
       const statusSpan = document.getElementById('courseSaveStatus');
@@ -1163,15 +1186,8 @@ async function handleCourseSave(shouldClose = true) {
         }, 3000);
       }
 
-      // Update button labels to "Update" since it's no longer a brand new course
-      if (saveCourseBtn) saveCourseBtn.textContent = "Update Course";
-      if (saveAndContinueBtn) saveAndContinueBtn.textContent = "Update & Continue";
-
-      setTimeout(() => {
-        // Restore button text after "Saving..."
-        activeBtn.textContent = shouldClose ? "Update Course" : "Update & Continue";
-      }, 1500);
-      // We do NOT reset currentCourseData or title/desc
+      // No longer a brand new course; this also replaces "Saving..."
+      setEditing(true);
     }
 
     // Dispatch event to notify other modules (like courses.js) to refresh
@@ -1179,11 +1195,9 @@ async function handleCourseSave(shouldClose = true) {
 
   } catch (err) {
     console.error("Error saving course (catch block):", err);
+    activeBtn.textContent = originalText;
     await alert(`Failed to save course: ${err.message}`);
   } finally {
     activeBtn.disabled = false;
-    if (shouldClose) {
-      activeBtn.textContent = originalText;
-    }
   }
 }

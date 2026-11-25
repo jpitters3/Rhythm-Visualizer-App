@@ -46,6 +46,8 @@ import { initGames } from './games.js';
 import { initHandpanGames } from './handpan-games.js';
 import { initChordListen } from './chord-listen.js';
 import { initClients } from './clients.js';
+import { initManageCourses } from './manage-courses.js';
+import { initCourseLinks, openCourseFromURL } from './course-links.js';
 import { initPracticeReminders } from './practice-reminders.js';
 import { initAdmin } from './admin.js';
 import { initNotifications } from './notifications.js';
@@ -117,6 +119,8 @@ async function init() {
     initHandpanGames();
     initChordListen();
     initClients();
+    initManageCourses();
+    initCourseLinks();
     initPracticeReminders();
     initCourseMarketplace();
     initPatternsModal();
@@ -352,6 +356,7 @@ function safeInit() {
       const loadedShared = await loadSharedFromURL();
       if (loadedShared) navigate('studio');
       await loadSharedCompositionFromURL();
+      openCourseFromURL();
 
       // After login, open any composition the user was trying to view before auth
       Bus.on(BUS_EVENT.PROFILE_LOADED, resumePendingSharedComp);

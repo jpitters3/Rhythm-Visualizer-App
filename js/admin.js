@@ -10,7 +10,7 @@ import { currentUser, isAdminUser } from './state.js';
 import { dbListPatternNames, dbLoadPatternByName, dbSavePattern, applyPattern } from './pattern-crud.js';
 import { start, stop } from './noteplayer.js';
 import { GridContext } from './grid-context.js';
-import { initCourseCopier, openCourseCopier } from './course-copier.js';
+import { initCourseCopier } from './course-copier.js';
 import { initAssignments, openAssignments, prefetchAssignmentsData } from './assignments.js';
 import { initProgressions, openProgressions } from './progressions.js';
 import { Bus, BUS_EVENT } from './bus.js';
@@ -78,11 +78,6 @@ function injectAdminButton() {
     const isOpen = adminSubmenu.classList.contains('open');
     adminSubmenu.classList.toggle('open', !isOpen);
     adminMenuBtn.setAttribute('aria-expanded', String(!isOpen));
-  });
-
-  document.getElementById('openCourseCopierAdminBtn')?.addEventListener('click', () => {
-    document.getElementById('accountDropdownMenu')?.classList.remove('show');
-    openCourseCopier();
   });
 
   document.getElementById('openPatternOrgAdminBtn')?.addEventListener('click', () => {

@@ -67,8 +67,12 @@ function applyFiltersAndRender() {
   renderMarketplace(visibleCourses, cachedOwnedIds, cachedArchivedIds, { filtered: !!q || activeFilters.size > 0 });
 }
 
-export async function openMarketplace() {
+export async function openMarketplace({ search } = {}) {
   if (!marketplaceModal) return;
+  if (search !== undefined) {
+    searchQuery = search;
+    if (marketSearchInput) marketSearchInput.value = search;
+  }
 
   marketPanel.open();
 

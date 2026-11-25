@@ -13,9 +13,11 @@ async function clickAccountBtn(page) {
 
 const { createTestUser, deleteTestUser } = require('./utils/auth-helper');
 const { waitForPageReady } = require('./utils/page-helper');
+const { deleteCoursesByTitle } = require('./utils/seed-helper');
 
 test.describe('Practice Plan', () => {
   let testUser;
+  let courseTitle; // the course this test builds through the Course Creator
 
   test.beforeEach(async ({ page }) => {
     // Create unique test user (admin so #openCourseModalBtn is visible)
@@ -69,6 +71,9 @@ test.describe('Practice Plan', () => {
   });
 
   test.afterEach(async ({ page }) => {
+    if (courseTitle) await deleteCoursesByTitle(courseTitle);
+    courseTitle = undefined;
+
     // Clear browser session to prevent test interference
     await page.context().clearCookies();
     await page.evaluate(() => localStorage.clear());
@@ -98,7 +103,7 @@ test.describe('Practice Plan', () => {
 
     // 2. Fill Course Details
     const timestamp = Date.now();
-    const courseTitle = `Practice Test Course ${timestamp}`;
+    courseTitle = `Practice Test Course ${timestamp}`;
     await page.fill('#courseTitle', courseTitle);
     await page.fill('#courseDesc', 'For testing practice plan');
 
@@ -124,8 +129,8 @@ test.describe('Practice Plan', () => {
     await page.locator('#confirmModal.open').waitFor({ timeout: 10000 });
     await page.click('#confirmOkBtn');
 
-    // Wait for modal to close
-    await expect(page.locator('#courseModal')).not.toHaveClass(/open/, { timeout: 5000 });
+    // Wait for the page to close
+    await expect(page.locator('#view-course-creator')).not.toHaveClass(/active/, { timeout: 5000 });
     // Allow CSS transitions to finish or overlay to be removed
     await page.waitForTimeout(500);
 

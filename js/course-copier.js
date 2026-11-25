@@ -1,10 +1,10 @@
 /**
  * course-copier.js
  * Admin-only UI for copying / reordering sections between courses via drag-and-drop.
+ * Lives in the Copy sections tab of Manage courses (js/manage-courses.js).
  */
 
 import { supabase } from './supabase-client.js';
-import { Modal } from './modal.js';
 import { loadCourseToEdit } from './course-creator.js';
 import { Bus, BUS_EVENT } from './bus.js';
 import { alert } from './alert.js';
@@ -20,15 +20,9 @@ const state = {
 
 // Drag state
 let dragSrc = null; // { side:'left'|'right', sIdx:Number }
-let copierPanel = null;
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 export async function initCourseCopier() {
-  // Modal open/close
-  copierPanel = new Modal(document.getElementById('courseCopierModal'));
-  document.getElementById('closeCourseCopierModal')
-    ?.addEventListener('click', closeCourseCopier);
-
   // Search bar — renders rich results panel
   document.getElementById('copierSearch')
     ?.addEventListener('input', (e) => {
@@ -48,17 +42,11 @@ export async function initCourseCopier() {
   document.getElementById('copierEditRight')
     ?.addEventListener('click', () => editCourse('right'));
 
-  // Save buttons
   document.getElementById('copierSaveBtn')
-    ?.addEventListener('click', () => saveAll(false));
-  document.getElementById('copierSaveCloseBtn')
-    ?.addEventListener('click', () => saveAll(true));
+    ?.addEventListener('click', saveAll);
 }
 
 export async function openCourseCopier() {
-  if (!copierPanel) return;
-  copierPanel.open();
-
   allAdminCourses = await fetchAllCourses();
   populateDropdowns(allAdminCourses);
   const searchEl = document.getElementById('copierSearch');
@@ -70,10 +58,6 @@ export async function openCourseCopier() {
   state.right = { courseId: null, sections: [] };
   renderSide('left');
   renderSide('right');
-}
-
-function closeCourseCopier() {
-  copierPanel?.close();
 }
 
 // ── Data ──────────────────────────────────────────────────────────────────────
@@ -455,7 +439,7 @@ async function autoSaveOrder(side) {
 }
 
 /** Full save: rewrite order_index for both sides. */
-async function saveAll(andClose) {
+async function saveAll() {
   showStatus('Saving…');
   try {
     await autoSaveOrder('left');
@@ -469,8 +453,6 @@ async function saveAll(andClose) {
 
     Bus.emit(BUS_EVENT.COURSE_DATA_CHANGED);
     showStatus('✓ Saved!');
-
-    if (andClose) closeCourseCopier();
   } catch (err) {
     showStatus('Save failed: ' + err.message, true);
   }
@@ -485,7 +467,6 @@ async function editCourse(side) {
   }
   const course = allAdminCourses.find(c => c.id === courseId);
   if (!course) return;
-  closeCourseCopier();
   loadCourseToEdit(course);
 }
 

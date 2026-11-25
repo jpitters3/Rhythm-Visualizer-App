@@ -1,22 +1,10 @@
 /* ============================================================
-   Course Copier Modal — Admin Only
+   Course Copier — Copy sections tab of Manage courses
    ============================================================ */
 
-/* Override course-modal width for the wider dual-column layout */
-#courseCopierModal .course-modal {
-  max-width: 960px;
-  width: 95vw;
-  max-height: 90vh;
-  display: flex;
-  flex-direction: column;
-  padding: 0;
-}
-
-/* The scrollable body area between header and footer */
-#courseCopierModal .course-modal > div[style*="display:flex"] {
-  flex: 1;
-  min-height: 0;
-  padding: 0 32px;
+.mc-copier > div[style*="display:flex"] {
+  min-height: 420px;
+  height: min(62vh, 640px);
 }
 
 /* ── Columns ── */

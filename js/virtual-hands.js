@@ -97,15 +97,13 @@ class VirtualHands {
   }
 
   initVisibilityObserver() {
-    // We want to hide the layer if #courseModal has class 'open' 
-    // OR #lessonPlayer is visible
-    const courseModal = document.getElementById('courseModal');
+    // Hide the layer on the Course Creator page or while #lessonPlayer is visible
     const lessonPlayer = document.getElementById('lessonPlayer');
 
     const check = () => {
       if (!this.layer) return;
 
-      const isCourseOpen = courseModal && courseModal.classList.contains('open');
+      const isCourseOpen = document.body.classList.contains('route-course-creator');
       const isLessonOpen = lessonPlayer && lessonPlayer.style.display !== 'none' && lessonPlayer.style.display !== '';
 
       if (isCourseOpen || isLessonOpen) {
@@ -120,10 +118,7 @@ class VirtualHands {
       }
     };
 
-    // Observer for Course Modal Class Changes
-    if (courseModal) {
-      new MutationObserver(check).observe(courseModal, { attributes: true, attributeFilter: ['class'] });
-    }
+    window.addEventListener('routeChanged', check);
 
     // Observer for Lesson Player Style Changes
     if (lessonPlayer) {

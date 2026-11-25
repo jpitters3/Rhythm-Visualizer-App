@@ -9,9 +9,11 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const { createTestUser, deleteTestUser, loginAsTestUser } = require('./utils/auth-helper');
 const { waitForPageReady } = require('./utils/page-helper');
+const { deleteCoursesByTitle } = require('./utils/seed-helper');
 
 test.describe('Course CRUD (Clean)', () => {
   let testUser;
+  let courseTitles = []; // every title a test gives its course, deleted in afterEach
 
   test.beforeEach(async ({ page }) => {
     // 0. Create unique test user (admin so edit-course button is visible)
@@ -63,6 +65,9 @@ test.describe('Course CRUD (Clean)', () => {
   });
 
   test.afterEach(async ({ page }) => {
+    for (const title of courseTitles) await deleteCoursesByTitle(title);
+    courseTitles = [];
+
     // Clear browser session to prevent test interference
     await page.context().clearCookies();
     await page.evaluate(() => localStorage.clear());
@@ -74,7 +79,7 @@ test.describe('Course CRUD (Clean)', () => {
   });
 
   test('Create and Save a new Course', async ({ page }) => {
-    // 1. Open Course Modal (Admin only)
+    // 1. Open the Course Creator page (Admin only)
     // On Desktop, we must click #accountBtn to see the dropdown.
     // On Mobile, the dropdown is flattened inside #appNav, so we just ensure menu is open.
     const accountBtn = page.locator('#accountBtn');
@@ -96,11 +101,12 @@ test.describe('Course CRUD (Clean)', () => {
     }
 
     await createBtn.click();
-    await expect(page.locator('#courseModal')).toHaveClass(/open/);
+    await expect(page.locator('#view-course-creator')).toHaveClass(/active/);
 
     // 2. Fill Course Info
     const timestamp = Date.now();
     const courseTitle = `Clean Test Course ${timestamp}`;
+    courseTitles.push(courseTitle);
     await page.fill('#courseTitle', courseTitle);
     await page.fill('#courseDesc', 'Created via clean E2E test');
 
@@ -124,7 +130,7 @@ test.describe('Course CRUD (Clean)', () => {
     await page.click('#confirmOkBtn');
 
     // 5. Verify Close
-    await expect(page.locator('#courseModal')).not.toHaveClass(/open/, { timeout: 5000 });
+    await expect(page.locator('#view-course-creator')).not.toHaveClass(/active/, { timeout: 5000 });
 
     // Verify it appears in Sidebar
     const sidebar = await openCoursesSidebar(page);
@@ -132,9 +138,6 @@ test.describe('Course CRUD (Clean)', () => {
     const courseItem = page.locator('.course-item').filter({ hasText: courseTitle });
     await expect(courseItem).toHaveCount(1);
     await expect(courseItem.first()).toBeVisible();
-
-    // Finally, delete the course with supabase
-    await supabase.from('courses').delete().eq('title', courseTitle);
 
   });
 
@@ -157,6 +160,7 @@ test.describe('Course CRUD (Clean)', () => {
     // Insert Course
     const timestamp = Date.now();
     const courseTitle = `Course to Update ${timestamp}`;
+    courseTitles.push(courseTitle, `${courseTitle} (Updated)`);
     const { data: course, error: insertError } = await supabase
       .from('courses')
       .insert({
@@ -172,70 +176,65 @@ test.describe('Course CRUD (Clean)', () => {
       throw new Error(`Failed to seed course: ${insertError.message}`);
     }
 
-    try {
-      // 2. Refresh Page (to load new course list), then re-login to restore auth state.
-      // js/dashboard.js's initDashboard() force-navigates any already-authenticated
-      // page load to #dashboard regardless of hash, so the reload alone always lands
-      // there — loginAsTestUser() (which itself re-navigates to #studio internally)
-      // must run before waiting for the studio grid, not after.
-      await page.reload({ waitUntil: 'networkidle' });
-      await loginAsTestUser(page, testUser);
-      await page.waitForSelector('.measure-row', { timeout: 10000 });
+    // 2. Refresh Page (to load new course list), then re-login to restore auth state.
+    // js/dashboard.js's initDashboard() force-navigates any already-authenticated
+    // page load to #dashboard regardless of hash, so the reload alone always lands
+    // there — loginAsTestUser() (which itself re-navigates to #studio internally)
+    // must run before waiting for the studio grid, not after.
+    await page.reload({ waitUntil: 'networkidle' });
+    await loginAsTestUser(page, testUser);
+    await page.waitForSelector('.measure-row', { timeout: 10000 });
 
-      // 3. Open Courses Sidebar
-      const sidebar = await openCoursesSidebar(page);
-      await expect(sidebar).toHaveClass(/open/, { timeout: 5000 });
+    // 3. Open Courses Sidebar
+    const sidebar = await openCoursesSidebar(page);
+    await expect(sidebar).toHaveClass(/open/, { timeout: 5000 });
 
-      // 4. Find the Course in the list
-      await expect(page.locator('#courseList .course-item')).not.toHaveCount(0, { timeout: 10000 });
+    // 4. Find the Course in the list
+    await expect(page.locator('#courseList .course-item')).not.toHaveCount(0, { timeout: 10000 });
 
-      const courseItem = page.locator(`.course-item[data-id="${course.id}"]`);
-      await courseItem.scrollIntoViewIfNeeded();
-      await expect(courseItem).toBeVisible();
+    const courseItem = page.locator(`.course-item[data-id="${course.id}"]`);
+    await courseItem.scrollIntoViewIfNeeded();
+    await expect(courseItem).toBeVisible();
 
-      // 5. Click the Edit Icon
-      const editBtn = courseItem.locator('.edit-course');
+    // 5. Click the Edit Icon
+    const editBtn = courseItem.locator('.edit-course');
 
-      // If course is not active/expanded, edit button might not be in DOM or hidden
-      if (!await editBtn.isVisible()) {
-        console.log("Course item collapsed, clicking to expand...");
-        await courseItem.click();
-      }
-
-      await expect(editBtn).toBeVisible();
-      await editBtn.click();
-
-      // 6. Verify Modal Open and Data
-      await expect(page.locator('#courseModal')).toHaveClass(/open/);
-      await expect(page.locator('#courseTitle')).toHaveValue(courseTitle);
-
-      // 7. Edit
-      const updatedTitle = courseTitle + " (Updated)";
-      await page.fill('#courseTitle', updatedTitle);
-      await page.fill('#courseDesc', 'Updated Description');
-
-      // 8. Save
-      await page.click('#saveCourseBtn');
-
-      // Dismiss the "Course saved successfully!" custom alert modal
-      await page.locator('#confirmModal.open').waitFor({ timeout: 10000 });
-      await page.click('#confirmOkBtn');
-
-      // 9. Verify DB Update
-      await expect(async () => {
-        const { data: updatedCourse } = await supabase
-          .from('courses')
-          .select()
-          .eq('id', course.id)
-          .single();
-        expect(updatedCourse.title).toBe(updatedTitle);
-        expect(updatedCourse.description).toBe('Updated Description');
-      }).toPass({ timeout: 5000 });
-
-    } finally {
-      // Cleanup
-      await supabase.from('courses').delete().eq('id', course.id);
+    // If course is not active/expanded, edit button might not be in DOM or hidden
+    if (!await editBtn.isVisible()) {
+      console.log("Course item collapsed, clicking to expand...");
+      await courseItem.click();
     }
+
+    await expect(editBtn).toBeVisible();
+    await editBtn.click();
+
+    // 6. Verify the Course Creator page shows the data
+    await expect(page.locator('#view-course-creator')).toHaveClass(/active/);
+    await expect(page.locator('#courseTitle')).toHaveValue(courseTitle);
+
+    // 7. Edit
+    const updatedTitle = courseTitle + " (Updated)";
+    await page.fill('#courseTitle', updatedTitle);
+    await page.fill('#courseDesc', 'Updated Description');
+
+    // 8. Save
+    await page.click('#saveCourseBtn');
+
+    // Dismiss the "Course saved successfully!" custom alert modal
+    await page.locator('#confirmModal.open').waitFor({ timeout: 10000 });
+    await page.click('#confirmOkBtn');
+
+    // 9. Verify DB Update
+    await expect(async () => {
+      const { data: updatedCourse } = await supabase
+        .from('courses')
+        .select()
+        .eq('id', course.id)
+        .single();
+      expect(updatedCourse.title).toBe(updatedTitle);
+      expect(updatedCourse.description).toBe('Updated Description');
+    }).toPass({ timeout: 5000 });
+
   });
 });
 
