@@ -18,7 +18,7 @@ jobs:
   deploy:
     environment:
       name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+      url: ${{ steps.deployment.outputs.page_url || steps.deployment_retry.outputs.page_url }}
     runs-on: ubuntu-24.04 # Playwright 1.57 has no Ubuntu 26.04 (ubuntu-latest) support
     steps:
       - name: Checkout
@@ -45,6 +45,15 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         # v4 stopped finding the uploaded artifact (Nov 2026); v5 pairs with upload-pages-artifact v5.
+        uses: actions/deploy-pages@v5
+        # GitHub's artifact list can lag the upload by a few seconds ("Found 0 artifact(s)").
+        continue-on-error: true
+      - name: Wait before retrying the deploy
+        if: steps.deployment.outcome == 'failure'
+        run: sleep 30
+      - name: Deploy to GitHub Pages (retry)
+        id: deployment_retry
+        if: steps.deployment.outcome == 'failure'
         uses: actions/deploy-pages@v5
       - name: Install Chromium for the health check
         run: npx playwright install --with-deps chromium
