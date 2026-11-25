@@ -38,13 +38,14 @@ jobs:
       - name: Setup Pages
         uses: actions/configure-pages@v4
       - name: Upload artifact
-        uses: actions/upload-pages-artifact@v4
+        uses: actions/upload-pages-artifact@v5
         with:
           # Upload dist folder
           path: './dist'
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v4
+        # v4 stopped finding the uploaded artifact (Nov 2026); v5 pairs with upload-pages-artifact v5.
+        uses: actions/deploy-pages@v5
       - name: Install Chromium for the health check
         run: npx playwright install --with-deps chromium
       - name: Health-check production
